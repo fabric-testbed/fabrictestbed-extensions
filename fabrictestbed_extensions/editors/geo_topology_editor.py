@@ -30,6 +30,7 @@ import re
 import functools
 
 import importlib.resources as pkg_resources
+from typing import List
 
 import ipywidgets as widgets
 from ipywidgets import HTML, Layout
@@ -50,21 +51,19 @@ from ipyleaflet import (
 
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
-    ComponentType
 )
 from fabrictestbed.slice_manager import (
-    SliceManager,
     Status,
     SliceState
 )
-from fabrictestbed.slice_editor import Capacities, ComponentCatalog
+from fabrictestbed.slice_editor import Capacities
 
-from fabrictestbed_extensions.editors.abs_topology_editor import AbsTopologyEditor
+from .abc_topology_editor import AbcTopologyEditor
 
 from .. import images
 
 
-class GeoTopologyEditor(AbsTopologyEditor):
+class GeoTopologyEditor(AbcTopologyEditor):
     # Constants
     # U.S. Default Map Center
     DEFAULT_US_MAP_CENTER = (38.12480976137421, -85.7129)
@@ -90,7 +89,6 @@ class GeoTopologyEditor(AbsTopologyEditor):
 
     # Default Widget values
     DEFAULT_SLICE_NAME_VALUE = 'New_Slice'
-    DEFAULT_SLICE_SELECT_VALUE = '<Choose Slice>'
 
     DEFAULT_NODE_SELECT_VALUE = '<Choose Node>'
     DEFAULT_NODE_SITE_VALUE = '<Choose Site>'
@@ -102,21 +100,14 @@ class GeoTopologyEditor(AbsTopologyEditor):
     DEFAULT_NODE_IMAGE_TYPE_VALUE = 'qcow2'
     DEFAULT_NODE_IMAGE_TYPE_OPTIONS = [DEFAULT_NODE_IMAGE_TYPE_VALUE]
 
-    EXPERIMENT_STATE_UNSUBMITTED = "Unsubmitted"
-    EXPERIMENT_STATE_SUBMITTED = "Submitted"
-    EXPERIMENT_STATE_DELETING = "Deleting"
-
     def __init__(self):
         """
         Constructor
         :return:
         """
-        self.experiments = []
-        self.current_experiment = None
+        super().__init__()
 
-        self.advertised_topology = None
         self.canvas = None
-        self.slice_manager = None
 
         self.available_resources_layer_group = None
         self.widget_layer_group = None
@@ -132,9 +123,6 @@ class GeoTopologyEditor(AbsTopologyEditor):
         self.editor_dashboard = None
         # VBox for control panel
         self.control_panel = None
-
-        self.site_detail = False
-        self.current_slice_name = None
 
         print('Creating VisualSliceEditor')
         # base layout for each line in the dashboard
@@ -283,47 +271,6 @@ class GeoTopologyEditor(AbsTopologyEditor):
             'features': []}
         dc.on_draw(self.handle_draw)
         self.canvas.add_control(dc)
-
-    def update_capacities(self):
-        """
-        Update capacities from the available resources information
-        :return:
-        """
-        # CREATE CURRENT CAPACITIES DICT
-        print('Update Capacities')
-        capacities = {}
-
-        for t in self.advertised_topology.sites.values():
-
-            # name
-            site_name = t.name
-            # available capacities total vs. currently allocated ones
-            available_capacities = t.get_property("capacities")
-            allocated_capacities = t.get_property("capacity_allocations")
-
-            if allocated_capacities is None:
-                allocated_capacities = Capacities()
-
-            if available_capacities is None:
-                available_capacities = Capacities()
-
-            d1 = available_capacities.__dict__.copy()
-            d2 = allocated_capacities.__dict__.copy()
-
-            # remove capacities that are not available
-            for d in allocated_capacities.__dict__:
-                if d1[d] == 0 and d2[d] == 0:
-                    d1.pop(d)
-                    d2.pop(d)
-
-            # add available capacities to site
-            site_capacities = {}
-            for c in d1:
-                site_capacities[c] = d1[c] - d2[c]
-
-            capacities[site_name] = site_capacities
-
-        return capacities
 
     def click_site(self, site_name, **kwargs):
         """
@@ -1350,57 +1297,14 @@ class GeoTopologyEditor(AbsTopologyEditor):
         """
         pass
 
-    def update_slice_list(self, current_slice_name=None, excludes=[SliceState.Dead, SliceState.Closing]):
+    def update_slice_list(self, current_slice_name=None, excludes=[SliceState.Dead, SliceState.Closing]) -> List[str]:
         """
         Update Slice list
         :param current_slice_name:
         :param excludes:
         :return:
         """
-        # Get all existing slices from FABRIC slice_manager
-        status, existing_slices = self.slice_manager.slices(excludes=excludes)
-
-        # Create new list of slices
-        new_experiments_list = []
-        for slice in existing_slices:
-            experiment = {'slice_name': slice.slice_name, 'slice_id': slice.slice_id, 'slice_state': slice.slice_state,
-                          'lease_end': slice.lease_end, 'graph_id': slice.graph_id, 'slice': slice}
-
-            status, current_slice_topology = self.slice_manager.get_slice_topology(slice_object=slice)
-            experiment['topology'] = current_slice_topology
-
-            new_experiments_list.append(experiment)
-
-        # Add all unsubmitted experiments
-        for experiment in self.experiments:
-            if experiment['slice_state'] == self.EXPERIMENT_STATE_UNSUBMITTED:
-                new_experiments_list.append(experiment)
-
-        # Set experiments list
-        self.experiments = new_experiments_list
-
-        # Build slice name list for widget
-        self.current_experiment = None
-        slice_names = []
-        for experiment in self.experiments:
-            slice_names.append(experiment['slice_name'])
-            if current_slice_name is not None and experiment['slice_name'] == current_slice_name:
-                self.current_experiment = experiment
-
-        if len(slice_names) == 0:
-            slice_names = [self.DEFAULT_SLICE_SELECT_VALUE]
-
-        # Set current experiment
-        print("current_slice_name: " + str(current_slice_name))
-        print("self.experiments: " + str(self.experiments))
-
-        # If there is no slice to set then set the first one in the list
-        if current_slice_name is None and self.experiments is not None and len(self.experiments) > 0:
-            current_slice_name = sorted(slice_names)[0]
-
-        if self.experiments is not None and len(self.experiments) > 0:
-            self.current_experiment = list(filter(lambda experiment: experiment['slice_name'] == current_slice_name,
-                                                  self.experiments))[0]
+        slice_names = super().update_slice_list(current_slice_name=current_slice_name, excludes=excludes)
 
         self.dashboards['slice_dashboard']['slice_select_widget'].options = sorted(slice_names)
         self.dashboards['slice_dashboard']['slice_select_widget'].value = current_slice_name
@@ -1413,6 +1317,8 @@ class GeoTopologyEditor(AbsTopologyEditor):
                 'slice_state']
             self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = self.current_experiment['lease_end']
             self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = self.current_experiment['graph_id']
+
+        return slice_names
 
     def submit_slice(self):
         """
@@ -1604,30 +1510,6 @@ class GeoTopologyEditor(AbsTopologyEditor):
         print("handle_draw")
         print(kwargs)
 
-    def get_node_name_list(self):
-        """
-        Get node name list
-        :return:
-        """
-        if self.current_experiment:
-            return list(self.current_experiment['topology'].nodes)
-        else:
-            return []
-
-    def get_unique_node_name(self):
-        """
-        Get Unique node name
-        :return:
-        """
-        # need to go through all the nodes in the experiment
-        num = 1
-        name = 'node' + str(num)
-        while name in self.current_experiment['topology'].nodes:
-            num += 1
-            name = 'node' + str(num)
-
-        return name
-
     def get_unique_component_name(self):
         """
         Get unique component name
@@ -1642,57 +1524,16 @@ class GeoTopologyEditor(AbsTopologyEditor):
 
         return name
 
-    def get_component_type_list(self):
-        """
-        Get component type list
-        :return:
-        """
-        return_list = []
-        for type in ComponentType:
-            return_list.append(type.name)
-        return return_list
-
-    def get_component_widget_options_list(self, type=None):
-        """
-        Get component widget options list
-        :param type:
-        :return:
-        """
-        return_list = []
-        for component in self.get_component_model_list(type):
-            return_list.append(component['Model'] + " (" + component['Type'] + ")")
-
-        return return_list
-
-    def get_component_model_list(self, type=None):
-        """
-        Get component model list
-        :param type:
-        :return:
-        """
-        if type == None:
-            return ComponentCatalog.catalog_instance.copy()
-        else:
-            return list(filter(lambda x: x['Type'] == type, ComponentCatalog.catalog_instance))
-
     def start(self):
         """
         Start the geo editors
         :return:
         """
-        print('Get Slice Manager')
-        self.slice_manager = SliceManager()
-
         # TODO make site detail per slice and per site
         self.site_detail = False
 
         print("Token location: {}".format(self.slice_manager.token_location))
         print()
-
-        # Cofigure SSH Key
-        self.ssh_key = None
-        with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as myfile:
-            self.ssh_key = myfile.read().strip()
 
         print('Get Available Resources')
         self.update_sites()
