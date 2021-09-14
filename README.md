@@ -1,2 +1,2 @@
 # fabrictestbed-extensions
-Extensions for the fabric APUI/CLI.  
+Extensions for the FABRIC API/CLI.  
