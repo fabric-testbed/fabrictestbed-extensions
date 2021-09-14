@@ -21,33 +21,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Author: Komal Thareja (kthare10@renci.org)
-from setuptools import setup, find_packages
-from fabrictestbed_extensions import __VERSION__
+# Author: Paul Ruth (pruth@renci.org)
+from abc import ABC, abstractmethod
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
 
-with open("requirements.txt", "r") as fh:
-    requirements = fh.read()
-
-setup(
-    name="fabrictestbed-extensions",
-    version=__VERSION__,
-    author="Paul Ruth, Komal Thareja",
-    author_email="pruth@renci.org, kthare10@renci.org",
-    description="FABRIC Python Client Library and CLI Extensions",
-    url="https://github.com/fabric-testbed/fabrictestbed-extensions",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    packages=find_packages(),
-    include_package_data=True,
-    classifiers=[
-                  "Programming Language :: Python :: 3",
-                  "License :: OSI Approved :: MIT License",
-                  "Operating System :: OS Independent",
-              ],
-    python_requires='>=3.9',
-    install_requires=requirements,
-    setup_requires=requirements,
-)
+class AbsTopologyEditor(ABC):
+    @abstractmethod
+    def start(self):
+        """
+        Start the editors
+        :return:
+        """
