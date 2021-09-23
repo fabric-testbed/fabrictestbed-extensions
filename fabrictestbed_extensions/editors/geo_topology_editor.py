@@ -125,17 +125,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.control_panel = None
 
         print('Creating VisualSliceEditor')
-        # base layout for each line in the dashboard
-        # self.base_overflow_y='hidden'
-        # self.base_min_height='30px'
-        # self.base_layout = Layout(min_height='30px', overflow_y='hidden')
-
-        # TRY to remove these and use model data structures
-        # HELPER/CONTAINER VARS
-        # self.clusters = {}
-        # self.add_btns = {}
-        # self.components_dict = {}
-        ######################################
 
         # Create the Canvas
         self.canvas = Map(basemap=basemaps.Esri.WorldStreetMap,
@@ -284,11 +273,14 @@ class GeoTopologyEditor(AbcTopologyEditor):
         event = kwargs['event']
         coordinates = kwargs['coordinates']
 
-        # Toggle Site detail for current experiment
-        if not self.site_detail:
+        #Toggle Site detail for current experiment
+        if self.site_detail == False:
             self.site_detail = True
+        else:
+            self.site_detail = False
 
-        self.redraw_slice_map()
+
+        self.redraw_map()
 
     def dbclick_site(self, site_name, **kwargs):
         """
@@ -821,15 +813,14 @@ class GeoTopologyEditor(AbcTopologyEditor):
         print("CHANGE: " + str(change))
         print("CANVAS: " + str(self.canvas))
         print("ZOOM: " + str(self.canvas.zoom))
-        self.redraw_slice_map()
+        self.redraw_map()
 
-    def redraw_slice_map(self):
+    def redraw_map(self):
         """
         Redraw slice map
         :return:
         """
-        print("redraw_slice_map")
-        print(self.current_experiment)
+        print("redraw_map")
 
         # Clear slice
         try:
@@ -847,51 +838,58 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
         # slivers = self.slice_manager.slivers(slices=[self.current_experiment['slice']])
         if self.site_detail:
-            print("topo nodes: " + str(self.current_experiment['topology'].nodes))
+           #print("topo nodes: " + str(self.current_experiment['topology'].nodes))
 
             slice_rack_markers = []
             count = 0
+            #Rectangle scale
+            baselength=float(45.0)
+            baseheight=float(45.0)
+            length=baselength/(pow(2,self.canvas.zoom-1))
+            height=baseheight/(pow(2,self.canvas.zoom-1))
+            length_offset=length/float(2.0)
+            height_offset=height/float(2.0)
+            icon_base = 10
+            icon_offset = icon_base/(pow(2,float(self.canvas.zoom-1)))
+
+            #print("height_offset: " + str(height_offset) + ", length_offset: " + str(length_offset))
             for node in self.current_experiment['topology'].nodes:
-                print("Node: " + str(self.current_experiment['topology'].nodes[node]))
+                #print("Node: " + str(self.current_experiment['topology'].nodes[node]))
                 site = self.current_experiment['topology'].nodes[node].get_property(pname='site')
-                print("sites: " + str(self.advertised_topology.sites))
-                print("Site: " + site)
+                #print("sites: " + str(self.advertised_topology.sites))
+                #print("Site: " +  site)
 
                 location = self.advertised_topology.sites[site].get_property(pname='location').to_latlon()
                 if site not in slice_rack_markers:
-                    print("CREATING RECTANGLE " + str(location[1]) + ", " + str(location[0]))
-                    baselength = 18.0
-                    baseheight = 18.0
-                    length = baselength / self.canvas.zoom
-                    height = baseheight / self.canvas.zoom
-                    length_offset = length / 2.0
-                    height_offset = height / 2.0
 
-                    self.rectangle = Rectangle(bounds=((location[0] + height_offset, location[1] - length_offset),
-                                                       (location[0] - height_offset, location[1] + length_offset)),
-                                               # self.rectangle = Rectangle(bounds=((location[0]+2,location[1]-4),(location[0]-5,location[1]+4)),
-                                               color=self.FABRIC_PRIMARY,
-                                               fill_color=self.FABRIC_LIGHT,
-                                               fill_opacity=0.6)
+                    #print("CREATING RECTANGLE " + str(location[0]) + ", " + str(location[1]))
+
+                    self.rectangle = Rectangle(bounds=((location[0]-height_offset,location[1]-length_offset),(location[0]+height_offset,location[1]+length_offset)),
+                    #self.rectangle = Rectangle(bounds=((location[0]+2,location[1]-4),(location[0]-5,location[1]+4)),
+                                          color=self.FABRIC_PRIMARY,
+                                          fill_color=self.FABRIC_LIGHT,
+                                          fill_opacity=0.6)
                     self.current_slice_layer_group.add_layer(self.rectangle)
                     slice_rack_markers.append(site)
 
-                print("ADDING MARKER: " + site)
+                #print("ADDING MARKER: " +  site)
 
-                icon = Icon(icon_url=self.SERVER_IMAGE, icon_size=[50, 20])
-                mark = Marker(location=self.location_plus(location, plus_x=0, plus_y=(0 - count) * 1), icon=icon)
+
+
+                icon = Icon(icon_url=self.SERVER_IMAGE,icon_size=[50, 20])
+                mark = Marker(location=self.location_plus(location,plus_x=0,plus_y=(0-count)*icon_offset), icon=icon)
                 count += 1
                 self.current_slice_layer_group.add_layer(mark)
         else:
             slice_rack_markers = []
             for node in self.current_experiment['topology'].nodes:
-                print("Node: " + str(self.current_experiment['topology'].nodes[node]))
+                #print("Node: " + str(self.current_experiment['topology'].nodes[node]))
                 site = self.current_experiment['topology'].nodes[node].get_property(pname='site')
-                print("sites: " + str(self.advertised_topology.sites))
-                print("Site: " + site)
+                #print("sites: " + str(self.advertised_topology.sites))
+                #print("Site: " + site)
 
                 if site not in slice_rack_markers:
-                    print("ADDING MARKER: " + site)
+                    #print("ADDING MARKER: " + site)
                     location = self.advertised_topology.sites[site].get_property(pname='location').to_latlon()
                     icon = Icon(icon_url=self.SLICE_RACK_IMAGE)
                     mark = Marker(location=location, icon=icon)
@@ -1047,9 +1045,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         try:
             node = self.current_experiment['topology'].nodes[node_name]
-
-            print("load node site name: " + node.get_property(pname='site'))
-            print("load node image: " + node.get_property(pname='image_ref'))
 
             self.dashboards['node_dashboard']['node_name_widget'].value = node_name
             self.dashboards['node_dashboard']['site_name_widget'].value = node.get_property(pname='site')
@@ -1270,8 +1265,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
             print("self.experiments: " + str(self.experiments))
 
             # Set state to self.EXPERIMENT_STATE_DELETING to unset any Unsubmitted states
-            self.current_experiment['slice_state'] = self.EXPERIMENT_STATE_DELETING
-            result = self.slice_manager.delete(slices=[self.current_experiment['slice']])
+            self.current_experiment['editor_slice_state'] = self.EXPERIMENT_STATE_DELETING
+            result = self.slice_manager.delete(slice_object=self.current_experiment['slice'])
 
             # TODO eliminate race condition... need to update until delete instead of sleep
             import time
@@ -1310,13 +1305,19 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.dashboards['slice_dashboard']['slice_select_widget'].value = current_slice_name
 
         if self.current_experiment is not None:
-            self.dashboards['slice_dashboard']['slice_status_slice_name_value'].value = self.current_experiment[
-                'slice_name']
-            self.dashboards['slice_dashboard']['slice_status_slice_id_value'].value = self.current_experiment['slice_id']
-            self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = self.current_experiment[
-                'slice_state']
-            self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = self.current_experiment['lease_end']
-            self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = self.current_experiment['graph_id']
+           if 'slice' in self.current_experiment.keys():
+               slice = self.current_experiment['slice']
+               self.dashboards['slice_dashboard']['slice_status_slice_name_value'].value = slice.slice_name
+               self.dashboards['slice_dashboard']['slice_status_slice_id_value'].value = slice.slice_id
+               self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = slice.slice_state
+               self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = slice.lease_end
+               self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = slice.graph_id
+           else:
+               self.dashboards['slice_dashboard']['slice_status_slice_name_value'].value = self.current_experiment['slice_name']
+               self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = self.current_experiment['slice_state']
+               self.dashboards['slice_dashboard']['slice_status_slice_id_value'].value = None
+               self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = None
+               self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = None
 
         return slice_names
 
@@ -1352,7 +1353,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :return:
         """
         self.update_slice_list(current_slice_name=change.new)
-        self.redraw_slice_map()
+        self.redraw_map()
 
     def slice_dashboard_update_slices(self, button, **kwargs):
         """
@@ -1363,7 +1364,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         current_slice_name = None
         if self.current_experiment:
-            current_slice_name = self.current_experiment['slice_name']
+            current_slice_name = self.current_experiment['slice'].slice_name
 
         self.update_slice_list(current_slice_name=current_slice_name)
 
