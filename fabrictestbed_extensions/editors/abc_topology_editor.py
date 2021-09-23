@@ -130,10 +130,6 @@ class AbcTopologyEditor(ABC):
         if len(slice_names) == 0:
             slice_names = [self.DEFAULT_SLICE_SELECT_VALUE]
 
-        # Set current experiment
-        print("current_slice_name: " + str(current_slice_name))
-        print("self.experiments: " + str(self.experiments))
-
         # If there is no slice to set then set the first one in the list
         if current_slice_name is None and self.experiments is not None and len(self.experiments) > 0:
             current_slice_name = sorted(slice_names)[0]
