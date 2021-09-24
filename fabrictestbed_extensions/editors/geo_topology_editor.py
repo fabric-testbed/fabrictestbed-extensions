@@ -51,12 +51,9 @@ from ipyleaflet import (
 
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
+    Capacities
 )
-from fabrictestbed.slice_manager import (
-    Status,
-    SliceState
-)
-from fabrictestbed.slice_editor import Capacities
+from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 from .abc_topology_editor import AbcTopologyEditor
 
@@ -109,10 +106,10 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
         self.canvas = None
 
-        self.available_resources_layer_group = None
-        self.widget_layer_group = None
-        self.current_slice_layer_group = None
-        self.slice_layer_groups = None
+        self.available_resources_layer_group = LayerGroup(layers=())
+        self.widget_layer_group = LayerGroup(layers=())
+        self.current_slice_layer_group = LayerGroup(layers=())
+        self.slice_layer_groups = LayerGroup(layers=())
         self.dashboards = None
 
         self.base_overflow_y = 'hidden'
@@ -135,12 +132,12 @@ class GeoTopologyEditor(AbcTopologyEditor):
                                         height=self.DEFAULT_US_MAP_HEIGHT))
 
         # LayerGroup for all sites remove_layer
-        self.available_resources_layer_group = LayerGroup(layers=())
+        #self.available_resources_layer_group = LayerGroup(layers=())
         # LayerGroup for all widgets and interface
-        self.widget_layer_group = LayerGroup(layers=())
+        #self.widget_layer_group = LayerGroup(layers=())
         # List of a LayerGroups, one for each slice (one for now)
-        self.current_slice_layer_group = LayerGroup(layers=())
-        self.slice_layer_groups = [self.current_slice_layer_group]
+        #self.current_slice_layer_group = LayerGroup(layers=())
+        #self.slice_layer_groups = [self.current_slice_layer_group]
 
         # Add LayerGroups to Canvas
         self.canvas.add_layer(self.available_resources_layer_group)
@@ -338,7 +335,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         print('Update Sites')
         # Query FABRIC for updated resources
-        status, self.advertised_topology = self.slice_manager.resources()
+        self.pull_advertised_topology()
 
         # Clear the resource layers
         self.available_resources_layer_group.clear_layers()
@@ -430,7 +427,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         header = HTML('<center><b>Node Dashboard</b></center>')
         dashboard['header'] = header
 
-        select_node_widget = widgets.Dropdown(
+        select_node_widget = widgets.Select(
             options=[self.DEFAULT_NODE_SELECT_VALUE] + sorted(self.get_node_name_list()),
             value=self.DEFAULT_NODE_SELECT_VALUE,
             disabled=False,
@@ -704,15 +701,15 @@ class GeoTopologyEditor(AbcTopologyEditor):
         submit_slice_btn.style.button_color = self.FABRIC_PRIMARY
         submit_slice_btn.on_click(self.slice_dashboard_submit_slice)
 
-        delete_slice_btn = widgets.Button(
+        delete_experiment_btn = widgets.Button(
             description='Delete Slice',
             disabled=False,
             tooltip='click to delete the slice',
         )
-        delete_slice_btn.style.button_color = self.FABRIC_PRIMARY
-        delete_slice_btn.on_click(self.slice_dashboard_delete_slice)
+        delete_experiment_btn.style.button_color = self.FABRIC_PRIMARY
+        delete_experiment_btn.on_click(self.slice_dashboard_delete_experiment)
         button_1_hbox = widgets.HBox([new_slice_btn, update_slices_btn])
-        button_2_hbox = widgets.HBox([submit_slice_btn, delete_slice_btn])
+        button_2_hbox = widgets.HBox([submit_slice_btn, delete_experiment_btn])
 
         # Slice Status Text
         slice_status_header = HTML('<center><b>Slice Status</b></center>')
@@ -834,7 +831,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
             return
 
         topology = self.current_experiment['topology']
-        slice_id = self.current_experiment['slice_id']
 
         # slivers = self.slice_manager.slivers(slices=[self.current_experiment['slice']])
         if self.site_detail:
@@ -983,13 +979,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :return:
         """
         try:
-            # Add to FABRIC experiment topology
-            new_node = self.current_experiment['topology'].add_node(name=node_name, site=self.DEFAULT_NODE_SITE_VALUE)
-            cap = Capacities()
-            cap.set_fields(core=self.DEFAULT_NODE_CORE_VALUE, ram=self.DEFAULT_NODE_RAM_VALUE,
-                           disk=self.DEFAULT_NODE_DISK_VALUE)
-            new_node.set_properties(capacities=cap, image_type=self.DEFAULT_NODE_IMAGE_TYPE_VALUE,
-                                    image_ref=self.DEFAULT_NODE_IMAGE_VALUE)
+            super().add_node(node_name)
 
             # Update the map markers/connections
 
@@ -1058,25 +1048,19 @@ class GeoTopologyEditor(AbcTopologyEditor):
             print('Failed to load node. Error: ' + str(e))
             traceback.print_exc()
 
-    def delete_node(self, node_name):
+    def delete_node(self):
         """
         Delete node
         :param node_name: node name
         :return:
         """
         print('Delete Node')
-        try:
-            node_name = self.dashboards['node_dashboard']['node_name_widget'].value
 
-            # Delete the node from experiment
-            self.current_experiment['topology'].remove_node(node_name)
+        node_name = self.dashboards['node_dashboard']['node_name_widget'].value
+        super().delete_node(node_name)
 
-            # update the node dashboard
-            self.update_select_node_widget_option_name(self.DEFAULT_NODE_SELECT_VALUE)
-        except Exception as e:
-            # TODO: Should create popup or other user facing error message
-            print('Failed to delete node. Error: ' + str(e))
-            traceback.print_exc()
+        # update the node dashboard
+        self.update_select_node_widget_option_name(self.DEFAULT_NODE_SELECT_VALUE)
 
         # Re-draw node dashboard
         self.rebuild_node_dashboard()
@@ -1224,59 +1208,16 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         self.delete_node(node_name)
 
-    def new_slice(self, slice_name):
-        """
-        Create a new slice
-        :param slice_name:
-        :return:
-        """
-        print('Create New Slice')
-
-        try:
-            # Test for unique slice name
-            if slice_name is None or slice_name == '' or list(filter(lambda experiment:
-                                                                     experiment['slice_name'] == slice_name,
-                                                                     self.experiments)):
-                # TODO: should raise Exception
-                print('Failed to create new slice. Error: Name not unique or invalid ' + str(slice_name))
-                return
-
-            experiment = {'slice_name': slice_name, 'slice_id': '', 'slice_state': self.EXPERIMENT_STATE_UNSUBMITTED,
-                          'lease_end': '', 'graph_id': '', 'topology': ExperimentTopology()}
-
-            self.experiments.append(experiment)
-
-            self.update_slice_list(current_slice_name=slice_name)
-        except Exception as e:
-            # TODO: Should create popup or other user facing error message
-            print('Failed to create new slice. Error: ' + str(e))
-            traceback.print_exc()
-        pass
-
-    def delete_slice(self, slice_name):
+    def delete_experiment(self, slice_name):
         """
         Delete a slice
         :param slice_name:
         :return:
         """
         print('Delete Slice')
-        try:
-            print("self.current_experiment: " + str(self.current_experiment))
-            print("self.experiments: " + str(self.experiments))
+        super().delete_experiment(self.current_experiment)
+        self.update_slice_list()
 
-            # Set state to self.EXPERIMENT_STATE_DELETING to unset any Unsubmitted states
-            self.current_experiment['editor_slice_state'] = self.EXPERIMENT_STATE_DELETING
-            result = self.slice_manager.delete(slice_object=self.current_experiment['slice'])
-
-            # TODO eliminate race condition... need to update until delete instead of sleep
-            import time
-            time.sleep(1)
-
-            self.update_slice_list()
-        except Exception as e:
-            # TODO: Should create popup or other user facing error message
-            print('Failed to delete slice. Error: ' + str(e))
-            traceback.print_exc()
 
     def update_node_dashboard(self):
         """
@@ -1299,7 +1240,27 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param excludes:
         :return:
         """
-        slice_names = super().update_slice_list(current_slice_name=current_slice_name, excludes=excludes)
+        super().update_experiment_list(current_slice_name=current_slice_name, excludes=excludes)
+
+        # Build slice name list for widget
+        self.current_experiment = None
+        slice_names = []
+        for experiment in self.experiments:
+            slice_names.append(experiment['slice_name'])
+            if current_slice_name is not None and experiment['slice_name'] == current_slice_name:
+                self.current_experiment = experiment
+
+        if len(slice_names) == 0:
+            slice_names = [self.DEFAULT_SLICE_SELECT_VALUE]
+
+        # If there is no slice to set then set the first one in the list
+        if current_slice_name is None and self.experiments is not None and len(self.experiments) > 0:
+            current_slice_name = sorted(slice_names)[0]
+
+        if self.experiments is not None and len(self.experiments) > 0:
+            self.current_experiment = list(filter(lambda experiment: experiment['slice_name'] == current_slice_name,
+                                                  self.experiments))[0]
+
 
         self.dashboards['slice_dashboard']['slice_select_widget'].options = sorted(slice_names)
         self.dashboards['slice_dashboard']['slice_select_widget'].value = current_slice_name
@@ -1314,10 +1275,10 @@ class GeoTopologyEditor(AbcTopologyEditor):
                self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = slice.graph_id
            else:
                self.dashboards['slice_dashboard']['slice_status_slice_name_value'].value = self.current_experiment['slice_name']
-               self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = self.current_experiment['slice_state']
-               self.dashboards['slice_dashboard']['slice_status_slice_id_value'].value = None
-               self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = None
-               self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = None
+               self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = self.current_experiment['editor_slice_state']
+               self.dashboards['slice_dashboard']['slice_status_slice_id_value'].value = ""
+               self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = ""
+               self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = ""
 
         return slice_names
 
@@ -1384,18 +1345,22 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param kwargs:
         :return:
         """
-        self.new_slice(self.dashboards['slice_dashboard']['slice_name_widget'].value)
+        new_slice_name = self.dashboards['slice_dashboard']['slice_name_widget'].value
+
+        super().create_experiment(new_slice_name)
+
+        self.update_slice_list(current_slice_name=new_slice_name)
         # unset the new slice name
         self.dashboards['slice_dashboard']['slice_name_widget'].value = ''
 
-    def slice_dashboard_delete_slice(self, button, **kwargs):
+    def slice_dashboard_delete_experiment(self, button, **kwargs):
         """
         Slice dashboard delete slice
         :param button:
         :param kwargs:
         :return:
         """
-        self.delete_slice(self.dashboards['slice_dashboard']['slice_select_widget'].value)
+        self.delete_experiment(self.dashboards['slice_dashboard']['slice_select_widget'].value)
 
     def slice_dashboard_submit_slice(self, button, **kwargs):
         """
@@ -1404,22 +1369,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param kwargs:
         :return:
         """
-        slice_name = self.dashboards['slice_dashboard']['slice_select_widget'].value
-        self.current_slice_name = slice_name
-        # Generate Slice Graph
-        slice_graph = self.current_experiment['topology'].serialize()
+        super().submit_slice(self.current_experiment)
 
-        # Request slice from Orchestrator
-        status, reservations = self.slice_manager.create(slice_name=self.current_slice_name, slice_graph=slice_graph,
-                                                         ssh_key=self.ssh_key)
-
-        print("Response Status {}".format(status))
-        if status == Status.OK:
-            print("Reservations created {}".format(reservations))
-        else:
-            print(f"Failure: {reservations}")
-
-        self.current_experiment['slice_state'] = self.EXPERIMENT_STATE_SUBMITTED
         self.update_slice_list(current_slice_name=self.current_experiment['slice_name'])
 
     def node_dashboard_add_component(self, button, **kwargs):
@@ -1511,19 +1462,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         print("handle_draw")
         print(kwargs)
 
-    def get_unique_component_name(self):
-        """
-        Get unique component name
-        :return:
-        """
-        num = 1
-        name = 'dev' + str(num)
-        while len(list(filter(lambda x: x['component_name_widget'].value == name,
-                              self.dashboards['node_dashboard']['components']))) > 0:
-            num += 1
-            name = 'dev' + str(num)
 
-        return name
 
     def start(self):
         """
@@ -1533,8 +1472,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
         # TODO make site detail per slice and per site
         self.site_detail = False
 
-        print("Token location: {}".format(self.slice_manager.token_location))
-        print()
 
         print('Get Available Resources')
         self.update_sites()

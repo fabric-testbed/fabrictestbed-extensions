@@ -23,20 +23,24 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 import os
+import traceback
+
 from abc import ABC, abstractmethod
 from typing import List
 
 from fabric_cf.orchestrator.orchestrator_proxy import SliceState
-from fabrictestbed.slice_editor import Capacities, ComponentType, ComponentCatalog
-from fabrictestbed.slice_manager import SliceManager
-
+from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 
 class AbcTopologyEditor(ABC):
     EXPERIMENT_STATE_UNSUBMITTED = "Unsubmitted"
-    EXPERIMENT_STATE_SUBMITTED = "Submitted"
-    EXPERIMENT_STATE_DELETING = "Deleting"
+    EXPERIMENT_STATE_ACTIVE = "Active"
+    EXPERIMENT_STATE_DELETED = "Deleted"
 
     DEFAULT_SLICE_SELECT_VALUE = '<Choose Slice>'
+
+
+
 
     def __init__(self):
         self.slice_manager = SliceManager()
@@ -44,10 +48,112 @@ class AbcTopologyEditor(ABC):
         self.experiments = []
         self.current_experiment = None
         self.site_detail = False
-        self.current_slice_name = None
         self.ssh_key = None
         with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as fd:
             self.ssh_key = fd.read().strip()
+
+        self.pull_advertised_topology()
+        self.update_experiment_list()
+
+    def pull_advertised_topology(self):
+        status, self.advertised_topology = self.slice_manager.resources()
+
+    def pull_experiment_topology(self, experiment):
+        #do not update if unsubmitted
+        if experiment['editor_slice_state'] != self.EXPERIMENT_STATE_UNSUBMITTED:
+            status, current_slice_topology = self.slice_manager.get_slice_topology(slice_object=experiment['slice'])
+            experiment['topology'] = current_slice_topology
+
+    def update_current_experiment(self):
+        update_experiment_topology(self.current_experiment)
+
+    def update_all_experiment_topologies(self):
+        for experiment in self.experiments:
+            update_experiment_topology(experiment)
+
+    def remove_experiment(self, experiment):
+        """
+        Remove and exeriment from the editor.
+        Does not delete the slice.
+        :param experiment:
+        :return:
+        """
+        #Unset current experiment
+        if(experiment == self.current_experiment):
+            self.current_experiment = None
+
+        #remove the experiment
+        self.experiments.remove(experiment)
+
+    def delete_experiment(self, experiment):
+        print('Delete Slice')
+        if experiment['editor_slice_state'] != self.EXPERIMENT_STATE_UNSUBMITTED:
+            try:
+                print("self.current_experiment: " + str(self.current_experiment))
+                print("self.experiments: " + str(self.experiments))
+
+                #delete the slice
+                result = self.slice_manager.delete(slice_object=experiment['slice'])
+
+                experiment['editor_slice_state'] = self.EXPERIMENT_STATE_DELETED
+
+                # TODO eliminate race condition... need to update until delete instead of sleep
+                import time
+                time.sleep(1)
+
+            except Exception as e:
+                # TODO: Should create popup or other user facing error message
+                print('Failed to delete slice. Error: ' + str(e))
+                traceback.print_exc()
+
+        #Remove experiment from editor
+        self.remove_experiment(experiment)
+
+
+    def create_experiment(self, slice_name):
+        print('Create Experiment')
+
+        experiment = self.get_experiment_by_name(slice_name)
+
+        if experiment != None:
+            # TODO: should raise Exception
+            print('Failed to create new slice. Error: Name not unique or invalid ' + str(slice_name))
+            return
+
+        #New experiment
+        self.experiments.append({'slice_name': slice_name,
+                                 'editor_slice_state': self.EXPERIMENT_STATE_UNSUBMITTED,
+                                 'topology': ExperimentTopology()
+                                 #ssh_keys
+                                 #detail_levels {'detail': HIGH, {'node1': LOW, 'node2': MED}}
+                                 })
+
+    def set_current_experiment(self, experiment):
+        self.current_experiment = experiment
+
+    def add_node(self, node_name):
+        # Add to FABRIC experiment topology
+        new_node = self.current_experiment['topology'].add_node(name=node_name, site=self.DEFAULT_NODE_SITE_VALUE)
+        cap = Capacities()
+        cap.set_fields(core=self.DEFAULT_NODE_CORE_VALUE, ram=self.DEFAULT_NODE_RAM_VALUE,
+                       disk=self.DEFAULT_NODE_DISK_VALUE)
+        new_node.set_properties(capacities=cap, image_type=self.DEFAULT_NODE_IMAGE_TYPE_VALUE,
+                                image_ref=self.DEFAULT_NODE_IMAGE_VALUE)
+
+    def delete_node(self, node_name):
+        """
+        Delete node
+        :param node_name: node name
+        :return:
+        """
+        print('Delete Node')
+        try:
+            # Delete the node from experiment
+            self.current_experiment['topology'].remove_node(node_name)
+        except Exception as e:
+            # TODO: Should create popup or other user facing error message
+            print('Failed to delete node. Error: ' + str(e))
+            traceback.print_exc()
 
     def update_capacities(self):
         """
@@ -90,55 +196,77 @@ class AbcTopologyEditor(ABC):
 
         return capacities
 
-    def update_slice_list(self, current_slice_name=None, excludes=[SliceState.Dead, SliceState.Closing]) -> List[str]:
+    def get_experiment_by_slice_id(self, slice_id):
+        experiment = None
+        try:
+             experiment = list(filter(lambda x: x['slice_id'] == slice_id, self.experiments))[0]
+        except:
+            print("Slice {} not found".format(slice_id))
+        return experiment
+
+    def get_experiment_by_name(self, slice_name):
+        experiment = None
+        try:
+             experiment = list(filter(lambda x: x['slice_name'] == slice_name, self.experiments))[0]
+        except:
+            print("Slice {} not found".format(slice_name))
+        return experiment
+
+    def update_experiment_list(self, current_slice_name=None, excludes=[SliceState.Dead, SliceState.Closing]) -> List[str]:
         """
         Update Slice list
         :param current_slice_name:
         :param excludes:
         :return:
         """
+        print("XXXXXXXXXX update_experiment_list XXXXXXXXXX")
+
         # Get all existing slices from FABRIC slice_manager
         status, existing_slices = self.slice_manager.slices(excludes=excludes)
 
         # Create new list of slices
-        new_experiments_list = []
+        #new_experiments_list = []
         for slice in existing_slices:
-            experiment = {'slice_name': slice.slice_name, 'slice_id': slice.slice_id, 'slice_state': slice.slice_state,
-                          'lease_end': slice.lease_end, 'graph_id': slice.graph_id, 'slice': slice}
+            experiment = self.get_experiment_by_name(slice.slice_name)
 
-            status, current_slice_topology = self.slice_manager.get_slice_topology(slice_object=slice)
-            experiment['topology'] = current_slice_topology
+            if experiment == None:
+                #New experiment
+                experiment = {'slice_name': slice.slice_name,
+                              'slice_id': slice.slice_id,
+                              'editor_slice_state': slice.slice_state,
+                              'slice': slice,
+                              #ssh_keys
+                              #detail_levels {'detail': HIGH, {'node1': LOW, 'node2': MED}}
+                              }
 
-            new_experiments_list.append(experiment)
+                status, experiment['topology'] = self.slice_manager.get_slice_topology(slice_object=slice)
+                #experiment['topology'] = current_slice_topology
 
-        # Add all unsubmitted experiments
-        for experiment in self.experiments:
-            if experiment['slice_state'] == self.EXPERIMENT_STATE_UNSUBMITTED:
-                new_experiments_list.append(experiment)
+                self.experiments.append(experiment)
+            else:
+                #Existig experiment
+                experiment['slice'] = slice
+                status, experiment['topology'] = self.slice_manager.get_slice_topology(slice_object=slice)
 
-        # Set experiments list
-        self.experiments = new_experiments_list
 
-        # Build slice name list for widget
-        self.current_experiment = None
-        slice_names = []
-        for experiment in self.experiments:
-            slice_names.append(experiment['slice_name'])
-            if current_slice_name is not None and experiment['slice_name'] == current_slice_name:
-                self.current_experiment = experiment
+    def submit_slice(self, experiment):
 
-        if len(slice_names) == 0:
-            slice_names = [self.DEFAULT_SLICE_SELECT_VALUE]
+        slice_name = self.current_experiment['slice_name']
+        #ssh_key = self.current_experiment['ssh_key']
+        slice_graph = self.current_experiment['topology'].serialize()
 
-        # If there is no slice to set then set the first one in the list
-        if current_slice_name is None and self.experiments is not None and len(self.experiments) > 0:
-            current_slice_name = sorted(slice_names)[0]
+        # Request slice from Orchestrator
+        status, reservations = self.slice_manager.create(slice_name=slice_name,
+                                                         slice_graph=slice_graph,
+                                                         ssh_key=self.ssh_key)
 
-        if self.experiments is not None and len(self.experiments) > 0:
-            self.current_experiment = list(filter(lambda experiment: experiment['slice_name'] == current_slice_name,
-                                                  self.experiments))[0]
+        print("Response Status {}".format(status))
+        if status == Status.OK:
+            print("Reservations created {}".format(reservations))
+        else:
+            print(f"Failure: {reservations}")
 
-        return slice_names
+        self.current_experiment['slice_state'] = self.EXPERIMENT_STATE_ACTIVE
 
     @staticmethod
     def get_component_type_list():
@@ -197,6 +325,20 @@ class AbcTopologyEditor(ABC):
         while name in self.current_experiment['topology'].nodes:
             num += 1
             name = 'node' + str(num)
+
+        return name
+
+    def get_unique_component_name(self):
+        """
+        Get unique component name
+        :return:
+        """
+        num = 1
+        name = 'dev' + str(num)
+        while len(list(filter(lambda x: x['component_name_widget'].value == name,
+                              self.dashboards['node_dashboard']['components']))) > 0:
+            num += 1
+            name = 'dev' + str(num)
 
         return name
 
