@@ -56,7 +56,9 @@ class AbcTopologyEditor(ABC):
         self.update_experiment_list()
 
     def pull_advertised_topology(self):
-        status, self.advertised_topology = self.slice_manager.resources()
+        return_status, self.advertised_topology = self.slice_manager.resources()
+        if return_status != Status.OK:
+            print("Failed to get advertised_topology: {}".format(self.advertised_topology))
 
     def pull_experiment_topology(self, experiment):
         #do not update if unsubmitted
@@ -132,6 +134,8 @@ class AbcTopologyEditor(ABC):
         self.current_experiment = experiment
 
     def add_node(self, node_name):
+        print("abc.add_node  node_name {}".format(node_name))
+
         # Add to FABRIC experiment topology
         new_node = self.current_experiment['topology'].add_node(name=node_name, site=self.DEFAULT_NODE_SITE_VALUE)
         cap = Capacities()
@@ -153,6 +157,58 @@ class AbcTopologyEditor(ABC):
         except Exception as e:
             # TODO: Should create popup or other user facing error message
             print('Failed to delete node. Error: ' + str(e))
+            traceback.print_exc()
+
+    def save_node(self, topology_node,
+                        experiment=None,
+                        node_name=None,
+                        site_name=None,
+                        cores=None,
+                        ram=None,
+                        disk=None,
+                        image=None,
+                        image_type=None):
+        """
+        Save node
+        :param node_name:
+        :param site_name:
+        :param cores:
+        :param ram:
+        :param disk:
+        :param image:
+        :param image_type:
+        :return:
+        """
+        print("ABC.save_node")
+        print("save_node: topology_node {}".format(topology_node))
+        print("save_node: experiment {}".format(experiment))
+        print("save_node:  node_name {}".format(node_name))
+        print("save_node:  site_name {}".format(site_name))
+        print("save_node:  cores {}".format(cores))
+        print("save_node:  ram {}".format(ram))
+        print("save_node:  disk {}".format(disk))
+        print("save_node:  image {}".format(image))
+        print("save_node:  image_type {}".format(image_type))
+
+        if experiment == None:
+            experiment = self.current_experiment
+
+        try:
+            #node = experiment['topology'].nodes[node_name]
+
+            # Save node properties to FABRIC topology
+            if node_name:
+                topology_node.set_property(pname="name", pval=node_name)
+            if site_name:
+                topology_node.set_property(pname="site", pval=site_name)
+
+            # Set capacities
+            cap = Capacities()
+            cap.set_fields(core=cores, ram=ram, disk=disk)
+            topology_node.set_properties(capacities=cap, image_type=image_type, image_ref=image)
+        except Exception as e:
+            # TODO: Should create popup or other user facing error message
+            print('Failed to save node. Error: ' + str(e))
             traceback.print_exc()
 
     def update_capacities(self):

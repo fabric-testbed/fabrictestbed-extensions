@@ -97,6 +97,12 @@ class GeoTopologyEditor(AbcTopologyEditor):
     DEFAULT_NODE_IMAGE_TYPE_VALUE = 'qcow2'
     DEFAULT_NODE_IMAGE_TYPE_OPTIONS = [DEFAULT_NODE_IMAGE_TYPE_VALUE]
 
+    DEFAULT_DASHBOARD = 'slice_dashboard'
+    #Current node selected in node dashboard
+    current_node = None
+
+
+
     def __init__(self):
         """
         Constructor
@@ -111,6 +117,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.current_slice_layer_group = LayerGroup(layers=())
         self.slice_layer_groups = LayerGroup(layers=())
         self.dashboards = None
+        self.dashboards_buttons = {}
 
         self.base_overflow_y = 'hidden'
         self.base_min_height = '30px'
@@ -160,7 +167,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.canvas.add_control(title_control)
 
         # INIALIZE Editing Dashboard
-        self.editor_dashboard = widgets.VBox(layout=Layout(height='470px', width='250px', padding="4px",
+        self.editor_dashboard = widgets.VBox(layout=Layout(height='535px', width='250px', padding="4px",
                                                            overflow_y='scroll', flex_flow='column', display='flex'))
 
         editor_dashboard_control = WidgetControl(widget=self.editor_dashboard, position='topright')
@@ -172,73 +179,62 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.init_node_dashboard()
         self.dashboards['link_dashboard']['widget_list'] = self.init_link_dashboard()
 
+        self.current_dashboard = self.dashboards[self.DEFAULT_DASHBOARD]
+
         # Set defaul dashboard to slice_dashboard
         self.editor_dashboard.children = self.dashboards['slice_dashboard']['widget_list']
 
         # Initialize control panel
-        self.control_panel = widgets.VBox(layout=Layout(height='135px', width='250px', overflow_y='auto',
+        self.control_panel = widgets.VBox(layout=Layout(height='70px', width='250px', overflow_y='auto',
                                                         padding="4px"))
         control_panel_control = WidgetControl(widget=self.control_panel, position='bottomright')
         self.canvas.add_control(control_panel_control)
 
-        # DELETE ALL BTN
-        delete_all_nodes = widgets.Button(
-            description='Clear All',
-            disabled=False,
-            tooltip='click to remove all nodes',
-            layout=Layout(width='120px'))
-        delete_all_nodes.style.button_color = self.FABRIC_PRIMARY
-        delete_all_nodes.on_click(self.main_dashboard_delete_all)
-        # delete_all_btn = WidgetControl(widget = delete_all_nodes, position='bottomright')
-        # self.widget_layer_group.add_layer(delete_all_nodes)
-        # self.canvas.add_control(delete_all_btn)
 
-        # SUBMIT/PREVIEW BTN
-        submit_request = widgets.Button(
-            description='Submit',
-            disabled=False,
-            tooltip='click to submit',
-            layout=Layout(width='120px', border='solid 2px ' + self.FABRIC_PRIMARY))
-        submit_request.style.button_color = self.FABRIC_PRIMARY
-        submit_request.on_click(self.slice_dashboard_submit_slice)
-
-        # NEW LINK BTN
-        edit_link = widgets.Button(
+        #  LINK Dashboard BTN
+        edit_link_btn = widgets.Button(
             description='Links',
             disabled=False,
             tooltip='Click to edit link',
             layout=Layout(width='120px'))
-        edit_link.style.button_color = self.FABRIC_PRIMARY
-        edit_link.on_click(self.set_edit_link_dashboard)
+        edit_link_btn.style.button_color = self.FABRIC_PRIMARY
+        edit_link_btn.on_click(self.set_edit_link_dashboard)
+        self.dashboards['link_dashboard']['button'] = edit_link_btn
 
-        # NEW Node BTN
-        edit_node = widgets.Button(
+        edit_link_control = WidgetControl(widget=edit_link_btn, position='bottomright')
+
+
+        #  Node Dashboard BTN
+        edit_node_btn = widgets.Button(
             description='Nodes',
             disabled=False,
             tooltip='Click to edit node',
             layout=Layout(width='120px'))
-        edit_node.style.button_color = self.FABRIC_PRIMARY
-        edit_node.on_click(self.set_edit_node_dashboard)
+        edit_node_btn.style.button_color = self.FABRIC_PRIMARY
+        edit_node_btn.on_click(self.set_edit_node_dashboard)
+        self.dashboards['node_dashboard']['button'] = edit_node_btn
+        edit_node_control = WidgetControl(widget=edit_node_btn, position='bottomright')
 
-        # NEW Node BTN
-        edit_slice = widgets.Button(
+
+        # Slice Dashboard BTN
+        edit_slice_btn = widgets.Button(
             description='Slice',
             disabled=False,
             tooltip='Click to edit slice',
             layout=Layout(width='120px'))
-        edit_slice.style.button_color = self.FABRIC_PRIMARY
-        edit_slice.on_click(self.set_edit_slice_dashboard)
-        edit_slice_btn = WidgetControl(widget=edit_slice, position='bottomright')
+        edit_slice_btn.style.button_color = self.FABRIC_PRIMARY
+        edit_slice_btn.on_click(self.set_edit_slice_dashboard)
+        self.dashboards['slice_dashboard']['button'] = edit_slice_btn
+        edit_slice_control = WidgetControl(widget=edit_slice_btn, position='bottomright')
 
         control_panel_1_hbox = HTML('<center><b>Select Dashboard</b></center>')
-        control_panel_2_hbox = widgets.HBox([edit_slice, edit_node, edit_link])
-        control_panel_3_hbox = HTML('<center><b>Operations</b></center>')
-        control_panel_4_hbox = widgets.HBox([submit_request, delete_all_nodes])
+        control_panel_2_hbox = widgets.HBox([edit_slice_btn, edit_node_btn, edit_link_btn])
         self.control_panel.children = [control_panel_1_hbox,
                                        control_panel_2_hbox,
-                                       control_panel_3_hbox,
-                                       control_panel_4_hbox,
                                        ]
+
+        # Set the current dashboard
+        self.set_dashboard(self.DEFAULT_DASHBOARD)
 
         # Add General Canvas Controls
         self.canvas.add_control(FullScreenControl(position='bottomleft'))
@@ -257,6 +253,16 @@ class GeoTopologyEditor(AbcTopologyEditor):
             'features': []}
         dc.on_draw(self.handle_draw)
         self.canvas.add_control(dc)
+
+    def  set_dashboard(self, dashboard_name):
+        #Unset the old dashbord
+        self.current_dashboard['button'].style.button_color = self.FABRIC_PRIMARY
+
+        #Set the new dashboard
+        self.current_dashboard = self.dashboards[dashboard_name]
+        self.current_dashboard['button'].style.button_color = self.FABRIC_SECONDARY
+
+
 
     def click_site(self, site_name, **kwargs):
         """
@@ -364,7 +370,19 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
         # Add the links (TODO: What will this look like?)
         # Create Links (cheating for now)
-        # for link in self.advertised_topology.links.values():
+        # for link_name, link in self.advertised_topology.links.items():
+        #     print("properties: {}".format(link.list_properties()) )
+        #     for property in link.list_properties():
+        #         print("Link Name {}, property: {}: {}".format(link_name,property,link.get_property(property)))
+        #     print("Link Name {}, Print: {}".format(link_name,link))
+        #     print("Interfaces {}".format(link.interface_list))
+        #     for interface in link.interface_list:
+        #         print("interface properties: {}".format(interface.list_properties()) )
+        #         for property in interface.list_properties():
+        #             print("interface Name {}, property: {}: {}".format(interface.name,property,interface.get_property(property)))
+
+
+
         sites = []
         site_locations = []
         for site in self.advertised_topology.sites.values():
@@ -428,8 +446,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         dashboard['header'] = header
 
         select_node_widget = widgets.Select(
-            options=[self.DEFAULT_NODE_SELECT_VALUE] + sorted(self.get_node_name_list()),
-            value=self.DEFAULT_NODE_SELECT_VALUE,
+            options=[ self.DEFAULT_NODE_SELECT_VALUE ],
+            value=self.DEFAULT_NODE_SELECT_VALUE ,
             disabled=False,
             ensure_option=True,
             tooltip='Choose node to edit',
@@ -437,10 +455,12 @@ class GeoTopologyEditor(AbcTopologyEditor):
         )
         select_node_widget.observe(self.node_dashboard_select_node_event, names='value')
         dashboard['select_node_widget'] = select_node_widget
-        select_node_hbox = widgets.HBox([widgets.Label(value="Select Node: ", layout=Layout(width='150px',
-                                                                                            min_height=self.base_min_height,
-                                                                                            overflow_y=self.base_overflow_y)),
-                                         select_node_widget], layout=self.base_layout)
+        select_node_hbox = widgets.HBox([widgets.Label(value="Select Node: ",
+                                         layout=Layout(width='150px',
+                                                       min_height=self.base_min_height,
+                                                       overflow_y=self.base_overflow_y)),
+                                         select_node_widget],
+                                         layout=self.base_layout)
         dashboard['select_node_hbox'] = select_node_hbox
 
         # Edit Node
@@ -451,7 +471,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         # Edit node fields
         node_name_widget = widgets.Text(
             # value='',
-            placeholder='Enter Node Name',
+            placeholder='Enter New Node Name',
             disabled=False,
             tooltip='Enter Node Name',
             layout=self.base_layout
@@ -546,16 +566,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
         # edit_node_accordion = widgets.Accordion(children=[edit_node_vbox ], layout=Layout(width='100%', min_height='300px', overflow_y='unset'))
         # edit_node_accordion.set_title(0, 'Edit Node Properties')
 
-        # ADD NODE BTN
-        save_node_btn = widgets.Button(
-            description='Save',
-            disabled=False,
-            tooltip='Click to update or save changes to this node',
-            layout=self.base_layout,
-        )
-        save_node_btn.style.button_color = self.FABRIC_PRIMARY
-        save_node_btn.on_click(self.node_dashboard_save_node)
-        dashboard['save_node_btn'] = save_node_btn
 
         delete_node_btn = widgets.Button(
             description='Delete',
@@ -577,7 +587,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         add_node_btn.style.button_color = self.FABRIC_PRIMARY
         add_node_btn.on_click(self.node_dashboard_add_node)
 
-        node_edit_button_hbox = widgets.HBox([save_node_btn, delete_node_btn, add_node_btn], layout=self.base_layout)
+        node_edit_button_hbox = widgets.HBox([add_node_btn, delete_node_btn], layout=self.base_layout)
         dashboard['node_edit_button_hbox'] = node_edit_button_hbox
 
         component_header = HTML('<center><b><hr></b><b>Components</b></center>')
@@ -910,7 +920,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
         Update Edit slice dashboard
         :return:
         """
-        # self.build_slice_dashboard_widget_list()
         self.editor_dashboard.children = self.dashboards['slice_dashboard']['widget_list']
 
     def set_edit_slice_dashboard(self, button):
@@ -919,25 +928,40 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param button:
         :return:
         """
+        self.set_dashboard('slice_dashboard')
         self.update_edit_slice_dashboard()
 
-    def rebuild_node_dashboard(self, node_name=DEFAULT_NODE_SELECT_VALUE):
+    def rebuild_node_dashboard(self, node_name=None):
         """
         Rebuild Node dashboard
         :param node_name:
         :return:
         """
+        print(" XX REBUILD NODE DASHBOARD XX")
         dashboard = self.dashboards['node_dashboard']
         # Init a dictionary of components
         dashboard['components'] = []
 
-        # Update node select widget
-        self.update_select_node_widget_option_name(node_name)
+        #Nodes from topology
+        experiment_topology = self.current_experiment['topology']
+        nodes = experiment_topology.nodes.keys()
 
-        dashboard['node_name_widget'].value = node_name
+        if len(nodes) > 0:
+            # Update node select widget
+            self.dashboards['node_dashboard']['select_node_widget'].options = sorted(self.get_node_name_list())
+            if node_name == None:
+                node_name = sorted(self.get_node_name_list())[0]
 
-        if node_name == self.DEFAULT_NODE_SELECT_VALUE:
+            self.update_select_node_widget_option_name(node_name)
+            dashboard['select_node_widget'].observe(self.node_dashboard_select_node_event, names='')
             dashboard['node_name_widget'].value = node_name
+            dashboard['select_node_widget'].observe(self.node_dashboard_select_node_event, names='value')
+
+        else:
+            self.dashboards['node_dashboard']['select_node_widget'].options = [ self.DEFAULT_NODE_SELECT_VALUE ]
+            self.dashboards['node_dashboard']['select_node_widget'].value = self.DEFAULT_NODE_SELECT_VALUE
+
+            dashboard['node_name_widget'].value = ''
             dashboard['site_name_widget'].value = self.DEFAULT_NODE_SITE_VALUE
             dashboard['core_slider'].value = self.DEFAULT_NODE_CORE_VALUE
             dashboard['ram_slider'].value = self.DEFAULT_NODE_RAM_VALUE
@@ -954,6 +978,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param button:
         :return:
         """
+        self.set_dashboard('node_dashboard')
+
         self.rebuild_node_dashboard()
 
     def update_edit_link_dashboard(self):
@@ -970,6 +996,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param button:
         :return:
         """
+        self.set_dashboard('link_dashboard')
+
         self.update_edit_link_dashboard()
 
     def add_node(self, node_name):
@@ -979,6 +1007,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :return:
         """
         try:
+            print("geo.add_node: {}".format(node_name))
             super().add_node(node_name)
 
             # Update the map markers/connections
@@ -992,40 +1021,14 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.dashboards['node_dashboard']['image_widget'].value = self.DEFAULT_NODE_IMAGE_VALUE
             self.dashboards['node_dashboard']['image_type_widget'].value = self.DEFAULT_NODE_IMAGE_TYPE_VALUE
             # self.update_select_node_widget_option_name(node_name=node_name, new_node=True)
-            self.rebuild_node_dashboard(node_name=node_name)
+            #self.rebuild_node_dashboard(node_name=node_name)
 
         except Exception as e:
             # TODO: Should create popup or other user facing error message
             print('Failed to add node. Error: ' + str(e))
             traceback.print_exc()
 
-    def save_node(self, node_name, site_name, cores, ram, disk, image, image_type):
-        """
-        Save node
-        :param node_name:
-        :param site_name:
-        :param cores:
-        :param ram:
-        :param disk:
-        :param image:
-        :param image_type:
-        :return:
-        """
-        try:
-            node = self.current_experiment['topology'].nodes[node_name]
 
-            # Save node properties to FABRIC topology
-            node.set_property(pname="name", pval=node_name)
-            node.set_property(pname="site", pval=site_name)
-
-            # Set capacities
-            cap = Capacities()
-            cap.set_fields(core=cores, ram=ram, disk=disk)
-            node.set_properties(capacities=cap, image_type=image_type, image_ref=image)
-        except Exception as e:
-            # TODO: Should create popup or other user facing error message
-            print('Failed to save node. Error: ' + str(e))
-            traceback.print_exc()
 
     def load_node(self, node_name):
         """
@@ -1035,6 +1038,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         try:
             node = self.current_experiment['topology'].nodes[node_name]
+            self.current_node = node
+
 
             self.dashboards['node_dashboard']['node_name_widget'].value = node_name
             self.dashboards['node_dashboard']['site_name_widget'].value = node.get_property(pname='site')
@@ -1043,6 +1048,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.dashboards['node_dashboard']['disk_slider'].value = float(self.get_capacity_value(node, 'disk'))
             self.dashboards['node_dashboard']['image_widget'].value = node.get_property(pname='image_ref')
             self.dashboards['node_dashboard']['image_type_widget'].value = node.get_property(pname='image_type')
+
+            self.current_node = node
         except Exception as e:
             # TODO: Should create popup or other user facing error message
             print('Failed to load node. Error: ' + str(e))
@@ -1118,9 +1125,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :return:
         """
         self.dashboards['node_dashboard']['select_node_widget'].observe(self.node_dashboard_select_node_event, names='')
-        self.dashboards['node_dashboard']['select_node_widget'].options = ['<Choose Node>'] + sorted(
-            self.get_node_name_list())
-        self.dashboards['node_dashboard']['select_node_widget'].value = name
+        if name:
+            self.dashboards['node_dashboard']['select_node_widget'].value = name
         self.dashboards['node_dashboard']['select_node_widget'].observe(self.node_dashboard_select_node_event,
                                                                         names='value')
 
@@ -1150,9 +1156,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
         # Save old node selection
         old_node_name = change['old']
-        if old_node_name != self.DEFAULT_NODE_SELECT_VALUE and \
-                old_node_name in self.current_experiment['topology'].nodes:
-            self.save_node(node_name=old_node_name,
+        if old_node_name != self.DEFAULT_NODE_SELECT_VALUE:
+            self.save_node(topology_node=self.current_node,
+                           node_name=self.dashboards['node_dashboard']['node_name_widget'].value,
                            site_name=self.dashboards['node_dashboard']['site_name_widget'].value,
                            cores=self.dashboards['node_dashboard']['core_slider'].value,
                            ram=self.dashboards['node_dashboard']['ram_slider'].value,
@@ -1161,32 +1167,11 @@ class GeoTopologyEditor(AbcTopologyEditor):
                            image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
         # Display new node selection
         new_node_name = change['new']
-        if new_node_name != self.DEFAULT_NODE_SELECT_VALUE:
+        if new_node_name != None and new_node_name != self.DEFAULT_NODE_SELECT_VALUE:
             self.load_node(new_node_name)
 
         # Re-draw node dashboard
         self.rebuild_node_dashboard(new_node_name)
-
-    def node_dashboard_save_node(self, button, **kwargs):
-        """
-        Node dashboard save node
-        :param button:
-        :param kwargs:
-        :return:
-        """
-        print('Save Node')
-        try:
-            self.save_node(node_name=self.dashboards['node_dashboard']['node_name_widget'].value,
-                           site_name=self.dashboards['node_dashboard']['site_name_widget'].value,
-                           cores=self.dashboards['node_dashboard']['core_slider'].value,
-                           ram=self.dashboards['node_dashboard']['ram_slider'].value,
-                           disk=self.dashboards['node_dashboard']['disk_slider'].value,
-                           image=self.dashboards['node_dashboard']['image_widget'].value,
-                           image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
-        except Exception as e:
-            # TODO: Should create popup or other user facing error message
-            print('Failed to save node values. Error: ' + str(e))
-            traceback.print_exc()
 
     def node_dashboard_add_node(self, button, **kwargs):
         """
@@ -1197,7 +1182,22 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         print('Add Node')
 
-        self.add_node(node_name=self.get_unique_node_name())
+        if self.current_node:
+            self.save_node(topology_node=self.current_node,
+                           node_name=self.dashboards['node_dashboard']['node_name_widget'].value,
+                           site_name=self.dashboards['node_dashboard']['site_name_widget'].value,
+                           cores=self.dashboards['node_dashboard']['core_slider'].value,
+                           ram=self.dashboards['node_dashboard']['ram_slider'].value,
+                           disk=self.dashboards['node_dashboard']['disk_slider'].value,
+                           image=self.dashboards['node_dashboard']['image_widget'].value,
+                           image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
+        else:
+            print("XXX Skiping save node b/c current_node = {}".format(self.current_node))
+
+        node_name = self.get_unique_node_name()
+        self.add_node(node_name=node_name)
+        self.load_node(node_name=node_name)
+        self.rebuild_node_dashboard(node_name=node_name)
 
     def node_dashboard_delete_node(self, button, **kwargs):
         """
@@ -1443,14 +1443,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
         self.rebuild_node_dashboard()
 
-    def main_dashboard_delete_all(self, button, **kwargs):
-        """
-        Main dashboard delete all
-        :param button:
-        :param kwargs:
-        :return:
-        """
-        print("main_dashboard_delete_all")
 
     def handle_draw(self, info, **kwargs):
         """
