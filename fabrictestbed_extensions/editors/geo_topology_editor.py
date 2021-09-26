@@ -375,11 +375,15 @@ class GeoTopologyEditor(AbcTopologyEditor):
         #     for property in link.list_properties():
         #         print("Link Name {}, property: {}: {}".format(link_name,property,link.get_property(property)))
         #     print("Link Name {}, Print: {}".format(link_name,link))
+        #     print("link owwner: {}".format(self.advertised_topology.get_owner_node(link)))
+        #     print("link parent: {}".format(self.advertised_topology.get_parent_element(link)))
+        #
         #     print("Interfaces {}".format(link.interface_list))
         #     for interface in link.interface_list:
         #         print("interface properties: {}".format(interface.list_properties()) )
-        #         for property in interface.list_properties():
-        #             print("interface Name {}, property: {}: {}".format(interface.name,property,interface.get_property(property)))
+        #         parent = self.advertised_topology.get_parent_element(interface)
+        #         print("interface parent: {}".format(parent))
+        #         print("interface owwner: {}".format(self.advertised_topology.get_owner_node(parent)))
 
 
 
@@ -1055,22 +1059,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
             print('Failed to load node. Error: ' + str(e))
             traceback.print_exc()
 
-    def delete_node(self):
-        """
-        Delete node
-        :param node_name: node name
-        :return:
-        """
-        print('Delete Node')
 
-        node_name = self.dashboards['node_dashboard']['node_name_widget'].value
-        super().delete_node(node_name)
-
-        # update the node dashboard
-        self.update_select_node_widget_option_name(self.DEFAULT_NODE_SELECT_VALUE)
-
-        # Re-draw node dashboard
-        self.rebuild_node_dashboard()
 
     def add_component(self):
         """
@@ -1206,7 +1195,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param kwargs:
         :return:
         """
-        self.delete_node(node_name)
+        super().delete_node(node_name=self.dashboards['node_dashboard']['node_name_widget'].value)
+        self.current_node = None
+        self.rebuild_node_dashboard()
 
     def delete_experiment(self, slice_name):
         """
