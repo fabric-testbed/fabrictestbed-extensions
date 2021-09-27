@@ -252,6 +252,15 @@ class AbcTopologyEditor(ABC):
 
         return capacities
 
+    def add_component(self, component_name, model_type, node=None):
+        if node == None:
+            node = self.current_node
+        if component_name == None:
+            component_name = self.get_unique_component_name()
+
+        print("abc.add_component  component_name {}".format(component_name))
+        node.add_component(model_type=model_type, name=component_name)
+
     def get_experiment_by_slice_id(self, slice_id):
         experiment = None
         try:
@@ -279,6 +288,9 @@ class AbcTopologyEditor(ABC):
 
         # Get all existing slices from FABRIC slice_manager
         status, existing_slices = self.slice_manager.slices(excludes=excludes)
+        if status != Status.OK:
+            print("slice_manager.slices: Status: {}, Error: {}".format(status,existing_slices))
+            existing_slices = []
 
         # Create new list of slices
         #new_experiments_list = []
@@ -384,17 +396,36 @@ class AbcTopologyEditor(ABC):
 
         return name
 
-    def get_unique_component_name(self):
+    # def get_unique_component_name(self):
+    #     """
+    #     Get unique component name
+    #     :return:
+    #     """
+    #     num = 1
+    #     name = 'dev' + str(num)
+    #     while len(list(filter(lambda x: x['component_name_widget'].value == name,
+    #                           self.dashboards['node_dashboard']['components']))) > 0:
+    #         num += 1
+    #         name = 'dev' + str(num)
+    #
+    #     return name
+
+    def get_unique_component_name(self, node=None):
         """
         Get unique component name
         :return:
         """
+        if node == None:
+            node = self.current_node
+
         num = 1
         name = 'dev' + str(num)
-        while len(list(filter(lambda x: x['component_name_widget'].value == name,
-                              self.dashboards['node_dashboard']['components']))) > 0:
-            num += 1
-            name = 'dev' + str(num)
+        for component_name, component in node.components.items():
+            if name == component_name:
+                num += 1
+                name = 'node' + str(num)
+            else:
+                break
 
         return name
 

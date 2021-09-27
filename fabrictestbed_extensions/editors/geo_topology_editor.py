@@ -48,7 +48,7 @@ from ipyleaflet import (
     CircleMarker,
     FullScreenControl
 )
-
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
     Capacities
@@ -101,6 +101,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
     #Current node selected in node dashboard
     current_node = None
 
+    DEFAULT_COMPONENT_MODEL=ComponentModelType.SharedNIC_ConnectX_6
 
 
     def __init__(self):
@@ -442,7 +443,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         dashboard = self.dashboards['node_dashboard'] = {}
 
         # Init a dictionary of compoenents
-        dashboard['components'] = []
+        dashboard['component_widgets'] = []
         dashboard['widget_list'] = []
 
         # Create Node Propertiees dashboard
@@ -609,6 +610,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
         add_component_button_hbox = widgets.HBox([add_component_btn], layout=self.base_layout)
         dashboard['add_component_button_hbox'] = add_component_button_hbox
 
+        #Initi component dict
+        dashboard['component_widgets'] = {}
+
         self.build_node_dashboard_widget_list()
 
     def build_node_dashboard_widget_list(self):
@@ -634,11 +638,11 @@ class GeoTopologyEditor(AbcTopologyEditor):
                                     dashboard['component_header'],
                                     dashboard['add_component_button_hbox'],
                                     ]
-            for component in dashboard['components']:
+            for component_name, component in dashboard['component_widgets'].items():
                 print(component)
                 node_dashboard_list.append(component['component_header'])
                 node_dashboard_list.append(component['component_name_hbox'])
-                node_dashboard_list.append(component['component_type_hbox'])
+                #node_dashboard_list.append(component['component_type_hbox'])
                 node_dashboard_list.append(component['component_model_hbox'])
 
         dashboard['widget_list'] = node_dashboard_list
@@ -944,24 +948,13 @@ class GeoTopologyEditor(AbcTopologyEditor):
         print(" XX REBUILD NODE DASHBOARD XX")
         dashboard = self.dashboards['node_dashboard']
         # Init a dictionary of components
-        dashboard['components'] = []
+        dashboard['component_widgets'] = []
 
         #Nodes from topology
         experiment_topology = self.current_experiment['topology']
         nodes = experiment_topology.nodes.keys()
 
-        if len(nodes) > 0:
-            # Update node select widget
-            self.dashboards['node_dashboard']['select_node_widget'].options = sorted(self.get_node_name_list())
-            if node_name == None:
-                node_name = sorted(self.get_node_name_list())[0]
-
-            self.update_select_node_widget_option_name(node_name)
-            dashboard['select_node_widget'].observe(self.node_dashboard_select_node_event, names='')
-            dashboard['node_name_widget'].value = node_name
-            dashboard['select_node_widget'].observe(self.node_dashboard_select_node_event, names='value')
-
-        else:
+        if len(nodes) == 0:
             self.dashboards['node_dashboard']['select_node_widget'].options = [ self.DEFAULT_NODE_SELECT_VALUE ]
             self.dashboards['node_dashboard']['select_node_widget'].value = self.DEFAULT_NODE_SELECT_VALUE
 
@@ -972,6 +965,97 @@ class GeoTopologyEditor(AbcTopologyEditor):
             dashboard['disk_slider'].value = self.DEFAULT_NODE_DISK_VALUE
             dashboard['image_type_widget'].value = self.DEFAULT_NODE_IMAGE_TYPE_VALUE
             dashboard['image_widget'].value = self.DEFAULT_NODE_IMAGE_VALUE
+
+            self.dashboards['node_dashboard']['component_widgets'] = {}
+
+        else:
+            # Update node select widget
+            self.dashboards['node_dashboard']['select_node_widget'].options = sorted(self.get_node_name_list())
+            if node_name == None:
+                node_name = sorted(self.get_node_name_list())[0]
+
+            self.update_select_node_widget_option_name(node_name)
+            dashboard['select_node_widget'].observe(self.node_dashboard_select_node_event, names='')
+            dashboard['node_name_widget'].value = node_name
+            dashboard['select_node_widget'].observe(self.node_dashboard_select_node_event, names='value')
+
+            component_header = HTML('<center><b><hr></b><b>Components</b></center>')
+            dashboard['component_header'] = component_header
+
+            add_component_btn = widgets.Button(
+                description='Add Component',
+                disabled=False,
+                tooltip='click to add a component',
+                layout=self.base_layout
+            )
+            dashboard['add_component_btn'] = add_component_btn
+            add_component_btn.style.button_color = self.FABRIC_PRIMARY
+            add_component_btn.on_click(self.node_dashboard_add_component)
+            add_component_button_hbox = widgets.HBox([add_component_btn], layout=self.base_layout)
+            dashboard['add_component_button_hbox'] = add_component_button_hbox
+
+            component_widgets = {}
+            for component_name, component in self.current_node.components.items():
+                component_widget = component_widgets[component_name] = {}
+
+                # Edit Node
+                component_header = HTML('<center><b><hr></b></center>')
+                component_widget['component_header'] = component_header
+
+                # Edit node fields
+                component_name_widget = widgets.Text(
+                    value=component.name,
+                    placeholder='Enter Component Name',
+                    disabled=False,
+                    tooltip='Enter Component Name',
+                    layout=self.base_layout
+                )
+                component_widget['component_name_widget'] = component_name_widget
+                component_name_hbox = widgets.HBox([widgets.Label(value="Name: ",
+                                                                  layout=Layout(width='70px',
+                                                                                min_height=self.base_min_height,
+                                                                                overflow_y=self.base_overflow_y)),
+                                                    component_name_widget], layout=self.base_layout)
+                component_widget['component_name_hbox'] = component_name_hbox
+
+                # component_type_widget = widgets.Dropdown(
+                #     options=['<Any Type>'] + sorted(self.get_component_type_list()),
+                #     value='<Any Type>',
+                #     disabled=False,
+                #     ensure_option=True,
+                #     tooltip='Choose Component Type',
+                #     layout=self.base_layout
+                # )
+                # component_widget['component_type_widget'] = component_type_widget
+                # component_type_hbox = widgets.HBox([widgets.Label(value="Type: ",
+                #                                                   layout=Layout(width='70px',
+                #                                                                 min_height=self.base_min_height,
+                #                                                                 overflow_y=self.base_overflow_y)),
+                #                                     component_type_widget], layout=self.base_layout)
+                # component_widget['component_type_hbox'] = component_type_hbox
+
+                component_model_widget = widgets.Dropdown(
+                    options=['<Choose Component Model>'] + self.get_component_widget_options_list(),
+                    value='<Choose Component Model>',
+                    disabled=False,
+                    ensure_option=True,
+                    tooltip='Choose Component Model',
+                    layout=self.base_layout
+                )
+                component_widget['component_model_widget'] = component_model_widget
+                component_model_hbox = widgets.HBox([widgets.Label(value="Model: ",
+                                                                   layout=Layout(width='70px',
+                                                                                 min_height=self.base_min_height,
+                                                                                 overflow_y=self.base_overflow_y)),
+                                                     component_model_widget], layout=self.base_layout)
+                component_widget['component_model_hbox'] = component_model_hbox
+
+            self.dashboards['node_dashboard']['component_widgets'] = component_widgets
+
+
+
+
+
 
         self.build_node_dashboard_widget_list()
         self.editor_dashboard.children = self.dashboards['node_dashboard']['widget_list']
@@ -1052,6 +1136,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.dashboards['node_dashboard']['disk_slider'].value = float(self.get_capacity_value(node, 'disk'))
             self.dashboards['node_dashboard']['image_widget'].value = node.get_property(pname='image_ref')
             self.dashboards['node_dashboard']['image_type_widget'].value = node.get_property(pname='image_type')
+
+            #TODO: LOAD Components
+
 
             self.current_node = node
         except Exception as e:
@@ -1373,64 +1460,10 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         # Add a compopnent to the current node dashboard
         print("node_dashboard_add_component")
-        dashboard = self.dashboards['node_dashboard']
-        component_widgets = {}
+        component_name= self.get_unique_component_name()
+        model_type=self.DEFAULT_COMPONENT_MODEL
+        super().add_component(component_name, model_type)
 
-        # Edit Node
-        component_header = HTML('<center><b><hr></b></center>')
-        component_widgets['component_header'] = component_header
-
-        initial_unique_component_name = self.get_unique_component_name()
-        print("initial_unique_node_name: " + initial_unique_component_name)
-        # Edit node fields
-        component_name_widget = widgets.Text(
-            value=initial_unique_component_name,
-            placeholder='Enter Component Name',
-            disabled=False,
-            tooltip='Enter Component Name',
-            layout=self.base_layout
-        )
-        component_widgets['component_name_widget'] = component_name_widget
-        component_name_hbox = widgets.HBox([widgets.Label(value="Name: ",
-                                                          layout=Layout(width='70px',
-                                                                        min_height=self.base_min_height,
-                                                                        overflow_y=self.base_overflow_y)),
-                                            component_name_widget], layout=self.base_layout)
-        component_widgets['component_name_hbox'] = component_name_hbox
-
-        component_type_widget = widgets.Dropdown(
-            options=['<Any Type>'] + sorted(self.get_component_type_list()),
-            value='<Any Type>',
-            disabled=False,
-            ensure_option=True,
-            tooltip='Choose Component Type',
-            layout=self.base_layout
-        )
-        component_widgets['component_type_widget'] = component_type_widget
-        component_type_hbox = widgets.HBox([widgets.Label(value="Type: ",
-                                                          layout=Layout(width='70px',
-                                                                        min_height=self.base_min_height,
-                                                                        overflow_y=self.base_overflow_y)),
-                                            component_type_widget], layout=self.base_layout)
-        component_widgets['component_type_hbox'] = component_type_hbox
-
-        component_model_widget = widgets.Dropdown(
-            options=['<Choose Component Model>'] + self.get_component_widget_options_list(),
-            value='<Choose Component Model>',
-            disabled=False,
-            ensure_option=True,
-            tooltip='Choose Component Model',
-            layout=self.base_layout
-        )
-        component_widgets['component_model_widget'] = component_model_widget
-        component_model_hbox = widgets.HBox([widgets.Label(value="Model: ",
-                                                           layout=Layout(width='70px',
-                                                                         min_height=self.base_min_height,
-                                                                         overflow_y=self.base_overflow_y)),
-                                             component_model_widget], layout=self.base_layout)
-        component_widgets['component_model_hbox'] = component_model_hbox
-
-        dashboard = self.dashboards['node_dashboard']['components'].append(component_widgets)
 
         self.rebuild_node_dashboard()
 
