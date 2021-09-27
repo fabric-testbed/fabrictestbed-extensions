@@ -1,6 +1,7 @@
 ipycytoscape
 ipywidgets
 ipyleaflet
+ipycytoscape
 fabrictestbed==1.1b7
 urllib3==1.26.5
 six==1.15.0
