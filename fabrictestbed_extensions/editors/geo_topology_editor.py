@@ -368,23 +368,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
             except Exception as e:
                 print('Failed to add site: ' + str(site) + '. Error: ' + str(e))
                 # traceback.print_exc()
-
-        # Add the links (TODO: What will this look like?)
-        # Create Links (cheating for now)
-        # for link_name, link in self.advertised_topology.links.items():
-        #     print("properties: {}".format(link.list_properties()) )
-        #     for property in link.list_properties():
-        #         print("Link Name {}, property: {}: {}".format(link_name,property,link.get_property(property)))
-        #     print("Link Name {}, Print: {}".format(link_name,link))
-        #     print("link owwner: {}".format(self.advertised_topology.get_owner_node(link)))
-        #     print("link parent: {}".format(self.advertised_topology.get_parent_element(link)))
-        #
-        #     print("Interfaces {}".format(link.interface_list))
-        #     for interface in link.interface_list:
-        #         print("interface properties: {}".format(interface.list_properties()) )
-        #         parent = self.advertised_topology.get_parent_element(interface)
-        #         print("interface parent: {}".format(parent))
-        #         print("interface owwner: {}".format(self.advertised_topology.get_owner_node(parent)))
+                
         for link_name, link in self.advertised_topology.links.items():
             print("link_name {}, {}".format(link_name,link))
             print("\n\n Interfaces {}".format(link.interface_list))
