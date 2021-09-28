@@ -385,26 +385,26 @@ class GeoTopologyEditor(AbcTopologyEditor):
         #         parent = self.advertised_topology.get_parent_element(interface)
         #         print("interface parent: {}".format(parent))
         #         print("interface owwner: {}".format(self.advertised_topology.get_owner_node(parent)))
+        for link_name, link in self.advertised_topology.links.items():
+            print("link_name {}, {}".format(link_name,link))
+            print("\n\n Interfaces {}".format(link.interface_list))
 
+            #Source
+            source_interface = link.interface_list[0]
+            source_parent = self.advertised_topology.get_parent_element(source_interface)
+            source_node=self.advertised_topology.get_owner_node(source_parent)
+            source_location=source_node.get_property("location").to_latlon()
 
+            #Target
+            target_interface = link.interface_list[1]
+            target_parent = self.advertised_topology.get_parent_element(target_interface)
+            target_node=self.advertised_topology.get_owner_node(target_parent)
+            target_location=target_node.get_property("location").to_latlon()
 
-        sites = []
-        site_locations = []
-        for site in self.advertised_topology.sites.values():
-            try:
-                site_locations.append(site.get_property("location").to_latlon())
-                sites.append(site)
-            except Exception as e:
-                print('Failed to add site: ' + str(site) + '. Error: ' + str(e))
-                # traceback.print_exc()
+            #Build edge
 
-        paths = {}
-        for i, site in enumerate(sites):
-            # site_locations.append(site.get_property("location").to_latlon())
-            path_locations = [sites[i].get_property("location").to_latlon(),
-                              sites[(i + 1) % len(sites)].get_property("location").to_latlon()]
             ant_path = AntPath(
-                locations=path_locations,
+                locations=[source_location,target_location],
                 dash_array=[1, 10],
                 delay=1000,
                 color='#7590ba',
@@ -414,8 +414,41 @@ class GeoTopologyEditor(AbcTopologyEditor):
                 description='Task'
             )
 
-            ant_path.on_click(functools.partial(self.ant_path, path_name=i))
+            ant_path.on_click(functools.partial(self.ant_path, path_name=link_name))
             self.available_resources_layer_group.add_layer(ant_path)
+
+
+
+
+        #
+        # sites = []
+        # site_locations = []
+        # for site_name, site in self.advertised_topology.sites.items():
+        #     try:
+        #         site_locations.append(site.get_property("location").to_latlon())
+        #         sites.append(site)
+        #     except Exception as e:
+        #         print('Failed to add site: ' + str(site) + '. Error: ' + str(e))
+        #         # traceback.print_exc()
+        #
+        # paths = {}
+        # for i, site in enumerate(sites):
+        #     # site_locations.append(site.get_property("location").to_latlon())
+        #     path_locations = [sites[i].get_property("location").to_latlon(),
+        #                       sites[(i + 1) % len(sites)].get_property("location").to_latlon()]
+        #     ant_path = AntPath(
+        #         locations=path_locations,
+        #         dash_array=[1, 10],
+        #         delay=1000,
+        #         color='#7590ba',
+        #         pulse_color=self.FABRIC_PRIMARY,
+        #         paused=True,
+        #         hardwareAccelerated=True,
+        #         description='Task'
+        #     )
+        #
+        #     ant_path.on_click(functools.partial(self.ant_path, path_name=i))
+        #     self.available_resources_layer_group.add_layer(ant_path)
 
         # Update node Dashboard
         site_name_list = ['<Choose Site>'] + sorted(site_name_list)

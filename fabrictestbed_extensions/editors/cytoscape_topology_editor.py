@@ -103,12 +103,27 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
             print("site_name: {}".format(site_name))
             cy_nodes.append({ 'data': { 'id': site_name, 'name': site_name, 'href': 'http://cytoscape.org' }})
 
-        cy_edges.append({'data': { 'source': 'RENC', 'target': 'UKY' }})
-        cy_edges.append({'data': { 'source': 'UKY', 'target': 'LBNL' }})
-        cy_edges.append({'data': { 'source': 'LBNL', 'target': 'RENC' }})
+        #cy_edges.append({'data': { 'source': 'RENC', 'target': 'UKY' }})
+        #cy_edges.append({'data': { 'source': 'UKY', 'target': 'LBNL' }})
+        #cy_edges.append({'data': { 'source': 'LBNL', 'target': 'RENC' }})
 
         for link_name, link in self.advertised_topology.links.items():
             print("link_name {}, {}".format(link_name,link))
+            print("\n\n Interfaces {}".format(link.interface_list))
+
+            #Source
+            source_interface = link.interface_list[0]
+            source_parent = self.advertised_topology.get_parent_element(source_interface)
+            source_node=self.advertised_topology.get_owner_node(source_parent)
+
+            #Target
+            target_interface = link.interface_list[1]
+            target_parent = self.advertised_topology.get_parent_element(target_interface)
+            target_node=self.advertised_topology.get_owner_node(target_parent)
+
+            #Build edge
+            cy_edges.append({'data': { 'source': source_node.name, 'target': target_node.name }})
+
 
 
     def start(self):
