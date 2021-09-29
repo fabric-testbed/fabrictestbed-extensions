@@ -40,6 +40,7 @@ from fabrictestbed.slice_editor import (
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 import ipycytoscape as cy
+from IPython.display import display
 from ipywidgets import Output
 
 from .abc_topology_editor import AbcTopologyEditor
