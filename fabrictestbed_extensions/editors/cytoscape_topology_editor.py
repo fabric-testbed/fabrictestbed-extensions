@@ -94,6 +94,30 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
                         }}
                         ])
 
+    def set_style2(self):
+        self.cytoscapeobj.set_style([{
+                        'selector': 'node',
+                        'css': {
+                            'content': 'data(name)',
+                            'text-valign': 'center',
+                            'color': 'white',
+                            'text-outline-width': 2,
+                            'text-outline-color': self.FABRIC_PRIMARY_DARK,
+                            'background-color': self.FABRIC_SECONDARY
+                        }
+                        },
+                        {
+                        'selector': ':selected',
+                        'css': {
+                            'background-color': self.FABRIC_PRIMARY_DARK,
+                            'line-color': self.FABRIC_PRIMARY_DARK,
+                            'target-arrow-color': self.FABRIC_SECONDARY,
+                            'source-arrow-color': self.FABRIC_SECONDARY,
+                            'text-outline-color': self.FABRIC_SECONDARY
+                        }}
+                        ])
+
+
     def build_data(self):
         cy_nodes = self.data['nodes']
         cy_edges = self.data['edges']
@@ -124,6 +148,19 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
             #Build edge
             cy_edges.append({'data': { 'source': source_node.name, 'target': target_node.name }})
 
+    def setup_interaction(self):
+        #out = Output()
+        self.cytoscapeobj.on('node', 'click', self.log_clicks)
+        self.cytoscapeobj.on('node', 'mouseover', self.log_mouseovers)
+
+    def log_clicks(self):
+        with self.out:
+            print('click: {}'.format(str(node)))
+            self.set_style2()
+
+    def log_mouseovers(node):
+        with self.out:
+            print('mouseovers: {}'.format(str(node))
 
 
     def start(self):
@@ -132,10 +169,11 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         :return:
         """
 
+        self.set_style()
+        self.setup_interaction()
         self.build_data()
         self.cytoscapeobj.graph.add_graph_from_json(self.data)
 
-        self.set_style()
 
 
         return self.cytoscapeobj

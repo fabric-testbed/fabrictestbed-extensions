@@ -288,6 +288,8 @@ class AbcTopologyEditor(ABC):
 
         # Get all existing slices from FABRIC slice_manager
         status, existing_slices = self.slice_manager.slices(excludes=excludes)
+
+        # TODO: Remove this
         if status != Status.OK:
             print("slice_manager.slices: Status: {}, Error: {}".format(status,existing_slices))
             existing_slices = []
