@@ -168,6 +168,7 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         self.build_data()
         self.cytoscapeobj.graph.add_graph_from_json(self.data)
 
+        display(self.cytoscapeobj)
+        display(self.out)
 
-
-        return self.out, self.cytoscapeobj
+        #return self.out, self.cytoscapeobj
