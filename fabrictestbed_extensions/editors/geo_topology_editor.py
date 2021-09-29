@@ -368,38 +368,41 @@ class GeoTopologyEditor(AbcTopologyEditor):
             except Exception as e:
                 print('Failed to add site: ' + str(site) + '. Error: ' + str(e))
                 # traceback.print_exc()
-                
+
         for link_name, link in self.advertised_topology.links.items():
-            print("link_name {}, {}".format(link_name,link))
-            print("\n\n Interfaces {}".format(link.interface_list))
+            try:
+                #Source
+                source_interface = link.interface_list[0]
+                source_parent = self.advertised_topology.get_parent_element(source_interface)
+                source_node=self.advertised_topology.get_owner_node(source_parent)
+                print ("Source node: {}".format(source_node))
+                source_location=source_node.get_property("location").to_latlon()
 
-            #Source
-            source_interface = link.interface_list[0]
-            source_parent = self.advertised_topology.get_parent_element(source_interface)
-            source_node=self.advertised_topology.get_owner_node(source_parent)
-            source_location=source_node.get_property("location").to_latlon()
+                #Target
+                target_interface = link.interface_list[1]
+                target_parent = self.advertised_topology.get_parent_element(target_interface)
+                target_node=self.advertised_topology.get_owner_node(target_parent)
+                print ("Target node: {}".format(target_node))
+                target_location=target_node.get_property("location").to_latlon()
 
-            #Target
-            target_interface = link.interface_list[1]
-            target_parent = self.advertised_topology.get_parent_element(target_interface)
-            target_node=self.advertised_topology.get_owner_node(target_parent)
-            target_location=target_node.get_property("location").to_latlon()
 
-            #Build edge
+                #Build edge
 
-            ant_path = AntPath(
-                locations=[source_location,target_location],
-                dash_array=[1, 10],
-                delay=1000,
-                color='#7590ba',
-                pulse_color=self.FABRIC_PRIMARY,
-                paused=True,
-                hardwareAccelerated=True,
-                description='Task'
-            )
+                ant_path = AntPath(
+                    locations=[source_location,target_location],
+                    dash_array=[1, 10],
+                    delay=1000,
+                    color='#7590ba',
+                    pulse_color=self.FABRIC_PRIMARY,
+                    paused=True,
+                    hardwareAccelerated=True,
+                    description='Task'
+                )
 
-            ant_path.on_click(functools.partial(self.ant_path, path_name=link_name))
-            self.available_resources_layer_group.add_layer(ant_path)
+                ant_path.on_click(functools.partial(self.ant_path, path_name=link_name))
+                self.available_resources_layer_group.add_layer(ant_path)
+            except:
+                print("Skiping link: {}".format(link) )
 
 
 
