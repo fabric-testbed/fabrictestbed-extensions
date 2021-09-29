@@ -40,6 +40,7 @@ from fabrictestbed.slice_editor import (
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 import ipycytoscape as cy
+from ipywidgets import Output
 
 from .abc_topology_editor import AbcTopologyEditor
 
@@ -68,10 +69,24 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         """
         super().__init__()
 
+        self.out = Output()
+
         self.cytoscapeobj = cy.CytoscapeWidget()
         self.data = { 'nodes': [], 'edges': [] }
 
-    def set_style(self):
+        self.style = 'secondary'
+
+    def toggle_style(self):
+
+        if self.style == 'primary':
+            self.style = 'secondary'
+            color = self.FABRIC_SECONDARY
+            dark_color = self.FABRIC_SECONDARY_DARK
+        elif self.style == 'secondary':
+            self.style = 'primary'
+            color = self.FABRIC_PRIMARY
+            dark_color = self.FABRIC_PRIMARY_DARK
+
         self.cytoscapeobj.set_style([{
                         'selector': 'node',
                         'css': {
@@ -79,43 +94,22 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
                             'text-valign': 'center',
                             'color': 'white',
                             'text-outline-width': 2,
-                            'text-outline-color': self.FABRIC_PRIMARY_DARK,
-                            'background-color': self.FABRIC_PRIMARY
+                            'text-outline-color': dark_color,
+                            'background-color': color
                         }
                         },
                         {
                         'selector': ':selected',
                         'css': {
-                            'background-color': self.FABRIC_PRIMARY_DARK,
-                            'line-color': self.FABRIC_PRIMARY_DARK,
-                            'target-arrow-color': self.FABRIC_PRIMARY,
-                            'source-arrow-color': self.FABRIC_PRIMARY,
-                            'text-outline-color': self.FABRIC_PRIMARY
+                            'background-color': dark_color,
+                            'line-color': dark_color,
+                            'target-arrow-color': color,
+                            'source-arrow-color': color,
+                            'text-outline-color': color
                         }}
                         ])
 
-    def set_style2(self):
-        self.cytoscapeobj.set_style([{
-                        'selector': 'node',
-                        'css': {
-                            'content': 'data(name)',
-                            'text-valign': 'center',
-                            'color': 'white',
-                            'text-outline-width': 2,
-                            'text-outline-color': self.FABRIC_PRIMARY_DARK,
-                            'background-color': self.FABRIC_SECONDARY
-                        }
-                        },
-                        {
-                        'selector': ':selected',
-                        'css': {
-                            'background-color': self.FABRIC_PRIMARY_DARK,
-                            'line-color': self.FABRIC_PRIMARY_DARK,
-                            'target-arrow-color': self.FABRIC_SECONDARY,
-                            'source-arrow-color': self.FABRIC_SECONDARY,
-                            'text-outline-color': self.FABRIC_SECONDARY
-                        }}
-                        ])
+
 
 
     def build_data(self):
@@ -150,17 +144,17 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
 
     def setup_interaction(self):
         #out = Output()
-        self.cytoscapeobj.on('node', 'click', self.log_clicks)
-        self.cytoscapeobj.on('node', 'mouseover', self.log_mouseovers)
+        self.cytoscapeobj.on('node', 'click', self.on_click)
+        self.cytoscapeobj.on('node', 'mouseover', self.on_mouseover)
 
-    def log_clicks(self):
+    def on_click(self, node):
         with self.out:
             print('click: {}'.format(str(node)))
-            self.set_style2()
+            self.toggle_style()
 
-    def log_mouseovers(node):
+    def on_mouseover(self, node):
         with self.out:
-            print('mouseovers: {}'.format(str(node))
+            print('mouseovers: {}'.format(str(node)))
 
 
     def start(self):
@@ -169,11 +163,11 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         :return:
         """
 
-        self.set_style()
+        self.toggle_style()
         self.setup_interaction()
         self.build_data()
         self.cytoscapeobj.graph.add_graph_from_json(self.data)
 
 
 
-        return self.cytoscapeobj
+        return self.out, self.cytoscapeobj
