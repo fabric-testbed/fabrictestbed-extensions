@@ -752,6 +752,17 @@ class GeoTopologyEditor(AbcTopologyEditor):
         # Slice Status Text
         slice_status_header = HTML('<center><b>Slice Status</b></center>')
 
+        slice_experiment_state_label = widgets.Label(value="Expeirment State: ",
+                                                      layout=Layout(width='80px',
+                                                                    min_height=self.base_min_height,
+                                                                    overflow_y=self.base_overflow_y))
+        slice_experiment_state_value = widgets.Label(value="", layout=Layout(width='150px',
+                                                                              min_height=self.base_min_height,
+                                                                              overflow_y=self.base_overflow_y))
+        dashboard['slice_experiment_state_value'] = slice_experiment_state_value
+        slice_experiment_state_widget_hbox = widgets.HBox([slice_experiment_state_label,
+                                                            slice_experiment_state_value])
+
         slice_status_slice_name_label = widgets.Label(value="Slice Name: ",
                                                       layout=Layout(width='80px',
                                                                     min_height=self.base_min_height,
@@ -806,6 +817,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         slice_status_graph_id_widget_hbox = widgets.HBox([slice_status_graph_id_label, slice_status_graph_id_value])
 
         slice_status_vbox = widgets.VBox([slice_status_header,
+                                          slice_experiment_state_widget_hbox,
                                           slice_status_slice_name_widget_hbox,
                                           slice_status_slice_id_widget_hbox,
                                           slice_status_slice_state_widget_hbox,
@@ -891,7 +903,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
                 #print("Node: " + str(self.current_experiment['topology'].nodes[node]))
                 site = self.current_experiment['topology'].nodes[node].get_property(pname='site')
                 #print("sites: " + str(self.advertised_topology.sites))
-                #print("Site: " +  site)
+                #printSite: " +  site)
 
                 location = self.advertised_topology.sites[site].get_property(pname='location').to_latlon()
                 if site not in slice_rack_markers:
@@ -919,8 +931,10 @@ class GeoTopologyEditor(AbcTopologyEditor):
             for node in self.current_experiment['topology'].nodes:
                 #print("Node: " + str(self.current_experiment['topology'].nodes[node]))
                 site = self.current_experiment['topology'].nodes[node].get_property(pname='site')
-                #print("sites: " + str(self.advertised_topology.sites))
-                #print("Site: " + site)
+
+                #Skip icon if site for node has not been picked
+                if site == self.DEFAULT_NODE_SITE_VALUE:
+                    continue
 
                 if site not in slice_rack_markers:
                     #print("ADDING MARKER: " + site)
@@ -956,6 +970,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         :param button:
         :return:
         """
+        self.save_node_widget_data()
         self.set_dashboard('slice_dashboard')
         self.update_edit_slice_dashboard()
 
@@ -1241,6 +1256,16 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
         self.update_select_node_widget_option_name(new_name)
 
+    def save_node_widget_data(self):
+        self.save_node(topology_node=self.current_node,
+                       node_name=self.dashboards['node_dashboard']['node_name_widget'].value,
+                       site_name=self.dashboards['node_dashboard']['site_name_widget'].value,
+                       cores=self.dashboards['node_dashboard']['core_slider'].value,
+                       ram=self.dashboards['node_dashboard']['ram_slider'].value,
+                       disk=self.dashboards['node_dashboard']['disk_slider'].value,
+                       image=self.dashboards['node_dashboard']['image_widget'].value,
+                       image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
+
     def node_dashboard_select_node_event(self, change):
         """
         Node dashboard select node event
@@ -1253,14 +1278,15 @@ class GeoTopologyEditor(AbcTopologyEditor):
         # Save old node selection
         old_node_name = change['old']
         if old_node_name != self.DEFAULT_NODE_SELECT_VALUE:
-            self.save_node(topology_node=self.current_node,
-                           node_name=self.dashboards['node_dashboard']['node_name_widget'].value,
-                           site_name=self.dashboards['node_dashboard']['site_name_widget'].value,
-                           cores=self.dashboards['node_dashboard']['core_slider'].value,
-                           ram=self.dashboards['node_dashboard']['ram_slider'].value,
-                           disk=self.dashboards['node_dashboard']['disk_slider'].value,
-                           image=self.dashboards['node_dashboard']['image_widget'].value,
-                           image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
+            self.save_node_widget_data()
+            #self.save_node(topology_node=self.current_node,
+            #               node_name=self.dashboards['node_dashboard']['node_name_widget'].value,
+            #               site_name=self.dashboards['node_dashboard']['site_name_widget'].value,
+            #               cores=self.dashboards['node_dashboard']['core_slider'].value,
+            #               ram=self.dashboards['node_dashboard']['ram_slider'].value,
+            #               disk=self.dashboards['node_dashboard']['disk_slider'].value,
+            #               image=self.dashboards['node_dashboard']['image_widget'].value,
+            #               image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
         # Display new node selection
         new_node_name = change['new']
         if new_node_name != None and new_node_name != self.DEFAULT_NODE_SELECT_VALUE:
@@ -1371,12 +1397,15 @@ class GeoTopologyEditor(AbcTopologyEditor):
                self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = slice.slice_state
                self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = slice.lease_end
                self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = slice.graph_id
+               self.dashboards['slice_dashboard']['slice_experiment_state_value'].value = self.current_experiment['editor_slice_state']
            else:
                self.dashboards['slice_dashboard']['slice_status_slice_name_value'].value = self.current_experiment['slice_name']
-               self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = self.current_experiment['editor_slice_state']
+               self.dashboards['slice_dashboard']['slice_status_slice_state_value'].value = "new slice"
                self.dashboards['slice_dashboard']['slice_status_slice_id_value'].value = ""
                self.dashboards['slice_dashboard']['slice_status_lease_end_value'].value = ""
                self.dashboards['slice_dashboard']['slice_status_graph_id_value'].value = ""
+               self.dashboards['slice_dashboard']['slice_experiment_state_value'].value = self.current_experiment['editor_slice_state']
+
 
         return slice_names
 
