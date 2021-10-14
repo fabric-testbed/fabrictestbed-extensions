@@ -46,7 +46,7 @@ from .abc_test import AbcTest
 from .. import images
 
 
-class HelloFABRIC(AbcTest):
+class GPUTeslaT4Benchmark(AbcTest):
 
     def __init__(self):
         """
@@ -58,36 +58,33 @@ class HelloFABRIC(AbcTest):
 
 
 
-    def create_slice(self, slice_name, sites, node_count=1):
+    def create_slice(self, slice_name, site_name, node_count=1):
         image = 'default_centos_8'
         image_type = 'qcow2'
-        cores = 2
-        ram = 2
-        disk = 2
+        cores = 4
+        ram = 8
+        disk = 50
+        model_type = ComponentModelType.GPU_Tesla_T4
+        #Tesla_T4_component_type = ComponentType.Tesla_T4
+        #Tesla_T4_model = 'P4510'
+        Tesla_T4_name = 'gpu1'
 
         self.topology = ExperimentTopology()
 
-
-
-        # Set capacities
         cap = Capacities()
         cap.set_fields(core=cores, ram=ram, disk=disk)
 
-        for site in sites:
+        for node_num in range(0, node_count):
+            node_name="Tesla_T4-"+str(site_name)+"-"+str(node_num)
+            # Add node
+            n1 = self.topology.add_node(name=node_name, site=site_name)
 
-            for node_num in range(0, node_count):
-                node_name="hello-"+str(site)+"-"+str(node_num)
-                site_name=site
-                # Add node
-                #labels = Labels()
-                #labels.instance_parent = site.lower()+'-w'+str(node_num)+'.fabric-testbed.net'
+            # Set Properties
+            n1.set_properties(capacities=cap, image_type=image_type, image_ref=image)
 
-                node = self.topology.add_node(name=node_name, site=site_name)
-
-                # Set Properties
-                #node.set_properties(capacities=cap, image_type=image_type, image_ref=image, labels=labels)
-                node.set_properties(capacities=cap, image_type=image_type, image_ref=image)
-
+            # Add the PCI Tesla_T4 device
+            n1.add_component(model_type=model_type, name=Tesla_T4_name)
+            #n1.add_component(ctype=Tesla_T4_component_type, model=Tesla_T4_model, name=Tesla_T4_name)
 
         # Generate Slice Graph
         slice_graph = self.topology.serialize()
@@ -96,7 +93,8 @@ class HelloFABRIC(AbcTest):
         return_status, slice_reservations = self.slice_manager.create(slice_name=slice_name,
                                                     slice_graph=slice_graph,
                                                     ssh_key=self.node_ssh_key)
-        #time.sleep(5)
+
+
 
 
         if return_status == Status.OK:
@@ -105,13 +103,13 @@ class HelloFABRIC(AbcTest):
         else:
             print(f"Failure: {slice_reservations}")
 
-        #time.sleep(10)
+        #time.sleep(30)
 
         return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
 
         if return_status == Status.OK:
             self.slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
-            #self.slice = self.wait_for_slice(slice, progress=True, timeout=600)
+            #self.slice = self.wait_for_slice(slice, progress=True)
 
         #print()
         #print("Slice Name : {}".format(self.slice.slice_name))
@@ -119,13 +117,52 @@ class HelloFABRIC(AbcTest):
         #print("State      : {}".format(self.slice.slice_state))
         #print("Lease End  : {}".format(self.slice.lease_end))
 
-
-
     def config_test(self):
+        for node_name, node in self.topology.nodes.items():
+            #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            #print("Node:")
+            print("Config | ", end = '')
+            print(str(node_name) + " | ", end = '')
+            try:
+                print("{}".format(str(node_name)) + " | ", end = '')
 
-        pass
+                #print("   Name              : {}".format(node_name))
+                #print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
+                #print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
+                #print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
+                #print("   Image             : {}".format(node.image_ref))
+                #print("   Image Type        : {}".format(node.image_type))
+                #print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
+                print("{}".format(str(node.get_property(pname='label_allocations').instance_parent)).replace('\n','') + " | ", end = '')
+                #print("   Site              : {}".format(node.site))
+                print("{}".format(str(node.management_ip)).replace('\n','') + " | ", end = '')
+
+                #print("   Management IP     : {}".format(node.management_ip))
+                #print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
+                #print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
+                #print("   Components        : {}".format(node.components))
+                #print("   Interfaces        : {}".format(node.interfaces))
+                #print()
+                name = node_name
+                management_ip = node.management_ip
+
+                #print("------------------------- Test Output ---------------------------")
+                script= '#!/bin/bash  \n' \
+                'sudo yum install -y pciutils \n'
+                try:
+                    stdout_str = self.execute_script(node_username='centos', node=node, script=script)
+                    print("Done ")
+                except Exception as e:
+                    print("Fail {}".format(str(e)))
+                #print(str(stdout_str.replace('\n','')) + " | ", end = '')
+                #print("-----------------------------------------------------------------")
+                #stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
+            except Exception as e:
+                print ("Error in test: Error {}".format(e))
+                traceback.print_exc()
 
     def run_test(self):
+        self.config_test()
 
         for node_name, node in self.topology.nodes.items():
             #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
@@ -152,16 +189,17 @@ class HelloFABRIC(AbcTest):
 
                 hostname = reservation_id + '-' + name.lower()
 
-                expected_stdout = 'Hello, FABRIC from node ' + hostname + '\n'
+                expected_stdout = '3D controller: NVIDIA Corporation TU104GL [Tesla T4] (rev a1)'
 
                 #print("------------------------- Test Output ---------------------------")
                 script= '#!/bin/bash  \n' \
-                'echo Hello, FABRIC from node `hostname -s`   \n'
+                """lspci | grep Tesla \n"""
+                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(node_username='centos', node=node, script=script)
                 print(str(stdout_str.replace('\n','')) + " | ", end = '')
                 #print("-----------------------------------------------------------------")
                 #stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
-                if stdout_str == expected_stdout:
+                if expected_stdout in stdout_str:
                     print('Success')
                 else:
                     print('Fail')
@@ -171,12 +209,12 @@ class HelloFABRIC(AbcTest):
                 traceback.print_exc()
 
 
+
     def delete_slice(self):
-        status, result = self.slice_manager.delete(slice_object=self.slice)
+        status, result = self.slice_manager.delete(slice_id=self.slice.slice_id)
 
         #print("Response Status {}".format(status))
         #print("Response received {}".format(result))
-
 
     def get_existing_slice(self, slice_name):
         #Get existing slice
@@ -206,23 +244,22 @@ class HelloFABRIC(AbcTest):
         #print("State      : {}".format(self.slice.slice_state))
         #print("Lease End  : {}".format(self.slice.lease_end))
 
-
     def run_all(self, slice_name, sites=[], create_slice=True, run_test=True, delete=True, node_count=1):
-        for site in sites:
-            self.run(slice_name + "-" + site, create_slice=create_slice, run_test=run_test, delete=delete, sites=[site], node_count=node_count)
+        for site, node_count in sites:
+            #print("site: {}, node_count: {}".format(site,node_count))
+            self.run(slice_name + "-" + site, create_slice=create_slice, run_test=run_test, delete=delete, site=site, node_count=node_count)
 
-    def run(self, slice_name, create_slice=True, run_test=True, delete=True, sites=[], node_count=1):
+
+    def run(self, slice_name, create_slice=True, run_test=True, delete=True, site=None, node_count=1):
         """
         Run the test
         :return:
         """
-        #print(self.advertised_topology)
-
-        print("HelloFABRIC test, slice_name: {}, site: {}".format(slice_name,sites))
+        print("Tesla_T4 test, slice_name: {}, site: {}".format(slice_name,site))
         if create_slice:
             #print("Creating Slice")
             try:
-                self.create_slice(slice_name,sites,node_count=node_count)
+                self.create_slice(slice_name,site,node_count=node_count)
                 time.sleep(5)
 
                 self.slice = self.wait_for_slice(self.slice, progress=True, timeout=300+(20*node_count))
@@ -231,9 +268,9 @@ class HelloFABRIC(AbcTest):
             except Exception as e:
                 print("Create Slice FAILED. Error {}".format(e))
                 traceback.print_exc()
+            time.sleep(5*node_count)
 
 
-        time.sleep(5*node_count)
         self.get_existing_slice(slice_name)
         #time.sleep(60)
 

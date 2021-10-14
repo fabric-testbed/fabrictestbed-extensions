@@ -41,12 +41,12 @@ from fabrictestbed.slice_editor import (
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 
-from .abc_test import AbcTest
+from .abc_utils import AbcUtils
 
 from .. import images
 
 
-class HelloFABRIC(AbcTest):
+class SliceUtils(AbcUtils):
 
     def __init__(self):
         """
@@ -56,176 +56,65 @@ class HelloFABRIC(AbcTest):
         super().__init__()
 
 
+    @staticmethod
+    def delete_all():
+        slice_manager = AbcUtils.create_slice_manager()
 
+        return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
 
-    def create_slice(self, slice_name, sites, node_count=1):
-        image = 'default_centos_8'
-        image_type = 'qcow2'
-        cores = 2
-        ram = 2
-        disk = 2
-
-        self.topology = ExperimentTopology()
-
-
-
-        # Set capacities
-        cap = Capacities()
-        cap.set_fields(core=cores, ram=ram, disk=disk)
-
-        for site in sites:
-
-            for node_num in range(0, node_count):
-                node_name="hello-"+str(site)+"-"+str(node_num)
-                site_name=site
-                # Add node
-                #labels = Labels()
-                #labels.instance_parent = site.lower()+'-w'+str(node_num)+'.fabric-testbed.net'
-
-                node = self.topology.add_node(name=node_name, site=site_name)
-
-                # Set Properties
-                #node.set_properties(capacities=cap, image_type=image_type, image_ref=image, labels=labels)
-                node.set_properties(capacities=cap, image_type=image_type, image_ref=image)
-
-
-        # Generate Slice Graph
-        slice_graph = self.topology.serialize()
-
-        # Request slice from Orchestrator
-        return_status, slice_reservations = self.slice_manager.create(slice_name=slice_name,
-                                                    slice_graph=slice_graph,
-                                                    ssh_key=self.ssh_key)
-        #time.sleep(5)
-
-
-        if return_status == Status.OK:
-            slice_id = slice_reservations[0].get_slice_id()
-            print("Submitted slice creation request. Slice ID: {}".format(slice_id))
-        else:
-            print(f"Failure: {slice_reservations}")
-
-        #time.sleep(10)
-
-        return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
-
-        if return_status == Status.OK:
-            self.slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
-            self.slice = self.wait_for_slice(slice, progress=True, timeout=600)
-
-        print()
-        print("Slice Name : {}".format(self.slice.slice_name))
-        print("ID         : {}".format(self.slice.slice_id))
-        print("State      : {}".format(self.slice.slice_state))
-        print("Lease End  : {}".format(self.slice.lease_end))
+        for slice in slices:
+            return_status, result = slice_manager.delete(slice_object=slice)
+            print("Deleting Slice: {}.  Response Status {}".format(slice.slice_name,return_status))
 
 
 
-    def config_test(self):
+    @staticmethod
+    def get_slice(slice_name=None, slice_id=None):
+        slice_manager = AbcUtils.create_slice_manager()
 
-        pass
+        return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
+        try:
 
-    def run_test(self):
+            if slice_id:
+                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
+            elif slice_name:
+                slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
+            else:
+                raise Exception("Slice not found. Slice name or id requried. name: {}, slice_id: {}".format(str(name),str(slice_id)))
+        except:
+            raise Exception("Slice not found name: {}, slice_id: {}".format(str(name),str(slice_id)))
 
-        for node_name, node in self.topology.nodes.items():
-            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-            #print("Node:")
-            try:
-                print("   Name              : {}".format(node_name))
-                #print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
-                #print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
-                #print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
-                #print("   Image             : {}".format(node.image_ref))
-                #print("   Image Type        : {}".format(node.image_type))
-                print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
-                #print("   Site              : {}".format(node.site))
-                print("   Management IP     : {}".format(node.management_ip))
-                #print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
-                #print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
-                #print("   Components        : {}".format(node.components))
-                #print("   Interfaces        : {}".format(node.interfaces))
-                #print()
+        return slice
 
-                print("------------------------- Test Output ---------------------------")
-                script= '#!/bin/bash  \n' \
-                'echo Hello, FABRIC from node `hostname -s`   \n'
-                self.execute_script(node=node, script=script)
-                print("-----------------------------------------------------------------")
-            except Exception as e:
-                print ("Error in test: Error {}".format(e))
-                traceback.print_exc()
+    @staticmethod
+    def wait_for_slice(slice_name=None,slice_id=None,timeout=360,interval=10,progress=False):
+        slice_manager = AbcUtils.create_slice_manager()
+        slice = SliceUtils.get_slice(slice_name=slice_name, slice_id=slice_id)
 
+        timeout_start = time.time()
 
-    def delete_slice(self):
-        status, result = self.slice_manager.delete(slice_object=self.slice)
+        if progress: print("Waiting for slice .", end = '')
+        while time.time() < timeout_start + timeout:
+            return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
 
-        print("Response Status {}".format(status))
-        print("Response received {}".format(result))
+            if return_status == Status.OK:
+                slice = list(filter(lambda x: x.slice_name == slice.slice_name, slices))[0]
+                if slice.slice_state == "StableOK":
+                    if progress: print(" Slice state: {}".format(slice.slice_state))
+                    return slice
+                if slice.slice_state == "Closing" or slice.slice_state == "Dead" or slice.slice_state == "StableError":
+                    if progress: print(" Slice state: {}".format(slice.slice_state))
+                    return slice
+            else:
+                print(f"Failure: {slices}")
 
+            if progress: print(".", end = '')
+            time.sleep(interval)
 
-    def get_existing_slice(self, slice_name):
-        #Get existing slice
-        return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead, SliceState.Closing])
-
-        if return_status == Status.OK:
-            #for slice in slices:
-            #    print("{}:".format(slice.slice_name))
-            #    print("   ID         : {}".format(slice.slice_id))
-            #    print("   State      : {}".format(slice.slice_state))
-            #    print("   Lease End  : {}".format(slice.lease_end))
-            print("got Slice")
-        else:
-            print(f"Failure: {slices}")
-
-        self.slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
-        status, self.topology = self.slice_manager.get_slice_topology(slice_object=self.slice)
-        if return_status == Status.OK:
-            print("got topology")
-        else:
-            print(f"Failure: {self.topology}")
-
-        print("Slice Name : {}".format(self.slice.slice_name))
-        print("ID         : {}".format(self.slice.slice_id))
-        print("State      : {}".format(self.slice.slice_state))
-        print("Lease End  : {}".format(self.slice.lease_end))
-
-
-    def run(self, slice_name, create_slice=True, run_test=True, delete=True, sites=[], node_count=1):
-        """
-        Run the test
-        :return:
-        """
-        #print(self.advertised_topology)
-
-        print("HelloFABRIC test, slice_name: {}, site: {}".format(slice_name,sites))
-        if create_slice:
-            print("Creating Slice")
-            try:
-                self.create_slice(slice_name,sites,node_count=node_count)
-                time.sleep(10)
-
-                self.slice = self.wait_for_slice(self.slice, progress=True, timeout=600)
-                #time.sleep(10)
-
-            except Exception as e:
-                print("Create Slice FAILED. Error {}".format(e))
-                traceback.print_exc()
-
-
-        time.sleep(600)
-        self.get_existing_slice(slice_name)
-        #time.sleep(60)
-
-        if run_test:
-            try:
-                print("Run Test")
-                self.run_test()
-            except Exception as e:
-                print("Run test FAILED. Error {}".format(e))
-                traceback.print_exc()
-        if delete:
-            try:
-                print("Delete Slice")
-                self.delete_slice()
-            except:
-                print("Delete FAILED")
+        if time.time() >= timeout_start + timeout:
+            if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+            return slice

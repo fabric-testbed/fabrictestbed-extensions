@@ -69,7 +69,7 @@ class AbcTest(ABC):
     def wait_for_slice(self,slice,timeout=360,interval=10,progress=False):
         timeout_start = time.time()
 
-        if progress: print("Waiting for slice .", end = '')
+        if progress: print("Waiting for slice {} .".format(self.slice.slice_name), end = '')
         while time.time() < timeout_start + timeout:
             return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
 
@@ -102,40 +102,46 @@ class AbcTest(ABC):
     def execute_script(self, node_username, node, script):
         import paramiko
 
-        management_ip = str(node.get_property(pname='management_ip'))
-        print("Node {0} IP {1}".format(node.name, management_ip))
+        try:
+            management_ip = str(node.get_property(pname='management_ip'))
+            #print("Node {0} IP {1}".format(node.name, management_ip))
 
-        key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
+            key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
 
-        bastion=paramiko.SSHClient()
-        bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
+            bastion=paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
 
-        bastion_transport = bastion.get_transport()
-        if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.bastion_private_ipv4_addr, 22)
-        elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.bastion_private_ipv6_addr, 22)
-        else:
-            print ('Management IP Invalid: {}'.format(management_ip))
+            bastion_transport = bastion.get_transport()
+            if self.validIPAddress(management_ip) == 'IPv4':
+                src_addr = (self.bastion_private_ipv4_addr, 22)
+            elif self.validIPAddress(management_ip) == 'IPv6':
+                src_addr = (self.bastion_private_ipv6_addr, 22)
+            else:
+                return 'Management IP Invalid: {}'.format(management_ip)
 
-        dest_addr = (management_ip, 22)
-        bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+            dest_addr = (management_ip, 22)
+            bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
 
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client = paramiko.SSHClient()
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+            client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
 
-        stdin, stdout, stderr = client.exec_command('echo \"' + script + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
-        print ('')
-        print (str(stdout.read(),'utf-8').replace('\\n','\n'))
+            stdin, stdout, stderr = client.exec_command('echo \"' + script + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
+            stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
+            #print ('')
+            #print (str(stdout.read(),'utf-8').replace('\\n','\n'))
+            #print (stdout_str)
 
-        client.close()
+            client.close()
+        except Exception as e:
+            return str(e)
 
+        return stdout_str
 
 
     @abstractmethod

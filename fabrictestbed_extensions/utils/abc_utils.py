@@ -33,70 +33,44 @@ from fabric_cf.orchestrator.orchestrator_proxy import SliceState
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 
-class AbcTest(ABC):
-
-    def __init__(self):
-        self.slice_manager = SliceManager()
-        self.advertised_topology = None
-        self.slice = None
-        self.topology = None
-        self.ssh_key = None
-        with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as fd:
-            self.ssh_key = fd.read().strip()
-        self.ssh_key_priv_file=os.environ['HOME'] + "/.ssh/id_rsa"
-
-        self.pull_advertised_topology()
-
-    def pull_advertised_topology(self):
-        return_status, self.advertised_topology = self.slice_manager.resources()
-        if return_status != Status.OK:
-            print("Failed to get advertised_topology: {}".format(self.advertised_topology))
+class AbcUtils(ABC):
 
 
-    def wait_for_slice(self,slice,timeout=360,interval=10,progress=False):
-        timeout_start = time.time()
+    bastion_username = 'pruth'
+    bastion_keyfile = ''
 
-        if progress: print("Waiting for slice .", end = '')
-        while time.time() < timeout_start + timeout:
-            return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+    bastion_public_addr = 'bastion-1.fabric-testbed.net'
+    bastion_private_ipv4_addr = '192.168.11.226'
+    bastion_private_ipv6_addr = '2600:2701:5000:a902::c'
 
-            if return_status == Status.OK:
-                slice = list(filter(lambda x: x.slice_name == self.slice.slice_name, slices))[0]
-                if slice.slice_state == "StableOK":
-                    if progress: print(" Slice state: {}".format(slice.slice_state))
-                    return slice
-                if slice.slice_state == "Closing" or slice.slice_state == "Dead" or slice.slice_state == "StableError":
-                    if progress: print(" Slice state: {}".format(slice.slice_state))
-                    return slice
-            else:
-                print(f"Failure: {slices}")
+        #self.bastion_key_filename = '/Users/pruth/FABRIC/TESTING/pruth_fabric_rsa'
+    bastion_key_filename = os.environ['HOME'] + "/.ssh/pruth_fabric_rsa"
 
-            if progress: print(".", end = '')
-            time.sleep(interval)
+    node_ssh_key = None
+    with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as fd:
+        node_ssh_key = fd.read().strip()
+    node_ssh_key_priv_file=os.environ['HOME'] + "/.ssh/id_rsa"
 
-        if time.time() >= timeout_start + timeout:
-            if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
-            return slice
+    @staticmethod
+    def create_slice_manager():
+        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
+        print(f"FABRIC Credential Manager   : {credmgr_host}")
 
-    def execute_script(self, node, script):
-        import paramiko
+        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
+        print(f"FABRIC Orchestrator         : {orchestrator_host}")
 
-        key = paramiko.RSAKey.from_private_key_file(self.ssh_key_priv_file)
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        slice_manager = SliceManager(oc_host=orchestrator_host,
+                             cm_host=credmgr_host,
+                             project_name='all',
+                             scope='all')
 
-        management_ip = str(node.get_property(pname='management_ip'))
-        print("Node {0} IP {1}".format(node.name, management_ip))
+        # Initialize the slice manager
+        slice_manager.initialize()
 
-        client.connect(management_ip,username='centos',pkey = key)
+        return slice_manager
 
-        stdin, stdout, stderr = client.exec_command('echo \"' + script + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
-        print ('')
-        print (str(stdout.read(),'utf-8').replace('\\n','\n'))
 
-        client.close()
+
 
 
     @abstractmethod
