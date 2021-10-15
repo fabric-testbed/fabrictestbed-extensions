@@ -68,11 +68,19 @@ class SliceUtils(AbcUtils):
             return_status, result = slice_manager.delete(slice_object=slice)
             print("Deleting Slice: {}.  Response Status {}".format(slice.slice_name,return_status))
 
+    @staticmethod
+    def delete_slice(slice_name=None, slice_id=None):
+        slice = SliceUtils.get_slice(slice_name=slice_name, slice_id=slice_id)
+
+        slice_manager = AbcUtils.create_slice_manager()
+        return_status, result = slice_manager.delete(slice_object=slice)
+        print("Deleting Slice: {}.  Response Status {}".format(slice.slice_name,return_status))
 
 
     @staticmethod
-    def get_slice(slice_name=None, slice_id=None):
-        slice_manager = AbcUtils.create_slice_manager()
+    def get_slice(slice_name=None, slice_id=None, slice_manager=None):
+        if not slice_manager:
+            slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
         if return_status != Status.OK:
@@ -84,11 +92,63 @@ class SliceUtils(AbcUtils):
             elif slice_name:
                 slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
             else:
-                raise Exception("Slice not found. Slice name or id requried. name: {}, slice_id: {}".format(str(name),str(slice_id)))
+                raise Exception("Slice not found. Slice name or id requried. name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
         except:
-            raise Exception("Slice not found name: {}, slice_id: {}".format(str(name),str(slice_id)))
+            raise Exception("Slice not found name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
 
         return slice
+
+    @staticmethod
+    def list_all_slices(excludes=[SliceState.Dead,SliceState.Closing]):
+        slice_manager = AbcUtils.create_slice_manager()
+
+        return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
+        try:
+            for slice in slices:
+                print("{} | {} | {}".format(slice.slice_name, slice.slice_id, slice.slice_state))
+        except:
+            raise Exception("Slice not found name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
+
+        return slice
+
+
+    @staticmethod
+    def get_slice_error(slice_id):
+        slice_manager = AbcUtils.create_slice_manager()
+
+        return_status, slices = slice_manager.slices(includes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
+        try:
+
+            if slice_id:
+                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
+            else:
+                raise Exception("Slice not found. Slice name or id requried. slice_id: {}".format(str(slice_id)))
+        except:
+            raise Exception("Slice not found slice_id: {}".format(str(slice_id)))
+
+
+        return_status, slivers = slice_manager.slivers(slice_object=slice)
+        if return_status != Status.OK:
+            raise Exception("Failed to get slivers: {}".format(slivers))
+
+        return_errors = []
+        for s in slivers:
+            status, sliver_status = slice_manager.sliver_status(sliver=s)
+
+            #print("Response Status {}".format(status))
+            if status == Status.OK:
+                #print()
+                #print("Sliver Status {}".format(sliver_status.notices))
+                #print()
+                return_errors.append(sliver_status.notices)
+
+        return return_errors
+
+
 
     @staticmethod
     def wait_for_slice(slice_name=None,slice_id=None,timeout=360,interval=10,progress=False):

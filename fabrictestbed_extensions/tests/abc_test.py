@@ -41,7 +41,9 @@ class AbcTest(ABC):
         self.slice_manager = SliceManager()
         self.advertised_topology = None
         self.slice = None
+        self.slices = []
         self.topology = None
+
 
         self.bastion_username = 'pruth'
         self.bastion_keyfile = ''
@@ -67,6 +69,7 @@ class AbcTest(ABC):
 
 
     def wait_for_slice(self,slice,timeout=360,interval=10,progress=False):
+        self.slice = slice
         timeout_start = time.time()
 
         if progress: print("Waiting for slice {} .".format(self.slice.slice_name), end = '')
@@ -97,6 +100,60 @@ class AbcTest(ABC):
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:
             return "Invalid"
+
+    def run_ssh_test(self, slice):
+
+        return_status, topology = self.slice_manager.get_slice_topology(slice_object=slice)
+        if return_status != Status.OK:
+            raise Exception("run_ssh_test failed to get topology. slice; {}, error {}".format(str(slice),str(topology)))
+
+        for node_name, node in topology.nodes.items():
+            #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            #print("Node:")
+            print(" ssh test | " + str(slice.slice_name) + " | " + str(node_name) + " | ", end = '')
+            try:
+                #print("   Name              : {}".format(node_name))
+                #print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
+                #print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
+                #print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
+                #print("   Image             : {}".format(node.image_ref))
+                #print("   Image Type        : {}".format(node.image_type))
+                #print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
+                #print("   Site              : {}".format(node.site))
+                #print("   Management IP     : {}".format(node.management_ip))
+                #print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
+                #print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
+                #print("   Components        : {}".format(node.components))
+                #print("   Interfaces        : {}".format(node.interfaces))
+                #print()
+
+                print("{}".format(str(node.get_property(pname='label_allocations').instance_parent)).replace('\n','') + " | ", end = '')
+                print("{}".format(str(node.management_ip)).replace('\n','') + " | ", end = '')
+
+                name = node_name
+                reservation_id = node.get_property(pname='reservation_info').reservation_id
+                management_ip = node.management_ip
+
+                hostname = reservation_id + '-' + name.lower()
+
+                expected_stdout = 'Hello, FABRIC from node ' + hostname
+                #print("expected_stdout: XX{}XX".format(expected_stdout.replace('\n','')))
+
+                #print("------------------------- Test Output ---------------------------")
+                script= '#!/bin/bash  \n' \
+                'echo Hello, FABRIC from node `hostname -s`   \n'
+                stdout_str = self.execute_script(node_username='centos', node=node, script=script)
+                print(str(stdout_str.replace('\n','')) + " | ", end = '')
+                #print("-----------------------------------------------------------------")
+                #stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
+                if expected_stdout in stdout_str:
+                    print('Success')
+                else:
+                    print('Fail')
+                    #print('Fail: --{}--  --{}--'.format(expected_stdout,stdout_str))
+            except Exception as e:
+                print ("Error in test: Error {}".format(e))
+                traceback.print_exc()
 
 
     def execute_script(self, node_username, node, script):

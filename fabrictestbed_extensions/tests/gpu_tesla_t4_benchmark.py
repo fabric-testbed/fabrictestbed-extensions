@@ -196,7 +196,7 @@ class GPUTeslaT4Benchmark(AbcTest):
                 """lspci | grep Tesla \n"""
                 #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(node_username='centos', node=node, script=script)
-                print(str(stdout_str.replace('\n','')) + " | ", end = '')
+                #print(str(stdout_str.replace('\n','')) + " | ", end = '')
                 #print("-----------------------------------------------------------------")
                 #stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
                 if expected_stdout in stdout_str:
