@@ -57,6 +57,22 @@ class SliceUtils(AbcUtils):
 
 
     @staticmethod
+    def delete_all_with_substring(string):
+        slice_manager = AbcUtils.create_slice_manager()
+
+        return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
+
+
+        slices = list(filter(lambda x: string in x.slice_name, slices))
+
+        for slice in slices:
+            return_status, result = slice_manager.delete(slice_object=slice)
+            print("Deleting Slice: {}.  Response Status {}".format(slice.slice_name,return_status))
+
+
+    @staticmethod
     def delete_all():
         slice_manager = AbcUtils.create_slice_manager()
 

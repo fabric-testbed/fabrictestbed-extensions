@@ -110,7 +110,7 @@ class AbcTest(ABC):
         for node_name, node in topology.nodes.items():
             #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
             #print("Node:")
-            print(" ssh test | " + str(slice.slice_name) + " | " + str(node_name) + " | ", end = '')
+            print(" Test: ssh | " + str(slice.slice_name) + " | " + str(node_name) + " | ", end = '')
             try:
                 #print("   Name              : {}".format(node_name))
                 #print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
@@ -155,6 +155,47 @@ class AbcTest(ABC):
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
 
+    def open_ssh_client(self, node_username, node):
+        import paramiko
+
+        try:
+            management_ip = str(node.get_property(pname='management_ip'))
+            #print("Node {0} IP {1}".format(node.name, management_ip))
+
+            key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
+
+            bastion=paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
+
+            bastion_transport = bastion.get_transport()
+            if self.validIPAddress(management_ip) == 'IPv4':
+                src_addr = (self.bastion_private_ipv4_addr, 22)
+            elif self.validIPAddress(management_ip) == 'IPv6':
+                src_addr = (self.bastion_private_ipv6_addr, 22)
+            else:
+                return 'Management IP Invalid: {}'.format(management_ip)
+
+            dest_addr = (management_ip, 22)
+            bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+
+
+            client = paramiko.SSHClient()
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+
+        except Exception as e:
+            return str(e)
+
+        return client
+
+    def close_ssh_client(self, ssh_client):
+        import paramiko
+
+        client.close()
 
     def execute_script(self, node_username, node, script):
         import paramiko
