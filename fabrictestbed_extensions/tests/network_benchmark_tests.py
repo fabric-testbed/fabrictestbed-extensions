@@ -298,9 +298,14 @@ class NetworkBencharks(AbcTest):
         n1.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         n2 = t.add_node(name='n2', site=site)
         n2.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
-        n1.add_component(model_type=ComponentModelType.SmartNIC_ConnectX_6, name='n1-nic1')
-        n2.add_component(model_type=ComponentModelType.SmartNIC_ConnectX_6, name='n2-nic1')
+        n1.add_component(model_type=ComponentModelType.SmartNIC_ConnectX_5, name='n1-nic1')
+        #n1.add_component(model_type=ComponentModelType.SharedNIC_ConnectX_6, name='n1-nic1')
+        n2.add_component(model_type=ComponentModelType.SmartNIC_ConnectX_5, name='n2-nic1')
+        #n2.add_component(model_type=ComponentModelType.SharedNIC_ConnectX_6, name='n2-nic1')
+
         t.add_network_service(name='bridge1', nstype=ServiceType.L2Bridge, interfaces=[n1.interface_list[0], n2.interface_list[0],n1.interface_list[1], n2.interface_list[1]])
+        #t.add_network_service(name='bridge1', nstype=ServiceType.L2Bridge, interfaces=[n1.interface_list[0], n2.interface_list[0]])
+
         slice_graph = t.serialize()
 
         status, reservations = slice_manager.create(slice_name="test_harness_latency_mtu_bandwidth", slice_graph=slice_graph, ssh_key=self.node_ssh_key)
@@ -310,12 +315,16 @@ class NetworkBencharks(AbcTest):
             raise Exception("Slice creation failed. One thing to do: try renaming it?")
         slice_id=reservations[0].slice_id
 
+        print("slice id: {}".format(slice_id))
+
         time.sleep(10)
         return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
         slice = list(filter(lambda x : x.slice_id == slice_id, slices))[0]
 
-        slice = self.wait_for_slice(slice, progress=verbose, timeout=300)
+        slice = self.wait_for_slice(slice, progress=verbose, timeout=600)
 
+
+        time.sleep(120)
         return_status, topology = slice_manager.get_slice_topology(slice_object=slice)
         if return_status != Status.OK:
             raise Exception("run_ssh_test failed to get topology. slice; {}, error {}".format(str(slice),str(topology)))
@@ -332,26 +341,34 @@ class NetworkBencharks(AbcTest):
 
         #output = {"SliceInformation" : slice_information}
 
-        clientn1 = self.open_ssh_client('ubuntu', n1)
-        clientn2 = self.open_ssh_client('ubuntu', n2)
+        clientn1 = self.open_ssh_client_direct('ubuntu', n1)
+        clientn2 = self.open_ssh_client_direct('ubuntu', n2)
+
 
         def get_interface_before_last(stdout):
-            interface = re.findall(r"[0-9]: [A-Za-z][A-Za-z][A-Za-z][0-9]", stdout.read().decode("utf-8"))
-            interface = interface[-2:-1]
-            interface = re.findall("[A-Za-z][A-Za-z][A-Za-z][0-9]", interface[0])
-            return interface[0]
+            print("XXX")
+            print(stdout)
+            print("XXX")
+            interfaces = json.loads(str(stdout))
+            for iface in  interfaces:
+                if iface['link_type'] != 'loopback' and iface['operstate'] != 'UP':
+                    #print ('{}'.format(iface['ifname']))
+                    break
+            return iface['ifname']
 
         stdin, stdout, stderr = clientn1.exec_command('sudo apt-get update && sudo apt-get install -y iperf iperf3')
         stdin, stdout, stderr = clientn2.exec_command('sudo apt-get update && sudo apt-get install -y iperf iperf3')
 
         ################################Setting up the IP addresses and activating the interfaces
-        stdin, stdout, stderr = clientn1.exec_command('ip a')
-        interface_n1 = get_interface_before_last(stdout)
+        stdin, stdout, stderr = clientn1.exec_command('ip -j a')
+        interface_n1 = get_interface_before_last(str(stdout.read(),'utf-8').replace('\\n','\n'))
+        print("interface_n1: {}".format(interface_n1))
         ip_of_interface_on_n1 = "192.168.10.51"
         stdin, stdout, stderr = clientn1.exec_command('sudo ip addr add ' + ip_of_interface_on_n1 + '/24 dev ' + interface_n1)
         stdin, stdout, stderr = clientn1.exec_command('sudo ip link set dev ' + interface_n1 + ' up mtu 9000')
-        stdin, stdout, stderr = clientn2.exec_command('ip a')
-        interface_n2 = get_interface_before_last(stdout)
+        stdin, stdout, stderr = clientn2.exec_command('ip -j a')
+        interface_n2 = get_interface_before_last(str(stdout.read(),'utf-8').replace('\\n','\n'))
+        print("interface_n2: {}".format(interface_n2))
         ip_of_interface_on_n2 = "192.168.10.52"
         stdin, stdout, stderr = clientn2.exec_command('sudo ip addr add ' + ip_of_interface_on_n2 + '/24 dev ' + interface_n2)
         stdin, stdout, stderr = clientn2.exec_command('sudo ip link set dev ' + interface_n2 + ' up mtu 9000')

@@ -155,6 +155,29 @@ class AbcTest(ABC):
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
 
+
+    def open_ssh_client_direct(self, node_username, node):
+        import paramiko
+
+        try:
+            management_ip = str(node.get_property(pname='management_ip'))
+            #print("Node {0} IP {1}".format(node.name, management_ip))
+
+            key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
+
+            client = paramiko.SSHClient()
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            client.connect(management_ip,username=node_username,pkey = key)
+
+        except Exception as e:
+            print (str(e))
+            return str(e)
+
+        return client
+
     def open_ssh_client(self, node_username, node):
         import paramiko
 

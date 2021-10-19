@@ -169,10 +169,10 @@ class ComponentTest(AbcTest):
 
                 hostname = reservation_id + '-' + name.lower()
 
-                expected_stdout = '3D controller: NVIDIA Corporation TU104GL [Tesla T4] (rev a1)'
+                expected_stdout = '3D controller: NVIDIA Corporation TU102GL [Quadro RTX 6000/8000] (rev a1)'
 
                 script= '#!/bin/bash  \n' \
-                """lspci  \n"""
+                """lspci | grep NVIDIA \n"""
                 #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(node_username='centos', node=node, script=script)
                 print(str(stdout_str.replace('\n',''))[0:45] + "... | ", end = '')
@@ -223,18 +223,19 @@ class ComponentTest(AbcTest):
 
                 hostname = reservation_id + '-' + name.lower()
 
-                expected_stdout = 'Non-Volatile memory controller: Intel Corporation NVMe Datacenter SSD [3DNAND, Beta Rock Controller]'
-
+                #There are two types of NVMe
+                expected_stdout1 = 'Non-Volatile memory controller: Intel Corporation NVMe Datacenter SSD [3DNAND, Beta Rock Controller]'
+                expected_stdout2 = 'Non-Volatile memory controller: Toshiba Corporation NVMe SSD Controller Cx5 (rev 01)'
                 script= '#!/bin/bash  \n' \
                 """lspci | grep NVMe \n"""
                 #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(node_username='centos', node=node, script=script)
                 print(str(stdout_str.replace('\n',''))[0:45] + "... | ", end = '')
-                if expected_stdout in stdout_str:
+                if expected_stdout1 in stdout_str or expected_stdout2 in stdout_str :
                     print('Success')
                 else:
                     print('Fail')
-                    #print(stdout_str)
+                    print(stdout_str)
             except Exception as e:
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
@@ -278,10 +279,10 @@ class ComponentTest(AbcTest):
 
                 hostname = reservation_id + '-' + name.lower()
 
-                expected_stdout = '3D controller: NVIDIA Corporation TU104GL [Tesla T4] (rev a1)'
+                expected_stdout = 'Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5]'
 
                 script= '#!/bin/bash  \n' \
-                """lspci  \n"""
+                """lspci | ConnectX \n"""
                 #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(node_username='centos', node=node, script=script)
                 print(str(stdout_str.replace('\n',''))[0:45] + "... | ", end = '')
@@ -344,7 +345,7 @@ class ComponentTest(AbcTest):
                     print('Success')
                 else:
                     print('Fail')
-                    #print(stdout_str)
+                    print(stdout_str)
             except Exception as e:
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
@@ -398,7 +399,7 @@ class ComponentTest(AbcTest):
                     print('Success')
                 else:
                     print('Fail')
-                    #print(stdout_str)
+                    print(stdout_str)
             except Exception as e:
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
@@ -505,7 +506,7 @@ class ComponentTest(AbcTest):
                     print('Success')
                 else:
                     print('Fail')
-                    #print('Fail: --{}--  --{}--'.format(expected_stdout,stdout_str))
+                    print(stdout_str)
             except Exception as e:
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
