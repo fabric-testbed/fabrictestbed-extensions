@@ -158,9 +158,11 @@ class SliceUtils(AbcUtils):
             #print("Response Status {}".format(status))
             if status == Status.OK:
                 #print()
-                #print("Sliver Status {}".format(sliver_status.notices))
+                #print("Sliver Status {}".format(sliver_status))
                 #print()
-                return_errors.append(sliver_status.notices)
+                #return_errors.append("Sliver: {} {}".format(s.name))
+                #return_errors.append(sliver_status.notices)
+                return_errors.append(sliver_status)
 
         return return_errors
 

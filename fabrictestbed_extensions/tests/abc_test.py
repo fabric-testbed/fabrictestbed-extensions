@@ -156,25 +156,35 @@ class AbcTest(ABC):
                 traceback.print_exc()
 
 
-    def open_ssh_client_direct(self, node_username, node):
+    def open_ssh_client_direct(self, node_username, node, timeout=10,interval=10,progress=True):
         import paramiko
+        timeout_start = time.time()
 
-        try:
-            management_ip = str(node.get_property(pname='management_ip'))
-            #print("Node {0} IP {1}".format(node.name, management_ip))
+        client = None
+        if progress: print("Waiting for ssh client connection {} .".format(node.name), end = '')
+        while time.time() < timeout_start + timeout:
 
-            key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
+            try:
+                management_ip = str(node.get_property(pname='management_ip'))
+                #print("Node {0} IP {1}".format(node.name, management_ip))
 
-            client = paramiko.SSHClient()
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
 
-            client.connect(management_ip,username=node_username,pkey = key)
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        except Exception as e:
-            print (str(e))
-            return str(e)
+                client.connect(management_ip,username=node_username,pkey = key)
+
+                break
+            except Exception as e:
+                #print (str(e))
+                #return str(e)
+                pass
+
+            if progress: print(".", end = '')
+            time.sleep(interval)
 
         return client
 
@@ -218,7 +228,7 @@ class AbcTest(ABC):
     def close_ssh_client(self, ssh_client):
         import paramiko
 
-        client.close()
+        ssh_client.close()
 
     def execute_script(self, node_username, node, script):
         import paramiko

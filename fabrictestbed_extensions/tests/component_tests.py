@@ -282,7 +282,7 @@ class ComponentTest(AbcTest):
                 expected_stdout = 'Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5]'
 
                 script= '#!/bin/bash  \n' \
-                """lspci | ConnectX \n"""
+                """lspci | grep ConnectX \n"""
                 #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(node_username='centos', node=node, script=script)
                 print(str(stdout_str.replace('\n',''))[0:45] + "... | ", end = '')
