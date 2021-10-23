@@ -68,6 +68,27 @@ class AbcTest(ABC):
             print("Failed to get advertised_topology: {}".format(self.advertised_topology))
 
 
+    def get_slice(self,slice_name=None, slice_id=None, slice_manager=None):
+        if not slice_manager:
+            slice_manager = AbcUtils.create_slice_manager()
+
+        return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
+        try:
+
+            if slice_id:
+                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
+            elif slice_name:
+                slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
+            else:
+                raise Exception("Slice not found. Slice name or id requried. name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
+        except:
+            raise Exception("Slice not found name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
+
+        return slice
+
+
     def wait_for_slice(self,slice,timeout=360,interval=10,progress=False):
         self.slice = slice
         timeout_start = time.time()
