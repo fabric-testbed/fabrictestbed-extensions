@@ -23,69 +23,215 @@ class NetworkBencharks(AbcTest):
         super().__init__()
 
 
-    def latency_test(self, ssh_client_n1, ssh_client_n2, dataplan_ip_n1, dataplan_ip_n2, verbose):
-        output = "Information about latency with ping: \n"
-        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 5 ' + dataplan_ip_n2 + ' | grep rtt')
-        output += stdout.read().decode("utf-8")
-        stdin, stdout, stderr = ssh_client_n2.exec_command('ping -c 5 ' + dataplan_ip_n1 + ' | grep rtt')
-        output += "\n" + stdout.read().decode("utf-8")
+    def latency_test(self, ssh_client_n1, ssh_client_n2, dataplane_ip_n1, dataplane_ip_n2, verbose=False, info=None):
+        if verbose: print("Testing Latency: {}".format(info),end='')
 
-        return {"Latency" : output}
+        #rtt min/avg/max/mdev = 0.063/0.119/0.189/0.053 ms
+        #output = "Information about latency with ping: \n"
 
-    def mtu_test(self, ssh_client_n1, ssh_client_n2, dataplan_ip_n1, dataplan_ip_n2, verbose):
-        output = "Information about mtu with ping: \n"
+        #warm up
+        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 10 ' + dataplane_ip_n2 + ' | grep rtt')
+
+        #Run test
+        output = {}
+
+        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 10 ' + dataplane_ip_n2 + ' | grep rtt')
+        raw_output = stdout.read().decode("utf-8")
+        raw_data = raw_output.split(" ")[3]
+        data_array = raw_data.split("/")
+        output['rtt'] = {   'min': data_array[0],
+                                'avg': data_array[1],
+                                'max': data_array[2],
+                                'mdev': data_array[3],
+                            }
+        if verbose: print(", avg rtt: {}".format(output['rtt']['avg']),end='')
+
+        stdin, stdout, stderr = ssh_client_n2.exec_command('ping -c 10 ' + dataplane_ip_n1 + ' | grep rtt')
+        #output += "\n" + stdout.read().decode("utf-8")
+        raw_output = stdout.read().decode("utf-8")
+        raw_data = raw_output.split(" ")[3]
+        data_array = raw_data.split("/")
+        output['rtt_rev'] = {   'min': data_array[0],
+                                'avg': data_array[1],
+                                'max': data_array[2],
+                                'mdev': data_array[3],
+                            }
+        if verbose: print(", avg rtt_rev: {}".format(output['rtt_rev']['avg']))
+
+        return {'latency_test': output}
+
+    def mtu_test(self, ssh_client_n1, ssh_client_n2, dataplane_ip_n1, dataplane_ip_n2, verbose=False, info=None):
+        if verbose: print("Testing MTU: {}".format(info),end='')
+
+        #Run test
+        output = {}
+
         ping_packets_count = 3
-        ping_packet_sizes = [9000, 8950, 8000, 1500, 1450, 1400, 1000, 500, 100, 50]
-        for ping_packet_size in ping_packet_sizes:
-            stdin, stdout, stderr = ssh_client_n1.exec_command('ping -M do -s ' + str(ping_packet_size) + ' -c ' + str(ping_packets_count) + ' ' + dataplan_ip_n2)
-            ping_string = stdout.read().decode("utf-8")
-            ping_string = re.findall("[0-9] received", ping_string)
-            ping_string = re.findall("[0-9]", ping_string[0])
-            if(int(ping_string[0]) == ping_packets_count):
-                output += "Packet size " + str(ping_packet_size + 8) + " is enabled."
-                break
-            else:
-                if(verbose):
-                    print("Packet " + str(ping_packet_size + 8) + " too large.")
-        for ping_packet_size in ping_packet_sizes:
-            stdin, stdout, stderr = ssh_client_n2.exec_command('ping -M do -s ' + str(ping_packet_size) + ' -c ' + str(ping_packets_count) + ' ' + dataplan_ip_n1)
-            ping_string = stdout.read().decode("utf-8")
-            ping_string = re.findall("[0-9] received", ping_string)
-            ping_string = re.findall("[0-9]", ping_string[0])
-            if(int(ping_string[0]) == ping_packets_count):
-                output += "\n" + "Packet size " + str(ping_packet_size + 8) + " is enabled."
-                break
-            else:
-                if(verbose):
-                    print("Packet " + str(ping_packet_size + 8) + " too large.")
+        #ping_packet_sizes = [9000, 8950, 8000, 1500, 1450, 1400, 1000, 500, 100, 50]
+        max_success = -1
+        min_fail = 10000
 
-        return {"MTU" : output}
+        #Test min ping
+        current_size = 0
 
-    def bandwidth_test(self, ssh_client_n1, ssh_client_n2, dataplan_ip_n1, dataplan_ip_n2, verbose):
-        output = "Information about bandwidth with iperf: \n"
+        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -M do -s ' + str(current_size) + ' -c ' + str(ping_packets_count) + ' ' + dataplane_ip_n2 + " | grep transmitted")
+        ping_string = stdout.read().decode("utf-8")
+
+        data_array = ping_string.split(" ")
+        recieved_packets = 0
+        if len(data_array) > 3:
+            recieved_packets = data_array[3]
+
+        if(int(recieved_packets) == ping_packets_count):
+            max_success = current_size
+            min_fail = 10000
+        else:
+            min_fail = 0
+            max_success = -1
+
+
+        while max_success < min_fail - 1:
+
+            current_size = int((min_fail+max_success)/2)
+            #print("min_fail: {}, max_success: {}, current_size: {}".format(str(min_fail),str(max_success), str(current_size)))
+
+            stdin, stdout, stderr = ssh_client_n1.exec_command('ping -M do -s ' + str(current_size) + ' -c ' + str(ping_packets_count) + ' ' + dataplane_ip_n2 + " | grep transmitted")
+            ping_string = stdout.read().decode("utf-8")
+
+            #print("current_size: {}, output: {}".format(str(current_size),ping_string))
+
+            data_array = ping_string.split(" ")
+            recieved_packets = 0
+            if len(data_array) > 3:
+                recieved_packets = data_array[3]
+
+            #print("recieved_packets: {}, ping_packets_count: {}".format(str(recieved_packets),str(ping_packets_count)))
+            if(int(recieved_packets) == int(ping_packets_count)):
+                max_success = current_size
+            else:
+                min_fail = current_size
+
+        if max_success > 0:
+            output['mtu'] = str(max_success+28)
+        else:
+            output['mtu'] = 0
+
+        if verbose: print(", mtu: {}".format(output['mtu']),end='')
+
+
+        #Test reverse
+        max_success = -1
+        min_fail = 10000
+
+        #Test min ping
+        current_size = 0
+
+        stdin, stdout, stderr = ssh_client_n2.exec_command('ping -M do -s ' + str(current_size) + ' -c ' + str(ping_packets_count) + ' ' + dataplane_ip_n1 + " | grep transmitted")
+        ping_string = stdout.read().decode("utf-8")
+
+        data_array = ping_string.split(" ")
+        recieved_packets = 0
+        if len(data_array) > 3:
+            recieved_packets = data_array[3]
+
+        if(int(recieved_packets) == ping_packets_count):
+            max_success = current_size
+            min_fail = 10000
+        else:
+            min_fail = 0
+            max_success = -1
+
+
+        while max_success < min_fail - 1:
+
+            current_size = int((min_fail+max_success)/2)
+            #print("min_fail: {}, max_success: {}, current_size: {}".format(str(min_fail),str(max_success), str(current_size)))
+
+            stdin, stdout, stderr = ssh_client_n2.exec_command('ping -M do -s ' + str(current_size) + ' -c ' + str(ping_packets_count) + ' ' + dataplane_ip_n1 + " | grep transmitted")
+            ping_string = stdout.read().decode("utf-8")
+
+            #print("current_size: {}, output: {}".format(str(current_size),ping_string))
+
+            data_array = ping_string.split(" ")
+            recieved_packets = 0
+            if len(data_array) > 3:
+                recieved_packets = data_array[3]
+
+            #print("recieved_packets: {}, ping_packets_count: {}".format(str(recieved_packets),str(ping_packets_count)))
+            if(int(recieved_packets) == int(ping_packets_count)):
+                max_success = current_size
+            else:
+                min_fail = current_size
+
+        if max_success > 0:
+            output['mtu_rev'] = str(max_success+28)
+        else:
+            output['mtu_rev'] = 0
+
+        if verbose: print(", mtu_rev: {}  ".format(output['mtu_rev']))
+
+
+        return {'mtu_test': output}
+
+    def bandwidth_test(self, ssh_client_n1, ssh_client_n2, dataplane_ip_n1, dataplane_ip_n2, verbose=False, info=None):
+        if verbose: print("Testing Bandwidth: {}".format(info),end='')
+
+        output = {}
         stdin, stdout, stderr = ssh_client_n1.exec_command('echo "net.core.rmem_max = 2147483647\nnet.core.wmem_max = 2147483647\nnet.ipv4.tcp_rmem = 4096 87380 2147483647\nnet.ipv4.tcp_wmem = 4096 65536 2147483647\nnet.ipv4.tcp_congestion_control=htcp\nnet.ipv4.tcp_mtu_probing=1\nnet.core.default_qdisc = fq\n" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p')
         stdin, stdout, stderr = ssh_client_n2.exec_command('echo "net.core.rmem_max = 2147483647\nnet.core.wmem_max = 2147483647\nnet.ipv4.tcp_rmem = 4096 87380 2147483647\nnet.ipv4.tcp_wmem = 4096 65536 2147483647\nnet.ipv4.tcp_congestion_control=htcp\nnet.ipv4.tcp_mtu_probing=1\nnet.core.default_qdisc = fq\n" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p')
+
         stdin, stdout, stderr = ssh_client_n1.exec_command('iperf3 -s > /dev/null 2>&1 &')
         stdin, stdout, stderr = ssh_client_n2.exec_command('iperf3 -s > /dev/null 2>&1 &')
-        stdin, stdout, stderr = ssh_client_n2.exec_command('iperf3 -c ' + dataplan_ip_n1 + ' -P 32 -w 512M -R')
-        iperf_string = stdout.read().decode("utf-8")
-        output += "n2 to n1:\n"
-        iperf_strings = iperf_string.splitlines()
-        if(len(iperf_strings) > 3):
-            output += iperf_string.splitlines()[-4] + "\n"
-            output += iperf_string.splitlines()[-3] + "\n"
-        stdin, stdout, stderr = ssh_client_n1.exec_command('iperf3 -c ' + dataplan_ip_n2 + ' -P 32 -w 512M -R')
-        iperf_string = stdout.read().decode("utf-8")
-        # iperf_string2 = re.findall("^(.*)\n^(.*)\n^(.*)\n^(.*)$\z", iperf_string)
-        output += "n1 to n2:\n"
-        iperf_strings = iperf_string.splitlines()
-        if(len(iperf_strings) > 3):
-            output += iperf_string.splitlines()[-4] + "\n"
-            output += iperf_string.splitlines()[-3]
 
-        return {"Bandwidth" : output}
+        stdin, stdout, stderr = ssh_client_n2.exec_command('iperf3 -J -c ' + dataplane_ip_n1 + ' -P 32 -w 512M -R')
+        #results = stdout.read().decode("utf-8")
+        try:
+            results = json.loads(str(stdout.read(),'utf-8'))
+            #for key, value in results.items():
+            #    print("key: {}, value: {}".format(key,value))
+            #print('| {} '.format(str(results['end'])), end='')
 
-    def network_card_information(self, ssh_client_n1, ssh_client_n2, dataplan_ip_n1, dataplan_ip_n2, verbose):
+            #bps = results['end']['sum_received']['bits_per_second']
+            #gbps = float(bps)/1000000000
+            #print('| {} '.format(str(gbps)), end='')
+            output['forward'] = results
+        except Exception as e:
+            print("error {}".format(e))
+            print("iperf raw results: {}".format(results))
+
+        if verbose:
+            bps = output['forward']['end']['sum_received']['bits_per_second']
+            gbps = float(bps)/1000000000
+            print(", forward: {:.3f} gbps".format(gbps),end='')
+
+
+
+        stdin, stdout, stderr = ssh_client_n1.exec_command('iperf3 -J -c ' + dataplane_ip_n2 + ' -P 32 -w 512M -R')
+        #results = stdout.read().decode("utf-8")
+        try:
+            results = json.loads(str(stdout.read(),'utf-8'))
+            #for key, value in results.items():
+            #    print("key: {}, value: {}".format(key,value))
+            #print('| {} '.format(str(results['end'])), end='')
+
+            #bps = results['end']['sum_received']['bits_per_second']
+            #gbps = float(bps)/1000000000
+            #print('| {} '.format(str(gbps)), end='')
+            output['reverse'] = results
+        except Exception as e:
+            print("error {}".format(e))
+            print("iperf raw results: {}".format(results))
+
+        if verbose:
+            bps = output['reverse']['end']['sum_received']['bits_per_second']
+            gbps = float(bps)/1000000000
+            print(", reverse: {:.3f} gbps".format(gbps))
+
+        return {'bandwidth_test': output}
+
+
+
+    def network_card_information(self, ssh_client_n1, ssh_client_n2, dataplane_ip_n1, dataplane_ip_n2, verbose):
         output = "n1\n\n"
 
         output += "lspci -xxxvvv\n\n"
@@ -132,7 +278,7 @@ class NetworkBencharks(AbcTest):
 
         return {"NetworkCardInformation" : output}
 
-    def processor_information(self, ssh_client_n1, ssh_client_n2, dataplan_ip_n1, dataplan_ip_n2, verbose):
+    def processor_information(self, ssh_client_n1, ssh_client_n2, dataplane_ip_n1, dataplane_ip_n2, verbose):
         output = "n1\n\n"
 
         output += 'sudo dmidecode | grep -w ID | sed "s/^.ID\: //g"'
@@ -248,7 +394,7 @@ class NetworkBencharks(AbcTest):
         print("dataplane_iface: {}".format(dataplane_iface))
 
         if vlan:
-            #dataplan_ip_n1 = "192.168.10.51"
+            #dataplane_ip_n1 = "192.168.10.51"
             stdin, stdout, stderr = ssh_client.exec_command('sudo ip link add link ' + dataplane_iface + ' name ens7.200 type vlan id 200')
             stdin, stdout, stderr = ssh_client.exec_command('sudo ip link set dev ' + dataplane_iface + ' up mtu 9000')
             stdin, stdout, stderr = ssh_client.exec_command('sudo ip link set dev ens7.200 up mtu 9000')
@@ -261,7 +407,7 @@ class NetworkBencharks(AbcTest):
 
 
 
-    def run_tests(self, test_name, node1, node2, dataplan_ip_n1, dataplan_ip_n2, test_list, verbose = True):
+    def run_tests(self, test_name, node1, node2, dataplane_ip_n1, dataplane_ip_n2, test_list, verbose = True):
 
         #Configure
         ssh_client_n1 = self.open_ssh_client('ubuntu', node1)
@@ -270,19 +416,18 @@ class NetworkBencharks(AbcTest):
         output = []
         for test in test_list:
             #print("{}".format(str(test)))
-            print("running test")
-            output.append(test(ssh_client_n1, ssh_client_n2, dataplan_ip_n1, dataplan_ip_n2, verbose))
+            #print("running test")
+            output.append(test(ssh_client_n1, ssh_client_n2, dataplane_ip_n1, dataplane_ip_n2, verbose=verbose, info="{}-{}".format(node1.name,node2.name)))
 
         #self.slice_manager .delete(slice_object=slice_object)
 
         self.close_ssh_client(ssh_client_n1)
         self.close_ssh_client(ssh_client_n2)
 
-        if(verbose):
-            for k in output:
-                print(k)
+        #if(verbose):
+            #for k in output:
+                #print(k)
                 #print(output[k])
-                print("---")
 
         return output
 
@@ -356,8 +501,9 @@ class NetworkBencharks(AbcTest):
             time.sleep(120)
 
         #Run tests
+        all_results = {}
         for test in tests:
-            print("Process test: {}".format(str(test)))
+            #print("Process test: {}".format(str(test)))
             slice = test['slice']
             test_name = test['test_name']
             return_status, topology = self.slice_manager .get_slice_topology(slice_object=slice)
@@ -378,8 +524,36 @@ class NetworkBencharks(AbcTest):
             #self.run_tests(test_name, site1, site2, [self.latency_test, self.mtu_test, self.bandwidth_test, self.network_card_information, self.processor_information])
             n1 = nodes['node1']
             n2 = nodes['node2']
-            print("Run test: {}".format(str(test)))
-            self.run_tests(test_name, n1['node'], n2['node'], n1['dataplane_ip'], n2['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
+            print("Run test: {}".format(str(test['test_name'])))
+            results = self.run_tests(test_name, n1['node'], n2['node'], n1['dataplane_ip'], n2['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
+            all_results[test_name]=results
+
+        print("{:<30} | {:>9} | {:>9} | {:>11} | {:>11} | {:>10} | {:>10}".format("Test","rtt","rtt_rev","mtu","mtu_rev","bw","bw_rev"))
+        for test_name, results in all_results.items():
+            print("{:<30}".format(test_name), end='')
+            for result in results:
+                if 'latency_test' in result.keys():
+                    rtt=result['latency_test']['rtt']['avg']
+                    rtt_rev=result['latency_test']['rtt_rev']['avg']
+                    print(" | {:>6} ms".format(str(rtt)), end='')
+                    print(" | {:>6} ms".format(str(rtt_rev)), end='')
+
+                if 'mtu_test' in result.keys():
+                    mtu=result['mtu_test']['mtu']
+                    mtu_rev=result['mtu_test']['mtu_rev']
+                    print(" | {:>5} bytes".format(str(mtu)), end='')
+                    print(" | {:>5} bytes".format(str(mtu_rev)), end='')
+
+                if 'bandwidth_test' in result.keys():
+                    bps_reverse=result['bandwidth_test']['reverse']['end']['sum_received']['bits_per_second']
+                    bps_forward=result['bandwidth_test']['forward']['end']['sum_received']['bits_per_second']
+                    gbps_reverse = float(bps_reverse)/1000000000
+                    gbps_forward = float(bps_forward)/1000000000
+                    print(" | {:.3f} gbps".format(gbps_forward), end='')
+                    print(" | {:.3f} gbps".format(gbps_reverse), end='')
+
+
+
 
 
 
