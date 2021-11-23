@@ -81,8 +81,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     FABRIC_LIGHT = '#f3f3f9'
     FABRIC_WHITE = '#ffffff'
     FABRIC_LOGO = "fabric_logo.png"
-    SLICE_RACK_IMAGE = "http://localhost:8888/files/git/jupyter-examples/fabric_gui/slice_rack.png?_xsrf=2%7Cd383f85d%7C3663b7e992bd4ab0671df1ed48966deb%7C1630417385"
-    SERVER_IMAGE = "http://localhost:8888/files/git/jupyter-examples/fabric_gui/server.png?_xsrf=2%7Cd383f85d%7C3663b7e992bd4ab0671df1ed48966deb%7C1630417385"
+    SLICE_RACK_IMAGE = "slice_rack.png"
+    SERVER_IMAGE = "server.png"
 
     # Default Widget values
     DEFAULT_SLICE_NAME_VALUE = 'New_Slice'
