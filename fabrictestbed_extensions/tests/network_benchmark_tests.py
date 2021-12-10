@@ -1,7 +1,7 @@
 import os
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 import json
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, Labels
 import time
 import paramiko
 import re
@@ -30,12 +30,12 @@ class NetworkBencharks(AbcTest):
         #output = "Information about latency with ping: \n"
 
         #warm up
-        #stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 3 ' + dataplane_ip_n2 + ' | grep rtt')
+        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 3 ' + dataplane_ip_n2 + ' | grep rtt')
 
         #Run test
         output = {}
 
-        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 3 ' + dataplane_ip_n2 + ' | grep rtt')
+        stdin, stdout, stderr = ssh_client_n1.exec_command('ping -c 10 ' + dataplane_ip_n2 + ' | grep rtt')
         raw_output = stdout.read().decode("utf-8")
         raw_data = raw_output.split(" ")[3]
         data_array = raw_data.split("/")
@@ -46,7 +46,7 @@ class NetworkBencharks(AbcTest):
                             }
         if verbose: print(", avg rtt: {}".format(output['rtt']['avg']),end='')
 
-        stdin, stdout, stderr = ssh_client_n2.exec_command('ping -c 3 ' + dataplane_ip_n1 + ' | grep rtt')
+        stdin, stdout, stderr = ssh_client_n2.exec_command('ping -c 10 ' + dataplane_ip_n1 + ' | grep rtt')
         #output += "\n" + stdout.read().decode("utf-8")
         raw_output = stdout.read().decode("utf-8")
         raw_data = raw_output.split(" ")[3]
@@ -683,7 +683,13 @@ class NetworkBencharks(AbcTest):
         cap.set_fields(core=server['core'], ram=server['ram'], disk=server['disk'])
         node = t.add_node(name=server['node_name'], site=site)
 
+        #temp for testign
+        #labels = Labels()
+        #labels.instance_parent = 'star-w5.fabric-testbed.net'
+
+
         print("Create node: {}, core: {}, ram: {}, disk: {}".format(server['node_name'],server['core'],server['ram'],server['disk']))
+        #node.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20',labels=labels)
         node.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         if server['nic'] == 'SmartNIC_ConnectX_6':
             node.add_component(model_type=ComponentModelType.SmartNIC_ConnectX_6, name=server['node_name']+'-nic1')
@@ -702,7 +708,12 @@ class NetworkBencharks(AbcTest):
             cap.set_fields(core=client['core'], ram=client['ram'], disk=client['disk'])
             node = t.add_node(name=client['node_name'], site=site)
 
+            #labels = Labels()
+            #labels.instance_parent = 'star-w4.fabric-testbed.net'
+
+
             print("Create node: {}, core: {}, ram: {}, disk: {}".format(client['node_name'],client['core'],client['ram'],client['disk']))
+            #node.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20',labels=labels)
             node.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
             if client['nic'] == 'SmartNIC_ConnectX_6':
                 node.add_component(model_type=ComponentModelType.SmartNIC_ConnectX_6, name=client['node_name']+'-nic1')
@@ -853,8 +864,8 @@ class NetworkBencharks(AbcTest):
             #print("Run test: {}".format(str(server_dataplane_ip)))
             #print("Run test: {}".format(str(node['dataplane_ip'])))
             #print("Run test: {} {} {} {}".format(str(server_node), str(node['node']), str(server_dataplane_ip), str(node['dataplane_ip'])))
-            #all_results[result_name] = self.run_tests(test_name, server_node, node['node'], server_dataplane_ip, node['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
-            all_results[result_name] = self.run_tests(test_name, server_node, node['node'], server_dataplane_ip, node['dataplane_ip'], [self.latency_test])
+            all_results[result_name] = self.run_tests(test_name, server_node, node['node'], server_dataplane_ip, node['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
+            #all_results[result_name] = self.run_tests(test_name, server_node, node['node'], server_dataplane_ip, node['dataplane_ip'], [self.latency_test])
 
         return all_results
 
