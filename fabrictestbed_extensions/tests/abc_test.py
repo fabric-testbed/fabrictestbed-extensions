@@ -44,8 +44,7 @@ class AbcTest(ABC):
         self.slices = []
         self.topology = None
 
-
-        self.bastion_username = 'pruth'
+        self.bastion_username = os.environ['FABRIC_BASTION_USERNAME']
         self.bastion_keyfile = ''
 
         self.bastion_public_addr = 'bastion-1.fabric-testbed.net'
@@ -54,11 +53,14 @@ class AbcTest(ABC):
 
         #self.bastion_key_filename = '/Users/pruth/FABRIC/TESTING/pruth_fabric_rsa'
         self.bastion_key_filename = os.environ['HOME'] + "/.ssh/pruth_fabric_rsa"
+        self.bastion_key_filename = os.environ['FABRIC_BASTION_KEY_LOCATION']
+
+        self.node_ssh_key_priv_file=os.environ['SLICE_PRIVATE_KEY_FILE']
+        self.node_ssh_key_pub_file=os.environ['SLICE_PUBLIC_KEY_FILE']
 
         self.node_ssh_key = None
-        with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as fd:
+        with open(self.node_ssh_key_pub_file, "r") as fd:
             self.node_ssh_key = fd.read().strip()
-        self.node_ssh_key_priv_file=os.environ['HOME'] + "/.ssh/id_rsa"
 
         self.pull_advertised_topology()
 
