@@ -46,7 +46,7 @@ from .abc_utils import AbcUtils
 from .. import images
 
 
-class SliceUtils(AbcUtils):
+class NodeUtils(AbcUtils):
 
     def __init__(self):
         """

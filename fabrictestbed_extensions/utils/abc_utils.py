@@ -36,12 +36,24 @@ from fabrictestbed.slice_editor import ExperimentTopology, Capacities, Component
 class AbcUtils(ABC):
 
 
-    bastion_username = 'pruth'
-    bastion_keyfile = ''
+    #os.environ['FABRIC_CREDMGR_HOST']='cm.fabric-testbed.net'
+    #os.environ['FABRIC_ORCHESTRATOR_HOST']='orchestrator.fabric-testbed.net'
+    #os.environ['FABRIC_TOKEN_LOCATION']=os.environ['HOME']+'/work/fabric_token.json'
 
-    bastion_public_addr = 'bastion-1.fabric-testbed.net'
-    bastion_private_ipv4_addr = '192.168.11.226'
-    bastion_private_ipv6_addr = '2600:2701:5000:a902::c'
+    #os.environ['FABRIC_BASTION_USERNAME']=<INSERT_YOUR_FABRIC_USERNAME>
+    #os.environ['FABRIC_BASTION_KEY_LOCATION']=os.environ['HOME']+'/work/.ssh/id_rsa_fabric'
+
+    #os.environ['FABRIC_SLICE_PRIVATE_KEY_FILE']=os.environ['HOME']+'/.ssh/id_rsa'
+    #os.environ['FABRIC_SLICE_PUBLIC_KEY_FILE']=os.environ['HOME']+'/.ssh/id_rsa.pub'
+
+
+
+    bastion_username = os.environ['FABRIC_BASTION_USERNAME']
+    #bastion_keyfile = ''
+
+    bastion_public_addr = os.environ['FABRIC_BASTION_HOST']
+    bastion_private_ipv4_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV4']
+    bastion_private_ipv6_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV6']
 
         #self.bastion_key_filename = '/Users/pruth/FABRIC/TESTING/pruth_fabric_rsa'
     bastion_key_filename = os.environ['HOME'] + "/.ssh/pruth_fabric_rsa"
