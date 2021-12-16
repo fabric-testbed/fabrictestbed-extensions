@@ -99,6 +99,9 @@ class Slice(AbcFabLIB):
     def get_slice_id(self):
         return self.slice_id
 
+    def get_lease_end(self):
+        return self.slice.lease_end
+
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node
         self.update()
@@ -141,6 +144,14 @@ class Slice(AbcFabLIB):
             raise Exception("Failed to delete slice: {}, {}".format(return_status, result))
 
         self.topology = None
+
+    def renew(self, end_date):
+
+        return_status, result = self.slice_manager.renew(slice_object=self.slice,
+                                     new_lease_end_time = end_date)
+
+        if return_status != Status.OK:
+            raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
 
     def wait(self, timeout=360,interval=10,progress=False):
         slice_name=self.slice.slice_name
