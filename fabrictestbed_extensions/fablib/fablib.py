@@ -33,7 +33,7 @@ import time
 import importlib.resources as pkg_resources
 from typing import List
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
+from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
     Capacities
@@ -47,6 +47,19 @@ from .. import images
 
 class fablib(AbcFabLIB):
 
+    credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
+    orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
+    fabric_token=os.environ['FABRIC_TOKEN_LOCATION']
+
+    #Basstion host setup
+    bastion_username = os.environ['FABRIC_BASTION_USERNAME']
+    bastion_key_filename = os.environ['FABRIC_BASTION_KEY_LOCATION']
+    bastion_public_addr = os.environ['FABRIC_BASTION_HOST']
+    bastion_private_ipv4_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV4']
+    bastion_private_ipv6_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV6']
+
+    slice_manager = None
+
     def __init__(self):
         """
         Constructor
@@ -54,18 +67,45 @@ class fablib(AbcFabLIB):
         """
         super().__init__()
 
+        self.create_slice_manager()
+
+    @staticmethod
+    def set_slice_manager(slice_manager):
+        fablib.slice_manager = slice_manager
+
+    @staticmethod
+    def get_slice_manager():
+        if fablib.slice_manager != None:
+            fablib.create_slice_manager()
+
+        return fablib.slice_manager
+
+    @staticmethod
+    def create_slice_manager():
+        fablib.slice_manager = SliceManager(oc_host=fablib.orchestrator_host,
+                             cm_host=fablib.credmgr_host,
+                             project_name='all',
+                             scope='all')
+
+        # Initialize the slice manager
+        fablib.slice_manager.initialize()
+
+        return fablib.slice_manager
+
+
+
     @staticmethod
     def new_slice(name):
         #fabric = fablib()
         from fabrictestbed_extensions.fablib.slice import Slice
-        return Slice(name=name)
+        return Slice.new_slice(name=name)
 
     @staticmethod
     def get_site_advertisment(site):
-        fabric = fablib()
+        #fabric = fablib()
         #slice_manager = AbcFabricX.create_slice_manager()
 
-        return_status, topology = fabric.slice_manager.resources()
+        return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
 
@@ -74,10 +114,10 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_available_resources():
-        fabric = fablib()
+        #fabric = fablib()
         #slice_manager = AbcFabricX.create_slice_manager()
 
-        return_status, topology = fabric.slice_manager.resources()
+        return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
 
@@ -85,10 +125,10 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_slices(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
-        fabric = fablib()
+        #fabric = fablib()
         from fabrictestbed_extensions.fablib.slice import Slice
 
-        return_status, slices = fabric.slice_manager.slices(excludes=excludes)
+        return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
 
         return_slices = []
         if return_status == Status.OK:
@@ -98,7 +138,7 @@ class fablib(AbcFabLIB):
                 #print("   State      : {}".format(slice.slice_state))
                 #print("   Lease End  : {}".format(slice.lease_end))
                 #print()
-                return_slices.append(Slice(slice=slice))
+                return_slices.append(Slice.get_slice(sm_slice=slice))
         else:
             print(f"Failure: {slices}")
 
@@ -106,10 +146,10 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_slice(name=None, slice_id=None, verbose=False):
-        fabric = fablib()
+        #fabric = fablib()
         #from fabrictestbed_extensions.fablib.slice import Slice
 
-        slices = fabric.get_slices()
+        slices = fablib.get_slices()
 
         for slice in slices:
             if name != None and slice.get_name() == name:
@@ -117,18 +157,24 @@ class fablib(AbcFabLIB):
             if slice_id != None and slice.get_slice_id() == slice_id:
                 return slice
 
-        return None
+        #Should not get here if the slice is found
+        if name != None:
+            raise Exception(f"Slice not found: name: {name}")
+        elif slice_id != None:
+            raise Excption(f"Slice not found: slice_id: {slice_id}")
+        else:
+            raise Exception(f"get_slice missing slice_id or name")
 
     @staticmethod
     def delete_slice(slice_name=None, slice_id=None):
-        fabric = fablib()
-        slice = fabric.get_slice(slice_id=slice_id)
+        #fabric = fablib()
+        slice = fablib.get_slice(slice_id=slice_id)
         slice.delete()
 
     @staticmethod
     def delete_all():
-        fabric = fablib()
-        slices = fabric.get_slices()
+        #fabric = fablib()
+        slices = fablib.get_slices()
 
         for slice in slices:
             try:
@@ -140,7 +186,7 @@ class fablib(AbcFabLIB):
     #TODO
     def get_slice_error(slice_id):
         fabric = fablib()
-        slice_manager = AbcFabricX.create_slice_manager()
+        slice_manager = fablib.create_slice_manager()
 
         return_status, slices = slice_manager.slices(includes=[SliceState.Dead,SliceState.Closing,SliceState.StableError])
         if return_status != Status.OK:

@@ -33,7 +33,7 @@ import time
 import importlib.resources as pkg_resources
 from typing import List
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
+from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
     Capacities
@@ -61,67 +61,122 @@ from .. import images
 
 class Node(AbcFabLIB):
 
-    def __init__(self, node, username='centos'):
+    def __init__(self, slice, node):
         """
         Constructor
         :return:
         """
         super().__init__()
-        self.node = node
-        self.username = username
+        self.fim_node = node
+        self.slice = slice
+
+        #Try to set the username.
+        try:
+            self.set_username()
+        except:
+            self.username = None
+
+    @staticmethod
+    def new_node(slice=None, name=None, site=None):
+        from fabrictestbed_extensions.fablib.node import Node
+        return Node(slice, slice.topology.add_node(name=name, site=site))
+
+    @staticmethod
+    def get_node(slice=None, node=None):
+        from fabrictestbed_extensions.fablib.node import Node
+        return Node(slice, node)
 
     def set_capacities(self, cores=2, ram=2, disk=2):
         cap = Capacities()
         cap.set_fields(core=cores, ram=ram, disk=disk)
-        self.node.set_properties(capacities=cap)
+        self.fim_node.set_properties(capacities=cap)
 
-    def set_image(self, image, username, image_type='qcow2'):
-        self.username = username
-        self.node.set_properties(image_type=image_type, image_ref=image)
+    def set_instance_type(self, instance_type):
+        self.fim_node.set_properties(capacity_hints=CapacityHints().set_fields(instance_type=instance_type))
+
+    def set_username(self, username=None):
+        if 'centos' in self.get_image():
+            self.username = 'centos'
+        elif 'ubuntu' in self.get_image():
+            self.username = 'ubuntu'
+        else:
+            self.username = None
+
+    def set_image(self, image, username=None, image_type='qcow2'):
+        self.fim_node.set_properties(image_type=image_type, image_ref=image)
+        self.set_username(username=username)
+
+    def get_slice(self):
+        return self.slice
 
     def get_name(self):
-        return self.node.name
+        return self.fim_node.name
 
     def get_cores(self):
-        return self.node.get_property(pname='capacity_allocations').core
+        return self.fim_node.get_property(pname='capacity_allocations').core
 
     def get_ram(self):
-        return self.node.get_property(pname='capacity_allocations').ram
+        return self.fim_node.get_property(pname='capacity_allocations').ram
 
     def get_disk(self):
-        return self.node.get_property(pname='capacity_allocations').disk
+        return self.fim_node.get_property(pname='capacity_allocations').disk
 
     def get_image(self):
-        return self.node.image_ref
+        return self.fim_node.image_ref
 
     def get_image_type(self):
-        return self.node.image_type
+        return self.fim_node.image_type
 
     def get_host(self):
-        return self.node.get_property(pname='label_allocations').instance_parent
+        return self.fim_node.get_property(pname='label_allocations').instance_parent
 
     def get_site(self):
-        return self.node.site
+        return self.fim_node.site
 
     def get_management_ip(self):
-        return self.node.management_ip
+        return self.fim_node.management_ip
 
     def get_reservation_id(self):
-        return self.node.get_property(pname='reservation_info').reservation_id
+        return self.fim_node.get_property(pname='reservation_info').reservation_id
 
     def get_reservation_state(self):
-        return self.node.get_property(pname='reservation_info').reservation_state
-
-    def get_components(self):
-        #TODO: create fablib.component
-        return self.node.components
+        return self.fim_node.get_property(pname='reservation_info').reservation_state
 
     def get_interfaces(self):
-        #TODO: create fablib.interface
-        return self.node.interfaces
+        from fabrictestbed_extensions.fablib.interface import Interface
+
+        interfaces = []
+        for component in self.get_components():
+            for interface in component.get_interfaces():
+                interfaces.append(interface)
+
+        return interfaces
 
     def get_username(self):
         return self.username
+
+    def add_component(self, model=None, name=None):
+        from fabrictestbed_extensions.fablib.component import Component
+        return Component.new_component(node=self, model=model, name=name)
+
+    def get_components(self):
+        from fabrictestbed_extensions.fablib.component import Component
+
+        return_components = []
+        for component_name, component in self.fim_node.components.items():
+            return_components.append(Component(self,component))
+
+        return return_components
+
+    def get_component(self, name):
+        from fabrictestbed_extensions.fablib.component import Component
+        try:
+            return Component(self,self.fim_node.components[name])
+        except Exception as e:
+            if verbose:
+                traceback.print_exc()
+            raise Exception(f"Component not found: {name}")
+
 
     def get_ssh_command(self):
         return 'ssh -i {} -J {}@{} {}@{}'.format(self.slice_private_key_file,
@@ -136,10 +191,10 @@ class Node(AbcFabLIB):
         except ValueError:
             return "Invalid"
 
-    def execute_script(self, script):
+    def execute(self, command):
         import paramiko
 
-        management_ip = str(self.node.get_property(pname='management_ip'))
+        management_ip = str(self.fim_node.get_property(pname='management_ip'))
         key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
 
         bastion=paramiko.SSHClient()
@@ -166,9 +221,11 @@ class Node(AbcFabLIB):
 
         client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-        stdin, stdout, stderr = client.exec_command('echo \"' + script + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
-        rtn_str = str(stdout.read(),'utf-8').replace('\\n','\n')
+        stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
+        rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
+        rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
+
 
         client.close()
 
-        return rtn_str
+        return rtn_stdout, rtn_stderr

@@ -73,22 +73,3 @@ class AbcFabLIB(ABC):
         with open(os.environ['FABRIC_SLICE_PUBLIC_KEY_FILE'], "r") as fd:
             self.slice_public_key = fd.read().strip()
         self.slice_private_key_file=os.environ['FABRIC_SLICE_PRIVATE_KEY_FILE']
-
-        self.create_slice_manager()
-
-    def set_slice_manager(self,slice_manager):
-        self.slice_manager = slice_manager
-
-    def get_slice_manager(self):
-        return slice_manager
-
-    def create_slice_manager(self):
-        self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
-                             cm_host=self.credmgr_host,
-                             project_name='all',
-                             scope='all')
-
-        # Initialize the slice manager
-        self.slice_manager.initialize()
-
-        return self.slice_manager
