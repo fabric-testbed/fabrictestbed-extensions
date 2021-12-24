@@ -26,6 +26,7 @@
 import os
 import traceback
 import re
+import json
 
 import functools
 import time
@@ -86,13 +87,16 @@ class Node(AbcFabLIB):
         from fabrictestbed_extensions.fablib.node import Node
         return Node(slice, node)
 
+    def get_fim_node(self):
+        return self.fim_node
+
     def set_capacities(self, cores=2, ram=2, disk=2):
         cap = Capacities()
         cap.set_fields(core=cores, ram=ram, disk=disk)
-        self.fim_node.set_properties(capacities=cap)
+        self.get_fim_node().set_properties(capacities=cap)
 
     def set_instance_type(self, instance_type):
-        self.fim_node.set_properties(capacity_hints=CapacityHints().set_fields(instance_type=instance_type))
+        self.get_fim_node().set_properties(capacity_hints=CapacityHints().set_fields(instance_type=instance_type))
 
     def set_username(self, username=None):
         if 'centos' in self.get_image():
@@ -103,44 +107,44 @@ class Node(AbcFabLIB):
             self.username = None
 
     def set_image(self, image, username=None, image_type='qcow2'):
-        self.fim_node.set_properties(image_type=image_type, image_ref=image)
+        self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
 
     def get_slice(self):
         return self.slice
 
     def get_name(self):
-        return self.fim_node.name
+        return self.get_fim_node().name
 
     def get_cores(self):
-        return self.fim_node.get_property(pname='capacity_allocations').core
+        return self.get_fim_node().get_property(pname='capacity_allocations').core
 
     def get_ram(self):
-        return self.fim_node.get_property(pname='capacity_allocations').ram
+        return self.get_fim_node().get_property(pname='capacity_allocations').ram
 
     def get_disk(self):
-        return self.fim_node.get_property(pname='capacity_allocations').disk
+        return self.get_fim_node().get_property(pname='capacity_allocations').disk
 
     def get_image(self):
-        return self.fim_node.image_ref
+        return self.get_fim_node().image_ref
 
     def get_image_type(self):
-        return self.fim_node.image_type
+        return self.get_fim_node().image_type
 
     def get_host(self):
-        return self.fim_node.get_property(pname='label_allocations').instance_parent
+        return self.get_fim_node().get_property(pname='label_allocations').instance_parent
 
     def get_site(self):
-        return self.fim_node.site
+        return self.get_fim_node().site
 
     def get_management_ip(self):
-        return self.fim_node.management_ip
+        return self.get_fim_node().management_ip
 
     def get_reservation_id(self):
-        return self.fim_node.get_property(pname='reservation_info').reservation_id
+        return self.get_fim_node().get_property(pname='reservation_info').reservation_id
 
     def get_reservation_state(self):
-        return self.fim_node.get_property(pname='reservation_info').reservation_state
+        return self.get_fim_node().get_property(pname='reservation_info').reservation_state
 
     def get_interfaces(self):
         from fabrictestbed_extensions.fablib.interface import Interface
@@ -151,6 +155,17 @@ class Node(AbcFabLIB):
                 interfaces.append(interface)
 
         return interfaces
+
+    def get_interface(self, name=None):
+        from fabrictestbed_extensions.fablib.interface import Interface
+
+        for component in self.get_components():
+            for interface in component.get_interfaces():
+                if interface.get_name() == name:
+                    return interface
+
+        raise Exception("Interface not found: {}".format(name))
+
 
     def get_username(self):
         return self.username
@@ -163,15 +178,16 @@ class Node(AbcFabLIB):
         from fabrictestbed_extensions.fablib.component import Component
 
         return_components = []
-        for component_name, component in self.fim_node.components.items():
+        for component_name, component in self.get_fim_node().components.items():
             return_components.append(Component(self,component))
 
         return return_components
 
-    def get_component(self, name):
+    def get_component(self, name, verbose=False):
         from fabrictestbed_extensions.fablib.component import Component
         try:
-            return Component(self,self.fim_node.components[name])
+            name = Component.calculate_name(node=self, name=name)
+            return Component(self,self.get_fim_node().components[name])
         except Exception as e:
             if verbose:
                 traceback.print_exc()
@@ -194,7 +210,7 @@ class Node(AbcFabLIB):
     def execute(self, command):
         import paramiko
 
-        management_ip = str(self.fim_node.get_property(pname='management_ip'))
+        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
 
         bastion=paramiko.SSHClient()
@@ -229,3 +245,202 @@ class Node(AbcFabLIB):
         client.close()
 
         return rtn_stdout, rtn_stderr
+
+    def upload_file(self, node_username, node, local_file_path, remote_file_path):
+        import paramiko
+
+        try:
+            management_ip = str(node.get_property(pname='management_ip'))
+            #print("Node {0} IP {1}".format(node.name, management_ip))
+
+            key = paramiko.RSAKey.from_private_key_file(ssh_key_file_priv)
+
+            bastion=paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(bastion_public_addr, username=bastion_username, key_filename=bastion_key_filename)
+
+            bastion_transport = bastion.get_transport()
+            if validIPAddress(management_ip) == 'IPv4':
+                src_addr = (bastion_private_ipv4_addr, 22)
+            elif validIPAddress(management_ip) == 'IPv6':
+                src_addr = (bastion_private_ipv6_addr, 22)
+            else:
+                return 'Management IP Invalid: {}'.format(management_ip)
+
+            dest_addr = (management_ip, 22)
+            bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+
+
+            client = paramiko.SSHClient()
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+
+            ftp_client=client.open_sftp()
+            file_attributes = ftp_client.put(local_file_path, remote_file_path)
+            ftp_client.close()
+
+            client.close()
+        except Exception as e:
+            print(str(e))
+            return str(e)
+
+        return file_attributes
+
+    def download_file(self, node_username, node, local_file_path, remote_file_path):
+        import paramiko
+
+        try:
+            management_ip = str(node.get_property(pname='management_ip'))
+            #print("Node {0} IP {1}".format(node.name, management_ip))
+
+            key = paramiko.RSAKey.from_private_key_file(ssh_key_file_priv)
+
+            bastion=paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(bastion_public_addr, username=bastion_username, key_filename=bastion_key_filename)
+
+            bastion_transport = bastion.get_transport()
+            if validIPAddress(management_ip) == 'IPv4':
+                src_addr = (bastion_private_ipv4_addr, 22)
+            elif validIPAddress(management_ip) == 'IPv6':
+                src_addr = (bastion_private_ipv6_addr, 22)
+            else:
+                return 'Management IP Invalid: {}'.format(management_ip)
+
+            dest_addr = (management_ip, 22)
+            bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+
+
+            client = paramiko.SSHClient()
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+
+            ftp_client=client.open_sftp()
+            file_attributes = ftp_client.get(local_file_path, remote_file_path)
+            ftp_client.close()
+
+            client.close()
+        except Exception as e:
+            print(str(e))
+            return str(e)
+
+        return file_attributes
+
+    def get_management_os_interface(self):
+        #Assumes that the default route uses the management network
+
+        stdout, stderr = self.execute("sudo ip -j route list")
+        stdout_json = json.loads(stdout)
+
+        #print(pythonObj)
+        for i in stdout_json:
+            if i['dst'] == 'default':
+                return  i['dev']
+
+    def get_dataplane_os_interfaces(self):
+        management_dev = self.get_management_os_interface()
+
+        stdout, stderr = self.execute("sudo ip -j addr list")
+        stdout_json = json.loads(stdout)
+        dataplane_devs = []
+        for i in stdout_json:
+            if i['ifname'] != 'lo' and i['ifname'] !=  management_dev:
+                dataplane_devs.append(i['ifname'])
+
+        return dataplane_devs
+
+    def flush_all_os_interfaces(self):
+        for iface in self.get_dataplane_os_interfaces():
+            self.flush_os_interface(iface)
+
+    def flush_os_interface(self, os_iface):
+        stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
+
+    def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        #Bring up base iface
+        command = f'sudo ip link set dev {os_iface} up'
+        if mtu != None:
+            command += f" mtu {mtu}"
+        stdout, stderr = self.execute(command)
+
+        #config vlan iface
+        if vlan != None:
+            #create vlan iface
+            command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+            stdout, stderr = self.execute(command)
+
+            #bring up vlan iface
+            os_iface = f"{os_iface}.{vlan}"
+            command = f'sudo ip link set dev {os_iface} up'
+            if mtu != None:
+                command += f" mtu {mtu}"
+            stdout, stderr = self.execute(command)
+
+        if ip != None and cidr != None:
+            #Set ip
+            command = f"sudo ip addr add {ip}/{cidr} dev {os_iface}"
+            stdout, stderr = self.execute(command)
+
+
+    #def remove_vlan_os_interface(self, os_iface=None, vlan=None):
+    #    #self.flush_os_interface(f"{os_iface}.{vlan}")
+    #
+    #    command = f"sudo ip link del link {os_iface} name {os_iface}.{vlan}"
+    #    stdout, stderr = self.execute(command)
+
+    def clear_all_ifaces(self):
+        self.remove_all_vlan_os_interfaces()
+        self.flush_all_os_interfaces()
+
+
+    def remove_all_vlan_os_interfaces(self):
+        management_os_iface = self.get_management_os_interface()
+        print(f"management_os_iface: {management_os_iface}")
+
+        stdout, stderr = self.execute("sudo ip -j addr list")
+        stdout_json = json.loads(stdout)
+        dataplane_devs = []
+        for i in stdout_json:
+            if i['ifname'] == management_os_iface or i['ifname'] == 'lo':
+                stdout_json.remove(i)
+                continue
+
+            #If iface is vlan linked to base iface
+            if 'link' in i.keys():
+                print(f"remove_vlan_os_interface: {i['ifname']}, {i['link']}")
+                self.remove_vlan_os_interface(os_iface=i['ifname'])
+
+
+
+    def remove_vlan_os_interface(self, os_iface=None):
+        command = f"sudo ip -j addr show {os_iface}"
+        stdout, stderr = self.execute(command)
+        [stdout_json] = json.loads(stdout)
+
+        link = stdout_json['link']
+
+        command = f"sudo ip link del link {link} name {os_iface}"
+        stdout, stderr = self.execute(command)
+
+    def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+        stdout, stderr = self.execute(command)
+        command = f'sudo ip link set dev {os_iface}.{vlan} up'
+        stdout, stderr = self.execute(command)
+
+        if ip != None and cidr != None:
+            self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
+
+    def ping_test(self, dst_ip):
+        command = f'ping -c 3 {dst_ip}  2>&1 > /dev/null && echo Success'
+        stdout, stderr = self.execute(command)
+        if stdout.replace("\n","") == 'Success':
+            return True
+        else:
+            return False

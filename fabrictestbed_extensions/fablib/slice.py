@@ -133,7 +133,7 @@ class Slice(AbcFabLIB):
 
         #fails for topology that does not have nodes
         try:
-            for node_name, node in self.topology.nodes.items():
+            for node_name, node in self.get_fim_topology().nodes.items():
                 return_nodes.append(Node.get_node(self,node))
         except Exception as e:
             print("get_nodes: exception")
@@ -145,11 +145,27 @@ class Slice(AbcFabLIB):
         from fabrictestbed_extensions.fablib.node import Node
         #self.update()
         try:
-            return Node(self.topology.nodes[name])
+            return Node.get_node(self,self.get_fim_topology().nodes[name])
         except Exception as e:
             if verbose:
                 traceback.print_exc()
             raise Exception(f"Node not found: {name}")
+
+    def get_interfaces(self):
+        interfaces = []
+        for node in self.get_nodes():
+            for interface in node.get_interfaces():
+                interfaces.append(interface)
+        return interfaces
+
+    def get_interface(self, name=None):
+        for interface in self.get_interfaces():
+            if name.endswith(interface.get_name()):
+                return interface
+
+        raise Exception("Interface not found: {}".format(name))
+
+
 
     def get_l2networks(self, verbose=False):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -176,7 +192,7 @@ class Slice(AbcFabLIB):
         fabric = fablib()
 
         # Generate Slice Graph
-        slice_graph = self.topology.serialize()
+        slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
         return_status, slice_reservations = fablib.get_slice_manager().create(slice_name=self.slice_name,
