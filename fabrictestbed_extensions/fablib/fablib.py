@@ -75,7 +75,7 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_slice_manager():
-        if fablib.slice_manager != None:
+        if fablib.slice_manager == None:
             fablib.create_slice_manager()
 
         return fablib.slice_manager

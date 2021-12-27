@@ -256,3 +256,109 @@ class Slice(AbcFabLIB):
         #Update the fim topology (wait to avoid get topology bug)
         time.sleep(interval)
         self.update()
+
+    def get_interface_map(self):
+        return self.network_iface_map
+
+    def post_boot_configure(self, verbose=False):
+
+        # Find the interface to network map
+        self.build_interface_map()
+
+        # Interface map in nodes
+
+    def load_interface_map(self, verbose=False):
+        self.network_iface_map = {}
+        for net in self.get_l2networks():
+            self.network_iface_map[net.get_name()] = {}
+
+        for node in self.get_nodes():
+            node.load_data()
+
+
+    def build_interface_map(self, verbose=False):
+        self.network_iface_map = {}
+        for net in self.get_l2networks():
+            iface_map = {}
+
+            if verbose == True:
+                print(f"Buiding iface map for network: {net.get_name()}")
+            ifaces = net.get_interfaces()
+
+            #target iface/node
+            target_iface =  ifaces.pop()
+            target_node = target_iface.get_node()
+            target_os_ifaces = target_node.get_dataplane_os_interfaces()
+            target_node.clear_all_ifaces()
+
+            #print(f"{target_node.get_ssh_command()}")
+
+            target_iface_nums = []
+            for os_iface in target_os_ifaces:
+                iface_num=target_os_ifaces.index(os_iface)+1
+                target_node.set_ip_os_interface(os_iface=os_iface,
+                                                  vlan=target_iface.get_vlan(),
+                                                  ip=f'192.168.{iface_num}.1',
+                                                  cidr = '24'
+                                                 )
+                target_iface_nums.append(iface_num)
+
+
+            #print(f"target_iface: {target_iface.get_name()}")
+            #print(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
+            #print(f"target_node: {target_node.get_name()}")
+            #print(f"target_os_ifaces: {target_os_ifaces}")
+
+
+            for iface in ifaces:
+                node = iface.get_node()
+                node.clear_all_ifaces()
+                node_os_ifaces = node.get_dataplane_os_interfaces()
+
+
+                #print(f"test_node: {node.get_name()}")
+                #print(f"test_iface: {iface.get_name()}")
+                #print(f"node_os_ifaces: {node_os_ifaces}")
+                #print(f"iface.get_vlan(): {iface.get_vlan()}")
+                #print(f"{node.get_ssh_command()}")
+
+                found = False
+                for node_os_iface in node_os_ifaces:
+                    #print(f"target_iface_nums: {target_iface_nums}")
+                    for net_num in target_iface_nums:
+                        dst_ip=f'192.168.{net_num}.1'
+
+                        ip=f'192.168.{net_num}.2'
+
+                        #set interface
+                        node.set_ip_os_interface(os_iface=node_os_iface,
+                                                 vlan=iface.get_vlan(),
+                                                 ip=ip,
+                                                 cidr='24')
+
+                        #ping test
+                        #print(f"ping test {node.get_name()}:{node_os_iface} ->  - {ip} to {dst_ip}")
+                        test_result = node.ping_test(dst_ip)
+                        #print(f"Ping test result: {test_result}")
+
+                        if iface.get_vlan() == None:
+                            node.flush_os_interface(node_os_iface)
+                        else:
+                            node.remove_vlan_os_interface(os_iface=f"{node_os_iface}.{iface.get_vlan()}")
+
+                        if test_result:
+                            #print(f"test_result true: {test_result}")
+                            target_iface_nums = [ net_num ]
+                            found = True
+                            iface_map[node.get_name()] = node_os_iface
+                            iface_map[target_node.get_name()] = target_os_ifaces[net_num-1]
+                            break
+
+                    if found:
+                        break
+
+            self.network_iface_map[net.get_name()] = iface_map
+            target_node.clear_all_ifaces()
+
+        if verbose:
+            print(f"network_iface_map: {self.network_iface_map}")

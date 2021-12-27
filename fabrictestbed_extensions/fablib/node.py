@@ -207,130 +207,166 @@ class Node(AbcFabLIB):
         except ValueError:
             return "Invalid"
 
-    def execute(self, command):
+    def execute(self, command, retry=3, retry_interval=10):
         import paramiko
+        import time
 
-        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-        key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
+        for attempt in range(retry):
+            try:
+                management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
 
-        bastion=paramiko.SSHClient()
-        bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
+                bastion=paramiko.SSHClient()
+                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
 
-        bastion_transport = bastion.get_transport()
-        if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.bastion_private_ipv4_addr, 22)
-        elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.bastion_private_ipv6_addr, 22)
-        else:
-            print ('Management IP Invalid: {}'.format(management_ip))
-            return
+                bastion_transport = bastion.get_transport()
+                if self.validIPAddress(management_ip) == 'IPv4':
+                    src_addr = (self.bastion_private_ipv4_addr, 22)
+                elif self.validIPAddress(management_ip) == 'IPv6':
+                    src_addr = (self.bastion_private_ipv6_addr, 22)
+                else:
+                    print ('Management IP Invalid: {}'.format(management_ip))
+                    return
 
-        dest_addr = (management_ip, 22)
-        bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
-
-
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
-
-        stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
-        rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
-        rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
+                dest_addr = (management_ip, 22)
+                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
 
-        client.close()
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        return rtn_stdout, rtn_stderr
+                client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-    def upload_file(self, node_username, node, local_file_path, remote_file_path):
+                stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
+                rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
+                rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
+
+
+                client.close()
+
+                return rtn_stdout, rtn_stderr
+                #success, skip other tries
+                break
+            except Exception as e:
+                #Fail, try again
+                print("ssh execute fail, trying again")
+                print(f"Fail: {e}")
+                traceback.print_exc()
+                time.sleep(retry_interval)
+                pass
+
+        return "Error", "Error"
+
+    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         import paramiko
+        import time
 
-        try:
-            management_ip = str(node.get_property(pname='management_ip'))
-            #print("Node {0} IP {1}".format(node.name, management_ip))
+        node = self
+        node_username = self.get_username()
 
-            key = paramiko.RSAKey.from_private_key_file(ssh_key_file_priv)
+        for attempt in range(retry):
+            try:
+                management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
 
-            bastion=paramiko.SSHClient()
-            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            bastion.connect(bastion_public_addr, username=bastion_username, key_filename=bastion_key_filename)
+                bastion=paramiko.SSHClient()
+                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
 
-            bastion_transport = bastion.get_transport()
-            if validIPAddress(management_ip) == 'IPv4':
-                src_addr = (bastion_private_ipv4_addr, 22)
-            elif validIPAddress(management_ip) == 'IPv6':
-                src_addr = (bastion_private_ipv6_addr, 22)
-            else:
-                return 'Management IP Invalid: {}'.format(management_ip)
+                bastion_transport = bastion.get_transport()
+                if self.validIPAddress(management_ip) == 'IPv4':
+                    src_addr = (self.bastion_private_ipv4_addr, 22)
+                elif self.validIPAddress(management_ip) == 'IPv6':
+                    src_addr = (self.bastion_private_ipv6_addr, 22)
+                else:
+                    print ('Management IP Invalid: {}'.format(management_ip))
+                    return
 
-            dest_addr = (management_ip, 22)
-            bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+                dest_addr = (management_ip, 22)
+                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
 
-            client = paramiko.SSHClient()
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+                client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-            ftp_client=client.open_sftp()
-            file_attributes = ftp_client.put(local_file_path, remote_file_path)
-            ftp_client.close()
+                ftp_client=client.open_sftp()
+                file_attributes = ftp_client.put(local_file_path, remote_file_path)
+                ftp_client.close()
 
-            client.close()
-        except Exception as e:
-            print(str(e))
-            return str(e)
+                return file_attributes
+                #success, skip other tries
+                break
+            except Exception as e:
+                #Fail, try again
+                print("ssh execute fail, trying again")
+                print(f"Fail: {e}")
+                traceback.print_exc()
+                time.sleep(retry_interval)
+                pass
 
-        return file_attributes
+        return "Error"
 
-    def download_file(self, node_username, node, local_file_path, remote_file_path):
+    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         import paramiko
+        import time
 
-        try:
-            management_ip = str(node.get_property(pname='management_ip'))
-            #print("Node {0} IP {1}".format(node.name, management_ip))
+        node = self
+        node_username = self.get_username()
 
-            key = paramiko.RSAKey.from_private_key_file(ssh_key_file_priv)
+        for attempt in range(retry):
+            try:
+                management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
 
-            bastion=paramiko.SSHClient()
-            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            bastion.connect(bastion_public_addr, username=bastion_username, key_filename=bastion_key_filename)
+                bastion=paramiko.SSHClient()
+                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
 
-            bastion_transport = bastion.get_transport()
-            if validIPAddress(management_ip) == 'IPv4':
-                src_addr = (bastion_private_ipv4_addr, 22)
-            elif validIPAddress(management_ip) == 'IPv6':
-                src_addr = (bastion_private_ipv6_addr, 22)
-            else:
-                return 'Management IP Invalid: {}'.format(management_ip)
+                bastion_transport = bastion.get_transport()
+                if self.validIPAddress(management_ip) == 'IPv4':
+                    src_addr = (self.bastion_private_ipv4_addr, 22)
+                elif self.validIPAddress(management_ip) == 'IPv6':
+                    src_addr = (self.bastion_private_ipv6_addr, 22)
+                else:
+                    print ('Management IP Invalid: {}'.format(management_ip))
+                    return
 
-            dest_addr = (management_ip, 22)
-            bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+                dest_addr = (management_ip, 22)
+                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
 
-            client = paramiko.SSHClient()
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+                client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-            ftp_client=client.open_sftp()
-            file_attributes = ftp_client.get(local_file_path, remote_file_path)
-            ftp_client.close()
 
-            client.close()
-        except Exception as e:
-            print(str(e))
-            return str(e)
+                ftp_client=client.open_sftp()
+                file_attributes = ftp_client.get(local_file_path, remote_file_path)
+                ftp_client.close()
 
-        return file_attributes
+                return file_attributes
+                #success, skip other tries
+                break
+            except Exception as e:
+                #Fail, try again
+                print("ssh execute fail, trying again")
+                print(f"Fail: {e}")
+                traceback.print_exc()
+                time.sleep(retry_interval)
+                pass
+
+        return "Error"
+
 
     def get_management_os_interface(self):
         #Assumes that the default route uses the management network
@@ -387,13 +423,6 @@ class Node(AbcFabLIB):
             command = f"sudo ip addr add {ip}/{cidr} dev {os_iface}"
             stdout, stderr = self.execute(command)
 
-
-    #def remove_vlan_os_interface(self, os_iface=None, vlan=None):
-    #    #self.flush_os_interface(f"{os_iface}.{vlan}")
-    #
-    #    command = f"sudo ip link del link {os_iface} name {os_iface}.{vlan}"
-    #    stdout, stderr = self.execute(command)
-
     def clear_all_ifaces(self):
         self.remove_all_vlan_os_interfaces()
         self.flush_all_os_interfaces()
@@ -401,7 +430,6 @@ class Node(AbcFabLIB):
 
     def remove_all_vlan_os_interfaces(self):
         management_os_iface = self.get_management_os_interface()
-        print(f"management_os_iface: {management_os_iface}")
 
         stdout, stderr = self.execute("sudo ip -j addr list")
         stdout_json = json.loads(stdout)
@@ -413,10 +441,49 @@ class Node(AbcFabLIB):
 
             #If iface is vlan linked to base iface
             if 'link' in i.keys():
-                print(f"remove_vlan_os_interface: {i['ifname']}, {i['link']}")
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
 
+    def save_data(self):
+        data = {}
+        #Get interface data
+        interfaces = {}
+        for i in self.get_interfaces():
+            print(f"interface: {i.get_name()}")
+            print(f"os_interface: {i.get_os_interface()}")
+            if i.get_network() != None:
+                network_name = i.get_network().get_name()
+                print(f"network: {i.get_network().get_name()}")
+            else:
+                network_name = None
+                print(f"network: None")
 
+            interfaces[i.get_name()] =  { 'network':  network_name,
+                         'os_interface':  i.get_os_interface() }
+
+        with open(f'{self.get_name()}.json', 'w') as outfile:
+            json.dump(interfaces, outfile)
+
+        #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
+
+        self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+
+    def load_data(self):
+
+        self.download_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+
+        interfaces=""
+        with open(f'{self.get_name()}.json', 'r') as infile:
+            interfaces = json.load(infile)
+
+
+        interface_map = self.get_slice().network_iface_map #= self.get_slice().get_interface_map()
+        print(f"interfaces {interfaces}")
+        for interface_name, net_map in interfaces.items():
+            print(f"interface_name: {net_map}:")
+            if net_map['network'] != None:
+                interface_map[net_map['network']][self.get_name()] = net_map['os_interface']
+
+        self.get_slice().network_iface_map = interface_map
 
     def remove_vlan_os_interface(self, os_iface=None):
         command = f"sudo ip -j addr show {os_iface}"
