@@ -156,12 +156,17 @@ class Node(AbcFabLIB):
 
         return interfaces
 
-    def get_interface(self, name=None):
+    def get_interface(self, name=None, network_name=None):
         from fabrictestbed_extensions.fablib.interface import Interface
 
-        for component in self.get_components():
-            for interface in component.get_interfaces():
-                if interface.get_name() == name:
+        if name != None:
+            for component in self.get_components():
+                for interface in component.get_interfaces():
+                    if interface.get_name() == name:
+                        return interface
+        elif network_name != None:
+            for interface in self.get_interfaces():
+                if interface.get_network().get_name() == network_name:
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
@@ -387,19 +392,21 @@ class Node(AbcFabLIB):
         dataplane_devs = []
         for i in stdout_json:
             if i['ifname'] != 'lo' and i['ifname'] !=  management_dev:
-                dataplane_devs.append(i['ifname'])
+                print(f"i: {i}")
+                dataplane_devs.append({'ifname': i['ifname'], 'mac': i['address']})
 
         return dataplane_devs
 
     def flush_all_os_interfaces(self):
         for iface in self.get_dataplane_os_interfaces():
-            self.flush_os_interface(iface)
+            self.flush_os_interface(iface['ifname'])
 
     def flush_os_interface(self, os_iface):
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
         #Bring up base iface
+        #print(f"node.set_ip_os_interface: os_iface {os_iface}, vlan {vlan}")
         command = f'sudo ip link set dev {os_iface} up'
         if mtu != None:
             command += f" mtu {mtu}"
@@ -448,17 +455,17 @@ class Node(AbcFabLIB):
         #Get interface data
         interfaces = {}
         for i in self.get_interfaces():
-            print(f"interface: {i.get_name()}")
-            print(f"os_interface: {i.get_os_interface()}")
+            #print(f"interface: {i.get_name()}")
+            #print(f"os_interface: {i.get_physical_os_interface()}")
             if i.get_network() != None:
                 network_name = i.get_network().get_name()
-                print(f"network: {i.get_network().get_name()}")
+                #print(f"network: {i.get_network().get_name()}")
             else:
                 network_name = None
-                print(f"network: None")
+                #print(f"network: None")
 
             interfaces[i.get_name()] =  { 'network':  network_name,
-                         'os_interface':  i.get_os_interface() }
+                         'os_interface':  i.get_physical_os_interface() }
 
         with open(f'{self.get_name()}.json', 'w') as outfile:
             json.dump(interfaces, outfile)
@@ -477,9 +484,9 @@ class Node(AbcFabLIB):
 
 
         interface_map = self.get_slice().network_iface_map #= self.get_slice().get_interface_map()
-        print(f"interfaces {interfaces}")
+        #print(f"interfaces {interfaces}")
         for interface_name, net_map in interfaces.items():
-            print(f"interface_name: {net_map}:")
+            #print(f"interface_name: {net_map}:")
             if net_map['network'] != None:
                 interface_map[net_map['network']][self.get_name()] = net_map['os_interface']
 
@@ -488,7 +495,12 @@ class Node(AbcFabLIB):
     def remove_vlan_os_interface(self, os_iface=None):
         command = f"sudo ip -j addr show {os_iface}"
         stdout, stderr = self.execute(command)
-        [stdout_json] = json.loads(stdout)
+        try:
+            [stdout_json] = json.loads(stdout)
+        except Exception as e:
+            print(f"os_iface: {os_iface}, stdout: {stdout}, stderr: {stderr}")
+            raise e
+
 
         link = stdout_json['link']
 
@@ -496,6 +508,7 @@ class Node(AbcFabLIB):
         stdout, stderr = self.execute(command)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        print(f"node.add_vlan_os_interface: os_iface {os_iface}, vlan {vlan}")
         command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
         command = f'sudo ip link set dev {os_iface}.{vlan} up'

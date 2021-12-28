@@ -72,14 +72,24 @@ class Slice(AbcFabLIB):
          return slice
 
     @staticmethod
-    def get_slice(sm_slice=None):
+    def get_slice(sm_slice=None, verbose=False):
         slice = Slice(name=sm_slice.slice_name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.slice_name
         slice.topology = fablib.slice_manager.get_slice_topology(slice_object=slice.sm_slice)
 
-        slice.update()
+        try:
+            slice.update()
+        except:
+            if verbose:
+                print("Slice could not be updated: slice.get_slice")
+
+        try:
+            slice.load_config()
+        except:
+            print("Slice config could loaded: slice.get_slice")
+
         return slice
 
     def get_fim_topology(self):
@@ -187,26 +197,6 @@ class Slice(AbcFabLIB):
                 traceback.print_exc()
         return None
 
-    def submit(self, wait=False, wait_timeout=360, wait_interval=10, wait_progress=False):
-        from fabrictestbed_extensions.fablib.fablib import fablib
-        fabric = fablib()
-
-        # Generate Slice Graph
-        slice_graph = self.get_fim_topology().serialize()
-
-        # Request slice from Orchestrator
-        return_status, slice_reservations = fablib.get_slice_manager().create(slice_name=self.slice_name,
-                                                                slice_graph=slice_graph,
-                                                                ssh_key=self.slice_public_key)
-        if return_status != Status.OK:
-            raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
-
-
-        time.sleep(10)
-        self.update_slice()
-
-        if wait or wait_progress:
-            self.wait(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
 
     def delete(self):
         return_status, result = fablib.get_slice_manager().delete(slice_object=self.sm_slice)
@@ -260,12 +250,20 @@ class Slice(AbcFabLIB):
     def get_interface_map(self):
         return self.network_iface_map
 
-    def post_boot_configure(self, verbose=False):
+    def post_boot_config(self, verbose=False):
 
         # Find the interface to network map
         self.build_interface_map()
 
         # Interface map in nodes
+        for node in self.get_nodes():
+            node.save_data()
+
+        for interface in self.get_interfaces():
+            interface.config_vlan_iface()
+
+    def load_config(self):
+        self.load_interface_map()
 
     def load_interface_map(self, verbose=False):
         self.network_iface_map = {}
@@ -294,9 +292,10 @@ class Slice(AbcFabLIB):
             #print(f"{target_node.get_ssh_command()}")
 
             target_iface_nums = []
-            for os_iface in target_os_ifaces:
-                iface_num=target_os_ifaces.index(os_iface)+1
-                target_node.set_ip_os_interface(os_iface=os_iface,
+            for target_os_iface in target_os_ifaces:
+                target_os_iface_name = target_os_iface['ifname']
+                iface_num=target_os_ifaces.index(target_os_iface)+1
+                target_node.set_ip_os_interface(os_iface=target_os_iface_name,
                                                   vlan=target_iface.get_vlan(),
                                                   ip=f'192.168.{iface_num}.1',
                                                   cidr = '24'
@@ -324,6 +323,7 @@ class Slice(AbcFabLIB):
 
                 found = False
                 for node_os_iface in node_os_ifaces:
+                    node_os_iface_name = node_os_iface['ifname']
                     #print(f"target_iface_nums: {target_iface_nums}")
                     for net_num in target_iface_nums:
                         dst_ip=f'192.168.{net_num}.1'
@@ -331,20 +331,20 @@ class Slice(AbcFabLIB):
                         ip=f'192.168.{net_num}.2'
 
                         #set interface
-                        node.set_ip_os_interface(os_iface=node_os_iface,
+                        node.set_ip_os_interface(os_iface=node_os_iface_name,
                                                  vlan=iface.get_vlan(),
                                                  ip=ip,
                                                  cidr='24')
 
                         #ping test
-                        #print(f"ping test {node.get_name()}:{node_os_iface} ->  - {ip} to {dst_ip}")
+                        #print(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
                         test_result = node.ping_test(dst_ip)
                         #print(f"Ping test result: {test_result}")
 
                         if iface.get_vlan() == None:
-                            node.flush_os_interface(node_os_iface)
+                            node.flush_os_interface(node_os_iface_name)
                         else:
-                            node.remove_vlan_os_interface(os_iface=f"{node_os_iface}.{iface.get_vlan()}")
+                            node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
 
                         if test_result:
                             #print(f"test_result true: {test_result}")
@@ -362,3 +362,25 @@ class Slice(AbcFabLIB):
 
         if verbose:
             print(f"network_iface_map: {self.network_iface_map}")
+
+    def submit(self, wait=False, wait_timeout=360, wait_interval=10, wait_progress=False):
+        from fabrictestbed_extensions.fablib.fablib import fablib
+        fabric = fablib()
+
+        # Generate Slice Graph
+        slice_graph = self.get_fim_topology().serialize()
+
+        # Request slice from Orchestrator
+        return_status, slice_reservations = fablib.get_slice_manager().create(slice_name=self.slice_name,
+                                                                slice_graph=slice_graph,
+                                                                ssh_key=self.slice_public_key)
+        if return_status != Status.OK:
+            raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
+
+        time.sleep(10)
+        self.update_slice()
+
+        if wait or wait_progress:
+            self.wait(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
+            self.update()
+            self.post_boot_config()
