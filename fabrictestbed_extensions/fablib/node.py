@@ -166,7 +166,7 @@ class Node(AbcFabLIB):
                         return interface
         elif network_name != None:
             for interface in self.get_interfaces():
-                if interface.get_network().get_name() == network_name:
+                if interface != None and interface.get_network().get_name() == network_name:
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
