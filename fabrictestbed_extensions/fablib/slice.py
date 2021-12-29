@@ -382,5 +382,9 @@ class Slice(AbcFabLIB):
 
         if wait or wait_progress:
             self.wait(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
+            if wait_progress:
+                print("Running post boot config ...",end="")
             self.update()
             self.post_boot_config()
+            if wait_progress:
+                print("Done!")

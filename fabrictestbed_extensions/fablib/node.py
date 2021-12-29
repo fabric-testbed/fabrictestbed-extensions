@@ -392,7 +392,6 @@ class Node(AbcFabLIB):
         dataplane_devs = []
         for i in stdout_json:
             if i['ifname'] != 'lo' and i['ifname'] !=  management_dev:
-                print(f"i: {i}")
                 dataplane_devs.append({'ifname': i['ifname'], 'mac': i['address']})
 
         return dataplane_devs
@@ -508,7 +507,6 @@ class Node(AbcFabLIB):
         stdout, stderr = self.execute(command)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
-        print(f"node.add_vlan_os_interface: os_iface {os_iface}, vlan {vlan}")
         command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
         command = f'sudo ip link set dev {os_iface}.{vlan} up'
