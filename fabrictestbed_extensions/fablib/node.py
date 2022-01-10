@@ -110,6 +110,13 @@ class Node(AbcFabLIB):
         self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
 
+    def set_host(self, host_name=None):
+        #excample: host_name='renc-w2.fabric-testbed.net'
+        labels = Labels()
+        labels.instance_parent = host_name
+        self.get_fim_node().set_properties(labels=labels)
+
+
     def get_slice(self):
         return self.slice
 
