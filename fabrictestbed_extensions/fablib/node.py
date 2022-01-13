@@ -219,8 +219,9 @@ class Node(AbcFabLIB):
         for attempt in range(retry):
             try:
                 management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
 
+                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file, password=self.fabric_slice_private_key_passphrase)
+                
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
@@ -275,7 +276,8 @@ class Node(AbcFabLIB):
         for attempt in range(retry):
             try:
                 management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
+
+                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file, password=self.fabric_slice_private_key_passphrase)
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -328,7 +330,8 @@ class Node(AbcFabLIB):
         for attempt in range(retry):
             try:
                 management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file)
+
+                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file, password=self.fabric_slice_private_key_passphrase)
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
