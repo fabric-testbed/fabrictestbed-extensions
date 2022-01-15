@@ -50,6 +50,8 @@ class fablib(AbcFabLIB):
     credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
     orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
     fabric_token=os.environ['FABRIC_TOKEN_LOCATION']
+        
+    fabric_slice_private_key_passphrase=os.environ['FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE']
 
     #Basstion host setup
     bastion_username = os.environ['FABRIC_BASTION_USERNAME']
