@@ -244,7 +244,6 @@ class Node(AbcFabLIB):
                 dest_addr = (management_ip, 22)
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
-
                 client = paramiko.SSHClient()
                 client.load_system_host_keys()
                 client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())

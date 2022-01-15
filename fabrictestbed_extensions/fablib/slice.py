@@ -274,7 +274,7 @@ class Slice(AbcFabLIB):
             node.load_data()
 
 
-    def build_interface_map(self, verbose=False):
+    def build_interface_map(self, verbose=True):
         self.network_iface_map = {}
         for net in self.get_l2networks():
             iface_map = {}
