@@ -44,24 +44,7 @@ from .abc_fablib import AbcFabLIB
 
 from .. import images
 
-
 class fablib(AbcFabLIB):
-
-    credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-    orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
-    fabric_token=os.environ['FABRIC_TOKEN_LOCATION']
-        
-    fabric_slice_private_key_passphrase=os.environ['FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE']
-
-    #Basstion host setup
-    bastion_username = os.environ['FABRIC_BASTION_USERNAME']
-    bastion_key_filename = os.environ['FABRIC_BASTION_KEY_LOCATION']
-    bastion_public_addr = os.environ['FABRIC_BASTION_HOST']
-    bastion_private_ipv4_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV4']
-    bastion_private_ipv6_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV6']
-
-    slice_manager = None
-
     def __init__(self):
         """
         Constructor
@@ -69,32 +52,114 @@ class fablib(AbcFabLIB):
         """
         super().__init__()
 
-        self.create_slice_manager()
+        self.build_slice_manager()
 
-    @staticmethod
-    def set_slice_manager(slice_manager):
-        fablib.slice_manager = slice_manager
-
-    @staticmethod
-    def get_slice_manager():
-        if fablib.slice_manager == None:
-            fablib.create_slice_manager()
-
-        return fablib.slice_manager
-
-    @staticmethod
-    def create_slice_manager():
-        fablib.slice_manager = SliceManager(oc_host=fablib.orchestrator_host,
-                             cm_host=fablib.credmgr_host,
+    def build_slice_manager(self):
+        self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
+                             cm_host=self.credmgr_host,
                              project_name='all',
                              scope='all')
 
         # Initialize the slice manager
-        fablib.slice_manager.initialize()
+        self.slice_manager.initialize()
 
-        return fablib.slice_manager
+        return self.slice_manager
 
+    @staticmethod
+    def init_fablib():
+        if not hasattr(fablib, 'fablib_object'):
+            fablib.fablib_object = fablib()
 
+    @staticmethod
+    def get_default_slice_key():
+        return fablib.fablib_object.default_slice_key
+
+    @staticmethod
+    def get_config():
+        return { 'credmgr_host': fablib.fablib_object.credmgr_host,
+                'orchestrator_host': fablib.fablib_object.orchestrator_host,
+                'fabric_token': fablib.fablib_object.fabric_token,
+                'bastion_username': fablib.fablib_object.bastion_username,
+                'bastion_key_filename': fablib.fablib_object.bastion_key_filename,
+                'bastion_public_addr': fablib.fablib_object.bastion_public_addr,
+                'bastion_public_addr': fablib.fablib_object.bastion_public_addr,
+                'bastion_private_ipv4_addr': fablib.fablib_object.bastion_private_ipv4_addr,
+                'slice_public_key': fablib.get_default_slice_public_key(),
+                'slice_public_key_file': fablib.get_default_slice_public_key_file(),
+                'slice_private_key_file': fablib.get_default_slice_private_key_file(),
+                'fabric_slice_private_key_passphrase': fablib.get_default_slice_private_key_passphrase()
+               }
+    @staticmethod
+    def get_default_slice_public_key():
+        if 'slice_public_key' in fablib.fablib_object.default_slice_key.keys():
+            return fablib.fablib_object.default_slice_key['slice_public_key']
+        else:
+            return None
+
+    @staticmethod
+    def get_default_slice_public_key_file():
+        if 'slice_public_key_file' in fablib.fablib_object.default_slice_key.keys():
+            return fablib.fablib_object.default_slice_key['slice_public_key_file']
+        else:
+            return None
+
+    @staticmethod
+    def get_default_slice_private_key_file():
+        if 'slice_private_key_file' in fablib.fablib_object.default_slice_key.keys():
+            return fablib.fablib_object.default_slice_key['slice_private_key_file']
+        else:
+            return None
+
+    @staticmethod
+    def get_default_slice_private_key_passphrase():
+        if 'slice_private_key_passphrase' in fablib.fablib_object.default_slice_key.keys():
+            return fablib.fablib_object.default_slice_key['slice_private_key_passphrase']
+        else:
+            return None
+
+    @staticmethod
+    def get_credmgr_host():
+        return fablib.fablib_object.credmgr_host
+
+    @staticmethod
+    def get_orchestrator_host():
+        return fablib.fablib_object.orchestrator_host
+
+    @staticmethod
+    def get_fabric_token():
+        return fablib.fablib_object.fabric_token
+
+    @staticmethod
+    def get_bastion_username():
+        return fablib.fablib_object.bastion_username
+
+    @staticmethod
+    def get_bastion_key_filename():
+        return fablib.fablib_object.bastion_key_filename
+
+    @staticmethod
+    def get_bastion_public_addr():
+        return fablib.fablib_object.bastion_public_addr
+
+    @staticmethod
+    def get_bastion_private_ipv4_addr():
+        return fablib.fablib_object.bastion_private_ipv4_addr
+
+    @staticmethod
+    def get_bastion_private_ipv6_addr():
+        return fablib.fablib_object.bastion_private_ipv6_addr
+
+    @staticmethod
+    def set_slice_manager(slice_manager):
+        fablib.fablib_object.slice_manager = slice_manager
+
+    @staticmethod
+    def get_slice_manager():
+        return fablib.fablib_object.slice_manager
+
+    @staticmethod
+    def create_slice_manager():
+        return fablib.fablib_object.create_slice_manager()
 
     @staticmethod
     def new_slice(name):
@@ -104,9 +169,6 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_site_advertisment(site):
-        #fabric = fablib()
-        #slice_manager = AbcFabricX.create_slice_manager()
-
         return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
@@ -116,9 +178,6 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_available_resources():
-        #fabric = fablib()
-        #slice_manager = AbcFabricX.create_slice_manager()
-
         return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
@@ -127,9 +186,7 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_slices(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
-        #fabric = fablib()
         from fabrictestbed_extensions.fablib.slice import Slice
-
         return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
 
         return_slices = []
@@ -140,7 +197,7 @@ class fablib(AbcFabLIB):
                 #print("   State      : {}".format(slice.slice_state))
                 #print("   Lease End  : {}".format(slice.lease_end))
                 #print()
-                return_slices.append(Slice.get_slice(sm_slice=slice))
+                return_slices.append(Slice.get_slice(sm_slice=slice, load_config=False))
         else:
             print(f"Failure: {slices}")
 
@@ -148,9 +205,6 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_slice(name=None, slice_id=None, verbose=False):
-        #fabric = fablib()
-        #from fabrictestbed_extensions.fablib.slice import Slice
-
         slices = fablib.get_slices()
 
         for slice in slices:
@@ -161,65 +215,30 @@ class fablib(AbcFabLIB):
 
         #Should not get here if the slice is found
         if name != None:
-            raise Exception(f"Slice not found: name: {name}")
+            raise Exception(f"Slice {name} not found")
         elif slice_id != None:
-            raise Excption(f"Slice not found: slice_id: {slice_id}")
+            raise Excption(f"Slice {slice_id} not found")
         else:
             raise Exception(f"get_slice missing slice_id or name")
 
     @staticmethod
-    def delete_slice(slice_name=None, slice_id=None):
-        #fabric = fablib()
-        slice = fablib.get_slice(slice_id=slice_id)
+    def delete_slice(slice_name=None):
+        slice = fablib.get_slice(slice_name)
         slice.delete()
 
     @staticmethod
     def delete_all():
-        #fabric = fablib()
         slices = fablib.get_slices()
 
         for slice in slices:
             try:
+                print(f"Deleting slice {slice.get_name()}", end='')
                 slice.delete()
+                print(f", Success!")
             except Exception as e:
-                print(f"Failed to delete {slice.get_name()}")
-
-
-    #TODO
-    def get_slice_error(slice_id):
-        fabric = fablib()
-        slice_manager = fablib.create_slice_manager()
-
-        return_status, slices = slice_manager.slices(includes=[SliceState.Dead,SliceState.Closing,SliceState.StableError])
-        if return_status != Status.OK:
-            raise Exception("Failed to get slices: {}".format(slices))
-        try:
-
-            if slice_id:
-                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
-            else:
-                raise Exception("Slice not found. Slice name or id requried. slice_id: {}".format(str(slice_id)))
-        except Exception as e:
-            print("Exception: {}".format(str(e)))
-            raise Exception("Slice not found slice_id: {}".format(str(slice_id)))
+                print(f", Failed!")
 
 
 
-        return_status, slivers = slice_manager.slivers(slice_object=slice)
-        if return_status != Status.OK:
-            raise Exception("Failed to get slivers: {}".format(slivers))
-
-        return_errors = []
-        for s in slivers:
-            status, sliver_status = slice_manager.sliver_status(sliver=s)
-
-            #print("Response Status {}".format(status))
-            if status == Status.OK:
-                #print()
-                #print("Sliver Status {}".format(sliver_status))
-                #print()
-                #return_errors.append("Sliver: {} {}".format(s.name))
-                #return_errors.append(sliver_status.notices)
-                return_errors.append(sliver_status)
-
-        return return_errors
+#init fablib object
+fablib.fablib_object = fablib()

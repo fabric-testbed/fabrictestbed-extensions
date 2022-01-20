@@ -41,27 +41,16 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-#from fabrictestbed_extensions.fabricx.fabricx import FabricX
-#from fabrictestbed_extensions.fabricx.slicex import SliceX
-#from fabrictestbed_extensions.fabricx.nodex import NodeX
-#from .slicex import SliceX
-#from .nodex import NodeX
-#from .fabricx import FabricX
-
-
 from ipaddress import ip_address, IPv4Address
 
+#from .abc_fablib import AbcFabLIB
+from fabrictestbed_extensions.fablib.fablib import fablib
 
-#from fim.user import node
-
-
-from .abc_fablib import AbcFabLIB
 
 from .. import images
 
-
-class Node(AbcFabLIB):
-
+#class Node(AbcFabLIB):
+class Node():
     def __init__(self, slice, node):
         """
         Constructor
@@ -182,6 +171,21 @@ class Node(AbcFabLIB):
     def get_username(self):
         return self.username
 
+    def get_public_key(self):
+        return self.get_slice().get_slice_public_key()
+
+    def get_public_key_file(self):
+        return self.get_slice().get_slice_public_key_file()
+
+    def get_private_key(self):
+        return self.get_slice().get_slice_private_key()
+
+    def get_private_key_file(self):
+        return self.get_slice().get_slice_private_key_file()
+
+    def get_private_key_passphrase(self):
+        return self.get_slice().get_private_key_passphrase()
+
     def add_component(self, model=None, name=None):
         from fabrictestbed_extensions.fablib.component import Component
         return Component.new_component(node=self, model=model, name=name)
@@ -207,9 +211,9 @@ class Node(AbcFabLIB):
 
 
     def get_ssh_command(self):
-        return 'ssh -i {} -J {}@{} {}@{}'.format(self.slice_private_key_file,
-                                           self.bastion_username,
-                                           self.bastion_public_addr,
+        return 'ssh -i {} -J {}@{} {}@{}'.format(self.get_private_key_file(),
+                                           fablib.get_bastion_username(),
+                                           fablib.get_bastion_public_addr(),
                                            self.get_username(),
                                            self.get_management_ip())
 
@@ -223,26 +227,28 @@ class Node(AbcFabLIB):
         import paramiko
         import time
 
+        #Get and test src and management_ips
+        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+        if self.validIPAddress(management_ip) == 'IPv4':
+            src_addr = (fablib.get_bastion_private_ipv4_addr(), 22)
+        elif self.validIPAddress(management_ip) == 'IPv6':
+            src_addr = (fablib.get_bastion_private_ipv6_addr(), 22)
+        else:
+            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
+        dest_addr = (management_ip, 22)
+
         for attempt in range(retry):
             try:
-                management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+                if self.get_private_key_passphrase():
+                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                else:
+                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
 
-                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file, password=self.fabric_slice_private_key_passphrase)
-                
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
+                bastion.connect(fablib.get_bastion_public_addr(), username=fablib.get_bastion_username(), key_filename=fablib.get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
-                if self.validIPAddress(management_ip) == 'IPv4':
-                    src_addr = (self.bastion_private_ipv4_addr, 22)
-                elif self.validIPAddress(management_ip) == 'IPv6':
-                    src_addr = (self.bastion_private_ipv6_addr, 22)
-                else:
-                    print ('Management IP Invalid: {}'.format(management_ip))
-                    return
-
-                dest_addr = (management_ip, 22)
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
                 client = paramiko.SSHClient()
@@ -263,42 +269,46 @@ class Node(AbcFabLIB):
                 #success, skip other tries
                 break
             except Exception as e:
+                if attempt+1 == retry:
+                    raise e
+
                 #Fail, try again
-                print("ssh execute fail, trying again")
+                print(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
                 print(f"Fail: {e}")
-                traceback.print_exc()
+                #traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
 
-        return "Error", "Error"
+        raise Exception("scp download failed")
+
 
     def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         import paramiko
         import time
 
-        node = self
-        node_username = self.get_username()
+        #Get and test src and management_ips
+        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+        if self.validIPAddress(management_ip) == 'IPv4':
+            src_addr = (fablib.get_bastion_private_ipv4_addr(), 22)
+        elif self.validIPAddress(management_ip) == 'IPv6':
+            src_addr = (fablib.get_bastion_private_ipv6_addr(), 22)
+        else:
+            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
+        dest_addr = (management_ip, 22)
 
         for attempt in range(retry):
             try:
-                management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
 
-                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file, password=self.fabric_slice_private_key_passphrase)
+                if self.get_private_key_passphrase():
+                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                else:
+                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
+                bastion.connect(fablib.get_bastion_public_addr(), username=fablib.get_bastion_username(), key_filename=fablib.get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
-                if self.validIPAddress(management_ip) == 'IPv4':
-                    src_addr = (self.bastion_private_ipv4_addr, 22)
-                elif self.validIPAddress(management_ip) == 'IPv6':
-                    src_addr = (self.bastion_private_ipv6_addr, 22)
-                else:
-                    print ('Management IP Invalid: {}'.format(management_ip))
-                    return
-
-                dest_addr = (management_ip, 22)
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
 
@@ -317,44 +327,46 @@ class Node(AbcFabLIB):
                 #success, skip other tries
                 break
             except Exception as e:
+                if attempt+1 == retry:
+                    raise e
+
                 #Fail, try again
-                print("ssh execute fail, trying again")
+                print(f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
                 print(f"Fail: {e}")
-                traceback.print_exc()
+                #traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
 
-        return "Error"
+        raise Exception("scp upload failed")
+
 
     def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         import paramiko
         import time
 
-        node = self
-        node_username = self.get_username()
+        #Get and test src and management_ips
+        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
+        if self.validIPAddress(management_ip) == 'IPv4':
+            src_addr = (fablib.get_bastion_private_ipv4_addr(), 22)
+        elif self.validIPAddress(management_ip) == 'IPv6':
+            src_addr = (fablib.get_bastion_private_ipv6_addr(), 22)
+        else:
+            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
+        dest_addr = (management_ip, 22)
 
         for attempt in range(retry):
             try:
-                management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-
-                key = paramiko.RSAKey.from_private_key_file(self.slice_private_key_file, password=self.fabric_slice_private_key_passphrase)
+                if self.get_private_key_passphrase():
+                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                else:
+                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_key_filename)
+                bastion.connect(fablib.get_bastion_public_addr(), username=fablib.get_bastion_username(), key_filename=fablib.get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
-                if self.validIPAddress(management_ip) == 'IPv4':
-                    src_addr = (self.bastion_private_ipv4_addr, 22)
-                elif self.validIPAddress(management_ip) == 'IPv6':
-                    src_addr = (self.bastion_private_ipv6_addr, 22)
-                else:
-                    print ('Management IP Invalid: {}'.format(management_ip))
-                    return
-
-                dest_addr = (management_ip, 22)
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
-
 
                 client = paramiko.SSHClient()
                 client.load_system_host_keys()
@@ -372,15 +384,32 @@ class Node(AbcFabLIB):
                 #success, skip other tries
                 break
             except Exception as e:
+                if attempt+1 == retry:
+                    raise e
+
                 #Fail, try again
-                print("ssh execute fail, trying again")
+                print(f"SCP download fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
                 print(f"Fail: {e}")
-                traceback.print_exc()
+                #traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
 
-        return "Error"
+        raise Exception("scp download failed")
 
+
+    def test_ssh(self):
+        try:
+            self.execute('ls', retry=1, retry_interval=10)
+        except:
+            return False
+        return True
+
+    def wait_for_ssh(self, retry=6, retry_interval=10):
+        try:
+            self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval)
+        except:
+            return False
+        return True
 
     def get_management_os_interface(self):
         #Assumes that the default route uses the management network

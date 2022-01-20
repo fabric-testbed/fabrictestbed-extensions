@@ -44,14 +44,13 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 #from .nodex import NodeX
 #from .fabricx import FabricX
 
-from .abc_fablib import AbcFabLIB
+#from .abc_fablib import AbcFabLIB
 
 from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
 
-
-class Slice(AbcFabLIB):
+class Slice():
 
     def __init__(self, name=None):
         """
@@ -65,30 +64,44 @@ class Slice(AbcFabLIB):
         self.slice_id = None
         self.topology = None
 
-    @staticmethod
-    def new_slice(name=None):
-         slice = Slice(name=name)
-         slice.topology = ExperimentTopology()
-         return slice
+        self.slice_key = fablib.get_default_slice_key()
 
     @staticmethod
-    def get_slice(sm_slice=None, verbose=False):
+    def new_slice(name=None):
+        """
+        Create a new slice
+        @param name slice name
+        @return fablib Slice object
+        """
+
+        slice = Slice(name=name)
+        slice.topology = ExperimentTopology()
+        return slice
+
+    @staticmethod
+    def get_slice(sm_slice=None, verbose=False, load_config=True):
+        """
+        Create a new slice
+        @param name slice name
+        @return fablib Slice object
+        """
         slice = Slice(name=sm_slice.slice_name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.slice_name
-        slice.topology = fablib.slice_manager.get_slice_topology(slice_object=slice.sm_slice)
+        slice.topology = fablib.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
 
         try:
             slice.update()
         except:
             if verbose:
-                print("Slice could not be updated: slice.get_slice")
+                print(f"Slice {slice.slice_name} could not be updated: slice.get_slice")
 
-        try:
-            slice.load_config()
-        except:
-            print("Slice config could loaded: slice.get_slice")
+        if load_config:
+            try:
+                slice.load_config()
+            except:
+                print(f"Slice {slice.slice_name} config could not loaded: slice.get_slice")
 
         return slice
 
@@ -117,6 +130,34 @@ class Slice(AbcFabLIB):
     def update(self):
         self.update_slice()
         self.update_topology()
+
+    def get_slice_public_key(self):
+        return self.slice_key['slice_public_key']
+
+    def get_private_key_passphrase(self):
+        if 'slice_private_key_passphrase' in self.slice_key.keys():
+            return self.slice_key['slice_private_key_passphrase']
+        else:
+            return None
+
+    def get_slice_public_key(self):
+        if 'slice_public_key' in self.slice_key.keys():
+            return self.slice_key['slice_public_key']
+        else:
+            return None
+
+    def get_slice_public_key_file(self):
+        if 'slice_public_key_file' in self.slice_key.keys():
+            return self.slice_key['slice_public_key_file']
+        else:
+            return None
+
+    def get_slice_private_key_file(self):
+        if 'slice_private_key_file' in self.slice_key.keys():
+            return self.slice_key['slice_private_key_file']
+        else:
+            return None
+
 
     def get_name(self):
         return self.slice_name
@@ -248,6 +289,9 @@ class Slice(AbcFabLIB):
         self.update()
 
     def get_interface_map(self):
+        if not hasattr(self, 'network_iface_map'):
+            self.load_interface_map()
+
         return self.network_iface_map
 
     def post_boot_config(self, verbose=False):
@@ -274,7 +318,7 @@ class Slice(AbcFabLIB):
             node.load_data()
 
 
-    def build_interface_map(self, verbose=True):
+    def build_interface_map(self, verbose=False):
         self.network_iface_map = {}
         for net in self.get_l2networks():
             iface_map = {}
@@ -363,7 +407,7 @@ class Slice(AbcFabLIB):
         if verbose:
             print(f"network_iface_map: {self.network_iface_map}")
 
-    def submit(self, wait=False, wait_timeout=360, wait_interval=10, wait_progress=False):
+    def submit(self, wait=False, wait_timeout=360, wait_interval=10, wait_progress=False, wait_ssh=False):
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
@@ -373,7 +417,7 @@ class Slice(AbcFabLIB):
         # Request slice from Orchestrator
         return_status, slice_reservations = fablib.get_slice_manager().create(slice_name=self.slice_name,
                                                                 slice_graph=slice_graph,
-                                                                ssh_key=self.slice_public_key)
+                                                                ssh_key=self.get_slice_public_key())
         if return_status != Status.OK:
             raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
 
@@ -382,9 +426,17 @@ class Slice(AbcFabLIB):
 
         if wait or wait_progress:
             self.wait(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
+
             if wait_progress:
                 print("Running post boot config ...",end="")
+
+            time.sleep(30)
             self.update()
+
+            for node in self.get_nodes():
+                node.wait_for_ssh()
+
             self.post_boot_config()
-            if wait_progress:
-                print("Done!")
+
+        if wait_progress:
+            print("Done!")

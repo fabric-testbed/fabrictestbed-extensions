@@ -54,13 +54,13 @@ from ipaddress import ip_address, IPv4Address
 #from fim.user import node
 
 
-from .abc_fablib import AbcFabLIB
+#from .abc_fablib import AbcFabLIB
 
 from .. import images
 
 
-class Component(AbcFabLIB):
-
+#class Component(AbcFabLIB):
+class Component():
     component_model_map = { 'NIC_Basic': ComponentModelType.SharedNIC_ConnectX_6,
                             'NIC_ConnectX_6': ComponentModelType.SmartNIC_ConnectX_6,
                             'NIC_ConnectX_5': ComponentModelType.SmartNIC_ConnectX_5,

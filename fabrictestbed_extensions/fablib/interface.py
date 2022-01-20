@@ -54,13 +54,13 @@ from ipaddress import ip_address, IPv4Address
 #from fim.user import node
 
 
-from .abc_fablib import AbcFabLIB
+#from .abc_fablib import AbcFabLIB
 
 from .. import images
 
 
-class Interface(AbcFabLIB):
-
+#class Interface(AbcFabLIB):
+class Interface():
     def __init__(self, component=None, fim_interface=None):
         """
         Constructor

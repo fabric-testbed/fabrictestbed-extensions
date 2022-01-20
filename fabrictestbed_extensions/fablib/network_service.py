@@ -42,12 +42,13 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 from ipaddress import ip_address, IPv4Address
 
-from .abc_fablib import AbcFabLIB
+#from .abc_fablib import AbcFabLIB
 
 from .. import images
 
 
-class NetworkService(AbcFabLIB):
+#class NetworkService(AbcFabLIB):
+class NetworkService():
     network_service_map = { 'L2Bridge': ServiceType.L2Bridge,
                             'L2PTP': ServiceType.L2PTP,
                             'L2STS': ServiceType.L2STS,
