@@ -134,7 +134,7 @@ class SliceUtils(AbcUtils):
     def get_slice_error(slice_id):
         slice_manager = AbcUtils.create_slice_manager()
 
-        return_status, slices = slice_manager.slices(includes=[SliceState.Dead,SliceState.Closing])
+        return_status, slices = slice_manager.slices(includes=[SliceState.Dead,SliceState.Closing,SliceState.StableError])
         if return_status != Status.OK:
             raise Exception("Failed to get slices: {}".format(slices))
         try:
@@ -143,8 +143,10 @@ class SliceUtils(AbcUtils):
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
             else:
                 raise Exception("Slice not found. Slice name or id requried. slice_id: {}".format(str(slice_id)))
-        except:
+        except Exception as e:
+            print("Exception: {}".format(str(e)))
             raise Exception("Slice not found slice_id: {}".format(str(slice_id)))
+
 
 
         return_status, slivers = slice_manager.slivers(slice_object=slice)
@@ -158,9 +160,11 @@ class SliceUtils(AbcUtils):
             #print("Response Status {}".format(status))
             if status == Status.OK:
                 #print()
-                #print("Sliver Status {}".format(sliver_status.notices))
+                #print("Sliver Status {}".format(sliver_status))
                 #print()
-                return_errors.append(sliver_status.notices)
+                #return_errors.append("Sliver: {} {}".format(s.name))
+                #return_errors.append(sliver_status.notices)
+                return_errors.append(sliver_status)
 
         return return_errors
 

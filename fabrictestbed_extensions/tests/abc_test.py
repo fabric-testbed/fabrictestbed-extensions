@@ -44,8 +44,7 @@ class AbcTest(ABC):
         self.slices = []
         self.topology = None
 
-
-        self.bastion_username = 'pruth'
+        self.bastion_username = os.environ['FABRIC_BASTION_USERNAME']
         self.bastion_keyfile = ''
 
         self.bastion_public_addr = 'bastion-1.fabric-testbed.net'
@@ -54,11 +53,14 @@ class AbcTest(ABC):
 
         #self.bastion_key_filename = '/Users/pruth/FABRIC/TESTING/pruth_fabric_rsa'
         self.bastion_key_filename = os.environ['HOME'] + "/.ssh/pruth_fabric_rsa"
+        self.bastion_key_filename = os.environ['FABRIC_BASTION_KEY_LOCATION']
+
+        self.node_ssh_key_priv_file=os.environ['SLICE_PRIVATE_KEY_FILE']
+        self.node_ssh_key_pub_file=os.environ['SLICE_PUBLIC_KEY_FILE']
 
         self.node_ssh_key = None
-        with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as fd:
+        with open(self.node_ssh_key_pub_file, "r") as fd:
             self.node_ssh_key = fd.read().strip()
-        self.node_ssh_key_priv_file=os.environ['HOME'] + "/.ssh/id_rsa"
 
         self.pull_advertised_topology()
 
@@ -66,6 +68,27 @@ class AbcTest(ABC):
         return_status, self.advertised_topology = self.slice_manager.resources()
         if return_status != Status.OK:
             print("Failed to get advertised_topology: {}".format(self.advertised_topology))
+
+
+    def get_slice(self,slice_name=None, slice_id=None, slice_manager=None):
+        if not slice_manager:
+            slice_manager = AbcUtils.create_slice_manager()
+
+        return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        if return_status != Status.OK:
+            raise Exception("Failed to get slices: {}".format(slices))
+        try:
+
+            if slice_id:
+                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
+            elif slice_name:
+                slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
+            else:
+                raise Exception("Slice not found. Slice name or id requried. name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
+        except:
+            raise Exception("Slice not found name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
+
+        return slice
 
 
     def wait_for_slice(self,slice,timeout=360,interval=10,progress=False):
@@ -155,6 +178,39 @@ class AbcTest(ABC):
                 print ("Error in test: Error {}".format(e))
                 traceback.print_exc()
 
+
+    def open_ssh_client_direct(self, node_username, node, timeout=10,interval=10,progress=True):
+        import paramiko
+        timeout_start = time.time()
+
+        client = None
+        if progress: print("Waiting for ssh client connection {} .".format(node.name), end = '')
+        while time.time() < timeout_start + timeout:
+
+            try:
+                management_ip = str(node.get_property(pname='management_ip'))
+                #print("Node {0} IP {1}".format(node.name, management_ip))
+
+                key = paramiko.RSAKey.from_private_key_file(self.node_ssh_key_priv_file)
+
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+                client.connect(management_ip,username=node_username,pkey = key)
+
+                break
+            except Exception as e:
+                #print (str(e))
+                #return str(e)
+                pass
+
+            if progress: print(".", end = '')
+            time.sleep(interval)
+
+        return client
+
     def open_ssh_client(self, node_username, node):
         import paramiko
 
@@ -195,7 +251,7 @@ class AbcTest(ABC):
     def close_ssh_client(self, ssh_client):
         import paramiko
 
-        client.close()
+        ssh_client.close()
 
     def execute_script(self, node_username, node, script):
         import paramiko

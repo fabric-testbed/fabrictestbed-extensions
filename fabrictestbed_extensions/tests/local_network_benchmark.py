@@ -185,6 +185,9 @@ class LinkBenchmark(AbcTest):
             t.add_network_service(name='net1', nstype=ServiceType.L2Bridge, interfaces=[n1.interface_list[0], n2.interface_list[0]])
         else:
             t.add_network_service(name='net1', nstype=ServiceType.L2PTP, interfaces=[n1.interface_list[0], n2.interface_list[0]])
+
+
+
         if_labels = n1.interface_list[0].get_property(pname="labels")
         if_labels.vlan = "200"
         n1.interface_list[0].set_properties(labels=if_labels)
