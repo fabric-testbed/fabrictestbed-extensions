@@ -158,6 +158,8 @@ class Slice():
         else:
             return None
 
+    def get_state(self):
+        return self.sm_slice.slice_state
 
     def get_name(self):
         return self.slice_name
