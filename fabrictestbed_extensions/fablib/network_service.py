@@ -78,8 +78,47 @@ class NetworkService():
         return rtn_nstype
 
     @staticmethod
-    def new_l2network(slice=None, name=None, interfaces=[]):
-        nstype=NetworkService.calculate_l2_nstype(interfaces=interfaces)
+    def validate_nstype(type, interfaces):
+
+        sites = set([])
+        nics = set([])
+        for interface in interfaces:
+            sites.add(interface.get_site())
+            nics.add(interface.get_model())
+
+        #models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
+        if type == NetworkService.network_service_map['L2Bridge']:
+            if not len(sites) == 1:
+                raise Exception(f"Network type {type} must include interfaces from exactly one site. {len(sites)} sites requested: {sites}")
+
+        elif type == NetworkService.network_service_map['L2PTP']:
+            if not len(sites) == 2:
+                raise Exception(f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}")
+            if 'NIC_Basic' in nics:
+                raise Exception(f"Network type {type} does not support interfaces of type 'NIC_Basic'")
+
+        elif type == NetworkService.network_service_map['L2STS']:
+            if not len(sites) == 2:
+                raise Exception(f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}")
+        else:
+            raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.fim_network_service_types} or None for automatic selection")
+
+        return True
+
+
+    @staticmethod
+    def new_l2network(slice=None, name=None, interfaces=[], type=None):
+        if type == None:
+            nstype=NetworkService.calculate_l2_nstype(interfaces=interfaces)
+        else:
+            if type in NetworkService.fim_network_service_types:
+                nstype=NetworkService.network_service_map[type]
+            else:
+                raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.fim_network_service_types} or None for automatic selection")
+
+        #validate nstype and interface List
+        NetworkService.validate_nstype(nstype, interfaces)
+
         return NetworkService.new_network_service(slice=slice, name=name, nstype=nstype, interfaces=interfaces)
 
     @staticmethod
