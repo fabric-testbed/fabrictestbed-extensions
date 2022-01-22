@@ -129,7 +129,8 @@ class Component():
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
     def get_model(self):
-        return self.model
+        #TODO: get new model names (NIC_Basic, etc.)
+        return self.get_fim_model()
 
     def get_fim_model(self):
         return self.get_fim_component().model
