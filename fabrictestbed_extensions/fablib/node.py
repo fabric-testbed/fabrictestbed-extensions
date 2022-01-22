@@ -195,6 +195,7 @@ class Node():
 
         return_components = []
         for component_name, component in self.get_fim_node().components.items():
+            #return_components.append(Component(self,component))
             return_components.append(Component(self,component))
 
         return return_components

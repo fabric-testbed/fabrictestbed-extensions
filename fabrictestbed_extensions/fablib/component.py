@@ -89,7 +89,6 @@ class Component():
         :return:
         """
         super().__init__()
-        self.model='test'
         self.fim_component = fim_component
         self.node = node
 
