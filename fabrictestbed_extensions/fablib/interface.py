@@ -144,6 +144,9 @@ class Interface():
     def get_component(self):
         return self.component
 
+    def get_model(self):
+        return self.get_component().get_model()
+
     def get_site(self):
         return self.get_component().get_site()
 

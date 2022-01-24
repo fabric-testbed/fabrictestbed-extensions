@@ -81,6 +81,7 @@ class Component():
         name = Component.calculate_name(node=node, name=name)
 
         return Component(node = node, fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model], name=name))
+        #return Component(node = node, model=model, name=name)
 
     def __init__(self, node=None, fim_component=None):
         """
@@ -88,7 +89,7 @@ class Component():
         :return:
         """
         super().__init__()
-        self.fim_component  = fim_component
+        self.fim_component = fim_component
         self.node = node
 
     def get_interfaces(self):
@@ -128,6 +129,10 @@ class Component():
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
     def get_model(self):
+        #TODO: get new model names (NIC_Basic, etc.)
+        return self.get_fim_model()
+
+    def get_fim_model(self):
         return self.get_fim_component().model
 
     def get_type(self):

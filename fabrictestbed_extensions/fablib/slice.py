@@ -158,6 +158,8 @@ class Slice():
         else:
             return None
 
+    def get_state(self):
+        return self.sm_slice.slice_state
 
     def get_name(self):
         return self.slice_name
@@ -168,9 +170,9 @@ class Slice():
     def get_lease_end(self):
         return self.sm_slice.lease_end
 
-    def add_l2network(self, name=None, interfaces=[]):
+    def add_l2network(self, name=None, interfaces=[], type=None):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
-        return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces)
+        return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
     def add_node(self, name, site):
         from fabrictestbed_extensions.fablib.node import Node
