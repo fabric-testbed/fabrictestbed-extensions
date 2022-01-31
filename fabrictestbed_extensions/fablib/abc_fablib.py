@@ -62,8 +62,8 @@ class AbcFabLIB(ABC):
         self.bastion_username = None
         self.bastion_key_filename = None
         self.bastion_public_addr = None
-        self.bastion_private_ipv4_addr = None
-        self.bastion_private_ipv6_addr = None
+        self.bastion_private_ipv4_addr = '0.0.0.0'
+        self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
 
         #self.slice_public_key = None
         #self.slice_public_key_file = None
