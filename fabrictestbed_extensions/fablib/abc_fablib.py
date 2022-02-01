@@ -35,6 +35,10 @@ from fabrictestbed.slice_editor import ExperimentTopology, Capacities, Component
 
 class AbcFabLIB(ABC):
 
+    """
+    Library class. This class is a wrapper for environment variable references.
+    """
+
     #credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
     #orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
     #fabric_token=os.environ['FABRIC_TOKEN_LOCATION']
@@ -50,8 +54,7 @@ class AbcFabLIB(ABC):
 
     def __init__(self):
         """
-        Constructor
-        :return:
+        Constructor. Sets up FABRIC environment variables for clean references.
         """
         super().__init__()
 
