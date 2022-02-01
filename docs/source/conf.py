@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('../../fabrictestbed_extensions'))
 sys.path.insert(0, os.path.abspath('../../fabrictestbed_extensions/utils'))
+sys.path.insert(0, os.path.abspath('../../fabrictestbed_extensions/fablib'))
 
 
 # -- Project information -----------------------------------------------------
