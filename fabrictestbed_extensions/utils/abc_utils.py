@@ -34,7 +34,9 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 
 class AbcUtils(ABC):
-
+    """
+    Utility class. Generates slice manager and executes a test method.
+    """
 
     #os.environ['FABRIC_CREDMGR_HOST']='cm.fabric-testbed.net'
     #os.environ['FABRIC_ORCHESTRATOR_HOST']='orchestrator.fabric-testbed.net'
@@ -65,6 +67,12 @@ class AbcUtils(ABC):
 
     @staticmethod
     def create_slice_manager():
+        """
+        Create and return a SliceManager object using the system's environment variables.
+
+        :return: A newly generated SliceManager objects.
+        :rtype: SliceManager
+        """
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         print(f"FABRIC Credential Manager   : {credmgr_host}")
 
@@ -89,5 +97,4 @@ class AbcUtils(ABC):
     def run(self, create_slice=True, run_test=True, delete=True):
         """
         Run the test
-        :return:
         """

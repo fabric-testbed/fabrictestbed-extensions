@@ -47,17 +47,25 @@ from .. import images
 
 
 class SliceUtils(AbcUtils):
+    """
+    Utility class. Wraps useful functionality for Slice objects.
+    """
 
     def __init__(self):
         """
-        Constructor
-        :return:
+        Constructor. Runs the AbcUtils constructor.
         """
         super().__init__()
 
 
     @staticmethod
     def delete_all_with_substring(string):
+        """
+        Deletes all slices with the specified substring.
+
+        :param string: The substring to search for.
+        :type string: str
+        """
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
@@ -74,6 +82,9 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def delete_all():
+        """
+        Deletes all slices under the current user.
+        """
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
@@ -86,6 +97,14 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def delete_slice(slice_name=None, slice_id=None):
+        """
+        Deletes a slice using a slice name and ID.
+
+        :param slice_name: The name of the slice to delete.
+        :type slice_name: str
+        :param slice_id: The ID of the slice to delete.
+        :type slice_id: str
+        """
         slice = SliceUtils.get_slice(slice_name=slice_name, slice_id=slice_id)
 
         slice_manager = AbcUtils.create_slice_manager()
@@ -95,6 +114,16 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def get_slice(slice_name=None, slice_id=None, slice_manager=None):
+        """"
+        Gets a slice given its name, ID, and SliceManager.
+
+        :param slice_name: The name of the slice to get.
+        :type slice_name: str
+        :param slice_id: The ID of the slice to get.
+        :type slice_id: str
+        :param slice_manager: The SliceManager where the slice to get is.
+        :type slice_manager: SliceManager
+        """
         if not slice_manager:
             slice_manager = AbcUtils.create_slice_manager()
 
@@ -116,6 +145,12 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def list_all_slices(excludes=[SliceState.Dead,SliceState.Closing]):
+        """
+        Lists all slices.
+
+        :param excludes: A list of SliceState to exclude. By defualt, this method excludes dead and closing slices.
+        :type excludes: list[SliceState]
+        """
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
@@ -132,6 +167,14 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def get_slice_error(slice_id):
+        """
+        Returns the error of a slice.
+
+        :param slice_id: The ID of the slice with errors.
+        :type slice_id: str
+        :return: The errors in the slice.
+        :rtype: str
+        """
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(includes=[SliceState.Dead,SliceState.Closing,SliceState.StableError])
@@ -172,6 +215,20 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def wait_for_slice(slice_name=None,slice_id=None,timeout=360,interval=10,progress=False):
+        """
+        Wait for some slice to reach a stable state.
+
+        :param slice_name: The name of the slice to wait for.
+        :type slice_name: str
+        :param slice_id: The ID of the slice to wait for.
+        :type slice_id: str
+        :param timeout: The amount of seconds to wait for the slice to reach a stable state.
+        :type timeout: int
+        :param interval: How often to check the state of the slice.
+        :type interval: int
+        :param progress: Show progress of slice or don't.
+        :type progress: boolean
+        """
         slice_manager = AbcUtils.create_slice_manager()
         slice = SliceUtils.get_slice(slice_name=slice_name, slice_id=slice_id)
 
