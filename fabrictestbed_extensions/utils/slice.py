@@ -43,6 +43,8 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 from .abc_utils import AbcUtils
 
+# from .. import images
+
 
 class SliceUtils(AbcUtils):
     """
