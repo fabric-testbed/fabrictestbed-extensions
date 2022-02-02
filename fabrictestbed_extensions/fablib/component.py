@@ -56,11 +56,16 @@ from ipaddress import ip_address, IPv4Address
 
 #from .abc_fablib import AbcFabLIB
 
-from .. import images
+# from .. import images
 
 
 #class Component(AbcFabLIB):
 class Component():
+
+    """
+    Class representing hardware components.
+    """
+
     component_model_map = { 'NIC_Basic': ComponentModelType.SharedNIC_ConnectX_6,
                             'NIC_ConnectX_6': ComponentModelType.SmartNIC_ConnectX_6,
                             'NIC_ConnectX_5': ComponentModelType.SmartNIC_ConnectX_5,
@@ -85,8 +90,11 @@ class Component():
 
     def __init__(self, node=None, fim_component=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets up class state based on input values (default None).
+        :param node: A Node instance to pass to this Component.
+        :type node: Node
+        :param node: A FIM Compnent instance to pass to this Component.
+        :type node: Component
         """
         super().__init__()
         self.fim_component = fim_component
