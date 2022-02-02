@@ -77,11 +77,33 @@ class Component():
 
     @staticmethod
     def calculate_name(node=None, name=None):
+        """
+        Static hack that makes it possible to find interfaces. Takes the node's full name and subtracts out the inputted name.
+
+        :param node: Node to calculate the name of.
+        :type node: Node
+        :param name: Name to subtract from Node's name.
+        :type name: str
+        :return: the calculated name.
+        :rtype: str
+        """
         #Hack to make it possile to find interfaces
         return f"{node.get_name()}-{name}"
 
     @staticmethod
     def new_component(node=None, model=None, name=None):
+        """
+        Static method that adds a component of a particular model to an inputted node.
+
+        :param node: Node to calculate name of.
+        :type node: Node
+        :param model: Model key of component model desired.
+        :type model: str
+        :param name: Name of the component.
+        :type name: str
+        :return: the new Component.
+        :rtype: Component
+        """
         #Hack to make it possile to find interfaces
         name = Component.calculate_name(node=node, name=name)
 
@@ -91,6 +113,7 @@ class Component():
     def __init__(self, node=None, fim_component=None):
         """
         Constructor. Sets up class state based on input values (default None).
+
         :param node: A Node instance to pass to this Component.
         :type node: Node
         :param node: A FIM Compnent instance to pass to this Component.
@@ -101,6 +124,12 @@ class Component():
         self.node = node
 
     def get_interfaces(self):
+        """
+        Gets the interfaces attached to the Component instance called on.
+
+        :return: a list of interfaces on the Component instance.
+        :rtype: list<interface>
+        """
         from fabrictestbed_extensions.fablib.interface import Interface
 
         ifaces = []
@@ -110,43 +139,123 @@ class Component():
         return ifaces
 
     def get_fim_component(self):
+        """
+        Getter method for `fim_component`.
+
+        :return: the `fim_component` field.
+        :rtype: Component
+        """
         return self.fim_component
 
     def get_slice(self):
+        """
+        Getter method for `get_slice`.
+
+        :return: the `get_slice` field.
+        :rtype: Slice
+        """
         return self.node.get_slice()
 
     def get_node(self):
+        """
+        Getter method for `node`.
+
+        :return: the `node` field.
+        :rtype: Node
+        """
         return self.node
 
     def get_site(self):
+        """
+        Wrapped getter method for `node.get_site()`.
+
+        :return: the site of `node`
+        :rtype: Site
+        """
         return self.node.get_site()
 
     def get_name(self):
+        """
+        Wrapped getter method for the name of the FIM component.
+
+        :return: the name of the FIM component.
+        :rtype: str
+        """
         return self.get_fim_component().name
 
     def get_details(self):
+        """
+        Wrapped getter method for the details of the FIM component.
+
+        :return: the details of the FIM component.
+        :rtype: str
+        """
         return self.get_fim_component().details
 
     def get_disk(self):
+        """
+        Wrapped getter method for the disk space of the FIM component.
+
+        :return: the amount of disk space on the FIM component.
+        :rtype: int
+        """
         return self.get_fim_component().get_property(pname='capacity_allocations').disk
 
     def get_unit(self):
+        """
+        Wrapped getter method for the unit of the FIM component.
+
+        :return: the unit on the FIM component.
+        :rtype: str
+        """
         return self.get_fim_component().get_property(pname='capacity_allocations').unit
 
     def get_pci_addr(self):
+        """
+        Wrapped getter method for the PCI Address of the FIM component.
+
+        :return: the PCI Address on the FIM component.
+        :rtype: str
+        """
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
     def get_model(self):
+        """
+        Get the model of the component.
+
+        :return: the model of the component.
+        :rtype: Model
+        """
         #TODO: get new model names (NIC_Basic, etc.)
         return self.get_fim_model()
 
     def get_fim_model(self):
+        """
+        Get the model of the FIM component.
+
+        :return: the model of the FIM component.
+        :rtype: Model
+        """
         return self.get_fim_component().model
 
     def get_type(self):
+        """
+        Get the type of the component.
+
+        :return: the type of the component.
+        :rtype: Model
+        """
         return self.get_fim_component().type
 
     def configure_nvme(self, mount_point='/mnt/nvme_mount', verbose=False):
+        """
+        Configure the NVME of this component.
+
+        :param mount_point: The system location of this component's mount point.
+        :type mount_point: str
+        :param verbose: An indicator for whether or not to provide verbose output.
+        :type verbose: boolean
+        """
         output = []
         try:
             output.append(self.node.execute('sudo fdisk -l /dev/nvme*'))
@@ -171,7 +280,6 @@ class Disk(Component):
     def __init__(self, component):
         """
         Constructor
-        :return:
         """
         super().__init__(component)
 
@@ -179,7 +287,6 @@ class NIC(Component):
     def __init__(self, component):
         """
         Constructor
-        :return:
         """
         super().__init__(component)
 
@@ -187,6 +294,5 @@ class GPU(Component):
     def __init__(self, component):
         """
         Constructor
-        :return:
         """
         super().__init__(component)
