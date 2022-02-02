@@ -40,15 +40,14 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-from .abc_fablib import AbcFabLIB
+from abc_fablib import AbcFabLIB
 
-from .. import images
+# from .. import images
 
 class fablib(AbcFabLIB):
     def __init__(self):
         """
         Constructor
-        :return:
         """
         super().__init__()
 
