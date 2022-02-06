@@ -107,4 +107,4 @@ class AbcFabLIB(ABC):
             self.default_slice_key['slice_private_key_file'] = os.environ['FABRIC_SLICE_PRIVATE_KEY_FILE']
         if "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE" in os.environ:
             #self.slice_private_key_passphrase = os.environ['FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE']
-            self.default_slice_key['slice_private_key_passphrase'] = os.environ['slice_private_key_passphrase']
+            self.default_slice_key['slice_private_key_passphrase'] = os.environ['FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE']

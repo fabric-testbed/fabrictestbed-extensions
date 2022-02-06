@@ -240,6 +240,7 @@ class Node():
 
         for attempt in range(retry):
             try:
+
                 if self.get_private_key_passphrase():
                     key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
                 else:
@@ -259,7 +260,7 @@ class Node():
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-                stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
+                stdin, stdout, stderr = client.exec_command(command)
                 rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                 rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
 
