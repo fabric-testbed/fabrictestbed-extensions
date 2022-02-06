@@ -224,7 +224,7 @@ class Node():
         except ValueError:
             return "Invalid"
 
-    def execute(self, command, retry=3, retry_interval=10):
+    def execute(self, command, retry=3, retry_interval=10, execute_as_script=False):
         import paramiko
         import time
 
@@ -259,8 +259,11 @@ class Node():
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
-
-                stdin, stdout, stderr = client.exec_command(command)
+                
+                if(execute_as_script):
+                    stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
+                else:
+                    stdin, stdout, stderr = client.exec_command(command)
                 rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                 rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
 
@@ -401,14 +404,14 @@ class Node():
 
     def test_ssh(self):
         try:
-            self.execute('ls', retry=1, retry_interval=10)
+            self.execute('ls', retry=1, retry_interval=10, execute_as_script=True)
         except:
             return False
         return True
 
     def wait_for_ssh(self, retry=6, retry_interval=10):
         try:
-            self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval)
+            self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval, execute_as_script=True)
         except:
             return False
         return True
@@ -416,7 +419,7 @@ class Node():
     def get_management_os_interface(self):
         #Assumes that the default route uses the management network
 
-        stdout, stderr = self.execute("sudo ip -j route list")
+        stdout, stderr = self.execute("sudo ip -j route list", execute_as_script=True)
         stdout_json = json.loads(stdout)
 
         #print(pythonObj)
@@ -427,7 +430,7 @@ class Node():
     def get_dataplane_os_interfaces(self):
         management_dev = self.get_management_os_interface()
 
-        stdout, stderr = self.execute("sudo ip -j addr list")
+        stdout, stderr = self.execute("sudo ip -j addr list", execute_as_script=True)
         stdout_json = json.loads(stdout)
         dataplane_devs = []
         for i in stdout_json:
@@ -441,7 +444,7 @@ class Node():
             self.flush_os_interface(iface['ifname'])
 
     def flush_os_interface(self, os_iface):
-        stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
+        stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}", execute_as_script=True)
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
         #Bring up base iface
@@ -449,25 +452,25 @@ class Node():
         command = f'sudo ip link set dev {os_iface} up'
         if mtu != None:
             command += f" mtu {mtu}"
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, execute_as_script=True)
 
         #config vlan iface
         if vlan != None:
             #create vlan iface
             command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
-            stdout, stderr = self.execute(command)
+            stdout, stderr = self.execute(command, execute_as_script=True)
 
             #bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
             command = f'sudo ip link set dev {os_iface} up'
             if mtu != None:
                 command += f" mtu {mtu}"
-            stdout, stderr = self.execute(command)
+            stdout, stderr = self.execute(command, execute_as_script=True)
 
         if ip != None and cidr != None:
             #Set ip
             command = f"sudo ip addr add {ip}/{cidr} dev {os_iface}"
-            stdout, stderr = self.execute(command)
+            stdout, stderr = self.execute(command, execute_as_script=True)
 
     def clear_all_ifaces(self):
         self.remove_all_vlan_os_interfaces()
@@ -477,7 +480,7 @@ class Node():
     def remove_all_vlan_os_interfaces(self):
         management_os_iface = self.get_management_os_interface()
 
-        stdout, stderr = self.execute("sudo ip -j addr list")
+        stdout, stderr = self.execute("sudo ip -j addr list", execute_as_script=True)
         stdout_json = json.loads(stdout)
         dataplane_devs = []
         for i in stdout_json:
@@ -533,7 +536,7 @@ class Node():
 
     def remove_vlan_os_interface(self, os_iface=None):
         command = f"sudo ip -j addr show {os_iface}"
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, execute_as_script=True)
         try:
             [stdout_json] = json.loads(stdout)
         except Exception as e:
@@ -544,20 +547,20 @@ class Node():
         link = stdout_json['link']
 
         command = f"sudo ip link del link {link} name {os_iface}"
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, execute_as_script=True)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
         command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, execute_as_script=True)
         command = f'sudo ip link set dev {os_iface}.{vlan} up'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, execute_as_script=True)
 
         if ip != None and cidr != None:
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
 
     def ping_test(self, dst_ip):
         command = f'ping -c 3 {dst_ip}  2>&1 > /dev/null && echo Success'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, execute_as_script=True)
         if stdout.replace("\n","") == 'Success':
             return True
         else:
