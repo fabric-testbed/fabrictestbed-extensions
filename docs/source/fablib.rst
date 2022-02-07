@@ -126,3 +126,83 @@ fablib
    .. automethod:: delete_slice
 
    .. automethod:: delete_all
+
+``interface``
+===========
+
+.. automodule:: interface
+
+.. autoclass:: Interface
+
+   .. automethod:: __init__
+
+   .. automethod:: get_os_interface
+
+   .. automethod:: get_mac
+
+   .. automethod:: get_physical_os_interface
+
+   .. automethod:: config_vlan_iface
+
+   .. automethod:: set_ip
+
+   .. automethod:: set_vlan
+
+   .. automethod:: get_fim_interface
+
+   .. automethod:: get_bandwidth
+
+   .. automethod:: get_vlan
+
+   .. automethod:: get_name
+
+   .. automethod:: get_component
+
+   .. automethod:: get_model
+
+   .. automethod:: get_site
+
+   .. automethod:: get_slice
+
+   .. automethod:: get_node
+
+   .. automethod:: get_network
+
+``network_service``
+==================
+
+.. automodule:: network_service
+
+.. autoclass:: NetworkService
+
+   .. automethod:: calculate_l2_nstype
+
+   .. automethod:: validate_nstype
+
+   .. automethod:: new_l2network
+
+   .. automethod:: new_network_service
+
+   .. automethod:: get_l2network_services
+
+   .. automethod:: get_l2network_service
+
+   .. automethod:: __init__
+
+   .. automethod:: get_slice
+
+   .. automethod:: get_fim_network_service
+
+   .. automethod:: get_name
+
+   .. automethod:: get_interfaces
+
+   .. automethod:: get_interface
+
+   .. automethod:: has_interface
+
+   .. automethod:: find_nic_mapping
+
+   .. automethod:: flush_dataplane_ips
+
+   .. automethod:: flush_all_dataplane_ips
