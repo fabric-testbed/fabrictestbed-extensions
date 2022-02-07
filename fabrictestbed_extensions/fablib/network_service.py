@@ -44,11 +44,13 @@ from ipaddress import ip_address, IPv4Address
 
 #from .abc_fablib import AbcFabLIB
 
-from .. import images
-
-
 #class NetworkService(AbcFabLIB):
 class NetworkService():
+
+    """
+    Network Service class. Contains networking methods.
+    """
+
     network_service_map = { 'L2Bridge': ServiceType.L2Bridge,
                             'L2PTP': ServiceType.L2PTP,
                             'L2STS': ServiceType.L2STS,
@@ -60,7 +62,14 @@ class NetworkService():
 
     @staticmethod
     def calculate_l2_nstype(interfaces=None):
+        """
+        Calculates the L2 network service type based on the interfaces keyword input.
 
+        :param interface: A list of Interface objects for which to calculate the network service type.
+        :type interface: list[Interface]
+        :return: the network service type
+        :rtype: ServiceType
+        """
         sites = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
@@ -79,7 +88,16 @@ class NetworkService():
 
     @staticmethod
     def validate_nstype(type, interfaces):
+        """
+        Validate the network service type based on the type and the amount of interfaces' sites.
 
+        :param type: the type of network service to validate.
+        :type type: ServiceType
+        :param interface: A list of Interface objects for which to verify the network service.
+        :type interface: list[Interface]
+        :return: True if network service is valid
+        :rtype: boolean
+        """
         sites = set([])
         nics = set([])
         for interface in interfaces:
@@ -108,6 +126,20 @@ class NetworkService():
 
     @staticmethod
     def new_l2network(slice=None, name=None, interfaces=[], type=None):
+        """
+        Create a new L2 network.
+
+        :param slice: The slice to create this network with.
+        :type slice: Slice
+        :param name: The name of the network.
+        :type name: str
+        :param interfaces: The interfaces to create this network with.
+        :type interfaces: list[Interface]
+        :param type: The type of network(?) to create.
+        :type type: ServiceType
+        :return: a new L2 network.
+        :rtype: ServiceType
+        """
         if type == None:
             nstype=NetworkService.calculate_l2_nstype(interfaces=interfaces)
         else:
@@ -123,6 +155,20 @@ class NetworkService():
 
     @staticmethod
     def new_network_service(slice=None, name=None, nstype=None, interfaces=[]):
+        """
+        Create a new network service.
+
+        :param slice: The slice to create this network service on.
+        :type slice: Slice
+        :param name: The name of this new network service.
+        :type name: str
+        :param nstype: The type of network service to create.
+        :type nstype: ServiceType
+        :param interfaces: The interfaces to create this network service with.
+        :type interfaces: list[Interface]
+        :return: a new network service.
+        :rtype: NetworkService
+        """
         fim_interfaces = []
         for interface in interfaces:
             fim_interfaces.append(interface.get_fim_interface())
@@ -135,6 +181,14 @@ class NetworkService():
 
     @staticmethod
     def get_l2network_services(slice=None):
+        """
+        Gets the L2 network service on a slice.
+
+        :param slice: The slice to get the L2 network services from.
+        :type slice: Slice
+        :return: the network services on the slice
+        :rtype: NetworkService
+        """
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
@@ -147,7 +201,14 @@ class NetworkService():
 
     @staticmethod
     def get_l2network_service(slice=None, name=None):
+        """
+        Gets a specific L2 network service on a slice.
 
+        :param slice: The slice to get the L2 network service from.
+        :type slice: Slice
+        :return: the network service if it exists
+        :rtype: NetworkService
+        """
         for net in NetworkService.get_l2network_services(slice=slice):
             if net.get_name() == name:
                 return net
@@ -157,23 +218,51 @@ class NetworkService():
 
     def __init__(self, slice=None, fim_network_service=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets the slice and fim_network_service state based on keyword inputs.
+
+        :param slice: The slice to set for this NetworkService.
+        :type slice: Slice
+        :param fim_network_service: The FIM network service to set for this NetworkService.
+        :type fim_network_service: NetworkService
         """
         super().__init__()
         self.fim_network_service  = fim_network_service
         self.slice = slice
 
     def get_slice(self):
+        """
+        Getter method for the slice on this network service.
+
+        :return: the slice on this network service
+        :rtype: Slice
+        """
         return self.slice
 
     def get_fim_network_service(self):
+        """
+        Getter method for the FIM network service on this network service.
+
+        :return: the FIM network service
+        :rtype: NetworkService
+        """
         return self.fim_network_service
 
     def get_name(self):
+        """
+        Getter method for the name on the FIM network service.
+
+        :return: the FIM network service's name
+        :rtype: str
+        """
         return self.get_fim_network_service().name
 
     def get_interfaces(self):
+        """
+        Gets the interfaces on this network service.
+
+        :return: a list of interface on this network service
+        :rtype: list[Interface]
+        """
         interfaces = []
         for interface in self.get_fim_network_service().interface_list:
             interfaces.append(self.get_slice().get_interface(name=interface.name))
@@ -181,6 +270,14 @@ class NetworkService():
         return interfaces
 
     def get_interface(self, name=None):
+        """
+        Gets a particular interface on this network service.
+
+        :param name: The name of the interface to get.
+        :type name: str
+        :return: the particular interface on this network service
+        :rtype: Interface
+        """
         #print(f"network_service.get_interface: name {name}")
         for interface in self.get_interfaces():
             #print(f"network_service.get_interface: self.get_name() {self.get_name()}, interface.get_name(): {interface.get_name()}")
@@ -197,13 +294,29 @@ class NetworkService():
         #raise Exception(f"Interface not found: interface {name}")
 
     def has_interface(self, interface):
+        """
+        Method to check if this network service has a particular interface.
 
+        :param interface: The interface to search for
+        :type interface: Interface
+        :return: whether or not this network service has the interface
+        :rtype: boolean
+        """
         if self.get_interface(name=interface.get_name()) == None:
             return False
         else:
             return True
 
     def find_nic_mapping(self, net_name, nodes):
+        """
+        Finds the NIC mapping.
+
+        :param net_name: The netowrk name to map with.
+        :type net_name: str
+        :param nodes: The nodes to map with.
+        :type nodes: list[Node]
+        :return: A map of node names to resources/interfaces.
+        """
         return_data = {}
 
         #copy scripts to nodes
@@ -263,7 +376,12 @@ class NetworkService():
         return return_data
 
     def flush_dataplane_ips(nodes):
+        """
+        Flush the dataplane IPs of a set of nodes.
 
+        :param nodes: The nodes to flush the dataplane IPs of.
+        :type nodes: list[Node]
+        """
         for node in nodes:
             #config node1
             file_attributes = upload_file(username, node, 'scripts/host_flush_all_dataplane_ips.py','host_flush_all_dataplane_ips.py')
@@ -275,5 +393,8 @@ class NetworkService():
 
 
     def flush_all_dataplane_ips():
+        """
+        Flush the dataplane IPs of all nodes on this NetworkService.
+        """
         for node_name, node in experiment_topology.nodes.items():
             flush_dataplane_ips([node])
