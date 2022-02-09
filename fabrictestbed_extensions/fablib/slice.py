@@ -46,16 +46,17 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 #from .abc_fablib import AbcFabLIB
 
-from .. import images
-
-from fabrictestbed_extensions.fablib.fablib import fablib
+#from fabrictestbed_extensions.fablib.fablib import fablib
 
 class Slice():
 
+    """
+    Class representing FABRIC slices.
+    """
+
     def __init__(self, name=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets the slice name if defined, and sets the remaining slice state to None.
         """
         super().__init__()
         #print(f"Creating Slice: Name: {name}, Slice: {slice}")
@@ -70,8 +71,11 @@ class Slice():
     def new_slice(name=None):
         """
         Create a new slice
-        @param name slice name
-        @return fablib Slice object
+
+        :param name: Slice name.
+        :type name: str
+        :return: the new Slice.
+        :rtype: Slice
         """
 
         slice = Slice(name=name)
@@ -82,8 +86,11 @@ class Slice():
     def get_slice(sm_slice=None, verbose=False, load_config=True):
         """
         Create a new slice
-        @param name slice name
-        @return fablib Slice object
+
+        :param name: Slice name.
+        :type name: str
+        :return: a fablib Slice object.
+        :rtype: Slice
         """
         slice = Slice(name=sm_slice.slice_name)
         slice.sm_slice = sm_slice
@@ -106,9 +113,18 @@ class Slice():
         return slice
 
     def get_fim_topology(self):
+        """
+        Gets the topology of this Slice.
+
+        :return: the topology of this Slice.
+        :rtype: ExperimentTopology
+        """
         return self.topology
 
     def update_slice(self):
+        """
+        Updates this Slice's information with recent data.
+        """
         #Update slice
         return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
         if return_status == Status.OK:
@@ -119,6 +135,9 @@ class Slice():
 
 
     def update_topology(self):
+        """
+        Updates this Slice's topology with recent data.
+        """
         #Update topology
         return_status, new_topo = fablib.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
         if return_status != Status.OK:
@@ -128,57 +147,142 @@ class Slice():
         self.topology = new_topo
 
     def update(self):
+        """
+        Updates Slice information.
+        """
         self.update_slice()
         self.update_topology()
 
     def get_slice_public_key(self):
+        """
+        Gets the Slice's public key.
+
+        :return: the Slice's public key
+        :rtype: str
+        """
         return self.slice_key['slice_public_key']
 
     def get_private_key_passphrase(self):
+        """
+        Gets the Slice's private key passphrase.
+
+        :return: the Slice's private key passphrase
+        :rtype: str
+        """
         if 'slice_private_key_passphrase' in self.slice_key.keys():
             return self.slice_key['slice_private_key_passphrase']
         else:
             return None
 
     def get_slice_public_key(self):
+        """
+        Gets the Slice's public key.
+
+        :return: the slice's public key.
+        :rtype: str
+        """
         if 'slice_public_key' in self.slice_key.keys():
             return self.slice_key['slice_public_key']
         else:
             return None
 
     def get_slice_public_key_file(self):
+        """
+        Gets the Slice's public key file.
+
+        :return: the Slice's public key file.
+        :rtype: File
+        """
         if 'slice_public_key_file' in self.slice_key.keys():
             return self.slice_key['slice_public_key_file']
         else:
             return None
 
     def get_slice_private_key_file(self):
+        """
+        Gets the Slice's private key file.
+
+        :return: the Slice's private key file.
+        :rtype: File
+        """
         if 'slice_private_key_file' in self.slice_key.keys():
             return self.slice_key['slice_private_key_file']
         else:
             return None
 
     def get_state(self):
+        """
+        Gets the slice state from the SliceManager.
+
+        :return: the slice state
+        :rtype: SliceState
+        """
         return self.sm_slice.slice_state
 
     def get_name(self):
+        """
+        Gets the slice name.
+
+        :return: the slice name
+        :rtype: str
+        """
         return self.slice_name
 
     def get_slice_id(self):
+        """
+        Gets the Slice ID.
+
+        :return: the slice ID
+        :rtype: str
+        """
         return self.slice_id
 
     def get_lease_end(self):
+        """
+        Gets when the slice's lease ends from the SliceManager.
+
+        :return: when the slice's lease ends
+        :rtype: DateTimeFormat
+        """
         return self.sm_slice.lease_end
 
     def add_l2network(self, name=None, interfaces=[], type=None):
+        """
+        Adds an L2 network to the Slice. Calls `NetworkService#new_l2network`.
+
+        :param name: The name of the network.
+        :type name: str
+        :param interfaces: A list of the interfaces to put on the network.
+        :type interfaces: list[Interface]
+        :param type: The type of network (if specified).
+        :type type: ServiceType
+        :return: the new L2 network.
+        :rtype: ServiceType
+        """
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
     def add_node(self, name, site):
+        """
+        Adds a new node to the slice.
+
+        :param name: The name of the node.
+        :type name: str
+        :param site: The site the new node is on.
+        :type site: str
+        :return: the new node.
+        :rtype: Node
+        """
         from fabrictestbed_extensions.fablib.node import Node
         return Node.new_node(slice=self, name=name, site=site)
 
     def get_nodes(self):
+        """
+        Gets the nodes on the slice.
+
+        :return: a list of all nodes on the slice.
+        :rtype: list[Node]
+        """
         from fabrictestbed_extensions.fablib.node import Node
         #self.update()
 
@@ -195,6 +299,16 @@ class Slice():
         return return_nodes
 
     def get_node(self, name, verbose=False):
+        """
+        Gets a particular node on the slice, or raises an exception if it is not found.
+
+        :param name: The name of the node.
+        :type name: str
+        :param verbose: Indicator for whether or not to give verbose output.
+        :type verbose: boolean
+        :return: the desired node.
+        :rtype: Node
+        """
         from fabrictestbed_extensions.fablib.node import Node
         #self.update()
         try:
@@ -205,6 +319,12 @@ class Slice():
             raise Exception(f"Node not found: {name}")
 
     def get_interfaces(self):
+        """
+        Gets the interfaces attached to each node in this slice.
+
+        :return: a list of interfaces associated with this slice.
+        :rtype: list[Interface]
+        """
         interfaces = []
         for node in self.get_nodes():
             for interface in node.get_interfaces():
@@ -212,6 +332,12 @@ class Slice():
         return interfaces
 
     def get_interface(self, name=None):
+        """
+        Gets a particular interface associated with this slice.
+
+        :return: an interface on this slice
+        :rtype: Interface
+        """
         for interface in self.get_interfaces():
             if name.endswith(interface.get_name()):
                 return interface
@@ -221,6 +347,12 @@ class Slice():
 
 
     def get_l2networks(self, verbose=False):
+        """
+        Gets L2 networks associated with this slice.
+
+        :return: a list of L2 networks on this slice
+        :rtype: list[NetworkSevice]
+        """
         from fabrictestbed_extensions.fablib.network_service import NetworkService
 
         try:
@@ -231,6 +363,12 @@ class Slice():
         return None
 
     def get_l2network(self, name=None, verbose=False):
+        """
+        Gets a particular L2 networks associated with this slice.
+
+        :return: an L2 networks on this slice
+        :rtype: NetworkSevice
+        """
         from fabrictestbed_extensions.fablib.network_service import NetworkService
 
         try:
@@ -242,6 +380,9 @@ class Slice():
 
 
     def delete(self):
+        """
+        Deletes this slice from the SliceManager.
+        """
         return_status, result = fablib.get_slice_manager().delete(slice_object=self.sm_slice)
 
         if return_status != Status.OK:
@@ -250,7 +391,12 @@ class Slice():
         self.topology = None
 
     def renew(self, end_date):
+        """
+        Renews this slice until the provided end date.
 
+        :param end_date: The new end date of the slice.
+        :type end_date: DateTimeFormat
+        """
         return_status, result = fablib.get_slice_manager().renew(slice_object=self.sm_slice,
                                      new_lease_end_time = end_date)
 
@@ -258,6 +404,18 @@ class Slice():
             raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
 
     def wait(self, timeout=360,interval=10,progress=False):
+        """
+        Waits for this slice to be active.
+
+        :param timeout: How long (in seconds) to wait for the slice to be active.
+        :type timeout: int
+        :param interval: How often to check if the slice is active.
+        :type interval: int
+        :param progress: Indicator for whether or not to show progress.
+        :type progress: boolean
+        :return: the new slice.
+        :rtype: Slice
+        """
         slice_name=self.sm_slice.slice_name
         slice_id=self.sm_slice.slice_id
 
@@ -291,13 +449,24 @@ class Slice():
         self.update()
 
     def get_interface_map(self):
+        """
+        Gets the interface map on this slice.
+
+        :return: a map of key names to interfaces
+        :rtype: dict(str->Interface)
+        """
         if not hasattr(self, 'network_iface_map'):
             self.load_interface_map()
 
         return self.network_iface_map
 
     def post_boot_config(self, verbose=False):
+        """
+        Runs post-boot configuration for this slice.
 
+        :param verbose: Indicator for whether or not to give verbose output.
+        :type verbose: boolean
+        """
         # Find the interface to network map
         self.build_interface_map()
 
@@ -309,9 +478,18 @@ class Slice():
             interface.config_vlan_iface()
 
     def load_config(self):
+        """
+        Loads this slice's configuration.
+        """
         self.load_interface_map()
 
     def load_interface_map(self, verbose=False):
+        """
+        Loads this slice's interface map.
+
+        :param verbose: Indicator for whether or not to give verbose output.
+        :type verbose: boolean
+        """
         self.network_iface_map = {}
         for net in self.get_l2networks():
             self.network_iface_map[net.get_name()] = {}
@@ -321,6 +499,12 @@ class Slice():
 
 
     def build_interface_map(self, verbose=False):
+        """
+        Builds this slice's interface map based on the L2 networks on this slice.
+
+        :param verbose: Indicator for whether or not to give verbose output.
+        :type verbose: boolean
+        """
         self.network_iface_map = {}
         for net in self.get_l2networks():
             iface_map = {}
@@ -410,6 +594,19 @@ class Slice():
             print(f"network_iface_map: {self.network_iface_map}")
 
     def submit(self, wait=False, wait_timeout=360, wait_interval=10, wait_progress=False, wait_ssh=False):
+        """
+        Submits this slice state to the FABRIC API to be created.
+
+        :param wait: Indicator for whether or not to wait for the slice to be created.
+        :type wait: boolean
+        :param wait_timeout: How long (in seconds) to wait for the slice to be active.
+        :type wait_timeout: int
+        :param wait_interval: How often (in seconds) to check if the slice is active.
+        :param wait_progress: Indicator for whether or not to show slice waiting progress.
+        :type wait_progress: boolean
+        :param wait_ssh: Indicator for whether or not to wait for the slice to be SSH-able.
+        :type wait_ssh: boolean
+        """
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
