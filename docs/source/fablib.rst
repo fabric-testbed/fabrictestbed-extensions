@@ -1,3 +1,5 @@
+:orphan:
+
 fablib
 ------
 `fabrictestbed_extensions/fablib` stuff.
@@ -5,7 +7,7 @@ fablib
 .. automodule:: abc_fablib
 
 ``abc_fablib``
-===============
+==============================
 
 .. autoclass:: abc_fablib.AbcFabLIB
 
@@ -14,7 +16,7 @@ fablib
 .. automodule:: component
 
 ``component``
-==============
+============================
 
 .. autoclass:: component.Component
 
@@ -64,10 +66,8 @@ fablib
 
    .. automethod:: __init__
 
-.. automodule:: fablib
-
 ``fablib``
-===========
+======================
 
 .. automodule:: fablib
 
@@ -128,7 +128,7 @@ fablib
    .. automethod:: delete_all
 
 ``interface``
-===========
+======================
 
 .. automodule:: interface
 
@@ -169,7 +169,7 @@ fablib
    .. automethod:: get_network
 
 ``network_service``
-==================
+====================================
 
 .. automodule:: network_service
 
@@ -206,3 +206,183 @@ fablib
    .. automethod:: flush_dataplane_ips
 
    .. automethod:: flush_all_dataplane_ips
+
+``node``
+================
+
+.. automodule:: node
+
+.. autoclass:: Node
+
+   .. automethod:: __init__
+
+   .. automethod:: new_node
+
+   .. automethod:: get_node
+
+   .. automethod:: get_fim_node
+
+   .. automethod:: set_capacities
+
+   .. automethod:: set_instance_type
+
+   .. automethod:: set_username
+
+   .. automethod:: set_image
+
+   .. automethod:: set_host
+
+   .. automethod:: get_slice
+
+   .. automethod:: get_name
+
+   .. automethod:: get_cores
+
+   .. automethod:: get_ram
+
+   .. automethod:: get_disk
+
+   .. automethod:: get_image
+
+   .. automethod:: get_image_type
+
+   .. automethod:: get_host
+
+   .. automethod:: get_site
+
+   .. automethod:: get_management_ip
+
+   .. automethod:: get_reservation_id
+
+   .. automethod:: get_reservation_state
+
+   .. automethod:: get_interfaces
+
+   .. automethod:: get_interface
+
+   .. automethod:: get_username
+
+   .. automethod:: get_public_key
+
+   .. automethod:: get_public_key_file
+
+   .. automethod:: get_private_key
+
+   .. automethod:: get_private_key_file
+
+   .. automethod:: get_private_key_passphrase
+
+   .. automethod:: add_component
+
+   .. automethod:: get_components
+
+   .. automethod:: get_component
+
+   .. automethod:: get_ssh_command
+
+   .. automethod:: validIPAddress
+
+   .. automethod:: execute
+
+   .. automethod:: upload_file
+
+   .. automethod:: download_file
+
+   .. automethod:: test_ssh
+
+   .. automethod:: wait_for_ssh
+
+   .. automethod:: get_management_os_interface
+
+   .. automethod:: get_dataplane_os_interfaces
+
+   .. automethod:: flush_all_os_interfaces
+
+   .. automethod:: flush_os_interface
+
+   .. automethod:: set_ip_os_interface
+
+   .. automethod:: clear_all_ifaces
+
+   .. automethod:: remove_all_vlan_os_interfaces
+
+   .. automethod:: save_data
+
+   .. automethod:: load_data
+
+   .. automethod:: remove_vlan_os_interface
+
+   .. automethod:: add_vlan_os_interface
+
+   .. automethod:: ping_test
+
+.. automodule:: slice
+
+``slice``
+==============
+
+.. autoclass:: Slice
+
+   .. automethod:: __init__
+
+   .. automethod:: new_slice
+
+   .. automethod:: get_slice
+
+   .. automethod:: get_fim_topology
+
+   .. automethod:: update_slice
+
+   .. automethod:: update_topology
+
+   .. automethod:: update
+
+   .. automethod:: get_slice_public_key
+
+   .. automethod:: get_private_key_passphrase
+
+   .. automethod:: get_slice_public_key_file
+
+   .. automethod:: get_slice_private_key_file
+
+   .. automethod:: get_state
+
+   .. automethod:: get_name
+
+   .. automethod:: get_slice_id
+
+   .. automethod:: get_lease_end
+
+   .. automethod:: add_l2network
+
+   .. automethod:: add_node
+
+   .. automethod:: get_nodes
+
+   .. automethod:: get_node
+
+   .. automethod:: get_interfaces
+
+   .. automethod:: get_interface
+
+   .. automethod:: get_l2networks
+
+   .. automethod:: get_l2network
+
+   .. automethod:: delete
+
+   .. automethod:: renew
+
+   .. automethod:: wait
+
+   .. automethod:: get_interface_map
+
+   .. automethod:: post_boot_config
+
+   .. automethod:: load_config
+
+   .. automethod:: load_interface_map
+
+   .. automethod:: build_interface_map
+
+   .. automethod:: submit
