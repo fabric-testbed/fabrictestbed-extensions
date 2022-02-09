@@ -1,13 +1,11 @@
 :orphan:
 
-fablib
-------
 `fabrictestbed_extensions/fablib` stuff.
 
 .. automodule:: abc_fablib
 
-``abc_fablib``
-==============================
+``AbcFabLIB``
+------------------------------
 
 .. autoclass:: abc_fablib.AbcFabLIB
 
@@ -15,8 +13,8 @@ fablib
 
 .. automodule:: component
 
-``component``
-============================
+``Component``
+----------------------------
 
 .. autoclass:: component.Component
 
@@ -67,7 +65,7 @@ fablib
    .. automethod:: __init__
 
 ``fablib``
-======================
+----------------------
 
 .. automodule:: fablib
 
@@ -127,8 +125,8 @@ fablib
 
    .. automethod:: delete_all
 
-``interface``
-======================
+``Interface``
+----------------------
 
 .. automodule:: interface
 
@@ -168,8 +166,8 @@ fablib
 
    .. automethod:: get_network
 
-``network_service``
-====================================
+``NetworkService``
+------------------------------------
 
 .. automodule:: network_service
 
@@ -207,8 +205,8 @@ fablib
 
    .. automethod:: flush_all_dataplane_ips
 
-``node``
-================
+``Node``
+----------------
 
 .. automodule:: node
 
@@ -318,8 +316,8 @@ fablib
 
 .. automodule:: slice
 
-``slice``
-==============
+``Slice``
+--------------
 
 .. autoclass:: Slice
 
