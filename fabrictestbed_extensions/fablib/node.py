@@ -80,12 +80,11 @@ class Node():
         return self.fim_node
 
     def set_capacities(self, cores=2, ram=2, disk=2):
-        cap = Capacities()
-        cap.set_fields(core=cores, ram=ram, disk=disk)
+        cap = Capacities(core=cores, ram=ram, disk=disk)
         self.get_fim_node().set_properties(capacities=cap)
 
     def set_instance_type(self, instance_type):
-        self.get_fim_node().set_properties(capacity_hints=CapacityHints().set_fields(instance_type=instance_type))
+        self.get_fim_node().set_properties(capacity_hints=CapacityHints(instance_type=instance_type))
 
     def set_username(self, username=None):
         if 'centos' in self.get_image():

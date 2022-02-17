@@ -314,8 +314,7 @@ class NetworkBencharks(AbcTest):
         t = ExperimentTopology()
 
         #Node1
-        cap = Capacities()
-        cap.set_fields(core=test['src']['core'], ram=test['src']['ram'], disk=test['src']['disk'])
+        cap = Capacities(core=test['src']['core'], ram=test['src']['ram'], disk=test['src']['disk'])
         n1 = t.add_node(name='node1', site=site1)
         n1.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         if test['src']['nic'] == 'SmartNIC_ConnectX_6':
@@ -327,8 +326,7 @@ class NetworkBencharks(AbcTest):
 
 
         #Node2
-        cap = Capacities()
-        cap.set_fields(core=test['dst']['core'], ram=test['dst']['ram'], disk=test['dst']['disk'])
+        cap = Capacities(core=test['dst']['core'], ram=test['dst']['ram'], disk=test['dst']['disk'])
         n2 = t.add_node(name='node2', site=site2)
         n2.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         if test['dst']['nic'] == 'SmartNIC_ConnectX_6':
@@ -607,8 +605,7 @@ class NetworkBencharks(AbcTest):
 
         #server
         server = test['server']
-        cap = Capacities()
-        cap.set_fields(core=server['core'], ram=server['ram'], disk=server['disk'])
+        cap = Capacities(core=server['core'], ram=server['ram'], disk=server['disk'])
         node = t.add_node(name=server['node_name'], site=site)
 
         print("Create node: {}, core: {}, ram: {}, disk: {}".format(server['node_name'],server['core'],server['ram'],server['disk']))
@@ -626,8 +623,7 @@ class NetworkBencharks(AbcTest):
         for client in test['clients']:
             site = client['site']
             #Node2
-            cap = Capacities()
-            cap.set_fields(core=client['core'], ram=client['ram'], disk=client['disk'])
+            cap = Capacities(core=client['core'], ram=client['ram'], disk=client['disk'])
             node = t.add_node(name=client['node_name'], site=site)
 
             print("Create node: {}, core: {}, ram: {}, disk: {}".format(client['node_name'],client['core'],client['ram'],client['disk']))
@@ -679,8 +675,7 @@ class NetworkBencharks(AbcTest):
 
         #server
         server = test['server']
-        cap = Capacities()
-        cap.set_fields(core=server['core'], ram=server['ram'], disk=server['disk'])
+        cap = Capacities(core=server['core'], ram=server['ram'], disk=server['disk'])
         node = t.add_node(name=server['node_name'], site=site)
 
         #temp for testign
@@ -704,8 +699,7 @@ class NetworkBencharks(AbcTest):
         for client in test['clients']:
 
             #Node2
-            cap = Capacities()
-            cap.set_fields(core=client['core'], ram=client['ram'], disk=client['disk'])
+            cap = Capacities(core=client['core'], ram=client['ram'], disk=client['disk'])
             node = t.add_node(name=client['node_name'], site=site)
 
             #labels = Labels()

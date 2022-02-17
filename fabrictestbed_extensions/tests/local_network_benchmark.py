@@ -173,8 +173,7 @@ class LinkBenchmark(AbcTest):
         slice_manager.initialize()
 
         t = ExperimentTopology()
-        cap = Capacities()
-        cap.set_fields(core=32, ram=128, disk=10)
+        cap = Capacities(core=32, ram=128, disk=10)
         n1 = t.add_node(name='n1', site=site1)
         n1.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         n2 = t.add_node(name='n2', site=site2)
@@ -336,8 +335,7 @@ class LinkBenchmark(AbcTest):
         n1 = self.topology.add_node(name=node_name, site=site_name)
 
         # Set capacities
-        cap = Capacities()
-        cap.set_fields(core=cores, ram=ram, disk=disk)
+        cap = Capacities(core=cores, ram=ram, disk=disk)
 
         # Set Properties
         n1.set_properties(capacities=cap, image_type=image_type, image_ref=image)
