@@ -127,8 +127,7 @@ class AbcTopologyEditor(ABC):
 
         # Add to FABRIC experiment topology
         new_node = self.current_experiment['topology'].add_node(name=node_name, site=self.DEFAULT_NODE_SITE_VALUE)
-        cap = Capacities()
-        cap.set_fields(core=self.DEFAULT_NODE_CORE_VALUE, ram=self.DEFAULT_NODE_RAM_VALUE,
+        cap = Capacities(core=self.DEFAULT_NODE_CORE_VALUE, ram=self.DEFAULT_NODE_RAM_VALUE,
                        disk=self.DEFAULT_NODE_DISK_VALUE)
         new_node.set_properties(capacities=cap, image_type=self.DEFAULT_NODE_IMAGE_TYPE_VALUE,
                                 image_ref=self.DEFAULT_NODE_IMAGE_VALUE)
@@ -192,8 +191,7 @@ class AbcTopologyEditor(ABC):
                 topology_node.set_property(pname="site", pval=site_name)
 
             # Set capacities
-            cap = Capacities()
-            cap.set_fields(core=cores, ram=ram, disk=disk)
+            cap = Capacities(core=cores, ram=ram, disk=disk)
             topology_node.set_properties(capacities=cap, image_type=image_type, image_ref=image)
         except Exception as e:
             # TODO: Should create popup or other user facing error message

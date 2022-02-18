@@ -66,12 +66,8 @@ class HelloFABRIC(AbcTest):
         disk = 2
 
         self.topology = ExperimentTopology()
-
-
-
         # Set capacities
-        cap = Capacities()
-        cap.set_fields(core=cores, ram=ram, disk=disk)
+        cap = Capacities(core=cores, ram=ram, disk=disk)
 
         for site in sites:
 

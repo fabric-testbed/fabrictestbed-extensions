@@ -71,8 +71,7 @@ class NVMEBenchmark(AbcTest):
 
         self.topology = ExperimentTopology()
 
-        cap = Capacities()
-        cap.set_fields(core=cores, ram=ram, disk=disk)
+        cap = Capacities(core=cores, ram=ram, disk=disk)
 
         for node_num in range(0, node_count):
             node_name="nvme-"+str(site_name)+"-"+str(node_num)
