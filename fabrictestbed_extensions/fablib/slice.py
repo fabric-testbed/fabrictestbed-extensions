@@ -40,6 +40,7 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
+
 #from .slicex import SliceX
 #from .nodex import NodeX
 #from .fabricx import FabricX
@@ -49,6 +50,8 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.node import Node
+
 
 class Slice():
 
@@ -89,6 +92,7 @@ class Slice():
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.slice_name
+
         slice.topology = fablib.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
 
         try:
@@ -110,10 +114,12 @@ class Slice():
 
     def update_slice(self):
         #Update slice
-        return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+        #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+        return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+
         if return_status == Status.OK:
-            self.sm_slice = list(filter(lambda x: x.slice_name == self.slice_name, slices))[0]
-            self.slice_id = self.sm_slice.slice_id
+            self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
+            #self.slice_name = self.sm_slice.slice_name
         else:
             raise Exception("Failed to get slice list: {}, {}".format(return_status, slices))
 
@@ -128,7 +134,12 @@ class Slice():
         self.topology = new_topo
 
     def update(self):
-        self.update_slice()
+        try:
+            self.update_slice()
+        except:
+            pass
+            #print('update slice error')
+
         self.update_topology()
 
     def get_slice_public_key(self):
@@ -177,6 +188,40 @@ class Slice():
     def add_node(self, name, site):
         from fabrictestbed_extensions.fablib.node import Node
         return Node.new_node(slice=self, name=name, site=site)
+
+    def get_object_by_reservation(self, reservation_id):
+        # test all nodes
+        try:
+            for node in self.get_nodes():
+                if node.get_reservation_id() == reservation_id:
+                    return node
+
+                    # TODO: test other resource types.
+        except:
+            pass
+
+        return None
+
+
+    def get_errors(self):
+
+        # strings to ingnor
+        cascade_notice_string1 = 'Closing reservation due to failure in slice'
+        cascade_notice_string2 = 'is in a terminal state'
+
+        origin_notices = []
+        for reservation_id,notice in self.get_notices().items():
+            #print(f"XXXXX: reservation_id: {reservation_id}, notice {notice}")
+            if cascade_notice_string1 in notice or cascade_notice_string2 in notice:
+                continue
+
+            origin_notices.append({'reservation_id': reservation_id, 'notice': notice, 'sliver': self.get_object_by_reservation(reservation_id)})
+
+        return origin_notices
+
+
+    def get_notices(self):
+        return self.sm_slice.notices
 
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node
@@ -257,6 +302,27 @@ class Slice():
         if return_status != Status.OK:
             raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
 
+
+    def build_error_exception_string(self):
+        exception_string = ""
+        for err in self.get_errors():
+            notice = err['notice']
+            sliver = err['sliver']
+
+            sliver_extra = ""
+            if isinstance(sliver, Node):
+                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}: "
+
+            #for x in notice:
+            #    print(f"x: {x}")
+            notice = notice.split("(Last ticket update: ")[1]
+            notice = notice.split(" slice:")[0]
+
+
+            exception_string = f"{exception_string}{sliver_extra} {notice}\n"
+
+        return exception_string
+
     def wait(self, timeout=360,interval=10,progress=False):
         slice_name=self.sm_slice.slice_name
         slice_id=self.sm_slice.slice_id
@@ -266,16 +332,17 @@ class Slice():
 
         if progress: print("Waiting for slice .", end = '')
         while time.time() < timeout_start + timeout:
-            return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
-
+            #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+            return_status, slices = fablib.get_slice_manager().slices(excludes=[])
             if return_status == Status.OK:
-                slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
+                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.slice_state == "StableOK":
                     if progress: print(" Slice state: {}".format(slice.slice_state))
                     return slice
                 if slice.slice_state == "Closing" or slice.slice_state == "Dead" or slice.slice_state == "StableError":
                     if progress: print(" Slice state: {}".format(slice.slice_state))
-                    return slice
+                    exception_string = self.build_error_exception_string()
+                    raise Exception(str(exception_string))
             else:
                 print(f"Failure: {slices}")
 
@@ -283,7 +350,8 @@ class Slice():
             time.sleep(interval)
 
         if time.time() >= timeout_start + timeout:
-            if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+            #if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+            raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
             return slice
 
         #Update the fim topology (wait to avoid get topology bug)
@@ -423,8 +491,13 @@ class Slice():
         if return_status != Status.OK:
             raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
 
-        time.sleep(10)
-        self.update_slice()
+        #print(f'slice_reservations: {slice_reservations}')
+        #print(f"slice_id: {slice_reservations[0].slice_id}")
+        self.slice_id = slice_reservations[0].slice_id
+
+        time.sleep(5)
+        #self.update_slice()
+        self.update()
 
         if wait or wait_progress:
             self.wait(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
@@ -432,7 +505,7 @@ class Slice():
             if wait_progress:
                 print("Running post boot config ...",end="")
 
-            time.sleep(30)
+            #time.sleep(30)
             self.update()
 
             for node in self.get_nodes():
