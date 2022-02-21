@@ -304,22 +304,28 @@ class Slice():
 
 
     def build_error_exception_string(self):
-        exception_string = ""
-        for err in self.get_errors():
-            notice = err['notice']
-            sliver = err['sliver']
+        exception_string = "\n"
+        for error in self.get_errors():
+            notice = error['notice']
+            sliver = error['sliver']
 
             sliver_extra = ""
             if isinstance(sliver, Node):
-                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}: "
+                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, "
 
-            #for x in notice:
-            #    print(f"x: {x}")
-            notice = notice.split("(Last ticket update: ")[1]
-            notice = notice.split(" slice:")[0]
+            #pull out error message
+            if 'last_ticket_update' in notice:
+                error = notice['last_ticket_update']
+            elif 'error_message' in notice:
+                error = notice['error_message']
+            elif 'last_lease_update' in notice:
+                error = notice['last_lease_update']
+            else:
+                error = 'not available'
 
+            reservation_state = notice['reservation_state']
 
-            exception_string = f"{exception_string}{sliver_extra} {notice}\n"
+            exception_string = f"{exception_string}Error: {sliver_extra}{error}, Reservation state: {reservation_state}\n"
 
         return exception_string
 
@@ -403,7 +409,7 @@ class Slice():
             target_os_ifaces = target_node.get_dataplane_os_interfaces()
             target_node.clear_all_ifaces()
 
-            #print(f"{target_node.get_ssh_command()}")
+            if verbose: print(f"{target_node.get_ssh_command()}")
 
             target_iface_nums = []
             for target_os_iface in target_os_ifaces:
@@ -417,10 +423,11 @@ class Slice():
                 target_iface_nums.append(iface_num)
 
 
-            #print(f"target_iface: {target_iface.get_name()}")
-            #print(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
-            #print(f"target_node: {target_node.get_name()}")
-            #print(f"target_os_ifaces: {target_os_ifaces}")
+            if verbose:
+                print(f"target_iface: {target_iface.get_name()}")
+                print(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
+                print(f"target_node: {target_node.get_name()}")
+                print(f"target_os_ifaces: {target_os_ifaces}")
 
 
             for iface in ifaces:
@@ -428,17 +435,17 @@ class Slice():
                 node.clear_all_ifaces()
                 node_os_ifaces = node.get_dataplane_os_interfaces()
 
-
-                #print(f"test_node: {node.get_name()}")
-                #print(f"test_iface: {iface.get_name()}")
-                #print(f"node_os_ifaces: {node_os_ifaces}")
-                #print(f"iface.get_vlan(): {iface.get_vlan()}")
-                #print(f"{node.get_ssh_command()}")
+                if verbose:
+                    print(f"test_node: {node.get_name()}")
+                    print(f"test_iface: {iface.get_name()}")
+                    print(f"node_os_ifaces: {node_os_ifaces}")
+                    print(f"iface.get_vlan(): {iface.get_vlan()}")
+                    print(f"{node.get_ssh_command()}")
 
                 found = False
                 for node_os_iface in node_os_ifaces:
                     node_os_iface_name = node_os_iface['ifname']
-                    #print(f"target_iface_nums: {target_iface_nums}")
+                    if verbose: print(f"target_iface_nums: {target_iface_nums}")
                     for net_num in target_iface_nums:
                         dst_ip=f'192.168.{net_num}.1'
 
@@ -451,9 +458,9 @@ class Slice():
                                                  cidr='24')
 
                         #ping test
-                        #print(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
+                        if verbose: print(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
                         test_result = node.ping_test(dst_ip)
-                        #print(f"Ping test result: {test_result}")
+                        if verbose: print(f"Ping test result: {test_result}")
 
                         if iface.get_vlan() == None:
                             node.flush_os_interface(node_os_iface_name)
@@ -461,7 +468,7 @@ class Slice():
                             node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
 
                         if test_result:
-                            #print(f"test_result true: {test_result}")
+                            if verbose: print(f"test_result true: {test_result}")
                             target_iface_nums = [ net_num ]
                             found = True
                             iface_map[node.get_name()] = node_os_iface
