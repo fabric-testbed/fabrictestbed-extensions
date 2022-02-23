@@ -192,15 +192,9 @@ class fablib(AbcFabLIB):
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                #print("{}:".format(slice.slice_name))
-                #print("   ID         : {}".format(slice.slice_id))
-                #print("   State      : {}".format(slice.slice_state))
-                #print("   Lease End  : {}".format(slice.lease_end))
-                #print()
                 return_slices.append(Slice.get_slice(sm_slice=slice, load_config=False))
         else:
-            print(f"Failure: {slices}")
-
+            raise Excption(f"Failed to get slices: {slices}")
         return return_slices
 
     @staticmethod

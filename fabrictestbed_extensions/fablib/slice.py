@@ -361,7 +361,7 @@ class Slice():
             return slice
 
         #Update the fim topology (wait to avoid get topology bug)
-        time.sleep(interval)
+        #time.sleep(interval)
         self.update()
 
     def get_interface_map(self):
@@ -369,6 +369,42 @@ class Slice():
             self.load_interface_map()
 
         return self.network_iface_map
+
+    def wait_ssh(self, timeout=360,interval=10,progress=False):
+        slice_name=self.sm_slice.slice_name
+        slice_id=self.sm_slice.slice_id
+
+        timeout_start = time.time()
+        slice = self.sm_slice
+
+        #Wait for the slice to be stable ok
+        self.wait(timeout=timeout,interval=interval,progress=progress)
+
+        #Test ssh
+        if progress: print("Waiting for ssh in slice .", end = '')
+        while time.time() < timeout_start + timeout:
+
+            if self.test_ssh():
+                if progress: print(" ssh successful")
+                return True
+
+            if progress: print(".", end = '')
+
+
+            if time.time() >= timeout_start + timeout:
+                #if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+                raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+                return False
+
+            time.sleep(interval)
+            self.update()
+
+    def test_ssh(self, verbose=True):
+        for node in self.get_nodes():
+            if not node.test_ssh():
+                if verbose: print(f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}")
+                return False
+        return True
 
     def post_boot_config(self, verbose=False):
 
