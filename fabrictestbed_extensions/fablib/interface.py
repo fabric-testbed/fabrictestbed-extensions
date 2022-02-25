@@ -102,11 +102,10 @@ class Interface():
         network_name = self.get_network().get_name()
         node_name = self.get_node().get_name()
 
-        #print(f"get_physical_os_interface: network_name = {network_name}")
-        #print(f"get_physical_os_interface: node_name = {node_name}")
-
-
-        return self.get_slice().get_interface_map()[network_name][node_name]
+        try:
+            return self.get_slice().get_interface_map()[network_name][node_name]
+        except:
+            return None
 
     def config_vlan_iface(self):
         if self.get_vlan() != None:

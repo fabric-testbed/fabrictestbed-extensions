@@ -49,6 +49,25 @@ from fabrictestbed_extensions.fablib.fablib import fablib
 
 from .. import images
 
+#+------------------------+--------+
+#| Name                   | Status |
+#+------------------------+--------+
+#| default_centos8_stream | active |
+#| default_centos9_stream | active |
+#| default_centos_7       | active |
+#| default_centos_8       | active |
+#| default_cirros         | active |
+#| default_debian_10      | active |
+#| default_fedora_35      | active |
+#| default_freebsd_13_zfs | active |
+#| default_openbsd_7      | active |
+#| default_rocky_8        | active |
+#| default_ubuntu_18      | active |
+#| default_ubuntu_20      | active |
+#| default_ubuntu_21      | active |
+#| default_ubuntu_22      | active |
+#+------------------------+--------+
+
 #class Node(AbcFabLIB):
 class Node():
     def __init__(self, slice, node):
@@ -91,6 +110,8 @@ class Node():
             self.username = 'centos'
         elif 'ubuntu' in self.get_image():
             self.username = 'ubuntu'
+        elif 'rocky'in self.get_image():
+            self.username = 'rocky'
         else:
             self.username = None
 
@@ -487,8 +508,8 @@ class Node():
             if 'link' in i.keys():
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
 
-    def save_data(self):
-        data = {}
+    def get_interface_map(self):
+        #data = {}
         #Get interface data
         interfaces = {}
         for i in self.get_interfaces():
@@ -503,6 +524,26 @@ class Node():
 
             interfaces[i.get_name()] =  { 'network':  network_name,
                          'os_interface':  i.get_physical_os_interface() }
+        return interfaces
+
+
+    def save_data(self):
+        #data = {}
+        #Get interface data
+        interfaces = {}
+        for i in self.get_interfaces():
+            #print(f"interface: {i.get_name()}")
+            #print(f"os_interface: {i.get_physical_os_interface()}")
+            if i.get_network() != None:
+                network_name = i.get_network().get_name()
+                #print(f"network: {i.get_network().get_name()}")
+            else:
+                network_name = None
+                #print(f"network: None")
+
+            interfaces[i.get_name()] =  { 'network':  network_name,
+                         'os_interface':  i.get_physical_os_interface() }
+
 
         with open(f'{self.get_name()}.json', 'w') as outfile:
             json.dump(interfaces, outfile)
