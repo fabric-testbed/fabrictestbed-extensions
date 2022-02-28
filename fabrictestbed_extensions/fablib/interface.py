@@ -113,10 +113,10 @@ class Interface():
                                                   vlan=self.get_vlan())
 
 
-    def set_ip(self, ip=None, cidr=None):
+    def set_ip(self, ip=None, cidr=None, mtu=None):
         self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
                                             vlan=self.get_vlan(),
-                                            ip=ip, cidr=cidr)
+                                            ip=ip, cidr=cidr, mtu=mtu)
 
     def set_vlan(self, vlan=None):
 

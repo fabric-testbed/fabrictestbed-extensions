@@ -162,6 +162,11 @@ class Node():
     def get_reservation_state(self):
         return self.get_fim_node().get_property(pname='reservation_info').reservation_state
 
+    def get_reservation_info(self):
+        return self.get_fim_node().get_property(pname='reservation_info').reservation_info
+
+        #return self.get_fim_node().reservation_info
+
     def get_interfaces(self):
         from fabrictestbed_extensions.fablib.interface import Interface
 
@@ -182,7 +187,7 @@ class Node():
                         return interface
         elif network_name != None:
             for interface in self.get_interfaces():
-                if interface != None and interface.get_network().get_name() == network_name:
+                if interface != None and interface.get_network() != None and interface.get_network().get_name() == network_name:
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
@@ -244,9 +249,15 @@ class Node():
         except ValueError:
             return "Invalid"
 
-    def execute(self, command, retry=3, retry_interval=10):
+    def execute(self, command, retry=3, retry_interval=10, verbose=True):
         import paramiko
         import time
+
+
+        if verbose:
+            start = time.time()
+            print(f"Running node.execute(): command: {command}, ", end="")
+
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -286,6 +297,10 @@ class Node():
 
                 client.close()
 
+                if verbose:
+                    end = time.time()
+                    print(f"elapsed time: {end - start} seconds")
+
                 return rtn_stdout, rtn_stderr
                 #success, skip other tries
                 break
@@ -300,12 +315,17 @@ class Node():
                 time.sleep(retry_interval)
                 pass
 
-        raise Exception("scp download failed")
+        raise Exception("ssh failed: Should not get here")
 
 
-    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=True):
         import paramiko
         import time
+
+
+        if verbose:
+            start = time.time()
+            print(f"Running node.upload_file(): file: {local_file_path}, ", end="")
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -344,6 +364,10 @@ class Node():
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
                 ftp_client.close()
 
+                if verbose:
+                    end = time.time()
+                    print(f"elapsed time: {end - start} seconds")
+
                 return file_attributes
                 #success, skip other tries
                 break
@@ -361,9 +385,13 @@ class Node():
         raise Exception("scp upload failed")
 
 
-    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=True):
         import paramiko
         import time
+
+        if verbose:
+            start = time.time()
+            print(f"Running node.download_file(): file: {remote_file_path}, ", end="")
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -401,6 +429,10 @@ class Node():
                 file_attributes = ftp_client.get(local_file_path, remote_file_path)
                 ftp_client.close()
 
+                if verbose:
+                    end = time.time()
+                    print(f"elapsed time: {end - start} seconds")
+
                 return file_attributes
                 #success, skip other tries
                 break
@@ -420,7 +452,7 @@ class Node():
 
     def test_ssh(self):
         try:
-            self.execute('ls', retry=1, retry_interval=10)
+            self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
         except:
             return False
         return True
@@ -478,7 +510,7 @@ class Node():
 
             #bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
-            command = f'sudo ip link set dev {os_iface} up'
+            command = f' sudo ip link set dev {os_iface} up'
             if mtu != None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command)
@@ -487,6 +519,8 @@ class Node():
             #Set ip
             command = f"sudo ip addr add {ip}/{cidr} dev {os_iface}"
             stdout, stderr = self.execute(command)
+
+        stdout, stderr = self.execute(command)
 
     def clear_all_ifaces(self):
         self.remove_all_vlan_os_interfaces()

@@ -112,10 +112,20 @@ class Slice():
     def get_fim_topology(self):
         return self.topology
 
-    def update_slice(self):
+    def update_slice(self, verbose=True):
         #Update slice
         #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+        #return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+
+        import time
+        if verbose:
+            start = time.time()
+            print("Running slice.update_slice() : fablib.get_slice_manager().slices(): ", end="")
         return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+        if verbose:
+            end = time.time()
+            print(f"elapsed time: {end - start} seconds")
+
 
         if return_status == Status.OK:
             self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
@@ -412,7 +422,7 @@ class Slice():
         # Find the interface to network map
 
         if verbose: print(f"build_interface_map")
-        self.build_interface_map()
+        self.build_interface_map(verbose=verbose)
 
         # Interface map in nodes
         for node in self.get_nodes():
