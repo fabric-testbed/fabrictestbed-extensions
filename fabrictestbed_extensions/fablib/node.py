@@ -163,7 +163,10 @@ class Node():
         return self.get_fim_node().get_property(pname='reservation_info').reservation_state
 
     def get_reservation_info(self):
-        return self.get_fim_node().get_property(pname='reservation_info').reservation_info
+        try:
+            return self.get_fim_node().reservation_info
+        except:
+            return None
 
         #return self.get_fim_node().reservation_info
 
@@ -561,6 +564,31 @@ class Node():
         return interfaces
 
 
+    def save_data_XXX(self):
+        #data = {}
+        #Get interface data
+        interfaces = {}
+        for i in self.get_interfaces():
+            #print(f"interface: {i.get_name()}")
+            #print(f"os_interface: {i.get_physical_os_interface()}")
+            if i.get_network() != None:
+                network_name = i.get_network().get_name()
+                #print(f"network: {i.get_network().get_name()}")
+            else:
+                network_name = None
+                #print(f"network: None")
+
+            interfaces[i.get_name()] =  { 'network':  network_name,
+                         'os_interface':  i.get_physical_os_interface() }
+
+
+        with open(f'{self.get_name()}.json', 'w') as outfile:
+            json.dump(interfaces, outfile)
+
+        #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
+
+        self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+
     def save_data(self):
         #data = {}
         #Get interface data
@@ -585,6 +613,8 @@ class Node():
         #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
 
         self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+
+
 
     def load_data(self):
 
