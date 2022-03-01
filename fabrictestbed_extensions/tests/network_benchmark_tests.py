@@ -439,7 +439,7 @@ class NetworkBencharks(AbcTest):
         return output
 
 
-    def run_tests_all_tests(self, test_name, site1, site2, verbose=True):
+    def run_tests_all_tests(self, test_name, site1, site2, verbose=False):
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
         self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
@@ -472,7 +472,7 @@ class NetworkBencharks(AbcTest):
         self.run_tests(test_name, n1['node'], n2['node'], n1['dataplane_ip'], n2['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
 
 
-    def test_all_ptp(self, tests, verbose=True, create_slices=True):
+    def test_all_ptp(self, tests, verbose=False, create_slices=True):
 
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
@@ -743,7 +743,7 @@ class NetworkBencharks(AbcTest):
 
         return slice
 
-    def test_s2s(self, test_name, test=None, verbose=True, create_slice=True):
+    def test_s2s(self, test_name, test=None, verbose=False, create_slice=True):
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
         self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
@@ -805,7 +805,7 @@ class NetworkBencharks(AbcTest):
         return all_results
 
 
-    def test_l2bridge(self, test_name, test=None, verbose=True, create_slice=True):
+    def test_l2bridge(self, test_name, test=None, verbose=False, create_slice=True):
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
         self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')

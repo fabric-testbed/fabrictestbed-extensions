@@ -252,7 +252,7 @@ class Node():
         except ValueError:
             return "Invalid"
 
-    def execute(self, command, retry=3, retry_interval=10, verbose=True):
+    def execute(self, command, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
 
@@ -321,7 +321,7 @@ class Node():
         raise Exception("ssh failed: Should not get here")
 
 
-    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=True):
+    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
 
@@ -388,7 +388,7 @@ class Node():
         raise Exception("scp upload failed")
 
 
-    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=True):
+    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
 

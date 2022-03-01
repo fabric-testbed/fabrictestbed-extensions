@@ -112,7 +112,7 @@ class Slice():
     def get_fim_topology(self):
         return self.topology
 
-    def update_slice(self, verbose=True):
+    def update_slice(self, verbose=False):
         #Update slice
         #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
         #return_status, slices = fablib.get_slice_manager().slices(excludes=[])
@@ -432,6 +432,8 @@ class Slice():
                     print(f"{node.get_interface_map()}")
                 except Exception as e:
                     print(f"{e}")
+
+
 
             node.save_data()
 

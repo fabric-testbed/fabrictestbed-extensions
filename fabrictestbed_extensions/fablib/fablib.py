@@ -197,7 +197,7 @@ class fablib(AbcFabLIB):
         return return_slices
 
     @staticmethod
-    def get_slices(excludes=[SliceState.Dead,SliceState.Closing], verbose=True):
+    def get_slices(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
         from fabrictestbed_extensions.fablib.slice import Slice
         import time
 
