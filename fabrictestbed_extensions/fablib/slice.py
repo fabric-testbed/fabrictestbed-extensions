@@ -231,7 +231,9 @@ class Slice():
 
 
     def get_notices(self):
-        return self.sm_slice.notices
+        #TODO
+        return {}
+        #return self.sm_slice.notices
 
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node
