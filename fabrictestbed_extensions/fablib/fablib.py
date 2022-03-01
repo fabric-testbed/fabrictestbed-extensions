@@ -219,22 +219,24 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_slice(name=None, slice_id=None, verbose=False):
-        slices = fablib.get_slices()
 
-        for slice in slices:
-            if name != None and slice.get_name() == name:
-                return slice
-            if slice_id != None and slice.get_slice_id() == slice_id:
-                return slice
+        #Get the appropriat slices list
+        if slice_id:
+            #if getting by slice_id consider all slices
+            slices = fablib.get_slices(excludes=[])
 
-        #Should not get here if the slice is found
-        if name != None:
-            raise Exception(f"Slice {name} not found")
-        elif slice_id != None:
-            raise Excption(f"Slice {slice_id} not found")
+            for slice in slices:
+                if slice_id != None and slice.get_slice_id() == slice_id:
+                    return slice
+        elif name:
+            # if getting by name then only consider active slices
+            slices = fablib.get_slices(excludes=[SliceState.Dead,SliceState.Closing])
+
+            for slice in slices:
+                if name != None and slice.get_name() == name:
+                    return slice
         else:
-            raise Exception(f"get_slice missing slice_id or name")
-
+            raise Exception("get_slice requires slice name (name) or slice id (slice_id)")
 
     @staticmethod
     def delete_slice(slice_name=None):

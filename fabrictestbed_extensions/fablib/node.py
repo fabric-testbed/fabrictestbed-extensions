@@ -130,37 +130,70 @@ class Node():
         return self.slice
 
     def get_name(self):
-        return self.get_fim_node().name
+        try:
+            return self.get_fim_node().name
+        except:
+            return None
 
     def get_cores(self):
-        return self.get_fim_node().get_property(pname='capacity_allocations').core
+        try:
+            return self.get_fim_node().get_property(pname='capacity_allocations').core
+        except:
+            return None
 
     def get_ram(self):
-        return self.get_fim_node().get_property(pname='capacity_allocations').ram
+        try:
+            return self.get_fim_node().get_property(pname='capacity_allocations').ram
+        except:
+            return None
 
     def get_disk(self):
-        return self.get_fim_node().get_property(pname='capacity_allocations').disk
+        try:
+            return self.get_fim_node().get_property(pname='capacity_allocations').disk
+        except:
+            return None
 
     def get_image(self):
-        return self.get_fim_node().image_ref
+        try:
+            return self.get_fim_node().image_ref
+        except:
+            return None
 
     def get_image_type(self):
-        return self.get_fim_node().image_type
+        try:
+            return self.get_fim_node().image_type
+        except:
+            return None
 
     def get_host(self):
-        return self.get_fim_node().get_property(pname='label_allocations').instance_parent
+        try:
+            return self.get_fim_node().get_property(pname='label_allocations').instance_parent
+        except:
+            return None
 
     def get_site(self):
-        return self.get_fim_node().site
+        try:
+            return self.get_fim_node().site
+        except:
+            return None
 
     def get_management_ip(self):
-        return self.get_fim_node().management_ip
+        try:
+            return self.get_fim_node().management_ip
+        except:
+            return None
 
     def get_reservation_id(self):
-        return self.get_fim_node().get_property(pname='reservation_info').reservation_id
+        try:
+            return self.get_fim_node().get_property(pname='reservation_info').reservation_id
+        except:
+            return None
 
     def get_reservation_state(self):
-        return self.get_fim_node().get_property(pname='reservation_info').reservation_state
+        try:
+            return self.get_fim_node().get_property(pname='reservation_info').reservation_state
+        except:
+            return None
 
     def get_error_message(self):
         try:

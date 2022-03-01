@@ -319,28 +319,21 @@ class Slice():
 
 
     def build_error_exception_string(self):
-        exception_string = "\n"
-        for error in self.get_errors():
+
+        exception_string = ""
+        for error in self.get_error_messages():
             notice = error['notice']
             sliver = error['sliver']
 
             sliver_extra = ""
             if isinstance(sliver, Node):
-                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, "
+                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, State: {sliver.get_reservation_state()}, "
 
-            #pull out error message
-            if 'last_ticket_update' in notice:
-                error = notice['last_ticket_update']
-            elif 'error_message' in notice:
-                error = notice['error_message']
-            elif 'last_lease_update' in notice:
-                error = notice['last_lease_update']
-            else:
-                error = 'not available'
+            #skip errors that are caused by slice error
+            if 'Closing reservation due to failure in slice' in notice:
+                continue
 
-            reservation_state = notice['reservation_state']
-
-            exception_string = f"{exception_string}Error: {sliver_extra}{error}, Reservation state: {reservation_state}\n"
+            exception_string = f"{exception_string}{sliver_extra}{notice}\n"
 
         return exception_string
 
