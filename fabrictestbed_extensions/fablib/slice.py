@@ -213,7 +213,7 @@ class Slice():
         return None
 
 
-    def get_errors(self):
+    def get_error_messages(self):
 
         # strings to ingnor
         cascade_notice_string1 = 'Closing reservation due to failure in slice'
@@ -231,9 +231,12 @@ class Slice():
 
 
     def get_notices(self):
-        #TODO
-        return {}
-        #return self.sm_slice.notices
+
+        notices = {}
+        for node in self.get_nodes():
+            notices[node.get_reservation_id()] = node.get_error_message()
+
+        return notices
 
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node

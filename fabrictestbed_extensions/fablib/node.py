@@ -162,13 +162,11 @@ class Node():
     def get_reservation_state(self):
         return self.get_fim_node().get_property(pname='reservation_info').reservation_state
 
-    def get_reservation_info(self):
+    def get_error_message(self):
         try:
-            return self.get_fim_node().reservation_info
+            return self.get_fim_node().get_property(pname='reservation_info').error_message
         except:
             return None
-
-        #return self.get_fim_node().reservation_info
 
     def get_interfaces(self):
         from fabrictestbed_extensions.fablib.interface import Interface
