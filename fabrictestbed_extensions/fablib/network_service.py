@@ -181,27 +181,29 @@ class NetworkService():
         return interfaces
 
     def get_interface(self, name=None):
-        #print(f"network_service.get_interface: name {name}")
-        for interface in self.get_interfaces():
-            #print(f"network_service.get_interface: self.get_name() {self.get_name()}, interface.get_name(): {interface.get_name()}")
+        for interface in self.get_fim_network_service().interface_list:
+            if name in interface.name:
+                return self.get_slice().get_interface(name=interface.name)
 
-            #interface_name = f"{self.get_name()}-{interface.get_name()}"
-            interface_name = f"{interface.get_name()}"
-            #print(f"network_service.get_interface: interface_name {interface_name}, name: {name}")
-
-            if interface_name == name:
-                #print(f"returning iface: {interface.get_name()}")
-                return interface
+        #for interface in self.get_interfaces():
+        #    interface_name = f"{interface.get_name()}"
+        #    if interface_name == name:
+        #        return interface
 
         return None
-        #raise Exception(f"Interface not found: interface {name}")
 
     def has_interface(self, interface):
+        for fim_interface in self.get_fim_network_service().interface_list:
+            #print(f"fim_interface.name: {fim_interface.name}, interface.get_name(): {interface.get_name()}")
+            if fim_interface.name.endswith(interface.get_name()):
+                return True
 
-        if self.get_interface(name=interface.get_name()) == None:
-            return False
-        else:
-            return True
+        return False
+
+        #if self.get_interface(name=interface.get_name()) == None:
+        #    return False
+        #else:
+        #    return True
 
     def find_nic_mapping(self, net_name, nodes):
         return_data = {}

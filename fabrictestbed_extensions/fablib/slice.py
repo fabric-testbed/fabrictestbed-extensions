@@ -578,7 +578,7 @@ class Slice():
         #print(f"slice_id: {slice_reservations[0].slice_id}")
         self.slice_id = slice_reservations[0].slice_id
 
-        time.sleep(5)
+        time.sleep(1)
         #self.update_slice()
         self.update()
 

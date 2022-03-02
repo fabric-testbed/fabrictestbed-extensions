@@ -156,9 +156,15 @@ class Interface():
         return self.get_component().get_node()
 
     def get_network(self):
-        for net in self.get_slice().get_l2networks():
-            if net.has_interface(self):
-                return net
+        if hasattr(self, 'network'):
+            #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
+            return self.network
+        else:
+            for net in self.get_slice().get_l2networks():
+                if net.has_interface(self):
+                    self.network = net
+                    #print(f"return found network, {self.network.get_name()}")
+                    return self.network
 
+        #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
         return None
-        #raise Exception(f"Network not found: interface {self.get_name()}")
