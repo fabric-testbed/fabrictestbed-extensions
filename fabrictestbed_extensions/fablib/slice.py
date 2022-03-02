@@ -40,6 +40,7 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
+
 #from .slicex import SliceX
 #from .nodex import NodeX
 #from .fabricx import FabricX
@@ -49,6 +50,8 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.node import Node
+
 
 class Slice():
 
@@ -89,6 +92,7 @@ class Slice():
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.slice_name
+
         slice.topology = fablib.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
 
         try:
@@ -108,12 +112,24 @@ class Slice():
     def get_fim_topology(self):
         return self.topology
 
-    def update_slice(self):
+    def update_slice(self, verbose=False):
         #Update slice
-        return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+        #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+        #return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+
+        import time
+        if verbose:
+            start = time.time()
+            print("Running slice.update_slice() : fablib.get_slice_manager().slices(): ", end="")
+        return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+        if verbose:
+            end = time.time()
+            print(f"elapsed time: {end - start} seconds")
+
+
         if return_status == Status.OK:
-            self.sm_slice = list(filter(lambda x: x.slice_name == self.slice_name, slices))[0]
-            self.slice_id = self.sm_slice.slice_id
+            self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
+            #self.slice_name = self.sm_slice.slice_name
         else:
             raise Exception("Failed to get slice list: {}, {}".format(return_status, slices))
 
@@ -128,7 +144,12 @@ class Slice():
         self.topology = new_topo
 
     def update(self):
-        self.update_slice()
+        try:
+            self.update_slice()
+        except:
+            pass
+            #print('update slice error')
+
         self.update_topology()
 
     def get_slice_public_key(self):
@@ -177,6 +198,45 @@ class Slice():
     def add_node(self, name, site):
         from fabrictestbed_extensions.fablib.node import Node
         return Node.new_node(slice=self, name=name, site=site)
+
+    def get_object_by_reservation(self, reservation_id):
+        # test all nodes
+        try:
+            for node in self.get_nodes():
+                if node.get_reservation_id() == reservation_id:
+                    return node
+
+                    # TODO: test other resource types.
+        except:
+            pass
+
+        return None
+
+
+    def get_error_messages(self):
+
+        # strings to ingnor
+        cascade_notice_string1 = 'Closing reservation due to failure in slice'
+        cascade_notice_string2 = 'is in a terminal state'
+
+        origin_notices = []
+        for reservation_id,notice in self.get_notices().items():
+            #print(f"XXXXX: reservation_id: {reservation_id}, notice {notice}")
+            if cascade_notice_string1 in notice or cascade_notice_string2 in notice:
+                continue
+
+            origin_notices.append({'reservation_id': reservation_id, 'notice': notice, 'sliver': self.get_object_by_reservation(reservation_id)})
+
+        return origin_notices
+
+
+    def get_notices(self):
+
+        notices = {}
+        for node in self.get_nodes():
+            notices[node.get_reservation_id()] = node.get_error_message()
+
+        return notices
 
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node
@@ -257,6 +317,26 @@ class Slice():
         if return_status != Status.OK:
             raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
 
+
+    def build_error_exception_string(self):
+
+        exception_string = ""
+        for error in self.get_error_messages():
+            notice = error['notice']
+            sliver = error['sliver']
+
+            sliver_extra = ""
+            if isinstance(sliver, Node):
+                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, State: {sliver.get_reservation_state()}, "
+
+            #skip errors that are caused by slice error
+            if 'Closing reservation due to failure in slice' in notice:
+                continue
+
+            exception_string = f"{exception_string}{sliver_extra}{notice}\n"
+
+        return exception_string
+
     def wait(self, timeout=360,interval=10,progress=False):
         slice_name=self.sm_slice.slice_name
         slice_id=self.sm_slice.slice_id
@@ -266,16 +346,17 @@ class Slice():
 
         if progress: print("Waiting for slice .", end = '')
         while time.time() < timeout_start + timeout:
-            return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
-
+            #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+            return_status, slices = fablib.get_slice_manager().slices(excludes=[])
             if return_status == Status.OK:
-                slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
+                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.slice_state == "StableOK":
                     if progress: print(" Slice state: {}".format(slice.slice_state))
                     return slice
                 if slice.slice_state == "Closing" or slice.slice_state == "Dead" or slice.slice_state == "StableError":
                     if progress: print(" Slice state: {}".format(slice.slice_state))
-                    return slice
+                    exception_string = self.build_error_exception_string()
+                    raise Exception(str(exception_string))
             else:
                 print(f"Failure: {slices}")
 
@@ -283,11 +364,12 @@ class Slice():
             time.sleep(interval)
 
         if time.time() >= timeout_start + timeout:
-            if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+            #if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+            raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
             return slice
 
         #Update the fim topology (wait to avoid get topology bug)
-        time.sleep(interval)
+        #time.sleep(interval)
         self.update()
 
     def get_interface_map(self):
@@ -296,17 +378,69 @@ class Slice():
 
         return self.network_iface_map
 
+    def wait_ssh(self, timeout=360,interval=10,progress=False):
+        slice_name=self.sm_slice.slice_name
+        slice_id=self.sm_slice.slice_id
+
+        timeout_start = time.time()
+        slice = self.sm_slice
+
+        #Wait for the slice to be stable ok
+        self.wait(timeout=timeout,interval=interval,progress=progress)
+
+        #Test ssh
+        if progress: print("Waiting for ssh in slice .", end = '')
+        while time.time() < timeout_start + timeout:
+
+            if self.test_ssh():
+                if progress: print(" ssh successful")
+                return True
+
+            if progress: print(".", end = '')
+
+
+            if time.time() >= timeout_start + timeout:
+                #if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+                raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+                return False
+
+            time.sleep(interval)
+            self.update()
+
+    def test_ssh(self, verbose=False):
+        for node in self.get_nodes():
+            if not node.test_ssh():
+                if verbose: print(f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}")
+                return False
+        return True
+
     def post_boot_config(self, verbose=False):
 
+        if verbose: print(f"post_boot_config")
         # Find the interface to network map
-        self.build_interface_map()
+
+        if verbose: print(f"build_interface_map")
+        self.build_interface_map(verbose=verbose)
 
         # Interface map in nodes
         for node in self.get_nodes():
+            if verbose:
+                print(f"Node data {node.get_name()}")
+                try:
+                    print(f"{node.get_interface_map()}")
+                except Exception as e:
+                    print(f"{e}")
+
+
+
             node.save_data()
 
         for interface in self.get_interfaces():
-            interface.config_vlan_iface()
+            try:
+                interface.config_vlan_iface()
+            except Exception as e:
+                if verbose: print(f"Interface: {interface.get_name()} failed to config")
+
 
     def load_config(self):
         self.load_interface_map()
@@ -331,11 +465,17 @@ class Slice():
 
             #target iface/node
             target_iface =  ifaces.pop()
+            #for iface in ifaces:
+            #    print(f"iface name: {iface.get_name()}")
+            #    if iface.get_name() == 'lbnl-w3_NIC_ConnectX_51-lbnl-w3_NIC_ConnectX_51NIC-p1':
+            #        target_iface=iface
+            #        ifaces.remove(iface)
+
             target_node = target_iface.get_node()
             target_os_ifaces = target_node.get_dataplane_os_interfaces()
             target_node.clear_all_ifaces()
 
-            #print(f"{target_node.get_ssh_command()}")
+            if verbose: print(f"{target_node.get_ssh_command()}")
 
             target_iface_nums = []
             for target_os_iface in target_os_ifaces:
@@ -348,11 +488,17 @@ class Slice():
                                                  )
                 target_iface_nums.append(iface_num)
 
+            #if verbose:
+                #print(f"Target Node: {target_node.get_name()}:")
+                #stdout, stderr = target_node.execute(f'ip addr list')
+                #print(stdout)
 
-            #print(f"target_iface: {target_iface.get_name()}")
-            #print(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
-            #print(f"target_node: {target_node.get_name()}")
-            #print(f"target_os_ifaces: {target_os_ifaces}")
+
+            if verbose:
+                print(f"target_node: {target_node.get_name()}")
+                print(f"target_iface: {target_iface.get_name()}")
+                print(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
+                print(f"target_os_ifaces: {target_os_ifaces}")
 
 
             for iface in ifaces:
@@ -360,17 +506,17 @@ class Slice():
                 node.clear_all_ifaces()
                 node_os_ifaces = node.get_dataplane_os_interfaces()
 
-
-                #print(f"test_node: {node.get_name()}")
-                #print(f"test_iface: {iface.get_name()}")
-                #print(f"node_os_ifaces: {node_os_ifaces}")
-                #print(f"iface.get_vlan(): {iface.get_vlan()}")
-                #print(f"{node.get_ssh_command()}")
+                if verbose:
+                    print(f"test_node: {node.get_name()}: {node.get_ssh_command()}")
+                    #print(f"test_iface: {iface.get_name()}")
+                    #print(f"node_os_ifaces: {node_os_ifaces}")
+                    #print(f"iface.get_vlan(): {iface.get_vlan()}")
+                    #print(f"{node.get_ssh_command()}")
 
                 found = False
                 for node_os_iface in node_os_ifaces:
                     node_os_iface_name = node_os_iface['ifname']
-                    #print(f"target_iface_nums: {target_iface_nums}")
+                    #if verbose: print(f"target_iface_nums: {target_iface_nums}")
                     for net_num in target_iface_nums:
                         dst_ip=f'192.168.{net_num}.1'
 
@@ -383,9 +529,13 @@ class Slice():
                                                  cidr='24')
 
                         #ping test
-                        #print(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
+                        #if verbose:
+                        #    print(f"Node: {node.get_name()}: {node_os_iface_name}, {iface.get_vlan()}, {ip}")
+                        #    stdout, stderr = node.execute(f'ip addr list')
+                        #    print(stdout)
+                        #if verbose: print(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
                         test_result = node.ping_test(dst_ip)
-                        #print(f"Ping test result: {test_result}")
+                        if verbose: print(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}: {test_result}")
 
                         if iface.get_vlan() == None:
                             node.flush_os_interface(node_os_iface_name)
@@ -393,7 +543,7 @@ class Slice():
                             node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
 
                         if test_result:
-                            #print(f"test_result true: {test_result}")
+                            #if verbose: print(f"test_result true: {test_result}")
                             target_iface_nums = [ net_num ]
                             found = True
                             iface_map[node.get_name()] = node_os_iface
@@ -402,6 +552,7 @@ class Slice():
 
                     if found:
                         break
+
 
             self.network_iface_map[net.get_name()] = iface_map
             target_node.clear_all_ifaces()
@@ -423,8 +574,13 @@ class Slice():
         if return_status != Status.OK:
             raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
 
-        time.sleep(10)
-        self.update_slice()
+        #print(f'slice_reservations: {slice_reservations}')
+        #print(f"slice_id: {slice_reservations[0].slice_id}")
+        self.slice_id = slice_reservations[0].slice_id
+
+        time.sleep(5)
+        #self.update_slice()
+        self.update()
 
         if wait or wait_progress:
             self.wait(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
@@ -432,7 +588,7 @@ class Slice():
             if wait_progress:
                 print("Running post boot config ...",end="")
 
-            time.sleep(30)
+            #time.sleep(30)
             self.update()
 
             for node in self.get_nodes():

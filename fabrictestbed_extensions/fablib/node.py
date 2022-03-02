@@ -49,6 +49,25 @@ from fabrictestbed_extensions.fablib.fablib import fablib
 
 from .. import images
 
+#+------------------------+--------+
+#| Name                   | Status |
+#+------------------------+--------+
+#| default_centos8_stream | active |
+#| default_centos9_stream | active |
+#| default_centos_7       | active |
+#| default_centos_8       | active |
+#| default_cirros         | active |
+#| default_debian_10      | active |
+#| default_fedora_35      | active |
+#| default_freebsd_13_zfs | active |
+#| default_openbsd_7      | active |
+#| default_rocky_8        | active |
+#| default_ubuntu_18      | active |
+#| default_ubuntu_20      | active |
+#| default_ubuntu_21      | active |
+#| default_ubuntu_22      | active |
+#+------------------------+--------+
+
 #class Node(AbcFabLIB):
 class Node():
     def __init__(self, slice, node):
@@ -91,6 +110,8 @@ class Node():
             self.username = 'centos'
         elif 'ubuntu' in self.get_image():
             self.username = 'ubuntu'
+        elif 'rocky'in self.get_image():
+            self.username = 'rocky'
         else:
             self.username = None
 
@@ -109,37 +130,76 @@ class Node():
         return self.slice
 
     def get_name(self):
-        return self.get_fim_node().name
+        try:
+            return self.get_fim_node().name
+        except:
+            return None
 
     def get_cores(self):
-        return self.get_fim_node().get_property(pname='capacity_allocations').core
+        try:
+            return self.get_fim_node().get_property(pname='capacity_allocations').core
+        except:
+            return None
 
     def get_ram(self):
-        return self.get_fim_node().get_property(pname='capacity_allocations').ram
+        try:
+            return self.get_fim_node().get_property(pname='capacity_allocations').ram
+        except:
+            return None
 
     def get_disk(self):
-        return self.get_fim_node().get_property(pname='capacity_allocations').disk
+        try:
+            return self.get_fim_node().get_property(pname='capacity_allocations').disk
+        except:
+            return None
 
     def get_image(self):
-        return self.get_fim_node().image_ref
+        try:
+            return self.get_fim_node().image_ref
+        except:
+            return None
 
     def get_image_type(self):
-        return self.get_fim_node().image_type
+        try:
+            return self.get_fim_node().image_type
+        except:
+            return None
 
     def get_host(self):
-        return self.get_fim_node().get_property(pname='label_allocations').instance_parent
+        try:
+            return self.get_fim_node().get_property(pname='label_allocations').instance_parent
+        except:
+            return None
 
     def get_site(self):
-        return self.get_fim_node().site
+        try:
+            return self.get_fim_node().site
+        except:
+            return None
 
     def get_management_ip(self):
-        return self.get_fim_node().management_ip
+        try:
+            return self.get_fim_node().management_ip
+        except:
+            return None
 
     def get_reservation_id(self):
-        return self.get_fim_node().get_property(pname='reservation_info').reservation_id
+        try:
+            return self.get_fim_node().get_property(pname='reservation_info').reservation_id
+        except:
+            return None
 
     def get_reservation_state(self):
-        return self.get_fim_node().get_property(pname='reservation_info').reservation_state
+        try:
+            return self.get_fim_node().get_property(pname='reservation_info').reservation_state
+        except:
+            return None
+
+    def get_error_message(self):
+        try:
+            return self.get_fim_node().get_property(pname='reservation_info').error_message
+        except:
+            return None
 
     def get_interfaces(self):
         from fabrictestbed_extensions.fablib.interface import Interface
@@ -161,7 +221,7 @@ class Node():
                         return interface
         elif network_name != None:
             for interface in self.get_interfaces():
-                if interface != None and interface.get_network().get_name() == network_name:
+                if interface != None and interface.get_network() != None and interface.get_network().get_name() == network_name:
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
@@ -223,9 +283,15 @@ class Node():
         except ValueError:
             return "Invalid"
 
-    def execute(self, command, retry=3, retry_interval=10):
+    def execute(self, command, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
+
+
+        if verbose:
+            start = time.time()
+            print(f"Running node.execute(): command: {command}, ", end="")
+
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -265,6 +331,10 @@ class Node():
 
                 client.close()
 
+                if verbose:
+                    end = time.time()
+                    print(f"elapsed time: {end - start} seconds")
+
                 return rtn_stdout, rtn_stderr
                 #success, skip other tries
                 break
@@ -279,12 +349,17 @@ class Node():
                 time.sleep(retry_interval)
                 pass
 
-        raise Exception("scp download failed")
+        raise Exception("ssh failed: Should not get here")
 
 
-    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
+
+
+        if verbose:
+            start = time.time()
+            print(f"Running node.upload_file(): file: {local_file_path}, ", end="")
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -323,6 +398,10 @@ class Node():
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
                 ftp_client.close()
 
+                if verbose:
+                    end = time.time()
+                    print(f"elapsed time: {end - start} seconds")
+
                 return file_attributes
                 #success, skip other tries
                 break
@@ -340,9 +419,13 @@ class Node():
         raise Exception("scp upload failed")
 
 
-    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
+
+        if verbose:
+            start = time.time()
+            print(f"Running node.download_file(): file: {remote_file_path}, ", end="")
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -380,6 +463,10 @@ class Node():
                 file_attributes = ftp_client.get(local_file_path, remote_file_path)
                 ftp_client.close()
 
+                if verbose:
+                    end = time.time()
+                    print(f"elapsed time: {end - start} seconds")
+
                 return file_attributes
                 #success, skip other tries
                 break
@@ -399,7 +486,7 @@ class Node():
 
     def test_ssh(self):
         try:
-            self.execute('ls', retry=1, retry_interval=10)
+            self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
         except:
             return False
         return True
@@ -457,7 +544,7 @@ class Node():
 
             #bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
-            command = f'sudo ip link set dev {os_iface} up'
+            command = f' sudo ip link set dev {os_iface} up'
             if mtu != None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command)
@@ -466,6 +553,8 @@ class Node():
             #Set ip
             command = f"sudo ip addr add {ip}/{cidr} dev {os_iface}"
             stdout, stderr = self.execute(command)
+
+        stdout, stderr = self.execute(command)
 
     def clear_all_ifaces(self):
         self.remove_all_vlan_os_interfaces()
@@ -487,8 +576,27 @@ class Node():
             if 'link' in i.keys():
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
 
-    def save_data(self):
-        data = {}
+    def get_interface_map(self):
+        #data = {}
+        #Get interface data
+        interfaces = {}
+        for i in self.get_interfaces():
+            #print(f"interface: {i.get_name()}")
+            #print(f"os_interface: {i.get_physical_os_interface()}")
+            if i.get_network() != None:
+                network_name = i.get_network().get_name()
+                #print(f"network: {i.get_network().get_name()}")
+            else:
+                network_name = None
+                #print(f"network: None")
+
+            interfaces[i.get_name()] =  { 'network':  network_name,
+                         'os_interface':  i.get_physical_os_interface() }
+        return interfaces
+
+
+    def save_data_XXX(self):
+        #data = {}
         #Get interface data
         interfaces = {}
         for i in self.get_interfaces():
@@ -504,12 +612,40 @@ class Node():
             interfaces[i.get_name()] =  { 'network':  network_name,
                          'os_interface':  i.get_physical_os_interface() }
 
+
         with open(f'{self.get_name()}.json', 'w') as outfile:
             json.dump(interfaces, outfile)
 
         #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
 
         self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+
+    def save_data(self):
+        #data = {}
+        #Get interface data
+        interfaces = {}
+        for i in self.get_interfaces():
+            #print(f"interface: {i.get_name()}")
+            #print(f"os_interface: {i.get_physical_os_interface()}")
+            if i.get_network() != None:
+                network_name = i.get_network().get_name()
+                #print(f"network: {i.get_network().get_name()}")
+            else:
+                network_name = None
+                #print(f"network: None")
+
+            interfaces[i.get_name()] =  { 'network':  network_name,
+                         'os_interface':  i.get_physical_os_interface() }
+
+
+        with open(f'{self.get_name()}.json', 'w') as outfile:
+            json.dump(interfaces, outfile)
+
+        #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
+
+        self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+
+
 
     def load_data(self):
 
