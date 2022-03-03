@@ -60,17 +60,21 @@ class NetworkService():
 
     @staticmethod
     def calculate_l2_nstype(interfaces=None):
+        #if there is a basic NIC, WAN must be STS
+        #found_basic_nic = False
 
         sites = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
+            #if interface.get_model()=="NIC_Basic":
+            #    found_basic_nic = True
 
         rtn_nstype = None
         if len(sites) == 1:
             rtn_nstype = NetworkService.network_service_map['L2Bridge']
-        elif len(sites) == 2 and len(interfaces) == 2:
-            rtn_nstype = NetworkService.network_service_map['L2PTP']
-        elif len(sites) == 2  and len(interfaces) > 2:
+        #elif not found_basic_nic and len(sites) == 2 and len(interfaces) == 2:
+        #    rtn_nstype = NetworkService.network_service_map['L2PTP']
+        elif len(sites) == 2  and len(interfaces) >= 2:
             rtn_nstype = NetworkService.network_service_map['L2STS']
         else:
             raise Exception(f"Invalid Network Service: Networks are limited to 2 unique sites. Site requested: {sites}")
@@ -118,6 +122,14 @@ class NetworkService():
 
         #validate nstype and interface List
         NetworkService.validate_nstype(nstype, interfaces)
+
+        #Set default VLANs for P2P networks that did not assing VLANs
+        if nstype == ServiceType.L2PTP:
+            for interface in interfaces:
+                if not interface.get_vlan():
+                    #TODO: Long term we might have muliple vlan on one property
+                    # and will need to make sure they are unique.  For now this okay
+                    interface.set_vlan("100")
 
         return NetworkService.new_network_service(slice=slice, name=name, nstype=nstype, interfaces=interfaces)
 

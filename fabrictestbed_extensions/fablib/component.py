@@ -80,19 +80,16 @@ class Component():
         #Hack to make it possile to find interfaces
         name = Component.calculate_name(node=node, name=name)
 
+        return Component(node = node, fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model], name=name))
+        #return Component(node = node, model=model, name=name)
 
-        #return Component(node = node, fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model], name=name))
-        return Component(node = node, model=model, name=name)
-
-    def __init__(self, node=None, model=None):
+    def __init__(self, node=None, fim_component=None):
         """
         Constructor
         :return:
         """
         super().__init__()
-        #fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model]
-        self.model = model
-        self.fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model]
+        self.fim_component = fim_component
         self.node = node
 
     def get_interfaces(self):
@@ -132,8 +129,23 @@ class Component():
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
     def get_model(self):
-        #TODO: get new model names (NIC_Basic, etc.)
-        return self.model
+        #TODO: This a hack that need a real fix
+        if str(self.get_type()) == "SmartNIC" and str(self.get_fim_model()) == "ConnectX-6":
+            return 'NIC_ConnectX_6'
+        elif str(self.get_type()) == "SmartNIC" and str(self.get_fim_model()) == "ConnectX-5":
+            return 'NIC_ConnectX_5'
+        elif str(self.get_type()) == "NVME"  and str(self.get_fim_model()) == "P4510":
+            return 'NVME_P4510'
+        elif str(self.get_type())== "GPU"  and str(self.get_fim_model()) == "Tesla T4":
+            return 'GPU_TeslaT4'
+        elif str(self.get_type()) == "GPU"  and str(self.get_fim_model()) == "RTX6000":
+            return 'GPU_RTX6000'
+        elif str(self.get_type()) == "SharedNIC"  and str(self.get_fim_model()) == "ConnectX-6":
+            return 'NIC_Basic'
+        else:
+            return None
+
+
 
     def get_fim_model(self):
         return self.get_fim_component().model
@@ -159,29 +171,3 @@ class Component():
             raise Exception(str(output))
 
         return output
-
-
-class Disk(Component):
-
-    def __init__(self, component):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(component)
-
-class NIC(Component):
-    def __init__(self, component):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(component)
-
-class GPU(Component):
-    def __init__(self, component):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(component)
