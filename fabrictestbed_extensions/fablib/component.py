@@ -80,16 +80,19 @@ class Component():
         #Hack to make it possile to find interfaces
         name = Component.calculate_name(node=node, name=name)
 
-        return Component(node = node, fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model], name=name))
-        #return Component(node = node, model=model, name=name)
 
-    def __init__(self, node=None, fim_component=None):
+        #return Component(node = node, fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model], name=name))
+        return Component(node = node, model=model, name=name)
+
+    def __init__(self, node=None, model=None):
         """
         Constructor
         :return:
         """
         super().__init__()
-        self.fim_component = fim_component
+        #fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model]
+        self.model = model
+        self.fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model]
         self.node = node
 
     def get_interfaces(self):
@@ -130,7 +133,7 @@ class Component():
 
     def get_model(self):
         #TODO: get new model names (NIC_Basic, etc.)
-        return self.get_fim_model()
+        return self.model
 
     def get_fim_model(self):
         return self.get_fim_component().model
