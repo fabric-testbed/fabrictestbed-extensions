@@ -340,7 +340,7 @@ class Node():
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-                stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > script.sh; chmod +x script.sh; sudo ./script.sh')
+                stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
                 rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                 rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
 
@@ -629,7 +629,7 @@ class Node():
                          'os_interface':  i.get_physical_os_interface() }
 
 
-        with open(f'{self.get_name()}.json', 'w') as outfile:
+        with open(f'/tmp/fabric_data_{self.get_name()}.json', 'w') as outfile:
             json.dump(interfaces, outfile)
 
         #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
@@ -643,7 +643,7 @@ class Node():
         self.download_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
 
         interfaces=""
-        with open(f'{self.get_name()}.json', 'r') as infile:
+        with open(f'/tmp/fabric_data_{self.get_name()}.json', 'r') as infile:
             interfaces = json.load(infile)
 
 
