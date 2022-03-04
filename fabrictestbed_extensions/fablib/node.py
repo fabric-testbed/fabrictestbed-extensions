@@ -30,6 +30,7 @@ import json
 
 import functools
 import time
+import paramiko
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -115,6 +116,10 @@ class Node():
         return self.fim_node
 
     def set_capacities(self, cores=2, ram=2, disk=2):
+        cores=int(cores)
+        ram=int(ram)
+        disk=int(disk)
+
         cap = Capacities(core=cores, ram=ram, disk=disk)
         self.get_fim_node().set_properties(capacities=cap)
 
@@ -299,9 +304,34 @@ class Node():
         except ValueError:
             return "Invalid"
 
+    def __get_paramiko_key(self, private_key_file=None, get_private_key_passphrase=None):
+        #TODO: This is a bit of a hack and should probably test he keys for their types
+        # rather than relying on execptions
+        if get_private_key_passphrase:
+            try:
+                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+            except:
+                pass
+
+            try:
+                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+            except:
+                pass
+        else:
+            try:
+                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
+            except:
+                pass
+
+            try:
+                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file())
+            except:
+                pass
+
+        raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+
     def execute(self, command, retry=3, retry_interval=10, verbose=False):
-        import paramiko
-        import time
+
 
 
         if verbose:
@@ -321,10 +351,7 @@ class Node():
 
         for attempt in range(retry):
             try:
-                if self.get_private_key_passphrase():
-                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
-                else:
-                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
+                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -390,11 +417,7 @@ class Node():
 
         for attempt in range(retry):
             try:
-
-                if self.get_private_key_passphrase():
-                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
-                else:
-                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
+                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -436,6 +459,7 @@ class Node():
         raise Exception("scp upload failed")
 
 
+
     def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
         import paramiko
         import time
@@ -456,10 +480,7 @@ class Node():
 
         for attempt in range(retry):
             try:
-                if self.get_private_key_passphrase():
-                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
-                else:
-                    key = paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
+                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -546,6 +567,9 @@ class Node():
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        cidr=str(cidr)
+        mtu=str(mtu)
+
         #Bring up base iface
         #print(f"node.set_ip_os_interface: os_iface {os_iface}, vlan {vlan}")
         command = f'sudo ip link set dev {os_iface} up'
@@ -672,6 +696,10 @@ class Node():
         stdout, stderr = self.execute(command)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        vlan=str(vlan)
+        cidr=str(cidr)
+        mtu=str(mtu)
+
         command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
         command = f'sudo ip link set dev {os_iface}.{vlan} up'
