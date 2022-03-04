@@ -167,7 +167,7 @@ class Component():
             output.append(self.node.execute(f'df -h {mount_point}'))
         except Exception as e:
             print(f"config_nvme Fail: {self.get_name()}")
-            traceback.print_exc()
+            #traceback.print_exc()
             raise Exception(str(output))
 
         return output

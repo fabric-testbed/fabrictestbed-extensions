@@ -70,6 +70,13 @@ from .. import images
 
 #class Node(AbcFabLIB):
 class Node():
+    default_cores = 2
+    default_ram = 8
+    default_disk = 10
+    default_image = 'default_rocky_8'
+
+
+
     def __init__(self, slice, node):
         """
         Constructor
@@ -88,7 +95,11 @@ class Node():
     @staticmethod
     def new_node(slice=None, name=None, site=None):
         from fabrictestbed_extensions.fablib.node import Node
-        return Node(slice, slice.topology.add_node(name=name, site=site))
+        node = Node(slice, slice.topology.add_node(name=name, site=site))
+        node.set_capacities(cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk)
+        node.set_image(Node.default_image)
+
+        return node
 
     @staticmethod
     def get_node(slice=None, node=None):

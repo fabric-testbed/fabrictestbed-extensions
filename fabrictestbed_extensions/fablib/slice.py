@@ -195,8 +195,14 @@ class Slice():
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site):
+    def add_node(self, name, site=None):
         from fabrictestbed_extensions.fablib.node import Node
+        import random
+
+        if site==None:
+            sites= [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
+            site = random.choice(sites)
+
         return Node.new_node(slice=self, name=name, site=site)
 
     def get_object_by_reservation(self, reservation_id):
@@ -250,7 +256,7 @@ class Slice():
                 return_nodes.append(Node.get_node(self,node))
         except Exception as e:
             print("get_nodes: exception")
-            traceback.print_exc()
+            #traceback.print_exc()
             pass
         return return_nodes
 
@@ -355,7 +361,10 @@ class Slice():
                     return slice
                 if slice.slice_state == "Closing" or slice.slice_state == "Dead" or slice.slice_state == "StableError":
                     if progress: print(" Slice state: {}".format(slice.slice_state))
-                    exception_string = self.build_error_exception_string()
+                    try:
+                        exception_string = self.build_error_exception_string()
+                    except Exception as e:
+                        exception_string = "Exception while getting error messages"
                     raise Exception(str(exception_string))
             else:
                 print(f"Failure: {slices}")
