@@ -197,11 +197,6 @@ class Slice():
 
     def add_node(self, name, site=None):
         from fabrictestbed_extensions.fablib.node import Node
-        import random
-
-        if site==None:
-            sites= [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
-            site = random.choice(sites)
 
         return Node.new_node(slice=self, name=name, site=site)
 
@@ -569,7 +564,7 @@ class Slice():
         if verbose:
             print(f"network_iface_map: {self.network_iface_map}")
 
-    def submit(self, wait=False, wait_timeout=360, wait_interval=10, wait_progress=False, wait_ssh=False):
+    def submit(self, wait=True, wait_timeout=360, wait_interval=10, wait_progress=True):
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
@@ -591,7 +586,7 @@ class Slice():
         #self.update_slice()
         self.update()
 
-        if wait or wait_progress:
+        if wait:
             self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
 
             if wait_progress:

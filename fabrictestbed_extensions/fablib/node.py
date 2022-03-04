@@ -74,7 +74,7 @@ class Node():
     default_ram = 8
     default_disk = 10
     default_image = 'default_rocky_8'
-
+    dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
 
 
     def __init__(self, slice, node):
@@ -95,6 +95,11 @@ class Node():
     @staticmethod
     def new_node(slice=None, name=None, site=None):
         from fabrictestbed_extensions.fablib.node import Node
+        import random
+
+        if site==None:
+            site = random.choice(Node.dafault_sites)
+
         node = Node(slice, slice.topology.add_node(name=name, site=site))
         node.set_capacities(cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk)
         node.set_image(Node.default_image)
@@ -354,9 +359,10 @@ class Node():
                     raise e
 
                 #Fail, try again
-                print(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
-                print(f"Fail: {e}")
-                #traceback.print_exc()
+                if verbose:
+                    print(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
+                    print(f"Fail: {e}")
+                    #traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
 
