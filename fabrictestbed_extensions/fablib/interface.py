@@ -55,7 +55,7 @@ from ipaddress import ip_address, IPv4Address
 
 
 #from .abc_fablib import AbcFabLIB
-
+from .slice import Slice
 from .. import images
 
 
@@ -63,23 +63,32 @@ from .. import images
 class Interface():
     def __init__(self, component=None, fim_interface=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets keyword arguments as instance fields.
+
+        :param component: the component to set on this interface
+        :type component: Component
+        :param fim_interface: the FABRIC information model interface to set on this fablib interface
+        :type fim_interface: Interface
         """
         super().__init__()
         self.fim_interface  = fim_interface
         self.component = component
 
     def get_os_interface(self):
+        """
+        Gets a formatted string with the OS interface name and the VLAN.
+
+        :return: OS interface information
+        :rtype: str
+        """
         try:
             os_iface = self.get_physical_os_interface()['ifname']
             vlan = self.get_vlan()
 
-            if vlan != None:
+            if vlan is not None:
                 os_iface = f"{os_iface}.{vlan}"
         except:
             os_iface = None
-
 
         return os_iface
 
@@ -141,6 +150,12 @@ class Interface():
         return self.get_fim_interface().name
 
     def get_component(self):
+        """
+        Gets the component attached to this interface.
+
+        :return: the component on this interface
+        :rtype: Component
+        """
         return self.component
 
     def get_model(self):
@@ -149,7 +164,7 @@ class Interface():
     def get_site(self):
         return self.get_component().get_site()
 
-    def get_slice(self):
+    def get_slice(self) -> Slice:
         return self.get_node().get_slice()
 
     def get_node(self):

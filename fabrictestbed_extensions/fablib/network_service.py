@@ -43,6 +43,7 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from ipaddress import ip_address, IPv4Address
 
 #from .abc_fablib import AbcFabLIB
+from fim.user.network_service import NetworkService
 
 from .. import images
 
@@ -167,7 +168,7 @@ class NetworkService():
     def get_slice(self):
         return self.slice
 
-    def get_fim_network_service(self):
+    def get_fim_network_service(self) -> NetworkService:
         return self.fim_network_service
 
     def get_name(self):
