@@ -30,6 +30,7 @@ import re
 import functools
 import time
 import logging
+import random
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -48,6 +49,8 @@ from .. import images
 class fablib(AbcFabLIB):
 
     log_level = logging.INFO
+
+    dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
 
     def __init__(self):
         """
@@ -68,6 +71,16 @@ class fablib(AbcFabLIB):
         self.slice_manager.initialize()
 
         return self.slice_manager
+
+    @staticmethod
+    def get_random_sites(count=1):
+        sites = fablib.dafault_sites.copy()
+        rtn_sites = []
+        for i in range(count):
+            rand_site = random.choice(sites)
+            sites.remove(rand_site)
+            rtn_sites.append(rand_site)
+        return rtn_sites
 
     @staticmethod
     def init_fablib():

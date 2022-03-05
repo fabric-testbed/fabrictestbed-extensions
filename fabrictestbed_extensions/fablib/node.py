@@ -76,7 +76,6 @@ class Node():
     default_ram = 8
     default_disk = 10
     default_image = 'default_rocky_8'
-    dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
 
 
     def __init__(self, slice, node):
@@ -99,10 +98,9 @@ class Node():
     @staticmethod
     def new_node(slice=None, name=None, site=None):
         from fabrictestbed_extensions.fablib.node import Node
-        import random
 
         if site==None:
-            site = random.choice(Node.dafault_sites)
+            site = fablib.get_random_site()
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))
