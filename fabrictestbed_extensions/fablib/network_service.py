@@ -142,6 +142,7 @@ class NetworkService():
         for interface in interfaces:
             fim_interfaces.append(interface.get_fim_interface())
 
+        logging.info(f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}")
         fim_network_service = slice.topology.add_network_service(name=name,
                                                                  nstype=nstype,
                                                                  interfaces=fim_interfaces)
@@ -219,6 +220,10 @@ class NetworkService():
         #    return False
         #else:
         #    return True
+
+
+
+    ###################### DELETE BELOW ???? #####################
 
     def find_nic_mapping(self, net_name, nodes):
         return_data = {}

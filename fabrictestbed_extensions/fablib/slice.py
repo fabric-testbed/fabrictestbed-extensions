@@ -431,8 +431,9 @@ class Slice():
         self.build_interface_map()
 
         # Interface map in nodes
-        if fablib.get_log_level() == logging.DEBUG:
-            for node in self.get_nodes():
+
+        for node in self.get_nodes():
+            if fablib.get_log_level() == logging.DEBUG:
                 try:
                     logging.debug(f"Node data {node.get_name()}: interface_map: {node.get_interface_map()}")
                 except Exception as e:

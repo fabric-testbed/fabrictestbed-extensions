@@ -271,7 +271,16 @@ class fablib(AbcFabLIB):
 
 
 fablib.set_log_level(logging.DEBUG)
-logging.basicConfig(filename='/tmp/fablib.log',
+try:
+    os.makedirs("/tmp/fablib")
+except:
+    pass
+try:
+    os.makedirs("/tmp/fablib/fabric_data")
+except:
+    pass
+
+logging.basicConfig(filename='/tmp/fablib/fablib.log',
                     level=fablib.get_log_level(),
                     format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                     datefmt='%H:%M:%S')

@@ -94,6 +94,8 @@ class Node():
         except:
             self.username = None
 
+        logging.getLogger("paramiko").setLevel(logging.WARNING)
+
     @staticmethod
     def new_node(slice=None, name=None, site=None):
         from fabrictestbed_extensions.fablib.node import Node
@@ -334,7 +336,7 @@ class Node():
     def execute(self, command, retry=3, retry_interval=10):
         import logging
 
-        logging.debug(f"execute node: {self.get_name()}, command: {command}")
+        logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
         if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
@@ -372,16 +374,31 @@ class Node():
 
 
                 client.close()
-
+                bastion_channel.close()
 
                 if fablib.get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds")
 
+                logging.debug(f"rtn_stdout: {rtn_stdout}")
+                logging.debug(f"rtn_stderr: {rtn_stderr}")
+
                 return rtn_stdout, rtn_stderr
                 #success, skip other tries
                 break
             except Exception as e:
+                try:
+                    client.close()
+                except:
+                    logging.debug("Exception in client.close")
+                    pass
+                try:
+                    bastion_channel.close()
+                except:
+                    logging.debug("Exception in bastion_channel.close()")
+                    pass
+
+
                 if attempt+1 == retry:
                     raise e
 
@@ -439,6 +456,8 @@ class Node():
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
                 ftp_client.close()
 
+                bastion_channel.close()
+
                 if fablib.get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(f"Running node.upload_file(): file: {local_file_path}, elapsed time: {end - start} seconds")
@@ -447,6 +466,17 @@ class Node():
                 #success, skip other tries
                 break
             except Exception as e:
+                try:
+                    client.close()
+                except:
+                    logging.debug("Exception in client.close")
+                    pass
+                try:
+                    bastion_channel.close()
+                except:
+                    logging.debug("Exception in bastion_channel.close()")
+                    pass
+
                 if attempt+1 == retry:
                     raise e
 
@@ -504,6 +534,8 @@ class Node():
                 file_attributes = ftp_client.get(local_file_path, remote_file_path)
                 ftp_client.close()
 
+                bastion_channel.close()
+
                 if fablib.get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(f"Running node.download(): file: {remote_file_path}, elapsed time: {end - start} seconds")
@@ -512,6 +544,17 @@ class Node():
                 #success, skip other tries
                 break
             except Exception as e:
+                try:
+                    client.close()
+                except:
+                    logging.debug("Exception in client.close")
+                    pass
+                try:
+                    bastion_channel.close()
+                except:
+                    logging.debug("Exception in bastion_channel.close()")
+                    pass
+
                 if attempt+1 == retry:
                     raise e
 
@@ -545,13 +588,14 @@ class Node():
 
     def get_management_os_interface(self):
         #Assumes that the default route uses the management network
-
+        logging.debug(f"{self.get_name()}->get_management_os_interface")
         stdout, stderr = self.execute("sudo ip -j route list")
         stdout_json = json.loads(stdout)
 
         #print(pythonObj)
         for i in stdout_json:
             if i['dst'] == 'default':
+                logging.debug(f"{self.get_name()}->get_management_os_interface: management_os_interface {i['dev']}")
                 return  i['dev']
 
     def get_dataplane_os_interfaces(self):
@@ -574,11 +618,11 @@ class Node():
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
-        cidr=str(cidr)
-        mtu=str(mtu)
+        if cidr: cidr=str(cidr)
+        if mtu: mtu=str(mtu)
 
         #Bring up base iface
-        #print(f"node.set_ip_os_interface: os_iface {os_iface}, vlan {vlan}")
+        logging.debug(f"{self.get_name()}->set_ip_os_interface: os_iface {os_iface}, vlan {vlan}, ip {ip}, cidr {cidr}, mtu {mtu}")
         command = f'sudo ip link set dev {os_iface} up'
         if mtu != None:
             command += f" mtu {mtu}"
@@ -664,12 +708,12 @@ class Node():
                          'os_interface':  i.get_physical_os_interface() }
 
 
-        with open(f'/tmp/fabric_data_{self.get_name()}.json', 'w') as outfile:
+        with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'w') as outfile:
             json.dump(interfaces, outfile)
 
         #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
 
-        self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+        self.upload_file(f'/tmp/fablib/fabric_data/{self.get_name()}.json', f'{self.get_name()}.json')
 
 
 
@@ -677,10 +721,10 @@ class Node():
         logging.debug(f"load_data: node {self.get_name()}")
 
 
-        self.download_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
+        self.download_file(f'{self.get_name()}.json', f'/tmp/fablib/fabric_data/{self.get_name()}.json')
 
         interfaces=""
-        with open(f'/tmp/fabric_data_{self.get_name()}.json', 'r') as infile:
+        with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'r') as infile:
             interfaces = json.load(infile)
 
 
@@ -709,9 +753,9 @@ class Node():
         stdout, stderr = self.execute(command)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
-        vlan=str(vlan)
-        cidr=str(cidr)
-        mtu=str(mtu)
+        if vlan: vlan=str(vlan)
+        if cidr: cidr=str(cidr)
+        if mtu: mtu=str(mtu)
 
         command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
@@ -722,8 +766,8 @@ class Node():
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
 
     def ping_test(self, dst_ip):
-        logging.debug(f"ping_test: node {self.ping_test()}")
-        
+        logging.debug(f"ping_test: node {self.get_name()}")
+
         command = f'ping -c 1 {dst_ip}  2>&1 > /dev/null && echo Success'
         stdout, stderr = self.execute(command)
         if stdout.replace("\n","") == 'Success':
