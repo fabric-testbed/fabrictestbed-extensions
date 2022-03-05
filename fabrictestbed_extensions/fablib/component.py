@@ -29,6 +29,8 @@ import re
 
 import functools
 import time
+import logging
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -153,7 +155,7 @@ class Component():
     def get_type(self):
         return self.get_fim_component().type
 
-    def configure_nvme(self, mount_point='/mnt/nvme_mount', verbose=False):
+    def configure_nvme(self, mount_point='/mnt/nvme_mount'):
         output = []
         try:
             output.append(self.node.execute('sudo fdisk -l /dev/nvme*'))

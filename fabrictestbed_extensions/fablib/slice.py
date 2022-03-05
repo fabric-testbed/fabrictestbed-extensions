@@ -29,6 +29,7 @@ import re
 
 import functools
 import time
+import logging
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -61,6 +62,7 @@ class Slice():
         :return:
         """
         super().__init__()
+
         #print(f"Creating Slice: Name: {name}, Slice: {slice}")
         self.slice_name = name
         self.sm_slice = None
@@ -68,6 +70,8 @@ class Slice():
         self.topology = None
 
         self.slice_key = fablib.get_default_slice_key()
+
+
 
     @staticmethod
     def new_slice(name=None):
@@ -82,12 +86,14 @@ class Slice():
         return slice
 
     @staticmethod
-    def get_slice(sm_slice=None, verbose=False, load_config=True):
+    def get_slice(sm_slice=None, load_config=True):
         """
         Create a new slice
         @param name slice name
         @return fablib Slice object
         """
+        logging.info("slice.get_slice()")
+
         slice = Slice(name=sm_slice.slice_name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
@@ -98,34 +104,32 @@ class Slice():
         try:
             slice.update()
         except:
-            if verbose:
-                print(f"Slice {slice.slice_name} could not be updated: slice.get_slice")
+            logging.error(f"Slice {slice.slice_name} could not be updated: slice.get_slice")
 
         if load_config:
             try:
                 slice.load_config()
             except:
-                print(f"Slice {slice.slice_name} config could not loaded: slice.get_slice")
+                logging.error(f"Slice {slice.slice_name} config could not loaded: slice.get_slice")
 
         return slice
 
     def get_fim_topology(self):
         return self.topology
 
-    def update_slice(self, verbose=False):
+    def update_slice(self):
         #Update slice
         #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
         #return_status, slices = fablib.get_slice_manager().slices(excludes=[])
 
         import time
-        if verbose:
+        if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
-            print("Running slice.update_slice() : fablib.get_slice_manager().slices(): ", end="")
-        return_status, slices = fablib.get_slice_manager().slices(excludes=[])
-        if verbose:
-            end = time.time()
-            print(f"elapsed time: {end - start} seconds")
 
+        return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+        if fablib.get_log_level() == logging.DEBUG:
+            end = time.time()
+            logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): elapsed time: {end - start} seconds")
 
         if return_status == Status.OK:
             self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
@@ -255,14 +259,13 @@ class Slice():
             pass
         return return_nodes
 
-    def get_node(self, name, verbose=False):
+    def get_node(self, name):
         from fabrictestbed_extensions.fablib.node import Node
         #self.update()
         try:
             return Node.get_node(self,self.get_fim_topology().nodes[name])
         except Exception as e:
-            if verbose:
-                traceback.print_exc()
+            logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
     def get_interfaces(self):
@@ -281,24 +284,23 @@ class Slice():
 
 
 
-    def get_l2networks(self, verbose=False):
+    def get_l2networks(self):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
 
         try:
             return NetworkService.get_l2network_services(self)
         except Exception as e:
-            if verbose:
-                traceback.print_exc()
+            logging.info(e, exc_info=True)
+
         return None
 
-    def get_l2network(self, name=None, verbose=False):
+    def get_l2network(self, name=None):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
 
         try:
             return NetworkService.get_l2network_service(self,name)
         except Exception as e:
-            if verbose:
-                traceback.print_exc()
+            logging.info(e, exc_info=True)
         return None
 
 
@@ -321,7 +323,9 @@ class Slice():
 
     def build_error_exception_string(self):
 
-        exception_string = ""
+        self.update()
+
+        exception_string =  f"Slice Exception: Slice Name: {self.get_name()}, Slice ID: {self.get_slice_id()}: "
         for error in self.get_error_messages():
             notice = error['notice']
             sliver = error['sliver']
@@ -360,6 +364,8 @@ class Slice():
                         exception_string = self.build_error_exception_string()
                     except Exception as e:
                         exception_string = "Exception while getting error messages"
+                        #traceback.print_exc()
+
                     raise Exception(str(exception_string))
             else:
                 print(f"Failure: {slices}")
@@ -395,47 +401,42 @@ class Slice():
         #Test ssh
         if progress: print("Waiting for ssh in slice .", end = '')
         while time.time() < timeout_start + timeout:
-
             if self.test_ssh():
                 if progress: print(" ssh successful")
                 return True
 
             if progress: print(".", end = '')
 
-
             if time.time() >= timeout_start + timeout:
-                #if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+                if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
                 raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
-                return False
 
             time.sleep(interval)
             self.update()
 
-    def test_ssh(self, verbose=False):
+
+    def test_ssh(self,):
         for node in self.get_nodes():
             if not node.test_ssh():
-                if verbose: print(f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}")
+                logging.debug(f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}")
                 return False
         return True
 
-    def post_boot_config(self, verbose=False):
+    def post_boot_config(self):
 
-        if verbose: print(f"post_boot_config")
+        logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
         # Find the interface to network map
 
-        if verbose: print(f"build_interface_map")
-        self.build_interface_map(verbose=verbose)
+        logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
+        self.build_interface_map()
 
         # Interface map in nodes
-        for node in self.get_nodes():
-            if verbose:
-                print(f"Node data {node.get_name()}")
+        if fablib.get_log_level() == logging.DEBUG:
+            for node in self.get_nodes():
                 try:
-                    print(f"{node.get_interface_map()}")
+                    logging.debug(f"Node data {node.get_name()}: interface_map: {node.get_interface_map()}")
                 except Exception as e:
-                    print(f"{e}")
-
-
+                    logging.error(e, exc_info=True)
 
             node.save_data()
 
@@ -443,13 +444,13 @@ class Slice():
             try:
                 interface.config_vlan_iface()
             except Exception as e:
-                if verbose: print(f"Interface: {interface.get_name()} failed to config")
-
+                logging.error(f"Interface: {interface.get_name()} failed to config")
+                logging.error(e, exc_info=True)
 
     def load_config(self):
         self.load_interface_map()
 
-    def load_interface_map(self, verbose=False):
+    def load_interface_map(self):
         self.network_iface_map = {}
         for net in self.get_l2networks():
             self.network_iface_map[net.get_name()] = {}
@@ -458,28 +459,22 @@ class Slice():
             node.load_data()
 
 
-    def build_interface_map(self, verbose=False):
+    def build_interface_map(self):
         self.network_iface_map = {}
         for net in self.get_l2networks():
             iface_map = {}
 
-            if verbose == True:
-                print(f"Buiding iface map for network: {net.get_name()}")
+            logging.info(f"Buiding iface map for network: {net.get_name()}")
             ifaces = net.get_interfaces()
 
             #target iface/node
             target_iface =  ifaces.pop()
-            #for iface in ifaces:
-            #    print(f"iface name: {iface.get_name()}")
-            #    if iface.get_name() == 'lbnl-w3_NIC_ConnectX_51-lbnl-w3_NIC_ConnectX_51NIC-p1':
-            #        target_iface=iface
-            #        ifaces.remove(iface)
 
             target_node = target_iface.get_node()
             target_os_ifaces = target_node.get_dataplane_os_interfaces()
             target_node.clear_all_ifaces()
 
-            if verbose: print(f"{target_node.get_ssh_command()}")
+            logging.debug(f"{target_node.get_ssh_command()}")
 
             target_iface_nums = []
             for target_os_iface in target_os_ifaces:
@@ -492,35 +487,26 @@ class Slice():
                                                  )
                 target_iface_nums.append(iface_num)
 
-            #if verbose:
-                #print(f"Target Node: {target_node.get_name()}:")
-                #stdout, stderr = target_node.execute(f'ip addr list')
-                #print(stdout)
-
-
-            if verbose:
-                print(f"target_node: {target_node.get_name()}")
-                print(f"target_iface: {target_iface.get_name()}")
-                print(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
-                print(f"target_os_ifaces: {target_os_ifaces}")
-
+            logging.debug(f"target_node: {target_node.get_name()}")
+            logging.debug(f"target_iface: {target_iface.get_name()}")
+            logging.debug(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
+            logging.debug(f"target_os_ifaces: {target_os_ifaces}")
 
             for iface in ifaces:
                 node = iface.get_node()
                 node.clear_all_ifaces()
                 node_os_ifaces = node.get_dataplane_os_interfaces()
 
-                if verbose:
-                    print(f"test_node: {node.get_name()}: {node.get_ssh_command()}")
-                    #print(f"test_iface: {iface.get_name()}")
-                    #print(f"node_os_ifaces: {node_os_ifaces}")
-                    #print(f"iface.get_vlan(): {iface.get_vlan()}")
-                    #print(f"{node.get_ssh_command()}")
+                logging.debug(f"test_node: {node.get_name()}: {node.get_ssh_command()}")
+                logging.debug(f"test_iface: {iface.get_name()}")
+                logging.debug(f"node_os_ifaces: {node_os_ifaces}")
+                logging.debug(f"iface.get_vlan(): {iface.get_vlan()}")
+                logging.debug(f"{node.get_ssh_command()}")
 
                 found = False
                 for node_os_iface in node_os_ifaces:
                     node_os_iface_name = node_os_iface['ifname']
-                    #if verbose: print(f"target_iface_nums: {target_iface_nums}")
+                    logging.debug(f"target_iface_nums: {target_iface_nums}")
                     for net_num in target_iface_nums:
                         dst_ip=f'192.168.{net_num}.1'
 
@@ -533,13 +519,11 @@ class Slice():
                                                  cidr='24')
 
                         #ping test
-                        #if verbose:
-                        #    print(f"Node: {node.get_name()}: {node_os_iface_name}, {iface.get_vlan()}, {ip}")
-                        #    stdout, stderr = node.execute(f'ip addr list')
-                        #    print(stdout)
-                        #if verbose: print(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
+                        logging.debug(f"Node: {node.get_name()}: {node_os_iface_name}, {iface.get_vlan()}, {ip}")
+
+                        logging.debug(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
                         test_result = node.ping_test(dst_ip)
-                        if verbose: print(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}: {test_result}")
+                        logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}: {test_result}")
 
                         if iface.get_vlan() == None:
                             node.flush_os_interface(node_os_iface_name)
@@ -547,7 +531,7 @@ class Slice():
                             node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
 
                         if test_result:
-                            #if verbose: print(f"test_result true: {test_result}")
+                            logging.debug(f"test_result true: {test_result}")
                             target_iface_nums = [ net_num ]
                             found = True
                             iface_map[node.get_name()] = node_os_iface
@@ -561,8 +545,7 @@ class Slice():
             self.network_iface_map[net.get_name()] = iface_map
             target_node.clear_all_ifaces()
 
-        if verbose:
-            print(f"network_iface_map: {self.network_iface_map}")
+        logging.debug(f"network_iface_map: {self.network_iface_map}")
 
     def submit(self, wait=True, wait_timeout=360, wait_interval=10, wait_progress=True):
         from fabrictestbed_extensions.fablib.fablib import fablib
@@ -578,8 +561,8 @@ class Slice():
         if return_status != Status.OK:
             raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
 
-        #print(f'slice_reservations: {slice_reservations}')
-        #print(f"slice_id: {slice_reservations[0].slice_id}")
+        logging.debug(f'slice_reservations: {slice_reservations}')
+        logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
         self.slice_id = slice_reservations[0].slice_id
 
         time.sleep(1)
@@ -595,8 +578,7 @@ class Slice():
             #time.sleep(30)
             self.update()
 
-            for node in self.get_nodes():
-                node.wait_for_ssh()
+            self.test_ssh()
 
             self.post_boot_config()
 

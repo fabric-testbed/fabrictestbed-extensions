@@ -31,6 +31,7 @@ import json
 import functools
 import time
 import paramiko
+import logging
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -101,6 +102,7 @@ class Node():
         if site==None:
             site = random.choice(Node.dafault_sites)
 
+        logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))
         node.set_capacities(cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk)
         node.set_image(Node.default_image)
@@ -220,7 +222,7 @@ class Node():
         try:
             return self.get_fim_node().get_property(pname='reservation_info').error_message
         except:
-            return None
+            return ""
 
     def get_interfaces(self):
         from fabrictestbed_extensions.fablib.interface import Interface
@@ -280,14 +282,13 @@ class Node():
 
         return return_components
 
-    def get_component(self, name, verbose=False):
+    def get_component(self, name):
         from fabrictestbed_extensions.fablib.component import Component
         try:
             name = Component.calculate_name(node=self, name=name)
             return Component(self,self.get_fim_node().components[name])
         except Exception as e:
-            if verbose:
-                traceback.print_exc()
+            logging.error(e, exc_info=True)
             raise Exception(f"Component not found: {name}")
 
 
@@ -330,14 +331,13 @@ class Node():
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
-    def execute(self, command, retry=3, retry_interval=10, verbose=False):
+    def execute(self, command, retry=3, retry_interval=10):
+        import logging
 
+        logging.debug(f"execute node: {self.get_name()}, command: {command}")
 
-
-        if verbose:
+        if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
-            print(f"Running node.execute(): command: {command}, ", end="")
-
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -346,13 +346,12 @@ class Node():
         elif self.validIPAddress(management_ip) == 'IPv6':
             src_addr = (fablib.get_bastion_private_ipv6_addr(), 22)
         else:
-            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
+            raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
         for attempt in range(retry):
             try:
                 key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
-
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(fablib.get_bastion_public_addr(), username=fablib.get_bastion_username(), key_filename=fablib.get_bastion_key_filename())
@@ -374,9 +373,10 @@ class Node():
 
                 client.close()
 
-                if verbose:
+
+                if fablib.get_log_level() == logging.DEBUG:
                     end = time.time()
-                    print(f"elapsed time: {end - start} seconds")
+                    logging.debug(f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds")
 
                 return rtn_stdout, rtn_stderr
                 #success, skip other tries
@@ -386,24 +386,25 @@ class Node():
                     raise e
 
                 #Fail, try again
-                if verbose:
-                    print(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
-                    print(f"Fail: {e}")
-                    #traceback.print_exc()
+                if fablib.get_log_level() == logging.DEBUG:
+                    logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
+                    logging.debug(e, exc_info=True)
+
                 time.sleep(retry_interval)
                 pass
 
         raise Exception("ssh failed: Should not get here")
 
 
-    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
+    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         import paramiko
         import time
 
+        logging.debug(f"upload node: {self.get_name()}, local_file_path: {local_file_path}")
 
-        if verbose:
+
+        if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
-            print(f"Running node.upload_file(): file: {local_file_path}, ", end="")
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -438,9 +439,9 @@ class Node():
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
                 ftp_client.close()
 
-                if verbose:
+                if fablib.get_log_level() == logging.DEBUG:
                     end = time.time()
-                    print(f"elapsed time: {end - start} seconds")
+                    logging.debug(f"Running node.upload_file(): file: {local_file_path}, elapsed time: {end - start} seconds")
 
                 return file_attributes
                 #success, skip other tries
@@ -460,13 +461,15 @@ class Node():
 
 
 
-    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
+    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         import paramiko
         import time
 
-        if verbose:
+        logging.debug(f"download node: {self.get_name()}, remote_file_path: {remote_file_path}")
+
+
+        if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
-            print(f"Running node.download_file(): file: {remote_file_path}, ", end="")
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
@@ -501,9 +504,9 @@ class Node():
                 file_attributes = ftp_client.get(local_file_path, remote_file_path)
                 ftp_client.close()
 
-                if verbose:
+                if fablib.get_log_level() == logging.DEBUG:
                     end = time.time()
-                    print(f"elapsed time: {end - start} seconds")
+                    logging.debug(f"Running node.download(): file: {remote_file_path}, elapsed time: {end - start} seconds")
 
                 return file_attributes
                 #success, skip other tries
@@ -523,18 +526,22 @@ class Node():
 
 
     def test_ssh(self):
+        logging.debug(f"test_ssh: node {self.get_name()}")
+
         try:
             self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
-        except:
+        except Exception as e:
+            #logging.debug(f"{e}")
+            logging.debug(e, exc_info=True)
             return False
         return True
 
-    def wait_for_ssh(self, retry=6, retry_interval=10):
-        try:
-            self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval)
-        except:
-            return False
-        return True
+    #def wait_for_ssh(self, retry=6, retry_interval=10):
+    #    try:
+    #        self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval)
+    #    except:
+    #        return False
+    #    return True
 
     def get_management_os_interface(self):
         #Assumes that the default route uses the management network
@@ -620,6 +627,8 @@ class Node():
     def get_interface_map(self):
         #data = {}
         #Get interface data
+        logging.debug(f"get_interface_map: node {self.get_name()}")
+
         interfaces = {}
         for i in self.get_interfaces():
             #print(f"interface: {i.get_name()}")
@@ -636,6 +645,8 @@ class Node():
         return interfaces
 
     def save_data(self):
+        logging.debug(f"save_data: node {self.get_name()}")
+
         #data = {}
         #Get interface data
         interfaces = {}
@@ -663,6 +674,8 @@ class Node():
 
 
     def load_data(self):
+        logging.debug(f"load_data: node {self.get_name()}")
+
 
         self.download_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
 
@@ -709,6 +722,8 @@ class Node():
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
 
     def ping_test(self, dst_ip):
+        logging.debug(f"ping_test: node {self.ping_test()}")
+        
         command = f'ping -c 1 {dst_ip}  2>&1 > /dev/null && echo Success'
         stdout, stderr = self.execute(command)
         if stdout.replace("\n","") == 'Success':
