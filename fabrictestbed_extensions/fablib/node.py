@@ -32,6 +32,8 @@ import functools
 import time
 import paramiko
 import logging
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -94,6 +96,24 @@ class Node():
             self.username = None
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
+
+    def __str__(self):
+        d = [ ["Name", self.get_name()],
+            ["Cores", self.get_cores()],
+            ["RAM", self.get_ram()],
+            ["Disk", self.get_disk()],
+            ["Image", self.get_image()],
+            ["Image Type", self.get_image_type()],
+            ["Host", self.get_host()],
+            ["Site", self.get_site()],
+            ["Management IP", self.get_management_ip()],
+            ["Reservation ID", self.get_reservation_id()],
+            ["Reservation State", self.get_reservation_state()],
+            ["Error Message", self.get_error_message()],
+            ["SSH Command ", self.get_ssh_command()],
+            ]
+
+        return tabulate(d) #, headers=["Property", "Value"])
 
     @staticmethod
     def new_node(slice=None, name=None, site=None):

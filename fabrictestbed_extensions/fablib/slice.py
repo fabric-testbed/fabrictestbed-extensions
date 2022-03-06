@@ -30,6 +30,8 @@ import re
 import functools
 import time
 import logging
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -70,6 +72,27 @@ class Slice():
         self.topology = None
 
         self.slice_key = fablib.get_default_slice_key()
+
+    def __str__(self):
+
+        table = []
+        for node in self.get_nodes():
+
+            table.append( [    node.get_name(),
+                                node.get_cores(),
+                                node.get_ram(),
+                                node.get_disk(),
+                                node.get_image(),
+                                node.get_host(),
+                                node.get_site(),
+                                node.get_management_ip(),
+                                node.get_reservation_id(),
+                                node.get_reservation_state(),
+                                node.get_error_message(),
+                                ] )
+
+        return tabulate(table, headers=["Name", "Cores", "RAM", "Disk", "Image", "Host", "Site", "Management IP", "ID", "State", "Error" ])
+
 
 
 

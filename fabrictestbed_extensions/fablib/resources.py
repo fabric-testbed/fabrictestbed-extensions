@@ -30,6 +30,8 @@ import re
 import functools
 import time
 import logging
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -80,6 +82,9 @@ class Resources():
         rtn_sites = []
         for site_name, site in self.topology.sites.items():
             rtn_sites.append(site_name)
+            # site.get_property("location").to_latlon()
+            #site.get_property("name")
+            #print(f"{ site.get_property('cores')}")
 
         return rtn_sites
 
