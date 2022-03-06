@@ -50,7 +50,7 @@ class fablib(AbcFabLIB):
 
     log_level = logging.INFO
 
-    dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
+    #dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
 
     def __init__(self):
         """
@@ -60,6 +60,7 @@ class fablib(AbcFabLIB):
         super().__init__()
 
         self.build_slice_manager()
+        self.resources = None
 
     def build_slice_manager(self):
         self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
@@ -73,8 +74,16 @@ class fablib(AbcFabLIB):
         return self.slice_manager
 
     @staticmethod
-    def get_random_sites(count=1):
-        sites = fablib.dafault_sites.copy()
+    def get_resources():
+        return fablib.fablib_object.resources
+
+    @staticmethod
+    def get_random_sites(count=1, avoid=[]):
+        sites = fablib.get_resources().get_site_list()
+        for site in avoid:
+            if site in sites:
+                sites.remove(site)
+
         rtn_sites = []
         for i in range(count):
             rand_site = random.choice(sites)
@@ -194,12 +203,16 @@ class fablib(AbcFabLIB):
         return topology.sites[site]
 
     @staticmethod
-    def get_available_resources():
-        return_status, topology = fablib.get_slice_manager().resources()
-        if return_status != Status.OK:
-            raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
+    def get_available_resources(update=False):
+        from fabrictestbed_extensions.fablib.resources import Resources
 
-        return topology
+        if fablib.fablib_object.resources == None:
+            fablib.fablib_object.resources = Resources()
+
+        if update:
+            fablib.fablib_object.resources.update()
+
+        return fablib.fablib_object.resources
 
     @staticmethod
     def get_slice_list(excludes=[SliceState.Dead,SliceState.Closing]):
