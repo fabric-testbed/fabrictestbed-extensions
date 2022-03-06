@@ -78,6 +78,10 @@ class fablib(AbcFabLIB):
         return fablib.fablib_object.resources
 
     @staticmethod
+    def get_random_site(avoid=[]):
+        return get_random_sites(count=1, avoid=avoid)[0]
+
+    @staticmethod
     def get_random_sites(count=1, avoid=[]):
         #Need to avoid NCSA and MASS for now
         always_avoid=['NCSA','MASS']
