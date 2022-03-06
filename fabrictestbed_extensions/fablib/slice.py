@@ -605,9 +605,9 @@ class Slice():
         self.update()
 
         if wait:
-            self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=wait_progress)
+            self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
 
-            if wait_progress:
+            if progress:
                 print("Running post boot config ...",end="")
 
             #time.sleep(30)
@@ -617,5 +617,5 @@ class Slice():
 
             self.post_boot_config()
 
-        if wait_progress:
+        if progress:
             print("Done!")
