@@ -100,7 +100,7 @@ class Node():
         from fabrictestbed_extensions.fablib.node import Node
 
         if site==None:
-            site = fablib.get_random_site()
+            [site] = fablib.get_random_sites()
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))

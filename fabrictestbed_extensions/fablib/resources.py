@@ -59,6 +59,9 @@ class Resources():
         self.topology = None
         self.update()
 
+    def __str__(self):
+        return str(self.topology)
+
     def update(self):
         return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
