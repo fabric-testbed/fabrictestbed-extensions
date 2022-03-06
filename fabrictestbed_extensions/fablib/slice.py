@@ -75,10 +75,21 @@ class Slice():
 
     def __str__(self):
 
+        table = [   [ "Slice Name", self.sm_slice.slice_name ],
+                    [ "Slice ID", self.sm_slice.slice_id ],
+                    [ "Slice State", self.sm_slice.slice_state ],
+                    [ "Lease End", self.sm_slice.lease_end ],
+                    ]
+
+        return tabulate(table)
+
+
+    def get_node_table(self):
+
         table = []
         for node in self.get_nodes():
 
-            table.append( [    node.get_name(),
+            table.append( [     node.get_name(),
                                 node.get_cores(),
                                 node.get_ram(),
                                 node.get_disk(),
