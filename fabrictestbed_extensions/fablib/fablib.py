@@ -79,6 +79,13 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_random_sites(count=1, avoid=[]):
+        #Need to avoid NCSA and MASS for now
+        always_avoid=['NCSA','MASS']
+        for site in always_avoid:
+            if site not in avoid:
+                avoid.append(site)
+
+
         sites = fablib.get_resources().get_site_list()
         for site in avoid:
             if site in sites:
