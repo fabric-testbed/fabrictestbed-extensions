@@ -586,6 +586,9 @@ class Slice():
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
+        if not wait:
+            progress = False
+
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
 
