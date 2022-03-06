@@ -76,8 +76,8 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_resources():
         if not fablib.fablib_object.resources:
-            self.get_available_resources()
-            
+            fablib.get_available_resources()
+
         return fablib.fablib_object.resources
 
     @staticmethod
