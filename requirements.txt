@@ -3,7 +3,7 @@ ipycytoscape
 ipywidgets
 ipyleaflet
 ipycytoscape
-fabrictestbed>=1.1b14
+fabrictestbed>=1.1.2
 urllib3==1.26.5
 six==1.15.0
 python-dateutil==2.8.1

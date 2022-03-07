@@ -185,35 +185,58 @@ class fablib(AbcFabLIB):
         return topology
 
     @staticmethod
+    def get_slice_list(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
+        return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
+
+        return_slices = []
+        if return_status == Status.OK:
+            for slice in slices:
+                return_slices.append(slice)
+        else:
+            raise Exception(f"Failed to get slice list: {slices}")
+        return return_slices
+
+    @staticmethod
     def get_slices(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
         from fabrictestbed_extensions.fablib.slice import Slice
+        import time
+
+        if verbose:
+            start = time.time()
+            print("Running fablib.get_slice_manager().slices(): ", end="")
         return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
+        if verbose:
+            end = time.time()
+            print(f"elapsed time: {end - start} seconds")
 
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
                 return_slices.append(Slice.get_slice(sm_slice=slice, load_config=False))
         else:
-            raise Excption(f"Failed to get slices: {slices}")
+            raise Exception(f"Failed to get slices: {slices}")
         return return_slices
 
     @staticmethod
     def get_slice(name=None, slice_id=None, verbose=False):
-        slices = fablib.get_slices()
 
-        for slice in slices:
-            if name != None and slice.get_name() == name:
-                return slice
-            if slice_id != None and slice.get_slice_id() == slice_id:
-                return slice
+        #Get the appropriat slices list
+        if slice_id:
+            #if getting by slice_id consider all slices
+            slices = fablib.get_slices(excludes=[])
 
-        #Should not get here if the slice is found
-        if name != None:
-            raise Exception(f"Slice {name} not found")
-        elif slice_id != None:
-            raise Excption(f"Slice {slice_id} not found")
+            for slice in slices:
+                if slice_id != None and slice.get_slice_id() == slice_id:
+                    return slice
+        elif name:
+            # if getting by name then only consider active slices
+            slices = fablib.get_slices(excludes=[SliceState.Dead,SliceState.Closing])
+
+            for slice in slices:
+                if name != None and slice.get_name() == name:
+                    return slice
         else:
-            raise Exception(f"get_slice missing slice_id or name")
+            raise Exception("get_slice requires slice name (name) or slice id (slice_id)")
 
     @staticmethod
     def delete_slice(slice_name=None):

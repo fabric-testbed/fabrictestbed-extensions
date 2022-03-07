@@ -112,10 +112,20 @@ class Slice():
     def get_fim_topology(self):
         return self.topology
 
-    def update_slice(self):
+    def update_slice(self, verbose=False):
         #Update slice
         #return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+        #return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+
+        import time
+        if verbose:
+            start = time.time()
+            print("Running slice.update_slice() : fablib.get_slice_manager().slices(): ", end="")
         return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+        if verbose:
+            end = time.time()
+            print(f"elapsed time: {end - start} seconds")
+
 
         if return_status == Status.OK:
             self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
@@ -203,7 +213,7 @@ class Slice():
         return None
 
 
-    def get_errors(self):
+    def get_error_messages(self):
 
         # strings to ingnor
         cascade_notice_string1 = 'Closing reservation due to failure in slice'
@@ -221,7 +231,12 @@ class Slice():
 
 
     def get_notices(self):
-        return self.sm_slice.notices
+
+        notices = {}
+        for node in self.get_nodes():
+            notices[node.get_reservation_id()] = node.get_error_message()
+
+        return notices
 
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node
@@ -304,28 +319,21 @@ class Slice():
 
 
     def build_error_exception_string(self):
-        exception_string = "\n"
-        for error in self.get_errors():
+
+        exception_string = ""
+        for error in self.get_error_messages():
             notice = error['notice']
             sliver = error['sliver']
 
             sliver_extra = ""
             if isinstance(sliver, Node):
-                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, "
+                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, State: {sliver.get_reservation_state()}, "
 
-            #pull out error message
-            if 'last_ticket_update' in notice:
-                error = notice['last_ticket_update']
-            elif 'error_message' in notice:
-                error = notice['error_message']
-            elif 'last_lease_update' in notice:
-                error = notice['last_lease_update']
-            else:
-                error = 'not available'
+            #skip errors that are caused by slice error
+            if 'Closing reservation due to failure in slice' in notice:
+                continue
 
-            reservation_state = notice['reservation_state']
-
-            exception_string = f"{exception_string}Error: {sliver_extra}{error}, Reservation state: {reservation_state}\n"
+            exception_string = f"{exception_string}{sliver_extra}{notice}\n"
 
         return exception_string
 
@@ -412,7 +420,7 @@ class Slice():
         # Find the interface to network map
 
         if verbose: print(f"build_interface_map")
-        self.build_interface_map()
+        self.build_interface_map(verbose=verbose)
 
         # Interface map in nodes
         for node in self.get_nodes():
@@ -422,6 +430,8 @@ class Slice():
                     print(f"{node.get_interface_map()}")
                 except Exception as e:
                     print(f"{e}")
+
+
 
             node.save_data()
 
