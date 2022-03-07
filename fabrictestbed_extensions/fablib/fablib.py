@@ -31,6 +31,8 @@ import functools
 import time
 import logging
 import random
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -82,7 +84,7 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_random_site(avoid=[]):
-        return get_random_sites(count=1, avoid=avoid)[0]
+        return fablib.get_random_sites(count=1, avoid=avoid)[0]
 
     @staticmethod
     def get_random_sites(count=1, avoid=[]):

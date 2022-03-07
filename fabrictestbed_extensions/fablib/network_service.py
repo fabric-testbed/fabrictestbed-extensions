@@ -30,6 +30,8 @@ import re
 import functools
 import time
 import logging
+from tabulate import tabulate
+
 
 
 import importlib.resources as pkg_resources

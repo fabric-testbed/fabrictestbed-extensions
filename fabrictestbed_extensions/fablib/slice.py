@@ -84,7 +84,7 @@ class Slice():
         return tabulate(table)
 
 
-    def get_node_table(self):
+    def list_nodes(self):
 
         table = []
         for node in self.get_nodes():
@@ -104,6 +104,27 @@ class Slice():
 
         return tabulate(table, headers=["Name", "Cores", "RAM", "Disk", "Image", "Host", "Site", "Management IP", "ID", "State", "Error" ])
 
+    def list_interfaces(self):
+        table = []
+        for iface in self.get_interfaces():
+
+            if iface.get_network():
+                network_name = iface.get_network().get_name()
+
+            if iface.get_node():
+                node_name = iface.get_node().get_name()
+
+            table.append( [     iface.get_name(),
+                                node_name,
+                                network_name,
+                                iface.get_bandwidth(),
+                                iface.get_vlan(),
+                                iface.get_mac(),
+                                iface.get_physical_os_interface_name(),
+                                iface.get_os_interface(),
+                                ] )
+
+        return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
 
 
 

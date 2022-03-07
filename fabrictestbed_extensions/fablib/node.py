@@ -98,7 +98,7 @@ class Node():
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
     def __str__(self):
-        d = [ ["Name", self.get_name()],
+        table = [ ["Name", self.get_name()],
             ["Cores", self.get_cores()],
             ["RAM", self.get_ram()],
             ["Disk", self.get_disk()],
@@ -113,7 +113,7 @@ class Node():
             ["SSH Command ", self.get_ssh_command()],
             ]
 
-        return tabulate(d) #, headers=["Property", "Value"])
+        return tabulate(table) #, headers=["Property", "Value"])
 
     @staticmethod
     def new_node(slice=None, name=None, site=None):

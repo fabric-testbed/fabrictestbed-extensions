@@ -30,6 +30,7 @@ import re
 import functools
 import time
 import logging
+from tabulate import tabulate
 
 
 import importlib.resources as pkg_resources
@@ -70,6 +71,43 @@ class Component():
                             'GPU_TeslaT4': ComponentModelType.GPU_Tesla_T4,
                             'GPU_RTX6000': ComponentModelType.GPU_RTX6000
                             }
+
+
+    def __str__(self):
+
+        table = [   [ "Name", self.get_name() ],
+                    [ "Details", self.get_details() ],
+                    [ "Disk (G)", self.get_disk() ],
+                    [ "Units", self.get_unit() ],
+                    [ "PCI Address", self.get_pci_addr() ],
+                    [ "Model", self.get_model() ],
+                    [ "Type", self.get_type() ],
+                    ]
+
+        return tabulate(table)
+
+
+    def list_interfaces(self):
+
+
+
+        table = []
+        for iface in self.get_interfaces():
+
+            if iface.get_network():
+                network_name = iface.get_network().get_name()
+
+            table.append( [     iface.get_name(),
+                                network_name,
+                                iface.get_bandwidth(),
+                                iface.get_vlan(),
+                                iface.get_mac(),
+                                iface.get_physical_os_interface(),
+                                iface.get_os_interface(),
+                                ] )
+
+        return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
+
 
 
     @staticmethod
