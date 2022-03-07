@@ -102,7 +102,7 @@ class Component():
                                 iface.get_bandwidth(),
                                 iface.get_vlan(),
                                 iface.get_mac(),
-                                iface.get_physical_os_interface(),
+                                iface.get_physical_os_interface_name(),
                                 iface.get_os_interface(),
                                 ] )
 
