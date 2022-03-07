@@ -41,12 +41,16 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
+from fim.user.node import Node as FIMNode
+
 from ipaddress import ip_address, IPv4Address
 
 #from .abc_fablib import AbcFabLIB
 from fabrictestbed_extensions.fablib.fablib import fablib
+from .slice import Slice
 
-
+from .interface import Interface
+from .component import Component
 from .. import images
 
 #+------------------------+--------+
@@ -72,8 +76,12 @@ from .. import images
 class Node():
     def __init__(self, slice, node):
         """
-        Constructor
-        :return:
+        Constructor. Sets the fablib slice and FIM node based on arguments.
+
+        :param slice: the fablib slice to have this node on
+        :type slice: Slice
+        :param node: the FIM node that this Node represents
+        :type node: Node
         """
         super().__init__()
         self.fim_node = node
@@ -87,25 +95,72 @@ class Node():
 
     @staticmethod
     def new_node(slice=None, name=None, site=None):
+        """
+        Creates a new FABRIC node and returns a fablib node with the new node.
+
+        :param slice: the fablib slice to build the new node on
+        :type slice: Slice
+        :param name: the name of the new node
+        :type name: str
+        :param site: the name of the site to build the node on
+        :type site: str
+        :return: a new fablib node
+        :rtype: Node
+        """
         from fabrictestbed_extensions.fablib.node import Node
         return Node(slice, slice.topology.add_node(name=name, site=site))
 
     @staticmethod
     def get_node(slice=None, node=None):
+        """
+        Returns a new fablib node using existing FABRIC resources.
+
+        :param slice: the fablib slice storing the existing node
+        :type slice: Slice
+        :param node: the FIM node stored in this fablib node
+        :type node: Node
+        :return: a new fablib node storing resources
+        :rtype: Node
+        """
         from fabrictestbed_extensions.fablib.node import Node
         return Node(slice, node)
 
-    def get_fim_node(self):
+    def get_fim_node(self) -> FIMNode:
+        """
+        Gets the FABRIC node associated with this fablib node.
+
+        :return: the real FABRIC node
+        :rtype: FIMNode
+        """
         return self.fim_node
 
     def set_capacities(self, cores=2, ram=2, disk=2):
+        """
+        Sets the capacities of the FABRIC node.
+
+        :param cores: the number of cores to set on this node
+        :type cores: int
+        :param ram: the amount of RAM to set on this node
+        :type ram: int
+        :param disk: the amount of disk space to set on this node
+        :type disk: int
+        """
         cap = Capacities(core=cores, ram=ram, disk=disk)
         self.get_fim_node().set_properties(capacities=cap)
 
     def set_instance_type(self, instance_type):
+        """
+        Sets the instance type of this fablib node on the FABRIC node.
+
+        :param instance_type: the name of the instance type to set
+        :type instance_type: str
+        """
         self.get_fim_node().set_properties(capacity_hints=CapacityHints(instance_type=instance_type))
 
     def set_username(self, username=None):
+        """
+        Sets this fablib node's username
+        """
         if 'centos' in self.get_image():
             self.username = 'centos'
         elif 'ubuntu' in self.get_image():
@@ -116,93 +171,191 @@ class Node():
             self.username = None
 
     def set_image(self, image, username=None, image_type='qcow2'):
+        """
+        Sets the image information of this fablib node on the FABRIC node.
+
+        :param image: the image reference to set
+        :type image: str
+        :param username: the username of this fablib node. Currently unused.
+        :type username: str
+        :param image_type: the image type to set
+        :type image_type: str
+        """
         self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
 
     def set_host(self, host_name=None):
-        #excample: host_name='renc-w2.fabric-testbed.net'
+        """
+        Sets the hostname of this fablib node on the FABRIC node.
+
+        :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
+        :type host_name: str
+        """
+        # example: host_name='renc-w2.fabric-testbed.net'
         labels = Labels()
         labels.instance_parent = host_name
         self.get_fim_node().set_properties(labels=labels)
 
+    def get_slice(self) -> Slice:
+        """
+        Gets the fablib slice associated with this node.
 
-    def get_slice(self):
+        :return: the fablib slice on this node
+        :rtype: Slice
+        """
         return self.slice
 
-    def get_name(self):
+    def get_name(self) -> str:
+        """
+        Gets the name of the FABRIC node.
+
+        :return: the name of the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().name
         except:
             return None
 
-    def get_cores(self):
+    def get_cores(self) -> int:
+        """
+        Gets the number of cores on the FABRIC node.
+
+        :return: the number of cores on the node
+        :rtype: int
+        """
         try:
             return self.get_fim_node().get_property(pname='capacity_allocations').core
         except:
             return None
 
-    def get_ram(self):
+    def get_ram(self) -> int:
+        """
+        Gets the amount of RAM on the FABRIC node.
+
+        :return: the amount of RAM on the node
+        :rtype: int
+        """
         try:
             return self.get_fim_node().get_property(pname='capacity_allocations').ram
         except:
             return None
 
-    def get_disk(self):
+    def get_disk(self) -> int:
+        """
+        Gets the amount of disk space on the FABRIC node.
+
+        :return: the amount of disk space on the node
+        :rtype: int
+        """
         try:
             return self.get_fim_node().get_property(pname='capacity_allocations').disk
         except:
             return None
 
-    def get_image(self):
+    def get_image(self) -> str:
+        """
+        Gets the image reference on the FABRIC node.
+
+        :return: the image reference on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().image_ref
         except:
             return None
 
     def get_image_type(self):
+        """
+        Gets the image type on the FABRIC node.
+
+        :return: the image type on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().image_type
         except:
             return None
 
     def get_host(self):
+        """
+        Gets the hostname on the FABRIC node.
+
+        :return: the hostname on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().get_property(pname='label_allocations').instance_parent
         except:
             return None
 
     def get_site(self):
+        """
+        Gets the sitename on the FABRIC node.
+
+        :return: the sitename on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().site
         except:
             return None
 
-    def get_management_ip(self):
+    def get_management_ip(self) -> str:
+        """
+        Gets the management IP on the FABRIC node.
+
+        :return: management IP
+        :rtype: str
+        """
         try:
             return self.get_fim_node().management_ip
         except:
             return None
 
-    def get_reservation_id(self):
+    def get_reservation_id(self) -> str:
+        """
+        Gets the reservation ID on the FABRIC node.
+
+        :return: reservation ID on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().get_property(pname='reservation_info').reservation_id
         except:
             return None
 
-    def get_reservation_state(self):
+    def get_reservation_state(self) -> str:
+        """
+        Gets the reservation state on the FABRIC node.
+
+        :return: the reservation state on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().get_property(pname='reservation_info').reservation_state
         except:
             return None
 
-    def get_error_message(self):
+    def get_error_message(self) -> str:
+        """
+        Gets the error message on the FABRIC node.
+
+        :return: the error message on the node
+        :rtype: str
+        """
         try:
             return self.get_fim_node().get_property(pname='reservation_info').error_message
         except:
             return None
 
-    def get_interfaces(self):
-        from fabrictestbed_extensions.fablib.interface import Interface
+    def get_interfaces(self) -> list[Interface]:
+        """
+        Gets a list of the interfaces associated with the FABRIC node.
+
+        :return: a list of interfaces on the node
+        :rtype: list[Interface]
+        """
 
         interfaces = []
         for component in self.get_components():
@@ -211,55 +364,124 @@ class Node():
 
         return interfaces
 
-    def get_interface(self, name=None, network_name=None):
-        from fabrictestbed_extensions.fablib.interface import Interface
+    def get_interface(self, name=None, network_name=None) -> Interface:
+        """
+        Gets a particular interface associated with the FABRIC node.
 
-        if name != None:
+        :param name: interface name to search for
+        :type name: str
+        :param network_name: network name to search for
+        :type name: str
+        :raise Exception: if interface is not found
+        :return: an interface on the node
+        :rtype: Interface
+        """
+
+        if name is not None:
             for component in self.get_components():
                 for interface in component.get_interfaces():
                     if interface.get_name() == name:
                         return interface
-        elif network_name != None:
+        elif network_name is not None:
             for interface in self.get_interfaces():
                 if interface != None and interface.get_network() != None and interface.get_network().get_name() == network_name:
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
 
+    def get_username(self) -> str:
+        """
+        Gets the username on this fablib node.
 
-    def get_username(self):
+        :return: the username on this node
+        :rtype: str
+        """
         return self.username
 
-    def get_public_key(self):
+    def get_public_key(self) -> str:
+        """
+        Gets the public key on fablib slice.
+
+        :return: the public key on the slice
+        :rtype: str
+        """
         return self.get_slice().get_slice_public_key()
 
-    def get_public_key_file(self):
+    def get_public_key_file(self) -> str:
+        """
+        Gets the public key file path on the fablib slice.
+
+        :return: the public key path
+        :rtype: str
+        """
         return self.get_slice().get_slice_public_key_file()
 
-    def get_private_key(self):
+    def get_private_key(self) -> str:
+        """
+        Gets the private key on the fablib slice.
+
+        :return: the private key on the slice
+        :rtype: str
+        """
         return self.get_slice().get_slice_private_key()
 
-    def get_private_key_file(self):
+    def get_private_key_file(self) -> str:
+        """
+        Gets the private key file path on the fablib slice.
+
+        :return: the private key path
+        :rtype: str
+        """
         return self.get_slice().get_slice_private_key_file()
 
     def get_private_key_passphrase(self):
+        """
+        Gets the private key passphrase on the FABLIB slice.
+
+        :return: the private key passphrase
+        :rtype: str
+        """
         return self.get_slice().get_private_key_passphrase()
 
-    def add_component(self, model=None, name=None):
-        from fabrictestbed_extensions.fablib.component import Component
+    def add_component(self, model=None, name=None) -> Component:
+        """
+        Creates a new FABRIC component using this fablib node.
+
+        :param model: the name of the component model to add
+        :type model: str
+        :param name: the name of the new component
+        :type name: str
+        :return: the new component
+        :rtype: Component
+        """
         return Component.new_component(node=self, model=model, name=name)
 
-    def get_components(self):
-        from fabrictestbed_extensions.fablib.component import Component
+    def get_components(self) -> list[Component]:
+        """
+        Gets a list of components associated with this node.
 
+        :return: a list of components on this node
+        :rtype: list[Component]
+        """
         return_components = []
         for component_name, component in self.get_fim_node().components.items():
-            #return_components.append(Component(self,component))
+            # return_components.append(Component(self,component))
             return_components.append(Component(self,component))
 
         return return_components
 
-    def get_component(self, name, verbose=False):
+    def get_component(self, name, verbose=False) -> Component:
+        """
+        Gets a particular component associated with this node.
+
+        :param name: the name of the component to search for
+        :type name: str
+        :param verbose: indicator for verbose output
+        :type verbose: bool
+        :raise Exception: if component not found by name
+        :return: the component on the FABRIC node
+        :rtype: Component
+        """
         from fabrictestbed_extensions.fablib.component import Component
         try:
             name = Component.calculate_name(node=self, name=name)
@@ -271,6 +493,12 @@ class Node():
 
 
     def get_ssh_command(self):
+        """
+        Gets the SSH command used to access this node.
+
+        :return: the SSH command to access this node
+        :rtype: str
+        """
         return 'ssh -i {} -J {}@{} {}@{}'.format(self.get_private_key_file(),
                                            fablib.get_bastion_username(),
                                            fablib.get_bastion_public_addr(),
@@ -278,12 +506,33 @@ class Node():
                                            self.get_management_ip())
 
     def validIPAddress(self, IP: str) -> str:
+        """
+        Checks if the IP string is a valid IP address.
+
+        :param IP: the IP string to check
+        :type IP: str
+        :return: the type of IP address the IP string is, or 'Invalid'
+        :rtype: str
+        """
         try:
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:
             return "Invalid"
 
     def execute(self, command, retry=3, retry_interval=10, verbose=False):
+        """
+        Runs a command on the FABRIC node.
+
+        :param command: the command to run
+        :type command: str
+        :param retry: the number of times to retry SSH upon failure
+        :type retry: int
+        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+        :type retry_interval: int
+        :param verbose: indicator for verbose output
+        :type verbose: bool
+        :raise Exception: if management IP is invalid
+        """
         import paramiko
         import time
 
@@ -353,6 +602,21 @@ class Node():
 
 
     def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
+        """
+        Upload a local file to a remote location on the node.
+
+        :param local_file_path: the path to the file to upload
+        :type local_file: str
+        :param remote_file_path: the destination path of the file on the node
+        :type remote_file_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP on failure
+        :type retry_interval: int
+        :param verbose: indicator for verbose output
+        :type verbose: bool
+        :raise Exception: if management IP is invalid
+        """
         import paramiko
         import time
 
@@ -420,6 +684,20 @@ class Node():
 
 
     def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10, verbose=False):
+        """
+        Download a remote file from the node to a local destination.
+
+        :param local_file_path: the destination path for the remote file
+        :type local_file_path: str
+        :param remote_file_path: the path to the remote file to download
+        :type remote_file_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP upon failure
+        :type retry_interval: int
+        :param verbose: indicator for verbose outpu
+        :type verbose: bool
+        """
         import paramiko
         import time
 
@@ -484,7 +762,13 @@ class Node():
         raise Exception("scp download failed")
 
 
-    def test_ssh(self):
+    def test_ssh(self) -> bool:
+        """
+        Test whether SSH is functional on the node.
+
+        :return: true if SSH is working, false otherwise
+        :rtype: bool
+        """
         try:
             self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
         except:
@@ -492,6 +776,15 @@ class Node():
         return True
 
     def wait_for_ssh(self, retry=6, retry_interval=10):
+        """
+        Wait for SSH by attempting to echo a simple string and waiting until it doesn't fail.
+
+        :param retry: how many times to retry SSH on fail
+        :type retry: int
+        :param retry_interval: how often to retry SSH on fail
+        :type retry_interval: int
+        :return: true if SSH is working, false otherwise
+        """
         try:
             self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval)
         except:
