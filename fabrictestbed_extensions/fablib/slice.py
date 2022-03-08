@@ -481,7 +481,6 @@ class Slice():
 
         logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
         # Find the interface to network map
-
         logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
         self.build_interface_map()
 
@@ -603,7 +602,7 @@ class Slice():
 
         logging.debug(f"network_iface_map: {self.network_iface_map}")
 
-    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True):
+    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=30):
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
@@ -639,6 +638,8 @@ class Slice():
 
             self.test_ssh()
 
+            #Hack for now. needs to test for active nics before pbc
+            time.sleep(delay_post_boot_config)
             self.post_boot_config()
 
         if progress:
