@@ -29,6 +29,9 @@ import re
 
 import functools
 import time
+import logging
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -70,9 +73,26 @@ class Interface():
         self.fim_interface  = fim_interface
         self.component = component
 
+
+    def __str__(self):
+        if self.get_network():
+            network_name = iface.get_network().get_name()
+
+        table = [   [ "Name", self.get_name() ],
+                    [ "Network", network_name ],
+                    [ "Bandwidth", self.get_bandwidth() ],
+                    [ "VLAN", self.get_vlan() ],
+                    [ "MAC", get_mac() ],
+                    [ "Physical OS Interface", self.get_physical_os_interface() ],
+                    [ "OS Interface", self.get_os_interface() ],
+                    ]
+
+        return tabulate(table)
+
+
     def get_os_interface(self):
         try:
-            os_iface = self.get_physical_os_interface()['ifname']
+            os_iface = self.get_physical_os_interface_name()
             vlan = self.get_vlan()
 
             if vlan != None:
@@ -107,18 +127,28 @@ class Interface():
         except:
             return None
 
+    def get_physical_os_interface_name(self):
+        if self.get_physical_os_interface():
+            return self.get_physical_os_interface()['ifname']
+        else:
+            return None
+
     def config_vlan_iface(self):
         if self.get_vlan() != None:
-            self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
+            self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
                                                   vlan=self.get_vlan())
 
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
-        self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
+        if cidr: cidr=str(cidr)
+        if mtu: mtu=str(mtu)
+
+        self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface_name(),
                                             vlan=self.get_vlan(),
                                             ip=ip, cidr=cidr, mtu=mtu)
 
     def set_vlan(self, vlan=None):
+        if vlan: vlan=str(vlan)
 
         if_labels = self.get_fim_interface().get_property(pname="labels")
         if_labels.vlan = str(vlan)
@@ -156,9 +186,15 @@ class Interface():
         return self.get_component().get_node()
 
     def get_network(self):
-        for net in self.get_slice().get_l2networks():
-            if net.has_interface(self):
-                return net
+        if hasattr(self, 'network'):
+            #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
+            return self.network
+        else:
+            for net in self.get_slice().get_l2networks():
+                if net.has_interface(self):
+                    self.network = net
+                    #print(f"return found network, {self.network.get_name()}")
+                    return self.network
 
+        #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
         return None
-        #raise Exception(f"Network not found: interface {self.get_name()}")

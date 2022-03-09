@@ -29,6 +29,10 @@ import re
 
 import functools
 import time
+import logging
+import random
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -45,6 +49,11 @@ from .abc_fablib import AbcFabLIB
 from .. import images
 
 class fablib(AbcFabLIB):
+
+    log_level = logging.INFO
+
+    #dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
+
     def __init__(self):
         """
         Constructor
@@ -53,6 +62,7 @@ class fablib(AbcFabLIB):
         super().__init__()
 
         self.build_slice_manager()
+        self.resources = None
 
     def build_slice_manager(self):
         self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
@@ -64,6 +74,38 @@ class fablib(AbcFabLIB):
         self.slice_manager.initialize()
 
         return self.slice_manager
+
+    @staticmethod
+    def get_resources():
+        if not fablib.fablib_object.resources:
+            fablib.get_available_resources()
+
+        return fablib.fablib_object.resources
+
+    @staticmethod
+    def get_random_site(avoid=[]):
+        return fablib.get_random_sites(count=1, avoid=avoid)[0]
+
+    @staticmethod
+    def get_random_sites(count=1, avoid=[]):
+        #Need to avoid NCSA and MASS for now
+        always_avoid=['NCSA','MASS']
+        for site in always_avoid:
+            if site not in avoid:
+                avoid.append(site)
+
+
+        sites = fablib.get_resources().get_site_list()
+        for site in avoid:
+            if site in sites:
+                sites.remove(site)
+
+        rtn_sites = []
+        for i in range(count):
+            rand_site = random.choice(sites)
+            sites.remove(rand_site)
+            rtn_sites.append(rand_site)
+        return rtn_sites
 
     @staticmethod
     def init_fablib():
@@ -177,15 +219,19 @@ class fablib(AbcFabLIB):
         return topology.sites[site]
 
     @staticmethod
-    def get_available_resources():
-        return_status, topology = fablib.get_slice_manager().resources()
-        if return_status != Status.OK:
-            raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
+    def get_available_resources(update=False):
+        from fabrictestbed_extensions.fablib.resources import Resources
 
-        return topology
+        if fablib.fablib_object.resources == None:
+            fablib.fablib_object.resources = Resources()
+
+        if update:
+            fablib.fablib_object.resources.update()
+
+        return fablib.fablib_object.resources
 
     @staticmethod
-    def get_slice_list(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
+    def get_slice_list(excludes=[SliceState.Dead,SliceState.Closing]):
         return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
 
         return_slices = []
@@ -197,17 +243,19 @@ class fablib(AbcFabLIB):
         return return_slices
 
     @staticmethod
-    def get_slices(excludes=[SliceState.Dead,SliceState.Closing], verbose=False):
+    def get_slices(excludes=[SliceState.Dead,SliceState.Closing]):
         from fabrictestbed_extensions.fablib.slice import Slice
         import time
 
-        if verbose:
+        if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
-            print("Running fablib.get_slice_manager().slices(): ", end="")
+
         return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
-        if verbose:
+
+
+        if fablib.get_log_level() == logging.DEBUG:
             end = time.time()
-            print(f"elapsed time: {end - start} seconds")
+            logging.debug(f"Running fablib.get_slice_manager().slices(): elapsed time: {end - start} seconds")
 
         return_slices = []
         if return_status == Status.OK:
@@ -218,7 +266,7 @@ class fablib(AbcFabLIB):
         return return_slices
 
     @staticmethod
-    def get_slice(name=None, slice_id=None, verbose=False):
+    def get_slice(name=None, slice_id=None):
 
         #Get the appropriat slices list
         if slice_id:
@@ -255,6 +303,29 @@ class fablib(AbcFabLIB):
             except Exception as e:
                 print(f", Failed!")
 
+    @staticmethod
+    def get_log_level():
+        return fablib.log_level
+
+    @staticmethod
+    def set_log_level(log_level):
+        fablib.log_level = log_level
+
+
+fablib.set_log_level(logging.DEBUG)
+try:
+    os.makedirs("/tmp/fablib")
+except:
+    pass
+try:
+    os.makedirs("/tmp/fablib/fabric_data")
+except:
+    pass
+
+logging.basicConfig(filename='/tmp/fablib/fablib.log',
+                    level=fablib.get_log_level(),
+                    format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                    datefmt='%H:%M:%S')
 
 
 #init fablib object
