@@ -39,6 +39,7 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed_extensions.fablib.interface import Interface
 
 #from fabrictestbed_extensions.fabricx.fabricx import FabricX
 #from fabrictestbed_extensions.fabricx.slicex import SliceX
@@ -53,13 +54,18 @@ from ipaddress import ip_address, IPv4Address
 
 #from fim.user import node
 
+from fim.user.component import Component as FIMComponent
+
+from .slice import Slice
+from .node import Node
+
 
 #from .abc_fablib import AbcFabLIB
 
 from .. import images
 
 
-#class Component(AbcFabLIB):
+# class Component(AbcFabLIB):
 class Component():
     component_model_map = { 'NIC_Basic': ComponentModelType.SharedNIC_ConnectX_6,
                             'NIC_ConnectX_6': ComponentModelType.SmartNIC_ConnectX_6,
@@ -69,57 +75,113 @@ class Component():
                             'GPU_RTX6000': ComponentModelType.GPU_RTX6000
                             }
 
-
     @staticmethod
     def calculate_name(node=None, name=None):
-        #Hack to make it possile to find interfaces
+        # Hack to make it possile to find interfaces
         return f"{node.get_name()}-{name}"
 
     @staticmethod
     def new_component(node=None, model=None, name=None):
-        #Hack to make it possile to find interfaces
+        """
+        Creates a new FIM component on the fablib node inputted.
+
+        :param node: the fablib node to build the component on
+        :type node: Node
+        :param model: the name of the component type to build
+        :type model: str
+        :param name: the name of the new component
+        :type name: str
+        :return: the new fablib compoent
+        :rtype: Component
+        """
+        # Hack to make it possile to find interfaces
         name = Component.calculate_name(node=node, name=name)
 
-        return Component(node = node, fim_component = node.fim_node.add_component(model_type=Component.component_model_map[model], name=name))
-        #return Component(node = node, model=model, name=name)
+        return Component(node=node, fim_component=node.fim_node.add_component(
+            model_type=Component.component_model_map[model], name=name))
+        # return Component(node = node, model=model, name=name)
 
     def __init__(self, node=None, fim_component=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets the FIM component and fablib node to the inputted values.
+
+        :param node: the fablib node to build the component on
+        :type node: Node
+        :param fim_component: the FIM component this object represents
+        :type fim_component: FIMComponent
         """
         super().__init__()
         self.fim_component = fim_component
         self.node = node
 
-    def get_interfaces(self):
-        from fabrictestbed_extensions.fablib.interface import Interface
+    def get_interfaces(self) -> list[Interface]:
+        """
+        Gets the interfaces attached to this fablib component's FABRIC component.
 
+        :return: a list of the interfaces on this component.
+        :rtype: list[Interface]
+        """
         ifaces = []
         for fim_interface in self.get_fim_component().interface_list:
             ifaces.append(Interface(component=self, fim_interface=fim_interface))
 
         return ifaces
 
-    def get_fim_component(self):
+    def get_fim_component(self) -> FIMComponent:
+        """
+        Gets the FABRIC component this fablib component represents.
+
+        :return: the FABRIC component on this component
+        :rtype: FIMComponent
+        """
         return self.fim_component
 
-    def get_slice(self):
+    def get_slice(self) -> Slice:
+        """
+        Gets the fablib slice associated with this component's node.
+
+        :return: the slice this component is on
+        :rtype: Slice
+        """
         return self.node.get_slice()
 
-    def get_node(self):
+    def get_node(self) -> Node:
+        """
+        Gets the fablib node this component is associated with.
+
+        :return: the node this component is on
+        :rtype: Node
+        """
         return self.node
 
-    def get_site(self):
+    def get_site(self) -> str:
+        """
+        Gets the name of the site this component's node is on.
+
+        :return: the site name this node is on
+        :rtype: str
+        """
         return self.node.get_site()
 
-    def get_name(self):
+    def get_name(self) -> str:
+        """
+        Gets the name of this component from the FABRIC component.
+
+        :return: the name of this component
+        :rtype: str
+        """
         return self.get_fim_component().name
 
     def get_details(self):
         return self.get_fim_component().details
 
-    def get_disk(self):
+    def get_disk(self) -> int:
+        """
+        Gets the amount of disk space on this component.
+
+        :return: this component's disk space
+        :rtype: int
+        """
         return self.get_fim_component().get_property(pname='capacity_allocations').disk
 
     def get_unit(self):
@@ -128,14 +190,26 @@ class Component():
     def get_pci_addr(self):
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
-    def get_model(self):
+    def get_model(self) -> str:
+        """
+        Gets the model name of this component.
+
+        :return: this component's model name
+        :rtype: str
+        """
         #TODO: get new model names (NIC_Basic, etc.)
         return self.get_fim_model()
 
     def get_fim_model(self):
         return self.get_fim_component().model
 
-    def get_type(self):
+    def get_type(self) -> str:
+        """
+        Gets the type of this component.
+
+        :return: the type of component
+        :rtype: str
+        """
         return self.get_fim_component().type
 
     def configure_nvme(self, mount_point='/mnt/nvme_mount', verbose=False):

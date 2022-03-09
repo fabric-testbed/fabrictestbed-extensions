@@ -56,11 +56,15 @@ from ipaddress import ip_address, IPv4Address
 
 #from .abc_fablib import AbcFabLIB
 from .slice import Slice
+from .component import Component
+from .node import Node
+from .network_service import NetworkService
 from .. import images
 
 
 #class Interface(AbcFabLIB):
 class Interface():
+
     def __init__(self, component=None, fim_interface=None):
         """
         Constructor. Sets keyword arguments as instance fields.
@@ -101,11 +105,8 @@ class Interface():
 
         return mac
 
-
     def get_physical_os_interface(self):
-
-
-        if self.get_network() == None:
+        if self.get_network() is None:
             return None
 
         network_name = self.get_network().get_name()
@@ -117,10 +118,9 @@ class Interface():
             return None
 
     def config_vlan_iface(self):
-        if self.get_vlan() != None:
+        if self.get_vlan() is not None:
             self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
                                                   vlan=self.get_vlan())
-
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
         self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
@@ -146,10 +146,16 @@ class Interface():
             vlan = None
         return vlan
 
-    def get_name(self):
+    def get_name(self) -> str:
+        """
+        Gets the name of this interface.
+
+        :return: the name of this interface
+        :rtype: str
+        """
         return self.get_fim_interface().name
 
-    def get_component(self):
+    def get_component(self) -> Component:
         """
         Gets the component attached to this interface.
 
@@ -158,22 +164,52 @@ class Interface():
         """
         return self.component
 
-    def get_model(self):
+    def get_model(self) -> str:
+        """
+        Gets the component model type on this interface's component.
+
+        :return: the model of this interface's component
+        :rtype: str
+        """
         return self.get_component().get_model()
 
-    def get_site(self):
+    def get_site(self) -> str:
+        """
+        Gets the site this interface's component is on.
+
+        :return: the site this interface is on
+        :rtype: str
+        """
         return self.get_component().get_site()
 
     def get_slice(self) -> Slice:
+        """
+        Gets the FABLIB slice this interface's node is attached to.
+
+        :return: the slice this interface is attached to
+        :rtype: Slice
+        """
         return self.get_node().get_slice()
 
-    def get_node(self):
+    def get_node(self) -> Node:
+        """
+        Gets the node this interface's component is on.
+
+        :return: the node this interface is attached to
+        :rtype: Node
+        """
         return self.get_component().get_node()
 
-    def get_network(self):
+    def get_network(self) -> NetworkService:
+        """
+        Gets the network this interface is on.
+
+        :return: the network service this interface is on
+        :rtype: NetworkService
+        """
         for net in self.get_slice().get_l2networks():
             if net.has_interface(self):
                 return net
 
         return None
-        #raise Exception(f"Network not found: interface {self.get_name()}")
+        # raise Exception(f"Network not found: interface {self.get_name()}")
