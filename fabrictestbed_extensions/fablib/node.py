@@ -792,6 +792,7 @@ class Node():
         return True
 
     def get_management_os_interface(self):
+        # TODO: Add docstring after doc networking classes
         #Assumes that the default route uses the management network
 
         stdout, stderr = self.execute("sudo ip -j route list")
@@ -803,6 +804,7 @@ class Node():
                 return  i['dev']
 
     def get_dataplane_os_interfaces(self):
+        # TODO: Add docstring after doc networking classes
         management_dev = self.get_management_os_interface()
 
         stdout, stderr = self.execute("sudo ip -j addr list")
@@ -815,13 +817,16 @@ class Node():
         return dataplane_devs
 
     def flush_all_os_interfaces(self):
+        # TODO: Add docstring after doc networking classes
         for iface in self.get_dataplane_os_interfaces():
             self.flush_os_interface(iface['ifname'])
 
     def flush_os_interface(self, os_iface):
+        # TODO: Add docstring after doc networking classes
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        # TODO: Add docstring after doc networking classes
         #Bring up base iface
         #print(f"node.set_ip_os_interface: os_iface {os_iface}, vlan {vlan}")
         command = f'sudo ip link set dev {os_iface} up'
@@ -850,11 +855,13 @@ class Node():
         stdout, stderr = self.execute(command)
 
     def clear_all_ifaces(self):
+        # TODO: Add docstring after doc networking classes
         self.remove_all_vlan_os_interfaces()
         self.flush_all_os_interfaces()
 
 
     def remove_all_vlan_os_interfaces(self):
+        # TODO: Add docstring after doc networking classes
         management_os_iface = self.get_management_os_interface()
 
         stdout, stderr = self.execute("sudo ip -j addr list")
@@ -870,6 +877,7 @@ class Node():
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
 
     def get_interface_map(self):
+        # TODO: Add docstring after doc networking classes
         #data = {}
         #Get interface data
         interfaces = {}
@@ -889,6 +897,7 @@ class Node():
 
 
     def save_data_XXX(self):
+        # TODO: Add docstring after doc networking classes
         #data = {}
         #Get interface data
         interfaces = {}
@@ -914,6 +923,7 @@ class Node():
         self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
 
     def save_data(self):
+        # TODO: Add docstring after doc networking classes
         #data = {}
         #Get interface data
         interfaces = {}
@@ -938,10 +948,8 @@ class Node():
 
         self.upload_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
 
-
-
     def load_data(self):
-
+        # TODO: Add docstring after doc networking classes
         self.download_file(f'{self.get_name()}.json', f'{self.get_name()}.json')
 
         interfaces=""
@@ -959,6 +967,7 @@ class Node():
         self.get_slice().network_iface_map = interface_map
 
     def remove_vlan_os_interface(self, os_iface=None):
+        # TODO: Add docstring after doc networking classes
         command = f"sudo ip -j addr show {os_iface}"
         stdout, stderr = self.execute(command)
         try:
@@ -974,6 +983,7 @@ class Node():
         stdout, stderr = self.execute(command)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        # TODO: Add docstring after doc networking classes
         command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
         command = f'sudo ip link set dev {os_iface}.{vlan} up'
@@ -983,6 +993,7 @@ class Node():
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
 
     def ping_test(self, dst_ip):
+        # TODO: Add docstring after doc networking classes
         command = f'ping -c 3 {dst_ip}  2>&1 > /dev/null && echo Success'
         stdout, stderr = self.execute(command)
         if stdout.replace("\n","") == 'Success':
