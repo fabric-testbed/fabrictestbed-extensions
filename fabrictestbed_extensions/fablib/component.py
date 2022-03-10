@@ -29,6 +29,9 @@ import re
 
 import functools
 import time
+import logging
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -68,6 +71,43 @@ class Component():
                             'GPU_TeslaT4': ComponentModelType.GPU_Tesla_T4,
                             'GPU_RTX6000': ComponentModelType.GPU_RTX6000
                             }
+
+
+    def __str__(self):
+
+        table = [   [ "Name", self.get_name() ],
+                    [ "Details", self.get_details() ],
+                    [ "Disk (G)", self.get_disk() ],
+                    [ "Units", self.get_unit() ],
+                    [ "PCI Address", self.get_pci_addr() ],
+                    [ "Model", self.get_model() ],
+                    [ "Type", self.get_type() ],
+                    ]
+
+        return tabulate(table)
+
+
+    def list_interfaces(self):
+
+
+
+        table = []
+        for iface in self.get_interfaces():
+
+            if iface.get_network():
+                network_name = iface.get_network().get_name()
+
+            table.append( [     iface.get_name(),
+                                network_name,
+                                iface.get_bandwidth(),
+                                iface.get_vlan(),
+                                iface.get_mac(),
+                                iface.get_physical_os_interface_name(),
+                                iface.get_os_interface(),
+                                ] )
+
+        return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
+
 
 
     @staticmethod
@@ -129,8 +169,42 @@ class Component():
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
     def get_model(self):
-        #TODO: get new model names (NIC_Basic, etc.)
-        return self.get_fim_model()
+        #TODO: This a hack that need a real fix
+        if str(self.get_type()) == "SmartNIC" and str(self.get_fim_model()) == "ConnectX-6":
+            return 'NIC_ConnectX_6'
+        elif str(self.get_type()) == "SmartNIC" and str(self.get_fim_model()) == "ConnectX-5":
+            return 'NIC_ConnectX_5'
+        elif str(self.get_type()) == "NVME"  and str(self.get_fim_model()) == "P4510":
+            return 'NVME_P4510'
+        elif str(self.get_type())== "GPU"  and str(self.get_fim_model()) == "Tesla T4":
+            return 'GPU_TeslaT4'
+        elif str(self.get_type()) == "GPU"  and str(self.get_fim_model()) == "RTX6000":
+            return 'GPU_RTX6000'
+        elif str(self.get_type()) == "SharedNIC"  and str(self.get_fim_model()) == "ConnectX-6":
+            return 'NIC_Basic'
+        else:
+            return None
+
+    def get_reservation_id(self):
+        try:
+            #This does not work
+            #print(f"{self.get_fim_component()}")
+            return self.get_fim_component().get_property(pname='reservation_info').reservation_id
+        except:
+            return None
+
+    def get_reservation_state(self):
+        try:
+            return self.get_fim_component().get_property(pname='reservation_info').reservation_state
+        except:
+            return None
+
+    def get_error_message(self):
+        try:
+            return self.get_fim_component().get_property(pname='reservation_info').error_message
+        except:
+            return ""
+
 
     def get_fim_model(self):
         return self.get_fim_component().model
@@ -138,7 +212,7 @@ class Component():
     def get_type(self):
         return self.get_fim_component().type
 
-    def configure_nvme(self, mount_point='/mnt/nvme_mount', verbose=False):
+    def configure_nvme(self, mount_point='/mnt/nvme_mount'):
         output = []
         try:
             output.append(self.node.execute('sudo fdisk -l /dev/nvme*'))
@@ -152,33 +226,7 @@ class Component():
             output.append(self.node.execute(f'df -h {mount_point}'))
         except Exception as e:
             print(f"config_nvme Fail: {self.get_name()}")
-            traceback.print_exc()
+            #traceback.print_exc()
             raise Exception(str(output))
 
         return output
-
-
-class Disk(Component):
-
-    def __init__(self, component):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(component)
-
-class NIC(Component):
-    def __init__(self, component):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(component)
-
-class GPU(Component):
-    def __init__(self, component):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(component)

@@ -29,6 +29,10 @@ import re
 
 import functools
 import time
+import logging
+from tabulate import tabulate
+
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -60,17 +64,22 @@ class NetworkService():
 
     @staticmethod
     def calculate_l2_nstype(interfaces=None):
+        #if there is a basic NIC, WAN must be STS
+        found_basic_nic = False
 
         sites = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
+            if interface.get_model()=="NIC_Basic":
+                found_basic_nic = True
 
         rtn_nstype = None
         if len(sites) == 1:
             rtn_nstype = NetworkService.network_service_map['L2Bridge']
-        elif len(sites) == 2 and len(interfaces) == 2:
+        elif not found_basic_nic and len(sites) == 2 and len(interfaces) == 2:
+            #TODO: remove this when STS works on new links.
             rtn_nstype = NetworkService.network_service_map['L2PTP']
-        elif len(sites) == 2  and len(interfaces) > 2:
+        elif len(sites) == 2  and len(interfaces) >= 2:
             rtn_nstype = NetworkService.network_service_map['L2STS']
         else:
             raise Exception(f"Invalid Network Service: Networks are limited to 2 unique sites. Site requested: {sites}")
@@ -119,6 +128,14 @@ class NetworkService():
         #validate nstype and interface List
         NetworkService.validate_nstype(nstype, interfaces)
 
+        #Set default VLANs for P2P networks that did not assing VLANs
+        if nstype == ServiceType.L2PTP: # or nstype == ServiceType.L2STS:
+            for interface in interfaces:
+                if interface.get_model() != 'NIC_Basic' and not interface.get_vlan():
+                    #TODO: Long term we might have muliple vlan on one property
+                    # and will need to make sure they are unique.  For now this okay
+                    interface.set_vlan("100")
+
         return NetworkService.new_network_service(slice=slice, name=name, nstype=nstype, interfaces=interfaces)
 
     @staticmethod
@@ -127,6 +144,7 @@ class NetworkService():
         for interface in interfaces:
             fim_interfaces.append(interface.get_fim_interface())
 
+        logging.info(f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}")
         fim_network_service = slice.topology.add_network_service(name=name,
                                                                  nstype=nstype,
                                                                  interfaces=fim_interfaces)
@@ -170,6 +188,24 @@ class NetworkService():
     def get_fim_network_service(self):
         return self.fim_network_service
 
+    def get_error_message(self):
+        try:
+            return self.get_fim_network_service().get_property(pname='reservation_info').error_message
+        except:
+            return ""
+
+    def get_reservation_id(self):
+        try:
+            return self.get_fim_network_service().get_property(pname='reservation_info').reservation_id
+        except:
+            return None
+
+    def get_reservation_state(self):
+        try:
+            return self.get_fim_network_service().get_property(pname='reservation_info').reservation_state
+        except:
+            return None
+
     def get_name(self):
         return self.get_fim_network_service().name
 
@@ -181,27 +217,33 @@ class NetworkService():
         return interfaces
 
     def get_interface(self, name=None):
-        #print(f"network_service.get_interface: name {name}")
-        for interface in self.get_interfaces():
-            #print(f"network_service.get_interface: self.get_name() {self.get_name()}, interface.get_name(): {interface.get_name()}")
+        for interface in self.get_fim_network_service().interface_list:
+            if name in interface.name:
+                return self.get_slice().get_interface(name=interface.name)
 
-            #interface_name = f"{self.get_name()}-{interface.get_name()}"
-            interface_name = f"{interface.get_name()}"
-            #print(f"network_service.get_interface: interface_name {interface_name}, name: {name}")
-
-            if interface_name == name:
-                #print(f"returning iface: {interface.get_name()}")
-                return interface
+        #for interface in self.get_interfaces():
+        #    interface_name = f"{interface.get_name()}"
+        #    if interface_name == name:
+        #        return interface
 
         return None
-        #raise Exception(f"Interface not found: interface {name}")
 
     def has_interface(self, interface):
+        for fim_interface in self.get_fim_network_service().interface_list:
+            #print(f"fim_interface.name: {fim_interface.name}, interface.get_name(): {interface.get_name()}")
+            if fim_interface.name.endswith(interface.get_name()):
+                return True
 
-        if self.get_interface(name=interface.get_name()) == None:
-            return False
-        else:
-            return True
+        return False
+
+        #if self.get_interface(name=interface.get_name()) == None:
+        #    return False
+        #else:
+        #    return True
+
+
+
+    ###################### DELETE BELOW ???? #####################
 
     def find_nic_mapping(self, net_name, nodes):
         return_data = {}
