@@ -221,11 +221,6 @@ class NetworkService():
             if name in interface.name:
                 return self.get_slice().get_interface(name=interface.name)
 
-        #for interface in self.get_interfaces():
-        #    interface_name = f"{interface.get_name()}"
-        #    if interface_name == name:
-        #        return interface
-
         return None
 
     def has_interface(self, interface):
@@ -235,87 +230,3 @@ class NetworkService():
                 return True
 
         return False
-
-        #if self.get_interface(name=interface.get_name()) == None:
-        #    return False
-        #else:
-        #    return True
-
-
-
-    ###################### DELETE BELOW ???? #####################
-
-    def find_nic_mapping(self, net_name, nodes):
-        return_data = {}
-
-        #copy scripts to nodes
-        for node in nodes:
-            #config node1
-            file_attributes = upload_file(username, node, 'scripts/host_set_all_dataplane_ips.py','host_set_all_dataplane_ips.py')
-            #print("file_attributes: {}".format(file_attributes))
-            file_attributes = upload_file(username, node, 'scripts/find_nic_mapping.py','find_nic_mapping.py')
-            #print("file_attributes: {}".format(file_attributes))
-
-
-        #Config target node
-        target_node = nodes[0]
-        stdout = execute_script(username, target_node, 'sudo python3 host_set_all_dataplane_ips.py')
-        #print("stdout: {}".format(stdout))
-        #print(stdout)
-
-        target_ifaces = json.loads(stdout.replace('\n',''))
-        #print(ifaces)
-        #for i in ifaces['management']:
-        #    print(i)
-
-        #for i in ifaces['dataplane']:
-        #    print(i)
-        #node1_map = { 'data' : {'ens6': '192.168.1.100', etc... }, 'management': { 'ens3': '10.1.1.1'}  }
-
-
-        # Test s1 ifaces
-        target_net_ip = None
-        for node in nodes:
-            #skip target node
-            if node == target_node:
-                continue
-
-            #test node interfaces against target
-            for target, ip in target_ifaces['dataplane']:
-                node1_dataplane_ip = ip
-                node2_dataplane_ip = ip.replace('100','101')
-                node2_cidr = '24'
-                #node2_management_ip = str(node2.management_ip)
-                #print("S1 Name        : {}".format(node2.name))
-                #print("Management IP    : {}".format(node2_management_ip))
-
-                stdout = execute_script(username, node, 'python3 find_nic_mapping.py {} {} {} {}'.format('net',node2_dataplane_ip,node2_cidr,node1_dataplane_ip) )
-                iface =  stdout.replace('\n','')
-                #print("stdout: {}".format(stdout))
-                if iface != 'None':
-                    #print(iface)
-                    #return iface
-                    if target_net_ip == None:
-                        return_data[target_node.name]=target
-                    return_data[node.name]=iface
-                    break
-
-
-
-        return return_data
-
-    def flush_dataplane_ips(nodes):
-
-        for node in nodes:
-            #config node1
-            file_attributes = upload_file(username, node, 'scripts/host_flush_all_dataplane_ips.py','host_flush_all_dataplane_ips.py')
-            #print("file_attributes: {}".format(file_attributes))
-
-            stdout = execute_script(username, node, 'sudo python3 host_flush_all_dataplane_ips.py')
-            #print("stdout: {}".format(stdout))
-            #print(stdout)
-
-
-    def flush_all_dataplane_ips():
-        for node_name, node in experiment_topology.nodes.items():
-            flush_dataplane_ips([node])
