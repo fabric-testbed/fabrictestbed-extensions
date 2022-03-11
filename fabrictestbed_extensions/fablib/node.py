@@ -585,6 +585,41 @@ class Node():
 
         raise Exception("scp download failed")
 
+    def upload_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+        import tarfile
+        import os
+
+        logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
+
+        output_filename = local_directory_path.split('/')[-1]
+        root_size = len(local_directory_path) - len(output_filename)
+        temp_file = "/tmp/" + output_filename + ".tar.gz"
+
+        with tarfile.open(temp_file, "w:gz") as tar_handle:
+            for root, dirs, files in os.walk(local_directory_path):
+                for file in files:
+                    tar_handle.add(os.path.join(root, file), arcname = os.path.join(root, file)[root_size:])
+
+        self.upload_file(temp_file, temp_file, retry, retry_interval)
+        os.remove(temp_file)
+        self.execute("mkdir -p "+remote_directory_path + "; tar -xf " + temp_file + " -C " + remote_directory_path + "; rm " + temp_file, retry, retry_interval)
+        return "success"
+
+    def download_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+        import tarfile
+        import os
+        logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
+
+        temp_file = "/tmp/unpackingfile.tar.gz"
+        self.execute("tar -czf " + temp_file + " " + remote_directory_path, retry, retry_interval)
+
+        self.download_file(temp_file, temp_file, retry, retry_interval)
+        tar_file = tarfile.open(temp_file)
+        tar_file.extractall(local_directory_path)
+
+        self.execute("rm " + temp_file, retry, retry_interval)
+        os.remove(temp_file)
+        return "success"
 
     def test_ssh(self):
         logging.debug(f"test_ssh: node {self.get_name()}")
