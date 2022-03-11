@@ -258,10 +258,21 @@ class Slice():
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site=None):
+    def add_node(self, name, site=None, cores=None, ram=None, disk=None, image=None, host=None):
         from fabrictestbed_extensions.fablib.node import Node
+        node = Node.new_node(slice=self, name=name, site=site)
 
-        return Node.new_node(slice=self, name=name, site=site)
+        if cores or ram or disk:
+            node.set_capacities(cores=cores, ram=ram, disk=disk)
+
+        if image:
+            node.set_image(image)
+
+        if host:
+            node.set_host(host)
+
+
+        return node
 
     def get_object_by_reservation(self, reservation_id):
         # test all nodes

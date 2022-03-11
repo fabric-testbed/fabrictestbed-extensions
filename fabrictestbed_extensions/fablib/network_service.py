@@ -65,21 +65,21 @@ class NetworkService():
     @staticmethod
     def calculate_l2_nstype(interfaces=None):
         #if there is a basic NIC, WAN must be STS
-        found_basic_nic = False
+        basic_nic_count = 0
 
         sites = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
             if interface.get_model()=="NIC_Basic":
-                found_basic_nic = True
+                basic_nic_count += 1
 
         rtn_nstype = None
         if len(sites) == 1:
             rtn_nstype = NetworkService.network_service_map['L2Bridge']
-        elif not found_basic_nic and len(sites) == 2 and len(interfaces) == 2:
-            #TODO: remove this when STS works on new links.
+        elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
+            #TODO: remove this when STS works on all links.
             rtn_nstype = NetworkService.network_service_map['L2PTP']
-        elif len(sites) == 2  and len(interfaces) >= 2:
+        elif len(sites) == 2  and basic_nic_count == 2 and len(interfaces) == 2:
             rtn_nstype = NetworkService.network_service_map['L2STS']
         else:
             raise Exception(f"Invalid Network Service: Networks are limited to 2 unique sites. Site requested: {sites}")
