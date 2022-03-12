@@ -196,7 +196,6 @@ class Slice():
         else:
             raise Exception("Failed to get slice list: {}, {}".format(return_status, slices))
 
-
     def update_topology(self):
         #Update topology
         return_status, new_topo = fablib.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
@@ -206,12 +205,44 @@ class Slice():
         #Set slice attibutes
         self.topology = new_topo
 
+    def update_slivers(self):
+        status, slivers = fablib.get_slice_manager().slivers(slice_object=self.sm_slice)
+        if status == Status.OK:
+            self.slivers = slivers
+
+        raise Exception(f"{status}")
+
+    def get_sliver(self, reservation_id):
+        #for sliver in self.get_slivers():
+        #    if sliver.reservation_id == reservation_id:
+        #        return sliver
+
+        slivers = self.get_slivers()
+        sliver = list(filter(lambda x: x.reservation_id == reservation_id, slivers ))[0]
+
+        return sliver
+
+
+    def get_slivers(self):
+
+        if not hasattr(self, 'slivers') or not self.slivers:
+            self.update_slivers()
+
+        return self.slivers
+
+
+
     def update(self):
         try:
             self.update_slice()
-        except:
-            pass
-            #print('update slice error')
+        except Exception as e:
+            logging.warning(f"slice.update_slice failed: {e}")
+
+        try:
+            self.update_slivers()
+        except Exception as e:
+            logging.warning(f"slice.update_slivers failed: {e}")
+
 
         self.update_topology()
 
@@ -257,6 +288,10 @@ class Slice():
     def add_l2network(self, name=None, interfaces=[], type=None):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
+
+    def add_l3network(self, name=None, interfaces=[], type='IPv6'):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+        return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
 
     def add_node(self, name, site=None, cores=None, ram=None, disk=None, image=None, host=None):
         from fabrictestbed_extensions.fablib.node import Node
@@ -404,7 +439,24 @@ class Slice():
 
         raise Exception("Interface not found: {}".format(name))
 
+    def get_l3networks(self):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
 
+        try:
+            return NetworkService.get_l3network_services(self)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+
+        return []
+
+    def get_l3network(self, name=None):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
+        try:
+            return NetworkService.get_l3network_service(self,name)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+        return None
 
     def get_l2networks(self):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -414,7 +466,7 @@ class Slice():
         except Exception as e:
             logging.info(e, exc_info=True)
 
-        return None
+        return []
 
     def get_l2network(self, name=None):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -425,6 +477,24 @@ class Slice():
             logging.info(e, exc_info=True)
         return None
 
+    def get_networks(self):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
+        try:
+            return NetworkService.get_network_services(self)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+
+        return []
+
+    def get_network(self, name=None):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
+        try:
+            return NetworkService.get_network_service(self,name)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+        return None
 
     def delete(self):
         return_status, result = fablib.get_slice_manager().delete(slice_object=self.sm_slice)

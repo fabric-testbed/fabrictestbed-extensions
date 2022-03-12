@@ -95,6 +95,12 @@ class Node():
         except:
             self.username = None
 
+        try:
+            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+        except:
+            self.sliver = None
+
+
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
     def __str__(self):
@@ -107,6 +113,7 @@ class Node():
             ["Host", self.get_host()],
             ["Site", self.get_site()],
             ["Management IP", self.get_management_ip()],
+            ["L3 Subnet", self.get_subnet()],
             ["Reservation ID", self.get_reservation_id()],
             ["Reservation State", self.get_reservation_state()],
             ["Error Message", self.get_error_message()],
@@ -114,6 +121,15 @@ class Node():
             ]
 
         return tabulate(table) #, headers=["Property", "Value"])
+
+    def get_subnet(self):
+        try:
+            return self.get_fim_node().gateway.subnet
+        except:
+            return None
+
+    def get_sliver(self):
+        return self.sliver
 
     @staticmethod
     def new_node(slice=None, name=None, site=None):
