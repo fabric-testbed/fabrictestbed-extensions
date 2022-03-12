@@ -45,7 +45,7 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-from ipaddress import ip_address, IPv4Address
+from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 #from .abc_fablib import AbcFabLIB
 from fabrictestbed_extensions.fablib.fablib import fablib
@@ -686,13 +686,27 @@ class Node():
     def flush_os_interface(self, os_iface):
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
 
+
+    def validIPAddress(self, IP: str) -> str:
+        try:
+            return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
+        except ValueError:
+            return "Invalid"
+
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
         if cidr: cidr=str(cidr)
         if mtu: mtu=str(mtu)
 
+        if self.validIPAddress(ip) == "IPv4":
+            ip_command = "sudo ip"
+        elif self.validIPAddress(ip) == "IPv6":
+            ip_command = "sudo ip -6"
+        else:
+            raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
+
         #Bring up base iface
         logging.debug(f"{self.get_name()}->set_ip_os_interface: os_iface {os_iface}, vlan {vlan}, ip {ip}, cidr {cidr}, mtu {mtu}")
-        command = f'sudo ip link set dev {os_iface} up'
+        command = f'{ip_command} link set dev {os_iface} up'
         if mtu != None:
             command += f" mtu {mtu}"
         stdout, stderr = self.execute(command)
@@ -700,19 +714,19 @@ class Node():
         #config vlan iface
         if vlan != None:
             #create vlan iface
-            command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+            command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
             stdout, stderr = self.execute(command)
 
             #bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
-            command = f' sudo ip link set dev {os_iface} up'
+            command = f'{ip_command} link set dev {os_iface} up'
             if mtu != None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command)
 
         if ip != None and cidr != None:
             #Set ip
-            command = f"sudo ip addr add {ip}/{cidr} dev {os_iface}"
+            command = f"{ip_command} addr add {ip}/{cidr} dev {os_iface}"
             stdout, stderr = self.execute(command)
 
         stdout, stderr = self.execute(command)
@@ -744,12 +758,16 @@ class Node():
 
         interfaces = {}
         for i in self.get_interfaces():
+            logging.debug(f"get_interface_map: i: {i}")
+
             #print(f"interface: {i.get_name()}")
             #print(f"os_interface: {i.get_physical_os_interface()}")
             if i.get_network() != None:
+                logging.debug(f"i.get_network().get_name(): {i.get_network().get_name()}")
                 network_name = i.get_network().get_name()
                 #print(f"network: {i.get_network().get_name()}")
             else:
+                logging.debug(f"i.get_network(): None")
                 network_name = None
                 #print(f"network: None")
 
@@ -789,22 +807,29 @@ class Node():
     def load_data(self):
         logging.debug(f"load_data: node {self.get_name()}")
 
+        try:
+            self.download_file(f'{self.get_name()}.json', f'/tmp/fablib/fabric_data/{self.get_name()}.json')
 
-        self.download_file(f'{self.get_name()}.json', f'/tmp/fablib/fabric_data/{self.get_name()}.json')
-
-        interfaces=""
-        with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'r') as infile:
-            interfaces = json.load(infile)
+            interfaces=""
+            with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'r') as infile:
+                interfaces = json.load(infile)
 
 
-        interface_map = self.get_slice().network_iface_map #= self.get_slice().get_interface_map()
-        #print(f"interfaces {interfaces}")
-        for interface_name, net_map in interfaces.items():
-            #print(f"interface_name: {net_map}:")
-            if net_map['network'] != None:
-                interface_map[net_map['network']][self.get_name()] = net_map['os_interface']
+            interface_map = self.get_slice().network_iface_map #= self.get_slice().get_interface_map()
+            #print(f"interfaces {interfaces}")
+            for interface_name, net_map in interfaces.items():
+                logging.debug(f"interface_name: {interface_name}, {net_map}")
+                if net_map['network'] != None:
+                    interface_map[net_map['network']][self.get_name()] = net_map['os_interface']
 
-        self.get_slice().network_iface_map = interface_map
+            self.get_slice().network_iface_map = interface_map
+            logging.debug(f"{self.get_slice().network_iface_map}")
+        except Exception as e:
+            logging.error(f"load data failes: {e}")
+            logging.error(e, exc_info=True)
+            raise e
+
+
 
     def remove_vlan_os_interface(self, os_iface=None):
         command = f"sudo ip -j addr show {os_iface}"
@@ -826,9 +851,16 @@ class Node():
         if cidr: cidr=str(cidr)
         if mtu: mtu=str(mtu)
 
-        command = f'sudo ip link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+        if validIPAddress(ip) == "IPv4":
+            ip_command = "sudo ip"
+        elif validIPAddress(ip) == "IPv6":
+            ip_command = "sudo ip -6"
+        else:
+            raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
+
+        command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
-        command = f'sudo ip link set dev {os_iface}.{vlan} up'
+        command = f'{ip_command} link set dev {os_iface}.{vlan} up'
         stdout, stderr = self.execute(command)
 
         if ip != None and cidr != None:

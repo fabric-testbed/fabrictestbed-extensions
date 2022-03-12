@@ -76,14 +76,16 @@ class Interface():
 
     def __str__(self):
         if self.get_network():
-            network_name = iface.get_network().get_name()
+            network_name = self.get_network().get_name()
+        else:
+            network_name = None
 
         table = [   [ "Name", self.get_name() ],
                     [ "Network", network_name ],
                     [ "Bandwidth", self.get_bandwidth() ],
                     [ "VLAN", self.get_vlan() ],
-                    [ "MAC", get_mac() ],
-                    [ "Physical OS Interface", self.get_physical_os_interface() ],
+                    [ "MAC", self.get_mac() ],
+                    [ "Physical OS Interface", self.get_physical_os_interface_name() ],
                     [ "OS Interface", self.get_os_interface() ],
                     ]
 
@@ -211,7 +213,7 @@ class Interface():
             #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
             return self.network
         else:
-            for net in self.get_slice().get_l2networks():
+            for net in self.get_slice().get_networks():
                 if net.has_interface(self):
                     self.network = net
                     #print(f"return found network, {self.network.get_name()}")
