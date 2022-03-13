@@ -113,7 +113,6 @@ class Node():
             ["Host", self.get_host()],
             ["Site", self.get_site()],
             ["Management IP", self.get_management_ip()],
-            ["L3 Subnet", self.get_subnet()],
             ["Reservation ID", self.get_reservation_id()],
             ["Reservation State", self.get_reservation_state()],
             ["Error Message", self.get_error_message()],
@@ -685,6 +684,8 @@ class Node():
 
     def flush_os_interface(self, os_iface):
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
+        stdout, stderr = self.execute(f"sudo -6 ip addr flush dev {os_iface}")
+
 
 
     def validIPAddress(self, IP: str) -> str:
@@ -692,6 +693,82 @@ class Node():
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:
             return "Invalid"
+
+
+    def ip_route_add(self, subnet, gateway):
+        if type(subnet) == IPv6Network:
+            ip_command = "sudo ip -6"
+        elif type(subnet) == IPv4Network:
+            ip_command = "sudo ip"
+
+        try:
+            self.execute(f"{ip_command} route add {subnet} via {gateway}")
+        except Exception as e:
+            logging.warning(f"Failed to add route: {e}")
+            raise e
+
+
+    def ip_route_del(self, subnet, gateway):
+        if type(subnet) == IPv6Network:
+            ip_command = "sudo ip -6"
+        elif type(subnet) == IPv4Network:
+            ip_command = "sudo ip"
+
+        try:
+            self.execute(f"{ip_command} route del {subnet} via {gateway}")
+        except Exception as e:
+            logging.warning(f"Failed to del route: {e}")
+            raise e
+
+    def ip_addr_add(self, addr, subnet, interface):
+        if type(subnet) == IPv6Network:
+            ip_command = "sudo ip -6"
+        elif type(subnet) == IPv4Network:
+            ip_command = "sudo ip"
+
+        try:
+            self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
+        except Exception as e:
+            logging.warning(f"Failed to add addr: {e}")
+            raise e
+
+    def ip_addr_del(self, addr, subnet, interface):
+        if type(subnet) == IPv6Network:
+            ip_command = "sudo ip -6"
+        elif type(subnet) == IPv4Network:
+            ip_command = "sudo ip"
+
+        try:
+            self.execute(f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {iface.get_os_interface()} ")
+        except Exception as e:
+            logging.warning(f"Failed to del addr: {e}")
+            raise e
+
+    def ip_link_up(self, interface):
+        if type(subnet) == IPv6Network:
+            ip_command = "sudo ip -6"
+        elif type(subnet) == IPv4Network:
+            ip_command = "sudo ip"
+
+        try:
+            self.execute(f"{ip_command} link set dev {iface.get_os_interface()} up")
+        except Exception as e:
+            logging.warning(f"Failed to up link: {e}")
+            raise e
+
+    def ip_link_down(self, interface):
+        if type(subnet) == IPv6Network:
+            ip_command = "sudo ip -6"
+        elif type(subnet) == IPv4Network:
+            ip_command = "sudo ip"
+
+        try:
+            self.execute(f"{ip_command} link set dev {iface.get_os_interface()} down")
+        except Exception as e:
+            logging.warning(f"Failed to up link: {e}")
+            raise e
+
+
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
         if cidr: cidr=str(cidr)
@@ -737,6 +814,7 @@ class Node():
 
 
     def remove_all_vlan_os_interfaces(self):
+
         management_os_iface = self.get_management_os_interface()
 
         stdout, stderr = self.execute("sudo ip -j addr list")

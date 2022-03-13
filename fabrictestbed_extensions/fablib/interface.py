@@ -149,6 +149,23 @@ class Interface():
                                             vlan=self.get_vlan(),
                                             ip=ip, cidr=cidr, mtu=mtu)
 
+
+    def ip_addr_add(self, addr, subnet):
+        self.get_node().ip_addr_add(addr, subnet, self)
+
+
+    def ip_addr_del(self, addr, subnet):
+        self.get_node().ip_addr_del(addr, subnet, self)
+
+    def ip_link_up(self):
+        self.get_node().ip_link_up(self)
+
+    def ip_link_down(self):
+        self.get_node().ip_link_down(self)
+
+
+
+
     def set_vlan(self, vlan=None):
         if vlan: vlan=str(vlan)
 

@@ -43,8 +43,9 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fim.slivers.network_service import NetworkServiceSliver, ServiceType, NSLayer
 
-from ipaddress import ip_address, IPv4Address
+from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 #from .abc_fablib import AbcFabLIB
 
@@ -63,6 +64,8 @@ class NetworkService():
     fim_l3network_service_types = [ 'FABNetv4', 'FABNetv6']
 
     #fim_network_service_types = [ 'L2Bridge', 'L2PTP', 'L2STS']
+
+
 
     @staticmethod
     def get_fim_l2network_service_types():
@@ -263,8 +266,44 @@ class NetworkService():
             self.sliver = None
 
 
+    def __str__(self):
+        table = [ ["ID", self.get_reservation_id()],
+            ["Name", self.get_name()],
+            ["Layer", self.get_layer()],
+            ["Type", self.get_type()],
+            ["Site", self.get_site()],
+            ["Gateway", self.get_gateway()],
+            ["L3 Subnet", self.get_subnet()],
+            ["Reservation State", self.get_reservation_state()],
+            ["Error Message", self.get_error_message()],
+            ]
+
+        return tabulate(table) #, headers=["Property", "Value"])
+
+
     def get_slice(self):
         return self.slice
+
+    def get_site(self):
+        try:
+            return self.get_sliver().sliver.site
+        except Exception as e:
+            logging.warning(f"Failed to get site: {e}")
+            return None
+
+    def get_layer(self):
+        try:
+            return self.get_sliver().sliver.layer
+        except Exception as e:
+            logging.warning(f"Failed to get layer: {e}")
+            return None
+
+    def get_type(self):
+        try:
+            return self.get_sliver().sliver.resource_type
+        except Exception as e:
+            logging.warning(f"Failed to get type: {e}")
+            return None
 
     def get_sliver(self):
         return self.sliver
@@ -280,26 +319,43 @@ class NetworkService():
 
     def get_gateway(self):
         try:
-            return self.get_sliver().sliver.gateway.gateway
+            gateway = None
+            if self.get_layer() == NSLayer.L3:
+                if self.get_type() == ServiceType.FABNetv6:
+                    gateway = IPv6Address(self.get_sliver().sliver.gateway.gateway)
+                elif self.get_type() == ServiceType.FABNetv4:
+                    gateway = IPv4Address(self.get_sliver().sliver.gateway.gateway)
+
+            return gateway
         except Exception as e:
             logging.warning(f"Failed to get gateway: {e}")
+            return None
 
     def get_subnet(self):
         try:
-            return self.get_sliver().sliver.gateway.subnet
+            subnet = None
+            if self.get_layer() == NSLayer.L3:
+                if self.get_type() == ServiceType.FABNetv6:
+                    subnet = IPv6Network(self.get_sliver().sliver.gateway.subnet)
+                elif self.get_type() == ServiceType.FABNetv4:
+                    subnet = IPv4Network(self.get_sliver().sliver.gateway.subnet)
+            return subnet
         except Exception as e:
             logging.warning(f"Failed to get subnet: {e}")
+            return None
 
     def get_reservation_id(self):
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').reservation_id
         except:
+            logging.warning(f"Failed to get reservation_id: {e}")
             return None
 
     def get_reservation_state(self):
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').reservation_state
         except:
+            logging.warning(f"Failed to get reservation_state: {e}")
             return None
 
     def get_name(self):
