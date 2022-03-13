@@ -64,6 +64,8 @@ class fablib(AbcFabLIB):
         self.build_slice_manager()
         self.resources = None
 
+
+
     def build_slice_manager(self):
         self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
                              cm_host=self.credmgr_host,
@@ -74,6 +76,19 @@ class fablib(AbcFabLIB):
         self.slice_manager.initialize()
 
         return self.slice_manager
+
+    @staticmethod
+    def get_site_names():
+        return fablib.get_resources().get_site_names()
+
+    @staticmethod
+    def list_sites():
+        return str(fablib.get_resources())
+
+    @staticmethod
+    def show_site(site_name):
+        return str(fablib.get_resources().show_site(site_name))
+
 
     @staticmethod
     def get_resources():
