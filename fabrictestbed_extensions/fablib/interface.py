@@ -138,7 +138,7 @@ class Interface():
     def config_vlan_iface(self):
         if self.get_vlan() != None:
             self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
-                                                  vlan=self.get_vlan())
+                                                  vlan=self.get_vlan(), interface=self)
 
 
     def set_ip(self, ip=None, cidr=None, mtu=None):

@@ -665,10 +665,6 @@ class Slice():
         self.network_iface_map = {}
 
         for net in self.get_l3networks():
-
-
-
-
             logging.debug(f"net: {net}")
             #gateway = IPv4Address(net.get_gateway())
             #test_ip = gateway + 1

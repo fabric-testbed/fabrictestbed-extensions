@@ -104,7 +104,8 @@ class Node():
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
     def __str__(self):
-        table = [ ["Name", self.get_name()],
+        table = [ ["ID", self.get_reservation_id()],
+            ["Name", self.get_name()],
             ["Cores", self.get_cores()],
             ["RAM", self.get_ram()],
             ["Disk", self.get_disk()],
@@ -113,7 +114,6 @@ class Node():
             ["Host", self.get_host()],
             ["Site", self.get_site()],
             ["Management IP", self.get_management_ip()],
-            ["Reservation ID", self.get_reservation_id()],
             ["Reservation State", self.get_reservation_state()],
             ["Error Message", self.get_error_message()],
             ["SSH Command ", self.get_ssh_command()],
@@ -684,7 +684,7 @@ class Node():
 
     def flush_os_interface(self, os_iface):
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
-        stdout, stderr = self.execute(f"sudo -6 ip addr flush dev {os_iface}")
+        stdout, stderr = self.execute(f"sudo ip -6 addr flush dev {os_iface}")
 
 
 
@@ -924,17 +924,32 @@ class Node():
         command = f"sudo ip link del link {link} name {os_iface}"
         stdout, stderr = self.execute(command)
 
-    def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+    def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None, interface=None):
         if vlan: vlan=str(vlan)
         if cidr: cidr=str(cidr)
         if mtu: mtu=str(mtu)
 
-        if validIPAddress(ip) == "IPv4":
+
+        try:
+            gateway = None
+            if interface.get_network().get_layer() == NSLayer.L3:
+                if interface.get_network().get_type() == ServiceType.FABNetv6:
+                    ip_command = "sudo ip -6"
+                elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                    ip_command = "sudo ip"
+            else:
+                ip_command = "sudo ip"
+        except Exception as e:
+            logging.warning(f"Failed to get network layer and/or type: {e}")
             ip_command = "sudo ip"
-        elif validIPAddress(ip) == "IPv6":
-            ip_command = "sudo ip -6"
-        else:
-            raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
+
+
+        #if interface. == "IPv4":
+        #    ip_command = "sudo ip"
+        #elif self.validIPAddress(ip) == "IPv6":
+        #    ip_command = "sudo ip -6"
+        #else:
+        #    logging.debug(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string. Config VLAN interface only.")
 
         command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
         stdout, stderr = self.execute(command)
