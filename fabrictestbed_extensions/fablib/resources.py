@@ -178,31 +178,7 @@ class Resources():
             return self.get_component_capacity(site_name, component_model_name) - self.get_component_allocated(site_name, component_model_name)
         except Exception as e:
             logging.warning(f"Failed to get {component_model_name} available {site_name}")
-            return 0
-
-
-
-
-    def get_disk_capacity(self, site_name):
-        try:
-            return self.get_topology_site(site_name).capacities.disk
-        except Exception as e:
-            logging.warning(f"Failed to get disk capacity {site_name}")
-            return 0
-
-    def get_disk_allocated(self, site_name):
-        try:
-            return self.get_topology_site(site_name).capacity_allocations.disk
-        except Exception as e:
-            logging.warning(f"Failed to get disk alloacted {site_name}")
-            return 0
-
-    def get_disk_available(self, site_name):
-        try:
-            return self.get_core_capacity(site_name) - self.get_disk_allocated(site_name)
-        except Exception as e:
-            logging.warning(f"Failed to get disk available {site_name}")
-            return 0
+            return self.get_component_capacity(site_name, component_model_name)
 
 
     def get_location_lat_long(self, site_name):
@@ -253,7 +229,7 @@ class Resources():
             return self.get_core_capacity(site_name) - self.get_core_allocated(site_name)
         except Exception as e:
             logging.warning(f"Failed to get cores available {site_name}")
-            return 0
+            return self.get_core_capacity(site_name)
 
     def get_ram_capacity(self, site_name):
         try:
@@ -271,10 +247,10 @@ class Resources():
 
     def get_ram_available(self, site_name):
         try:
-            return self.get_core_capacity(site_name) - self.get_ram_allocated(site_name)
+            return self.get_ram_capacity(site_name) - self.get_ram_allocated(site_name)
         except Exception as e:
             logging.warning(f"Failed to get ram available {site_name}")
-            return 0
+            return self.get_ram_capacity(site_name)
 
     def get_disk_capacity(self, site_name):
         try:
@@ -292,10 +268,10 @@ class Resources():
 
     def get_disk_available(self, site_name):
         try:
-            return self.get_core_capacity(site_name) - self.get_disk_allocated(site_name)
+            return self.get_disk_capacity(site_name) - self.get_disk_allocated(site_name)
         except Exception as e:
             logging.warning(f"Failed to get disk available {site_name}")
-            return 0
+            return self.get_disk_capacity(site_name)
 
     def update(self):
         return_status, topology = fablib.get_slice_manager().resources()
