@@ -331,6 +331,18 @@ class NetworkService():
             logging.warning(f"Failed to get gateway: {e}")
             return None
 
+    def get_available_ips(self, count=100):
+        try:
+            ip_list = []
+            gateway = self.get_gateway()
+            for i in range(count):
+                logging.debug(f"adding IP {i}")
+                ip_list.append(gateway+i+1)
+            return ip_list
+        except Exception as e:
+            logging.warning(f"Failed to get_available_ips: {e}")
+            return None
+
     def get_subnet(self):
         try:
             subnet = None
