@@ -131,11 +131,11 @@ class Node():
         return self.sliver
 
     @staticmethod
-    def new_node(slice=None, name=None, site=None):
+    def new_node(slice=None, name=None, site=None, avoid=[]):
         from fabrictestbed_extensions.fablib.node import Node
 
         if site==None:
-            [site] = fablib.get_random_sites()
+            [site] = fablib.get_random_sites(avoid=avoid)
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))

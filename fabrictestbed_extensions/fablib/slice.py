@@ -295,9 +295,9 @@ class Slice():
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site=None, cores=None, ram=None, disk=None, image=None, host=None):
+    def add_node(self, name, site=None, cores=None, ram=None, disk=None, image=None, host=None, avoid=[]):
         from fabrictestbed_extensions.fablib.node import Node
-        node = Node.new_node(slice=self, name=name, site=site)
+        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
 
         if cores or ram or disk:
             node.set_capacities(cores=cores, ram=ram, disk=disk)
