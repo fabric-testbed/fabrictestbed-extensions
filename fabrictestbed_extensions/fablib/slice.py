@@ -821,7 +821,7 @@ class Slice():
 
         logging.debug(f"network_iface_map: {self.network_iface_map}")
 
-    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=30):
+    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=60):
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
