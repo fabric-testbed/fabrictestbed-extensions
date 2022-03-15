@@ -76,6 +76,19 @@ class fablib(AbcFabLIB):
         return self.slice_manager
 
     @staticmethod
+    def get_site_names():
+        return fablib.get_resources().get_site_names()
+
+    @staticmethod
+    def list_sites():
+        return str(fablib.get_resources())
+
+    @staticmethod
+    def show_site(site_name):
+        return str(fablib.get_resources().show_site(site_name))
+
+
+    @staticmethod
     def get_resources():
         if not fablib.fablib_object.resources:
             fablib.get_available_resources()
@@ -88,8 +101,10 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_random_sites(count=1, avoid=[]):
-        #Need to avoid NCSA and MASS for now
-        always_avoid=['NCSA','MASS']
+        # Need to avoid SALT and MASS for now.
+        # Real fix is to check availability
+        always_avoid=['SALT','MASS', 'NCSA']
+        
         for site in always_avoid:
             if site not in avoid:
                 avoid.append(site)
@@ -224,7 +239,7 @@ class fablib(AbcFabLIB):
 
         if fablib.fablib_object.resources == None:
             fablib.fablib_object.resources = Resources()
-
+            
         if update:
             fablib.fablib_object.resources.update()
 

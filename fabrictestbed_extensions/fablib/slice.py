@@ -32,6 +32,7 @@ import time
 import logging
 from tabulate import tabulate
 
+from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -110,9 +111,13 @@ class Slice():
 
             if iface.get_network():
                 network_name = iface.get_network().get_name()
+            else:
+                network_name = None
 
             if iface.get_node():
                 node_name = iface.get_node().get_name()
+            else:
+                node_name = None
 
             table.append( [     iface.get_name(),
                                 node_name,
@@ -192,7 +197,6 @@ class Slice():
         else:
             raise Exception("Failed to get slice list: {}, {}".format(return_status, slices))
 
-
     def update_topology(self):
         #Update topology
         return_status, new_topo = fablib.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
@@ -202,12 +206,45 @@ class Slice():
         #Set slice attibutes
         self.topology = new_topo
 
+    def update_slivers(self):
+        status, slivers = fablib.get_slice_manager().slivers(slice_object=self.sm_slice)
+        if status == Status.OK:
+            self.slivers = slivers
+            return
+
+        raise Exception(f"{slivers}")
+
+    def get_sliver(self, reservation_id):
+        #for sliver in self.get_slivers():
+        #    if sliver.reservation_id == reservation_id:
+        #        return sliver
+
+        slivers = self.get_slivers()
+        sliver = list(filter(lambda x: x.reservation_id == reservation_id, slivers ))[0]
+
+        return sliver
+
+
+    def get_slivers(self):
+
+        if not hasattr(self, 'slivers') or not self.slivers:
+            self.update_slivers()
+
+        return self.slivers
+
+
+
     def update(self):
         try:
             self.update_slice()
-        except:
-            pass
-            #print('update slice error')
+        except Exception as e:
+            logging.warning(f"slice.update_slice failed: {e}")
+
+        try:
+            self.update_slivers()
+        except Exception as e:
+            logging.warning(f"slice.update_slivers failed: {e}")
+
 
         self.update_topology()
 
@@ -254,10 +291,25 @@ class Slice():
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site=None):
-        from fabrictestbed_extensions.fablib.node import Node
+    def add_l3network(self, name=None, interfaces=[], type='IPv6'):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+        return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
 
-        return Node.new_node(slice=self, name=name, site=site)
+    def add_node(self, name, site=None, cores=None, ram=None, disk=None, image=None, host=None, avoid=[]):
+        from fabrictestbed_extensions.fablib.node import Node
+        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
+
+        if cores or ram or disk:
+            node.set_capacities(cores=cores, ram=ram, disk=disk)
+
+        if image:
+            node.set_image(image)
+
+        if host:
+            node.set_host(host)
+
+
+        return node
 
     def get_object_by_reservation(self, reservation_id):
         # test all nodes
@@ -265,6 +317,14 @@ class Slice():
             for node in self.get_nodes():
                 if node.get_reservation_id() == reservation_id:
                     return node
+
+            for network in self.get_network_services():
+                if network.get_reservation_id() == reservation_id:
+                    return network
+
+            for iface in self.get_interfaces():
+                if iface.get_reservation_id() == reservation_id:
+                    return iface
 
                     # TODO: test other resource types.
         except:
@@ -290,13 +350,57 @@ class Slice():
         return origin_notices
 
 
+
     def get_notices(self):
 
         notices = {}
         for node in self.get_nodes():
             notices[node.get_reservation_id()] = node.get_error_message()
 
+        for network_service in self.get_network_services():
+            notices[network_service.get_reservation_id()] = network_service.get_error_message()
+
+        for component in self.get_components():
+            notices[component.get_reservation_id()] = component.get_error_message()
+
         return notices
+
+    def get_components(self):
+        from fabrictestbed_extensions.fablib.component import Component
+        #self.update()
+
+        return_components = []
+
+        #fails for topology that does not have nodes
+        try:
+            for node in self.get_nodes():
+                for component in node.get_components():
+                    return_components.append(component)
+
+        except Exception as e:
+            print("get_components: exception")
+            #traceback.print_exc()
+            pass
+        return return_components
+
+
+    def get_network_services(self):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+        #self.update()
+
+        return_networks = []
+
+        #fails for topology that does not have nodes
+        try:
+            for net_name, net in self.get_fim_topology().network_services.items():
+                if str(net.get_property('type')) in NetworkService.fim_network_service_types:
+                    return_networks.append(NetworkService(slice = self, fim_network_service = net))
+
+        except Exception as e:
+            print("get_network_services: exception")
+            #traceback.print_exc()
+            pass
+        return return_networks
 
     def get_nodes(self):
         from fabrictestbed_extensions.fablib.node import Node
@@ -337,7 +441,24 @@ class Slice():
 
         raise Exception("Interface not found: {}".format(name))
 
+    def get_l3networks(self):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
 
+        try:
+            return NetworkService.get_l3network_services(self)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+
+        return []
+
+    def get_l3network(self, name=None):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
+        try:
+            return NetworkService.get_l3network_service(self,name)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+        return None
 
     def get_l2networks(self):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -347,7 +468,7 @@ class Slice():
         except Exception as e:
             logging.info(e, exc_info=True)
 
-        return None
+        return []
 
     def get_l2network(self, name=None):
         from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -358,6 +479,24 @@ class Slice():
             logging.info(e, exc_info=True)
         return None
 
+    def get_networks(self):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
+        try:
+            return NetworkService.get_network_services(self)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+
+        return []
+
+    def get_network(self, name=None):
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
+        try:
+            return NetworkService.get_network_service(self,name)
+        except Exception as e:
+            logging.info(e, exc_info=True)
+        return None
 
     def delete(self):
         return_status, result = fablib.get_slice_manager().delete(slice_object=self.sm_slice)
@@ -507,19 +646,96 @@ class Slice():
 
     def load_interface_map(self):
         self.network_iface_map = {}
-        for net in self.get_l2networks():
+        for net in self.get_networks():
             self.network_iface_map[net.get_name()] = {}
 
         for node in self.get_nodes():
             node.load_data()
 
+    def validIPAddress(self, IP: str) -> str:
+        try:
+            return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
+        except ValueError:
+            return "Invalid"
 
     def build_interface_map(self):
         self.network_iface_map = {}
+
+        for net in self.get_l3networks():
+            logging.debug(f"net: {net}")
+            #gateway = IPv4Address(net.get_gateway())
+            #test_ip = gateway + 1
+            #subnet = IPv4Network(net.get_subnet())
+            if self.validIPAddress(net.get_gateway()) == 'IPv4':
+                gateway = IPv4Address(net.get_gateway())
+                subnet = IPv4Network(net.get_subnet())
+            elif self.validIPAddress(net.get_gateway()) == 'IPv6':
+                gateway = IPv6Address(net.get_gateway())
+                subnet = IPv6Network(net.get_subnet())
+            else:
+                raise Exception(f"FABNetv4: Gateway IP Invalid: {net.get_gateway()}")
+
+            test_ip = gateway + 1
+            #ip_base,cidr = net.get_subnet().split('/')
+            #logging.debug(f"L3 gateway: {gateway}")
+            #logging.debug(f"L3 test_ip: {test_ip}")
+
+            logging.debug(f"L3 subnet: {subnet}")
+            logging.debug(f"L3 gateway: {gateway}")
+            logging.debug(f"L3 test_ip: {test_ip}")
+
+            iface_map = {}
+
+            logging.info(f"Buiding iface map for l3 network: {net.get_name()}")
+            for iface in net.get_interfaces():
+                logging.debug(f"iface: {iface.get_name()}")
+                node = iface.get_node()
+                #node.clear_all_ifaces()
+                node_os_ifaces = node.get_dataplane_os_interfaces()
+
+                logging.debug(f"Test_node: {node.get_name()}: {node.get_ssh_command()}")
+                logging.debug(f"Test_tface: {iface.get_name()}")
+                logging.debug(f"node_os_ifaces: {node_os_ifaces}")
+                logging.debug(f"iface.get_vlan(): {iface.get_vlan()}")
+
+                found = False
+                for node_os_iface in node_os_ifaces:
+                    node_os_iface_name = node_os_iface['ifname']
+
+                    #set interface
+                    node.set_ip_os_interface(os_iface=node_os_iface_name,
+                                             vlan=iface.get_vlan(),
+                                             ip=test_ip,
+                                             cidr=subnet.prefixlen)
+
+                    #ping test
+                    #logging.debug(f"Node: {node.get_name()}: {node_os_iface_name}, {iface.get_vlan()}, {test_ip}")
+
+                    logging.debug(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {test_ip} to {gateway}")
+                    test_result = node.ping_test(gateway)
+                    logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {test_ip} to {gateway}: {test_result}")
+
+                    if iface.get_vlan() == None:
+                        node.flush_os_interface(node_os_iface_name)
+                    else:
+                        node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
+
+                    if test_result:
+                        logging.debug(f"test_result true: {test_result}")
+                        found = True
+                        iface_map[node.get_name()] = node_os_iface
+                        break
+
+                if found:
+                    break
+
+
+            self.network_iface_map[net.get_name()] = iface_map
+
         for net in self.get_l2networks():
             iface_map = {}
 
-            logging.info(f"Buiding iface map for network: {net.get_name()}")
+            logging.info(f"Buiding iface map for l2 network: {net.get_name()}")
             ifaces = net.get_interfaces()
 
             #target iface/node
@@ -602,7 +818,7 @@ class Slice():
 
         logging.debug(f"network_iface_map: {self.network_iface_map}")
 
-    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=30):
+    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=60):
         from fabrictestbed_extensions.fablib.fablib import fablib
         fabric = fablib()
 
@@ -631,7 +847,7 @@ class Slice():
             self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
 
             if progress:
-                print("Running post boot config ...",end="")
+                print("Running post boot config ... ",end="")
 
             #time.sleep(30)
             self.update()
@@ -644,3 +860,5 @@ class Slice():
 
         if progress:
             print("Done!")
+
+        return self.slice_id
