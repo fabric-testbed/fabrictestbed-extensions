@@ -61,30 +61,6 @@ class Resources():
         self.topology = None
         self.update()
 
-
-
- #for site_name, site in available_resources.topology.sites.items():
-#        print(f"{site_name}")
-#        print(f"{site}")
-#        print(f"{site.capacities.cpu}")
-#        print(f"{site.capacities.core}")
-#        print(f"{site.capacities.ram}")
-#        print(f"{site.capacities.disk}")
-#        print(f"{site.capacities.unit}")
-#        print(f"{site.location.postal}")
-#        print(f"{site.name}")
-#        print(f"{site.site}")
-#        print(f"{site.type}")
-#        print(f"{type(site)}")
-#        print(f"{site.capacity_allocations.core}")
-#        print(f"{site.capacity_allocations.ram}")
-#        print(f"{site.capacity_allocations.disk}")
-#print(f"{Capacities.UNITS}")
-#print(f"{Capacities.UNITS['bw']}")
-
-
-
-
     def __str__(self):
         table = []
         for site_name, site in self.topology.sites.items():
@@ -272,7 +248,7 @@ class Resources():
         except Exception as e:
             logging.warning(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site_name)
-
+          
     def update(self):
         return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
@@ -306,11 +282,3 @@ class Resources():
 
         return rtn_links
 
-        #Source
-        #source_interface = link.interface_list[0]
-        #source_parent = self.advertised_topology.get_parent_element(source_interface)
-        #source_node=self.advertised_topology.get_owner_node(source_parent)
-        #Target
-        #target_interface = link.interface_list[1]
-        #target_parent = self.advertised_topology.get_parent_element(target_interface)
-        #target_node=self.advertised_topology.get_owner_node(target_parent)

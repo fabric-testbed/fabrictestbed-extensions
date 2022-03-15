@@ -652,14 +652,11 @@ class Slice():
         for node in self.get_nodes():
             node.load_data()
 
-
-
     def validIPAddress(self, IP: str) -> str:
         try:
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:
             return "Invalid"
-
 
     def build_interface_map(self):
         self.network_iface_map = {}

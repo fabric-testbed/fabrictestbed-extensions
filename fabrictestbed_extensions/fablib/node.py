@@ -452,7 +452,6 @@ class Node():
 
         logging.debug(f"upload node: {self.get_name()}, local_file_path: {local_file_path}")
 
-
         if fablib.get_log_level() == logging.DEBUG:
             start = time.time()
 
@@ -784,6 +783,7 @@ class Node():
         #Bring up base iface
         logging.debug(f"{self.get_name()}->set_ip_os_interface: os_iface {os_iface}, vlan {vlan}, ip {ip}, cidr {cidr}, mtu {mtu}")
         command = f'{ip_command} link set dev {os_iface} up'
+
         if mtu != None:
             command += f" mtu {mtu}"
         stdout, stderr = self.execute(command)
@@ -856,8 +856,6 @@ class Node():
     def save_data(self):
         logging.debug(f"save_data: node {self.get_name()}")
 
-        #data = {}
-        #Get interface data
         interfaces = {}
         for i in self.get_interfaces():
             #print(f"interface: {i.get_name()}")
@@ -872,14 +870,12 @@ class Node():
             interfaces[i.get_name()] =  { 'network':  network_name,
                          'os_interface':  i.get_physical_os_interface() }
 
-
         with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'w') as outfile:
             json.dump(interfaces, outfile)
 
         #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
 
         self.upload_file(f'/tmp/fablib/fabric_data/{self.get_name()}.json', f'{self.get_name()}.json')
-
 
 
     def load_data(self):
@@ -924,11 +920,12 @@ class Node():
         command = f"sudo ip link del link {link} name {os_iface}"
         stdout, stderr = self.execute(command)
 
+
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None, interface=None):
+
         if vlan: vlan=str(vlan)
         if cidr: cidr=str(cidr)
         if mtu: mtu=str(mtu)
-
 
         try:
             gateway = None
@@ -952,6 +949,7 @@ class Node():
         #    logging.debug(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string. Config VLAN interface only.")
 
         command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+
         stdout, stderr = self.execute(command)
         command = f'{ip_command} link set dev {os_iface}.{vlan} up'
         stdout, stderr = self.execute(command)

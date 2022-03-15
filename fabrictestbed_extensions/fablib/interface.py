@@ -79,7 +79,7 @@ class Interface():
             network_name = self.get_network().get_name()
         else:
             network_name = None
-
+            
         table = [   [ "Name", self.get_name() ],
                     [ "Network", network_name ],
                     [ "Bandwidth", self.get_bandwidth() ],
@@ -139,7 +139,6 @@ class Interface():
         if self.get_vlan() != None:
             self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
                                                   vlan=self.get_vlan(), interface=self)
-
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
         if cidr: cidr=str(cidr)

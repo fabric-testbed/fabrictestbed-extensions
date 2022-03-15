@@ -64,8 +64,6 @@ class fablib(AbcFabLIB):
         self.build_slice_manager()
         self.resources = None
 
-
-
     def build_slice_manager(self):
         self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
                              cm_host=self.credmgr_host,
@@ -106,6 +104,7 @@ class fablib(AbcFabLIB):
         # Need to avoid SALT and MASS for now.
         # Real fix is to check availability
         always_avoid=['SALT','MASS', 'NCSA']
+        
         for site in always_avoid:
             if site not in avoid:
                 avoid.append(site)
@@ -240,7 +239,7 @@ class fablib(AbcFabLIB):
 
         if fablib.fablib_object.resources == None:
             fablib.fablib_object.resources = Resources()
-
+            
         if update:
             fablib.fablib_object.resources.update()
 

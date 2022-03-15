@@ -184,7 +184,7 @@ class Component():
             return 'NIC_Basic'
         else:
             return None
-
+          
     def get_reservation_id(self):
         try:
             #This does not work
@@ -204,7 +204,6 @@ class Component():
             return self.get_fim_component().get_property(pname='reservation_info').error_message
         except:
             return ""
-
 
     def get_fim_model(self):
         return self.get_fim_component().model
