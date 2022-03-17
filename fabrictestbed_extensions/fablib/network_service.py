@@ -84,7 +84,7 @@ class NetworkService():
         return NetworkService.get_fim_l2network_service_types() + NetworkService.get_fim_l3network_service_types()
 
     @staticmethod
-    def calculate_l2_nstype(interfaces=None) -> ServiceType:
+    def calculate_l2_nstype(interfaces=None):
         """
         Determines the L2 network service type based on the number of interfaces inputted.
 
@@ -117,7 +117,7 @@ class NetworkService():
         return rtn_nstype
 
     @staticmethod
-    def validate_nstype(type, interfaces) -> bool:
+    def validate_nstype(type, interfaces):
         """
         Verifies the network service type against the number of interfaces.
 
@@ -455,7 +455,7 @@ class NetworkService():
         """
         return self.get_fim_network_service().name
 
-    def get_interfaces(self) -> list[Interface]:
+    def get_interfaces(self):
         """
         Gets the interfaces on this network service.
 

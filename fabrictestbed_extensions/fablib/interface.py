@@ -225,7 +225,7 @@ class Interface():
         """
         return self.get_fim_interface().name
 
-    def get_component(self) -> Component:
+    def get_component(self):
         """
         Gets the component attached to this interface.
 
@@ -234,7 +234,7 @@ class Interface():
         """
         return self.component
 
-    def get_model(self) -> str:
+    def get_model(self):
         """
         Gets the component model type on this interface's component.
 
@@ -243,7 +243,7 @@ class Interface():
         """
         return self.get_component().get_model()
 
-    def get_site(self) -> str:
+    def get_site(self):
         """
         Gets the site this interface's component is on.
 
@@ -252,7 +252,7 @@ class Interface():
         """
         return self.get_component().get_site()
 
-    def get_slice(self) -> Slice:
+    def get_slice(self):
         """
         Gets the FABLIB slice this interface's node is attached to.
 
@@ -261,7 +261,7 @@ class Interface():
         """
         return self.get_node().get_slice()
 
-    def get_node(self) -> Node:
+    def get_node(self):
         """
         Gets the node this interface's component is on.
 

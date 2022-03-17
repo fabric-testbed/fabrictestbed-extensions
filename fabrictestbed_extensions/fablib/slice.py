@@ -191,7 +191,7 @@ class Slice():
 
         return slice
 
-    def get_fim_topology(self) -> ExperimentTopology:
+    def get_fim_topology(self):
         """
         Gets the slice's experiment topology
 
@@ -287,7 +287,7 @@ class Slice():
 
         self.update_topology()
 
-    def get_slice_public_key(self) -> str:
+    def get_slice_public_key(self):
         """
         Gets the slice public key.
 
@@ -296,7 +296,7 @@ class Slice():
         """
         return self.slice_key['slice_public_key']
 
-    def get_private_key_passphrase(self) -> str:
+    def get_private_key_passphrase(self):
         """
         Gets the slice private key passphrase.
 
@@ -308,7 +308,7 @@ class Slice():
         else:
             return None
 
-    def get_slice_public_key(self) -> str:
+    def get_slice_public_key(self):
         """
         Gets the slice public key.
 
@@ -320,7 +320,7 @@ class Slice():
         else:
             return None
 
-    def get_slice_public_key_file(self) -> str:
+    def get_slice_public_key_file(self):
         """
         Gets the path to the slice public key file.
 
@@ -332,7 +332,7 @@ class Slice():
         else:
             return None
 
-    def get_slice_private_key_file(self) -> str:
+    def get_slice_private_key_file(self):
         """
         Gets the path to the slice private key file.
 
@@ -344,7 +344,7 @@ class Slice():
         else:
             return None
 
-    def get_state(self) -> SliceState:
+    def get_state(self):
         """
         Gets the slice state off of the slice manager slice.
 
@@ -353,7 +353,7 @@ class Slice():
         """
         return self.sm_slice.slice_state
 
-    def get_name(self)-> str:
+    def get_name(self):
         """
         Gets the slice's name.
 
@@ -371,7 +371,7 @@ class Slice():
         """
         return self.slice_id
 
-    def get_lease_end(self) -> str:
+    def get_lease_end(self):
         """
         Gets the timestamp at which the slice lease ends.
 
@@ -380,7 +380,7 @@ class Slice():
         """
         return self.sm_slice.lease_end
 
-    def add_l2network(self, name=None, interfaces=[], type=None) -> NetworkService:
+    def add_l2network(self, name=None, interfaces=[], type=None):
         """
         Creates a new L2 network service using this fablib slice.
 
@@ -430,7 +430,7 @@ class Slice():
 
         return node
 
-    def get_object_by_reservation(self, reservation_id) -> Union[Node]:
+    def get_object_by_reservation(self, reservation_id):
         """
         Gets an object associated with this slice by its reservation ID. Currently, this method can find Node objects.
 
@@ -457,7 +457,7 @@ class Slice():
 
         return None
 
-    def get_error_messages(self) -> list[dict[str, str]]:
+    def get_error_messages(self):
         """
         Gets the error messages found in the slice notices.
 
@@ -576,7 +576,7 @@ class Slice():
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_interfaces(self) -> list[Interface]:
+    def get_interfaces(self):
         """
         Gets a list of fablib interfaces on this slice's nodes.
 
@@ -589,7 +589,7 @@ class Slice():
                 interfaces.append(interface)
         return interfaces
 
-    def get_interface(self, name=None) -> Interface:
+    def get_interface(self, name=None):
         """
         Gets a particular fablib interface from this slice's nodes.
 
@@ -734,7 +734,7 @@ class Slice():
 
         return exception_string
 
-    def wait(self, timeout=360, interval=10, progress=False) -> SMSlice:
+    def wait(self, timeout=360, interval=10, progress=False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
 
@@ -795,7 +795,7 @@ class Slice():
 
         return self.network_iface_map
 
-    def wait_ssh(self, timeout=360, interval=10, progress=False) -> bool:
+    def wait_ssh(self, timeout=360, interval=10, progress=False):
         """
         Checks that this slice's resources are ssh-able.
 
@@ -889,7 +889,7 @@ class Slice():
         for node in self.get_nodes():
             node.load_data()
 
-    def validIPAddress(self, IP: str) -> str:
+    def validIPAddress(self, IP: str):
         try:
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:

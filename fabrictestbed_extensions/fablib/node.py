@@ -178,7 +178,7 @@ class Node():
         from fabrictestbed_extensions.fablib.node import Node
         return Node(slice, node)
 
-    def get_fim_node(self) -> FIMNode:
+    def get_fim_node(self):
         """
         Gets the FABRIC node associated with this fablib node.
 
@@ -253,7 +253,7 @@ class Node():
         labels.instance_parent = host_name
         self.get_fim_node().set_properties(labels=labels)
 
-    def get_slice(self) -> Slice:
+    def get_slice(self):
         """
         Gets the fablib slice associated with this node.
 
@@ -262,7 +262,7 @@ class Node():
         """
         return self.slice
 
-    def get_name(self) -> str:
+    def get_name(self):
         """
         Gets the name of the FABRIC node.
 
@@ -274,7 +274,7 @@ class Node():
         except:
             return None
 
-    def get_cores(self) -> int:
+    def get_cores(self):
         """
         Gets the number of cores on the FABRIC node.
 
@@ -286,7 +286,7 @@ class Node():
         except:
             return None
 
-    def get_ram(self) -> int:
+    def get_ram(self):
         """
         Gets the amount of RAM on the FABRIC node.
 
@@ -298,7 +298,7 @@ class Node():
         except:
             return None
 
-    def get_disk(self) -> int:
+    def get_disk(self):
         """
         Gets the amount of disk space on the FABRIC node.
 
@@ -310,7 +310,7 @@ class Node():
         except:
             return None
 
-    def get_image(self) -> str:
+    def get_image(self):
         """
         Gets the image reference on the FABRIC node.
 
@@ -358,7 +358,7 @@ class Node():
         except:
             return None
 
-    def get_management_ip(self) -> str:
+    def get_management_ip(self):
         """
         Gets the management IP on the FABRIC node.
 
@@ -370,7 +370,7 @@ class Node():
         except:
             return None
 
-    def get_reservation_id(self) -> str:
+    def get_reservation_id(self):
         """
         Gets the reservation ID on the FABRIC node.
 
@@ -382,7 +382,7 @@ class Node():
         except:
             return None
 
-    def get_reservation_state(self) -> str:
+    def get_reservation_state(self):
         """
         Gets the reservation state on the FABRIC node.
 
@@ -394,7 +394,7 @@ class Node():
         except:
             return None
 
-    def get_error_message(self) -> str:
+    def get_error_message(self):
         """
         Gets the error message on the FABRIC node.
 
@@ -406,7 +406,7 @@ class Node():
         except:
             return ""
 
-    def get_interfaces(self) -> list[Interface]:
+    def get_interfaces(self):
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -421,7 +421,7 @@ class Node():
 
         return interfaces
 
-    def get_interface(self, name=None, network_name=None) -> Interface:
+    def get_interface(self, name=None, network_name=None):
         """
         Gets a particular interface associated with the FABRIC node.
 
@@ -446,7 +446,7 @@ class Node():
 
         raise Exception("Interface not found: {}".format(name))
 
-    def get_username(self) -> str:
+    def get_username(self):
         """
         Gets the username on this fablib node.
 
@@ -455,7 +455,7 @@ class Node():
         """
         return self.username
 
-    def get_public_key(self) -> str:
+    def get_public_key(self):
         """
         Gets the public key on fablib slice.
 
@@ -464,7 +464,7 @@ class Node():
         """
         return self.get_slice().get_slice_public_key()
 
-    def get_public_key_file(self) -> str:
+    def get_public_key_file(self):
         """
         Gets the public key file path on the fablib slice.
 
@@ -473,7 +473,7 @@ class Node():
         """
         return self.get_slice().get_slice_public_key_file()
 
-    def get_private_key(self) -> str:
+    def get_private_key(self):
         """
         Gets the private key on the fablib slice.
 
@@ -482,7 +482,7 @@ class Node():
         """
         return self.get_slice().get_slice_private_key()
 
-    def get_private_key_file(self) -> str:
+    def get_private_key_file(self):
         """
         Gets the private key file path on the fablib slice.
 
@@ -500,7 +500,7 @@ class Node():
         """
         return self.get_slice().get_private_key_passphrase()
 
-    def add_component(self, model=None, name=None) -> Component:
+    def add_component(self, model=None, name=None):
         """
         Creates a new FABRIC component using this fablib node.
 
@@ -513,7 +513,7 @@ class Node():
         """
         return Component.new_component(node=self, model=model, name=name)
 
-    def get_components(self) -> list[Component]:
+    def get_components(self):
         """
         Gets a list of components associated with this node.
 

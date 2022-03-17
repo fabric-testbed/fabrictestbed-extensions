@@ -65,7 +65,7 @@ from .node import Node
 
 #from .abc_fablib import AbcFabLIB
 
-from .. import images
+#from .. import images
 
 
 # class Component(AbcFabLIB):
@@ -152,7 +152,7 @@ class Component():
         self.fim_component = fim_component
         self.node = node
 
-    def get_interfaces(self) -> list[Interface]:
+    def get_interfaces(self):
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
@@ -165,7 +165,7 @@ class Component():
 
         return ifaces
 
-    def get_fim_component(self) -> FIMComponent:
+    def get_fim_component(self):
         """
         Gets the FABRIC component this fablib component represents.
 
@@ -174,7 +174,7 @@ class Component():
         """
         return self.fim_component
 
-    def get_slice(self) -> Slice:
+    def get_slice(self):
         """
         Gets the fablib slice associated with this component's node.
 
@@ -183,7 +183,7 @@ class Component():
         """
         return self.node.get_slice()
 
-    def get_node(self) -> Node:
+    def get_node(self):
         """
         Gets the fablib node this component is associated with.
 
@@ -192,7 +192,7 @@ class Component():
         """
         return self.node
 
-    def get_site(self) -> str:
+    def get_site(self):
         """
         Gets the name of the site this component's node is on.
 
@@ -201,7 +201,7 @@ class Component():
         """
         return self.node.get_site()
 
-    def get_name(self) -> str:
+    def get_name(self):
         """
         Gets the name of this component from the FABRIC component.
 
@@ -213,7 +213,7 @@ class Component():
     def get_details(self):
         return self.get_fim_component().details
 
-    def get_disk(self) -> int:
+    def get_disk(self):
         """
         Gets the amount of disk space on this component.
 
@@ -268,7 +268,7 @@ class Component():
     def get_fim_model(self):
         return self.get_fim_component().model
 
-    def get_type(self) -> str:
+    def get_type(self):
         """
         Gets the type of this component.
 
