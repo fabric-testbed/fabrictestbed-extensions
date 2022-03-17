@@ -29,6 +29,9 @@ import re
 
 import functools
 import time
+import logging
+from tabulate import tabulate
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -78,6 +81,25 @@ class Interface():
         self.fim_interface  = fim_interface
         self.component = component
 
+
+    def __str__(self):
+        if self.get_network():
+            network_name = self.get_network().get_name()
+        else:
+            network_name = None
+            
+        table = [   [ "Name", self.get_name() ],
+                    [ "Network", network_name ],
+                    [ "Bandwidth", self.get_bandwidth() ],
+                    [ "VLAN", self.get_vlan() ],
+                    [ "MAC", self.get_mac() ],
+                    [ "Physical OS Interface", self.get_physical_os_interface_name() ],
+                    [ "OS Interface", self.get_os_interface() ],
+                    ]
+
+        return tabulate(table)
+
+
     def get_os_interface(self):
         """
         Gets a formatted string with the OS interface name and the VLAN.
@@ -86,7 +108,7 @@ class Interface():
         :rtype: str
         """
         try:
-            os_iface = self.get_physical_os_interface()['ifname']
+            os_iface = self.get_physical_os_interface_name()
             vlan = self.get_vlan()
 
             if vlan is not None:
@@ -117,17 +139,44 @@ class Interface():
         except:
             return None
 
+    def get_physical_os_interface_name(self):
+        if self.get_physical_os_interface():
+            return self.get_physical_os_interface()['ifname']
+        else:
+            return None
+
     def config_vlan_iface(self):
-        if self.get_vlan() is not None:
-            self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
-                                                  vlan=self.get_vlan())
+        if self.get_vlan() != None:
+            self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
+                                                  vlan=self.get_vlan(), interface=self)
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
-        self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface()['ifname'],
+        if cidr: cidr=str(cidr)
+        if mtu: mtu=str(mtu)
+
+        self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface_name(),
                                             vlan=self.get_vlan(),
                                             ip=ip, cidr=cidr, mtu=mtu)
 
+
+    def ip_addr_add(self, addr, subnet):
+        self.get_node().ip_addr_add(addr, subnet, self)
+
+
+    def ip_addr_del(self, addr, subnet):
+        self.get_node().ip_addr_del(addr, subnet, self)
+
+    def ip_link_up(self):
+        self.get_node().ip_link_up(self)
+
+    def ip_link_down(self):
+        self.get_node().ip_link_down(self)
+
+
+
+
     def set_vlan(self, vlan=None):
+        if vlan: vlan=str(vlan)
 
         if_labels = self.get_fim_interface().get_property(pname="labels")
         if_labels.vlan = str(vlan)
@@ -146,7 +195,28 @@ class Interface():
             vlan = None
         return vlan
 
-    def get_name(self) -> str:
+    def get_reservation_id(self):
+        try:
+            #TODO THIS DOESNT WORK.
+            #print(f"{self.get_fim_interface()}")
+            return self.get_fim_interface().get_property(pname='reservation_info').reservation_id
+        except:
+            return None
+
+    def get_reservation_state(self):
+        try:
+            return self.get_fim_interface().get_property(pname='reservation_info').reservation_state
+        except:
+            return None
+
+    def get_error_message(self):
+        try:
+            return self.get_fim_interface().get_property(pname='reservation_info').error_message
+        except:
+            return ""
+
+
+    def get_name(self):
         """
         Gets the name of this interface.
 
@@ -200,16 +270,22 @@ class Interface():
         """
         return self.get_component().get_node()
 
-    def get_network(self) -> NetworkService:
+    def get_network(self):
         """
         Gets the network this interface is on.
 
         :return: the network service this interface is on
         :rtype: NetworkService
         """
-        for net in self.get_slice().get_l2networks():
-            if net.has_interface(self):
-                return net
+        if hasattr(self, 'network'):
+            #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
+            return self.network
+        else:
+            for net in self.get_slice().get_networks():
+                if net.has_interface(self):
+                    self.network = net
+                    #print(f"return found network, {self.network.get_name()}")
+                    return self.network
 
+        #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
         return None
-        # raise Exception(f"Network not found: interface {self.get_name()}")

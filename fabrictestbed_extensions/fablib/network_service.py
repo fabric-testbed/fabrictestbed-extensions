@@ -29,6 +29,10 @@ import re
 
 import functools
 import time
+import logging
+from tabulate import tabulate
+
+
 
 import importlib.resources as pkg_resources
 from typing import List
@@ -39,8 +43,9 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fim.slivers.network_service import NetworkServiceSliver, ServiceType, NSLayer
 
-from ipaddress import ip_address, IPv4Address
+from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 #from .abc_fablib import AbcFabLIB
 from fim.user.network_service import NetworkService as FIMNetworkService
@@ -59,7 +64,24 @@ class NetworkService():
                             }
 
     #Type names used in fim network services
-    fim_network_service_types = [ 'L2Bridge', 'L2PTP', 'L2STS']
+    fim_l2network_service_types = [ 'L2Bridge', 'L2PTP', 'L2STS']
+    fim_l3network_service_types = [ 'FABNetv4', 'FABNetv6']
+
+    #fim_network_service_types = [ 'L2Bridge', 'L2PTP', 'L2STS']
+
+
+
+    @staticmethod
+    def get_fim_l2network_service_types():
+        return NetworkService.fim_l2network_service_types
+
+    @staticmethod
+    def get_fim_l3network_service_types():
+        return NetworkService.fim_l3network_service_types
+
+    @staticmethod
+    def get_fim_network_service_types():
+        return NetworkService.get_fim_l2network_service_types() + NetworkService.get_fim_l3network_service_types()
 
     @staticmethod
     def calculate_l2_nstype(interfaces=None) -> ServiceType:
@@ -70,18 +92,24 @@ class NetworkService():
         :type interfaces: list[Interface]
         :raises Exception: if no network service type is not appropriate for the number of interfaces
         :return: the network service type
-        :rtype: SergviceType
+        :rtype: ServiceType
         """
+        # if there is a basic NIC, WAN must be STS
+        basic_nic_count = 0
+
         sites = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
+            if interface.get_model()=="NIC_Basic":
+                basic_nic_count += 1
 
         rtn_nstype = None
         if len(sites) == 1:
             rtn_nstype = NetworkService.network_service_map['L2Bridge']
-        elif len(sites) == 2 and len(interfaces) == 2:
+        elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
+            #TODO: remove this when STS works on all links.
             rtn_nstype = NetworkService.network_service_map['L2PTP']
-        elif len(sites) == 2  and len(interfaces) > 2:
+        elif len(sites) == 2  and basic_nic_count == 2 and len(interfaces) == 2:
             rtn_nstype = NetworkService.network_service_map['L2STS']
         else:
             raise Exception(f"Invalid Network Service: Networks are limited to 2 unique sites. Site requested: {sites}")
@@ -122,9 +150,22 @@ class NetworkService():
             if not len(sites) == 2:
                 raise Exception(f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}")
         else:
-            raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.fim_network_service_types} or None for automatic selection")
+            raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.get_fim_l2network_service_types()} or None for automatic selection")
 
         return True
+
+    @staticmethod
+    def new_l3network(slice=None, name=None, interfaces=[], type=None):
+        if type == "IPv6":
+            nstype = ServiceType.FABNetv6
+        else:
+            nstype = ServiceType.FABNetv4
+
+        # TODO: need a fabnet version of this
+        # validate nstype and interface List
+        #NetworkService.validate_nstype(nstype, interfaces)
+
+        return NetworkService.new_network_service(slice=slice, name=name, nstype=nstype, interfaces=interfaces)
 
     @staticmethod
     def new_l2network(slice=None, name=None, interfaces=[], type=None):
@@ -145,13 +186,21 @@ class NetworkService():
         if type == None:
             nstype=NetworkService.calculate_l2_nstype(interfaces=interfaces)
         else:
-            if type in NetworkService.fim_network_service_types:
+            if type in NetworkService.get_fim_l2network_service_types():
                 nstype=NetworkService.network_service_map[type]
             else:
-                raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.fim_network_service_types} or None for automatic selection")
+                raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.get_fim_l2network_service_types()} or None for automatic selection")
 
         # validate nstype and interface List
         NetworkService.validate_nstype(nstype, interfaces)
+
+        #Set default VLANs for P2P networks that did not assing VLANs
+        if nstype == ServiceType.L2PTP: # or nstype == ServiceType.L2STS:
+            for interface in interfaces:
+                if interface.get_model() != 'NIC_Basic' and not interface.get_vlan():
+                    #TODO: Long term we might have muliple vlan on one property
+                    # and will need to make sure they are unique.  For now this okay
+                    interface.set_vlan("100")
 
         return NetworkService.new_network_service(slice=slice, name=name, nstype=nstype, interfaces=interfaces)
 
@@ -174,11 +223,38 @@ class NetworkService():
         for interface in interfaces:
             fim_interfaces.append(interface.get_fim_interface())
 
+        logging.info(f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}")
         fim_network_service = slice.topology.add_network_service(name=name,
                                                                  nstype=nstype,
                                                                  interfaces=fim_interfaces)
 
         return NetworkService(slice=slice, fim_network_service=fim_network_service)
+
+    @staticmethod
+    def get_l3network_services(slice=None):
+        topology = slice.get_fim_topology()
+
+        rtn_network_services = []
+        fim_network_service = None
+        logging.debug(f"NetworkService.get_fim_l3network_service_types(): {NetworkService.get_fim_l3network_service_types()}")
+
+        for net_name, net in topology.network_services.items():
+            logging.debug(f"scanning network: {net_name}, net: {net}")
+            if str(net.get_property('type')) in NetworkService.get_fim_l3network_service_types():
+                logging.debug(f"returning network: {net_name}, net: {net}")
+                rtn_network_services.append(NetworkService(slice = slice, fim_network_service = net))
+
+        return rtn_network_services
+
+    @staticmethod
+    def get_l3network_service(slice=None, name=None):
+
+        for net in NetworkService.get_l3network_services(slice=slice):
+            if net.get_name() == name:
+                return net
+
+        raise Exception(f"Network not found. Slice {slice.name}, network {name}")
+
 
     @staticmethod
     def get_l2network_services(slice=None):
@@ -195,7 +271,7 @@ class NetworkService():
         rtn_network_services = []
         fim_network_service = None
         for net_name, net in topology.network_services.items():
-            if str(net.get_property('type')) in NetworkService.fim_network_service_types:
+            if str(net.get_property('type')) in NetworkService.get_fim_l2network_service_types():
                 rtn_network_services.append(NetworkService(slice=slice, fim_network_service=net))
 
         return rtn_network_services
@@ -219,6 +295,27 @@ class NetworkService():
 
         raise Exception(f"Network not found. Slice {slice.name}, network {name}")
 
+    @staticmethod
+    def get_network_services(slice=None):
+        topology = slice.get_fim_topology()
+
+        rtn_network_services = []
+        fim_network_service = None
+        for net_name, net in topology.network_services.items():
+            if str(net.get_property('type')) in NetworkService.get_fim_network_service_types():
+                rtn_network_services.append(NetworkService(slice = slice, fim_network_service = net))
+
+        return rtn_network_services
+
+    @staticmethod
+    def get_network_service(slice=None, name=None):
+
+        for net in NetworkService.get_network_services(slice=slice):
+            if net.get_name() == name:
+                return net
+
+        raise Exception(f"Network not found. Slice {slice.name}, network {name}")
+
     def __init__(self, slice=None, fim_network_service=None):
         """
         Constructor. Sets the fablib slice and the FABRIC network service.
@@ -232,7 +329,23 @@ class NetworkService():
         self.fim_network_service = fim_network_service
         self.slice = slice
 
-    def get_slice(self) -> Slice:
+
+    def __str__(self):
+        table = [ ["ID", self.get_reservation_id()],
+            ["Name", self.get_name()],
+            ["Layer", self.get_layer()],
+            ["Type", self.get_type()],
+            ["Site", self.get_site()],
+            ["Gateway", self.get_gateway()],
+            ["L3 Subnet", self.get_subnet()],
+            ["Reservation State", self.get_reservation_state()],
+            ["Error Message", self.get_error_message()],
+            ]
+
+        return tabulate(table) #, headers=["Property", "Value"])
+
+
+    def get_slice(self):
         """
         Gets the fablib slice this network service is built on.
 
@@ -241,7 +354,31 @@ class NetworkService():
         """
         return self.slice
 
-    def get_fim_network_service(self) -> FIMNetworkService:
+    def get_site(self):
+        try:
+            return self.get_sliver().sliver.site
+        except Exception as e:
+            logging.warning(f"Failed to get site: {e}")
+            return None
+
+    def get_layer(self):
+        try:
+            return self.get_sliver().sliver.layer
+        except Exception as e:
+            logging.warning(f"Failed to get layer: {e}")
+            return None
+
+    def get_type(self):
+        try:
+            return self.get_sliver().sliver.resource_type
+        except Exception as e:
+            logging.warning(f"Failed to get type: {e}")
+            return None
+
+    def get_sliver(self):
+        return self.sliver
+
+    def get_fim_network_service(self):
         """
         Gets the FABRIC network service this instance represents.
 
@@ -250,7 +387,66 @@ class NetworkService():
         """
         return self.fim_network_service
 
-    def get_name(self) -> str:
+    def get_error_message(self):
+        try:
+            return self.get_fim_network_service().get_property(pname='reservation_info').error_message
+        except:
+            return ""
+
+    def get_gateway(self):
+        try:
+            gateway = None
+            if self.get_layer() == NSLayer.L3:
+                if self.get_type() == ServiceType.FABNetv6:
+                    gateway = IPv6Address(self.get_sliver().sliver.gateway.gateway)
+                elif self.get_type() == ServiceType.FABNetv4:
+                    gateway = IPv4Address(self.get_sliver().sliver.gateway.gateway)
+
+            return gateway
+        except Exception as e:
+            logging.warning(f"Failed to get gateway: {e}")
+            return None
+
+    def get_available_ips(self, count=100):
+        try:
+            ip_list = []
+            gateway = self.get_gateway()
+            for i in range(count):
+                logging.debug(f"adding IP {i}")
+                ip_list.append(gateway+i+1)
+            return ip_list
+        except Exception as e:
+            logging.warning(f"Failed to get_available_ips: {e}")
+            return None
+
+    def get_subnet(self):
+        try:
+            subnet = None
+            if self.get_layer() == NSLayer.L3:
+                if self.get_type() == ServiceType.FABNetv6:
+                    subnet = IPv6Network(self.get_sliver().sliver.gateway.subnet)
+                elif self.get_type() == ServiceType.FABNetv4:
+                    subnet = IPv4Network(self.get_sliver().sliver.gateway.subnet)
+            return subnet
+        except Exception as e:
+            logging.warning(f"Failed to get subnet: {e}")
+            return None
+
+    def get_reservation_id(self):
+        try:
+            return self.get_fim_network_service().get_property(pname='reservation_info').reservation_id
+        except:
+            logging.warning(f"Failed to get reservation_id: {e}")
+            return None
+
+    def get_reservation_state(self):
+        try:
+            return self.get_fim_network_service().get_property(pname='reservation_info').reservation_state
+        except:
+            logging.warning(f"Failed to get reservation_state: {e}")
+            return None
+
+    def get_name(self):
         """
         Gets the name of this network service.
 
@@ -272,7 +468,7 @@ class NetworkService():
 
         return interfaces
 
-    def get_interface(self, name=None) -> Interface:
+    def get_interface(self, name=None):
         """
         Gets a particular interface on this network service.
 
@@ -281,22 +477,13 @@ class NetworkService():
         :return: the particular interface
         :rtype: Interface
         """
-        # print(f"network_service.get_interface: name {name}")
-        for interface in self.get_interfaces():
-            # print(f"network_service.get_interface: self.get_name() {self.get_name()}, interface.get_name(): {interface.get_name()}")
-
-            # interface_name = f"{self.get_name()}-{interface.get_name()}"
-            interface_name = f"{interface.get_name()}"
-            # print(f"network_service.get_interface: interface_name {interface_name}, name: {name}")
-
-            if interface_name == name:
-                # print(f"returning iface: {interface.get_name()}")
-                return interface
+        for interface in self.get_fim_network_service().interface_list:
+            if name in interface.name:
+                return self.get_slice().get_interface(name=interface.name)
 
         return None
-        # raise Exception(f"Interface not found: interface {name}")
 
-    def has_interface(self, interface) -> bool:
+    def has_interface(self, interface):
         """
         Determines whether this network service has a particular interface.
 
@@ -305,82 +492,9 @@ class NetworkService():
         :return: whether this network service has interface
         :rtype: bool
         """
-        if self.get_interface(name=interface.get_name()) == None:
-            return False
-        else:
-            return True
+        for fim_interface in self.get_fim_network_service().interface_list:
+            #print(f"fim_interface.name: {fim_interface.name}, interface.get_name(): {interface.get_name()}")
+            if fim_interface.name.endswith(interface.get_name()):
+                return True
 
-    def find_nic_mapping(self, net_name, nodes):
-        return_data = {}
-
-        #copy scripts to nodes
-        for node in nodes:
-            #config node1
-            file_attributes = upload_file(username, node, 'scripts/host_set_all_dataplane_ips.py','host_set_all_dataplane_ips.py')
-            #print("file_attributes: {}".format(file_attributes))
-            file_attributes = upload_file(username, node, 'scripts/find_nic_mapping.py','find_nic_mapping.py')
-            #print("file_attributes: {}".format(file_attributes))
-
-
-        #Config target node
-        target_node = nodes[0]
-        stdout = execute_script(username, target_node, 'sudo python3 host_set_all_dataplane_ips.py')
-        #print("stdout: {}".format(stdout))
-        #print(stdout)
-
-        target_ifaces = json.loads(stdout.replace('\n',''))
-        #print(ifaces)
-        #for i in ifaces['management']:
-        #    print(i)
-
-        #for i in ifaces['dataplane']:
-        #    print(i)
-        #node1_map = { 'data' : {'ens6': '192.168.1.100', etc... }, 'management': { 'ens3': '10.1.1.1'}  }
-
-
-        # Test s1 ifaces
-        target_net_ip = None
-        for node in nodes:
-            #skip target node
-            if node == target_node:
-                continue
-
-            #test node interfaces against target
-            for target, ip in target_ifaces['dataplane']:
-                node1_dataplane_ip = ip
-                node2_dataplane_ip = ip.replace('100','101')
-                node2_cidr = '24'
-                #node2_management_ip = str(node2.management_ip)
-                #print("S1 Name        : {}".format(node2.name))
-                #print("Management IP    : {}".format(node2_management_ip))
-
-                stdout = execute_script(username, node, 'python3 find_nic_mapping.py {} {} {} {}'.format('net',node2_dataplane_ip,node2_cidr,node1_dataplane_ip) )
-                iface =  stdout.replace('\n','')
-                #print("stdout: {}".format(stdout))
-                if iface != 'None':
-                    #print(iface)
-                    #return iface
-                    if target_net_ip == None:
-                        return_data[target_node.name]=target
-                    return_data[node.name]=iface
-                    break
-
-
-
-        return return_data
-
-    def flush_dataplane_ips(nodes):
-
-        for node in nodes:
-            #config node1
-            file_attributes = upload_file(username, node, 'scripts/host_flush_all_dataplane_ips.py','host_flush_all_dataplane_ips.py')
-            #print("file_attributes: {}".format(file_attributes))
-
-            stdout = execute_script(username, node, 'sudo python3 host_flush_all_dataplane_ips.py')
-            #print("stdout: {}".format(stdout))
-            #print(stdout)
-
-
-    def flush_all_dataplane_ips():
-        for node_name, node in experiment_topology.nodes.items():
-            flush_dataplane_ips([node])
+        return False
