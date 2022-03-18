@@ -108,6 +108,7 @@ class Interface():
         :rtype: str
         """
         try:
+            #logging.debug(f"iface: {self}")
             os_iface = self.get_physical_os_interface_name()
             vlan = self.get_vlan()
 

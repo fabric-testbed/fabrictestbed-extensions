@@ -47,7 +47,7 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
-from fabrictestbed_extensions.fablib.node import Node
+#from fabrictestbed_extensions.fablib.node import Node
 
 
 class Resources():

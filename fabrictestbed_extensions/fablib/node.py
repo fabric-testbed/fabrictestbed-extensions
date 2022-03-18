@@ -45,15 +45,15 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-from fim.user.node import Node as FIMNode
+#from fim.user.node import Node as FIMNode
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 #from .abc_fablib import AbcFabLIB
 from fabrictestbed_extensions.fablib.fablib import fablib
 #from .slice import Slice
 
-from .interface import Interface
-from .component import Component
+#from .interface import Interface
+#from .component import Component
 from .. import images
 
 #+------------------------+--------+
@@ -413,6 +413,7 @@ class Node():
         :return: a list of interfaces on the node
         :rtype: list[Interface]
         """
+        from fabrictestbed_extensions.fablib.interface import Interface
 
         interfaces = []
         for component in self.get_components():
@@ -433,6 +434,8 @@ class Node():
         :return: an interface on the node
         :rtype: Interface
         """
+
+        from fabrictestbed_extensions.fablib.interface import Interface
 
         if name is not None:
             for component in self.get_components():
@@ -511,6 +514,7 @@ class Node():
         :return: the new component
         :rtype: Component
         """
+        from fabrictestbed_extensions.fablib.component import Component
         return Component.new_component(node=self, model=model, name=name)
 
     def get_components(self):
@@ -520,6 +524,7 @@ class Node():
         :return: a list of components on this node
         :rtype: list[Component]
         """
+        from fabrictestbed_extensions.fablib.component import Component
         return_components = []
         for component_name, component in self.get_fim_node().components.items():
             # return_components.append(Component(self,component))
@@ -831,7 +836,7 @@ class Node():
 
 
                 ftp_client=client.open_sftp()
-                file_attributes = ftp_client.get(local_file_path, remote_file_path)
+                file_attributes = ftp_client.get(remote_file_path, local_file_path)
                 ftp_client.close()
 
                 bastion_channel.close()
@@ -913,6 +918,9 @@ class Node():
         logging.debug(f"test_ssh: node {self.get_name()}")
 
         try:
+            if self.get_management_ip() == None:
+                logging.debug(f"Node: {self.get_name()} failed test_ssh because management_ip == None" )
+
             self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
         except Exception as e:
             #logging.debug(f"{e}")
@@ -1164,7 +1172,7 @@ class Node():
         logging.debug(f"load_data: node {self.get_name()}")
 
         try:
-            self.download_file(f'{self.get_name()}.json', f'/tmp/fablib/fabric_data/{self.get_name()}.json')
+            self.download_file(f'/tmp/fablib/fabric_data/{self.get_name()}.json',f'{self.get_name()}.json')
 
             interfaces=""
             with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'r') as infile:
@@ -1180,7 +1188,7 @@ class Node():
             self.get_slice().network_iface_map = interface_map
             logging.debug(f"{self.get_slice().network_iface_map}")
         except Exception as e:
-            logging.error(f"load data failes: {e}")
+            logging.error(f"load data fail: {e}")
             logging.error(e, exc_info=True)
             raise e
 

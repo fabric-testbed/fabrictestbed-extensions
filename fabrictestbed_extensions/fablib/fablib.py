@@ -112,7 +112,7 @@ class fablib(AbcFabLIB):
         # Need to avoid SALT and MASS for now.
         # Real fix is to check availability
         always_avoid=['SALT','MASS', 'NCSA']
-        
+
         for site in always_avoid:
             if site not in avoid:
                 avoid.append(site)
@@ -362,7 +362,7 @@ class fablib(AbcFabLIB):
 
         if fablib.fablib_object.resources == None:
             fablib.fablib_object.resources = Resources()
-            
+
         if update:
             fablib.fablib_object.resources.update()
 

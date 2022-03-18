@@ -42,7 +42,7 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from fabrictestbed_extensions.fablib.interface import Interface
+#from fabrictestbed_extensions.fablib.interface import Interface
 
 #from fabrictestbed_extensions.fabricx.fabricx import FabricX
 #from fabrictestbed_extensions.fabricx.slicex import SliceX
@@ -159,6 +159,9 @@ class Component():
         :return: a list of the interfaces on this component.
         :rtype: list[Interface]
         """
+
+        from fabrictestbed_extensions.fablib.interface import Interface
+
         ifaces = []
         for fim_interface in self.get_fim_component().interface_list:
             ifaces.append(Interface(component=self, fim_interface=fim_interface))

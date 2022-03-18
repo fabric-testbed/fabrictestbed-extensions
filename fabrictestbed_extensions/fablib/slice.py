@@ -43,9 +43,9 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from fabrictestbed.slice_manager import Slice as SMSlice
+#from fabrictestbed.slice_manager import Slice as SMSlice
 
-from fabrictestbed_extensions.fablib.network_service import NetworkService
+#from fabrictestbed_extensions.fablib.network_service import NetworkService
 
 
 #from .slicex import SliceX
@@ -180,14 +180,17 @@ class Slice():
 
         try:
             slice.update()
-        except:
+        except Exception as e:
             logging.error(f"Slice {slice.slice_name} could not be updated: slice.get_slice")
+            logging.error(e, exc_info=True)
 
         if load_config:
             try:
                 slice.load_config()
-            except:
+            except Exception as e:
                 logging.error(f"Slice {slice.slice_name} config could not loaded: slice.get_slice")
+                logging.error(e, exc_info=True)
+
 
         return slice
 
@@ -286,6 +289,7 @@ class Slice():
             logging.warning(f"slice.update_slivers failed: {e}")
 
         self.update_topology()
+        #self.get_interface_map()
 
     def get_slice_public_key(self):
         """
@@ -392,6 +396,8 @@ class Slice():
         :return: a new L2 network service
         :rtype: NetworkService
         """
+        from fabrictestbed_extensions.fablib.network_service import NetworkService
+
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
     def add_l3network(self, name=None, interfaces=[], type='IPv6'):
@@ -585,7 +591,9 @@ class Slice():
         """
         interfaces = []
         for node in self.get_nodes():
+            logging.debug(f"Getting interfaces for node {node.get_name()}")
             for interface in node.get_interfaces():
+                logging.debug(f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}")
                 interfaces.append(interface)
         return interfaces
 
@@ -790,8 +798,12 @@ class Slice():
 
     def get_interface_map(self):
         # TODO: Add docstring after doc networking classes
-        if not hasattr(self, 'network_iface_map'):
+        if not hasattr(self, 'network_iface_map') or self.network_iface_map == None:
+            logging.debug(f'Slice {self.get_name()}, loading interface map')
             self.load_interface_map()
+        else:
+            logging.debug(f'Slice {self.get_name()}, NOT loading interface map')
+
 
         return self.network_iface_map
 

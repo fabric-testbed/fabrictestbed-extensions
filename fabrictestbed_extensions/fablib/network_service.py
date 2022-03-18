@@ -48,7 +48,7 @@ from fim.slivers.network_service import NetworkServiceSliver, ServiceType, NSLay
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 #from .abc_fablib import AbcFabLIB
-from fim.user.network_service import NetworkService as FIMNetworkService
+#from fim.user.network_service import NetworkService as FIMNetworkService
 
 from .. import images
 
