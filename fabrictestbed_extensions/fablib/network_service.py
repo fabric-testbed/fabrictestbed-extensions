@@ -52,8 +52,8 @@ from fim.user.network_service import NetworkService as FIMNetworkService
 
 from .. import images
 
-from .slice import Slice
-from .interface import Interface
+#from .slice import Slice
+#from .interface import Interface
 
 
 #class NetworkService(AbcFabLIB):

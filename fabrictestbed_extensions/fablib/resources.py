@@ -47,6 +47,7 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.node import Node
 
 
 class Resources():
@@ -248,7 +249,7 @@ class Resources():
         except Exception as e:
             logging.warning(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site_name)
-          
+
     def update(self):
         return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
@@ -281,4 +282,3 @@ class Resources():
             rtn_links.append(link_name)
 
         return rtn_links
-

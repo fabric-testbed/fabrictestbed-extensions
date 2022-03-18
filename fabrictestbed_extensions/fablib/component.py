@@ -57,10 +57,10 @@ from ipaddress import ip_address, IPv4Address
 
 #from fim.user import node
 
-from fim.user.component import Component as FIMComponent
+#from fim.user.component import Component as FIMComponent
 
-from .slice import Slice
-from .node import Node
+#from .slice import Slice
+#from .node import Node
 
 
 #from .abc_fablib import AbcFabLIB
@@ -244,7 +244,7 @@ class Component():
             return 'NIC_Basic'
         else:
             return None
-          
+
     def get_reservation_id(self):
         try:
             #This does not work

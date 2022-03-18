@@ -58,10 +58,10 @@ from ipaddress import ip_address, IPv4Address
 
 
 #from .abc_fablib import AbcFabLIB
-from .slice import Slice
-from .component import Component
-from .node import Node
-from .network_service import NetworkService
+#from .slice import Slice
+#from .component import Component
+#from .node import Node
+#from .network_service import NetworkService
 from .. import images
 
 
@@ -87,7 +87,7 @@ class Interface():
             network_name = self.get_network().get_name()
         else:
             network_name = None
-            
+
         table = [   [ "Name", self.get_name() ],
                     [ "Network", network_name ],
                     [ "Bandwidth", self.get_bandwidth() ],

@@ -50,7 +50,7 @@ from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Net
 
 #from .abc_fablib import AbcFabLIB
 from fabrictestbed_extensions.fablib.fablib import fablib
-from .slice import Slice
+#from .slice import Slice
 
 from .interface import Interface
 from .component import Component
