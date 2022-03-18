@@ -58,16 +58,24 @@ from ipaddress import ip_address, IPv4Address
 
 
 #from .abc_fablib import AbcFabLIB
-
+#from .slice import Slice
+#from .component import Component
+#from .node import Node
+#from .network_service import NetworkService
 from .. import images
 
 
 #class Interface(AbcFabLIB):
 class Interface():
+
     def __init__(self, component=None, fim_interface=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets keyword arguments as instance fields.
+
+        :param component: the component to set on this interface
+        :type component: Component
+        :param fim_interface: the FABRIC information model interface to set on this fablib interface
+        :type fim_interface: Interface
         """
         super().__init__()
         self.fim_interface  = fim_interface
@@ -79,7 +87,7 @@ class Interface():
             network_name = self.get_network().get_name()
         else:
             network_name = None
-            
+
         table = [   [ "Name", self.get_name() ],
                     [ "Network", network_name ],
                     [ "Bandwidth", self.get_bandwidth() ],
@@ -93,15 +101,21 @@ class Interface():
 
 
     def get_os_interface(self):
+        """
+        Gets a formatted string with the OS interface name and the VLAN.
+
+        :return: OS interface information
+        :rtype: str
+        """
         try:
+            #logging.debug(f"iface: {self}")
             os_iface = self.get_physical_os_interface_name()
             vlan = self.get_vlan()
 
-            if vlan != None:
+            if vlan is not None:
                 os_iface = f"{os_iface}.{vlan}"
         except:
             os_iface = None
-
 
         return os_iface
 
@@ -114,11 +128,8 @@ class Interface():
 
         return mac
 
-
     def get_physical_os_interface(self):
-
-
-        if self.get_network() == None:
+        if self.get_network() is None:
             return None
 
         network_name = self.get_network().get_name()
@@ -207,24 +218,66 @@ class Interface():
 
 
     def get_name(self):
+        """
+        Gets the name of this interface.
+
+        :return: the name of this interface
+        :rtype: str
+        """
         return self.get_fim_interface().name
 
     def get_component(self):
+        """
+        Gets the component attached to this interface.
+
+        :return: the component on this interface
+        :rtype: Component
+        """
         return self.component
 
     def get_model(self):
+        """
+        Gets the component model type on this interface's component.
+
+        :return: the model of this interface's component
+        :rtype: str
+        """
         return self.get_component().get_model()
 
     def get_site(self):
+        """
+        Gets the site this interface's component is on.
+
+        :return: the site this interface is on
+        :rtype: str
+        """
         return self.get_component().get_site()
 
     def get_slice(self):
+        """
+        Gets the FABLIB slice this interface's node is attached to.
+
+        :return: the slice this interface is attached to
+        :rtype: Slice
+        """
         return self.get_node().get_slice()
 
     def get_node(self):
+        """
+        Gets the node this interface's component is on.
+
+        :return: the node this interface is attached to
+        :rtype: Node
+        """
         return self.get_component().get_node()
 
     def get_network(self):
+        """
+        Gets the network this interface is on.
+
+        :return: the network service this interface is on
+        :rtype: NetworkService
+        """
         if hasattr(self, 'network'):
             #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
             return self.network

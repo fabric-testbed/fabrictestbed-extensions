@@ -48,8 +48,12 @@ from fim.slivers.network_service import NetworkServiceSliver, ServiceType, NSLay
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 #from .abc_fablib import AbcFabLIB
+#from fim.user.network_service import NetworkService as FIMNetworkService
 
 from .. import images
+
+#from .slice import Slice
+#from .interface import Interface
 
 
 #class NetworkService(AbcFabLIB):
@@ -79,10 +83,18 @@ class NetworkService():
     def get_fim_network_service_types():
         return NetworkService.get_fim_l2network_service_types() + NetworkService.get_fim_l3network_service_types()
 
-
     @staticmethod
     def calculate_l2_nstype(interfaces=None):
-        #if there is a basic NIC, WAN must be STS
+        """
+        Determines the L2 network service type based on the number of interfaces inputted.
+
+        :param interfaces: a list of interfaces
+        :type interfaces: list[Interface]
+        :raises Exception: if no network service type is not appropriate for the number of interfaces
+        :return: the network service type
+        :rtype: ServiceType
+        """
+        # if there is a basic NIC, WAN must be STS
         basic_nic_count = 0
 
         sites = set([])
@@ -106,14 +118,24 @@ class NetworkService():
 
     @staticmethod
     def validate_nstype(type, interfaces):
+        """
+        Verifies the network service type against the number of interfaces.
 
+        :param type: the network service type to check
+        :type type: ServiceType
+        :param interfaces: the list of interfaces to check
+        :type interfaces: list[Interface]
+        :raises Exception: if the network service type is invalid based on the number of interfaces
+        :return: true if the network service type is valid based on the number of interfaces
+        :rtype: bool
+        """
         sites = set([])
         nics = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
             nics.add(interface.get_model())
 
-        #models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
+        # models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
         if type == NetworkService.network_service_map['L2Bridge']:
             if not len(sites) == 1:
                 raise Exception(f"Network type {type} must include interfaces from exactly one site. {len(sites)} sites requested: {sites}")
@@ -147,6 +169,20 @@ class NetworkService():
 
     @staticmethod
     def new_l2network(slice=None, name=None, interfaces=[], type=None):
+        """
+        Creates a new L2 network service.
+
+        :param slice: the fablib slice to build this network on
+        :type slice: Slice
+        :param name: the name of the new network
+        :type name: str
+        :param interfaces: a list of interfaces to build the network service on
+        :type interfaces: list[Interface]
+        :param type: the type of network service to build (optional)
+        :tyep type: str
+        :return: the new L2 network service
+        :rtype: NetworkService
+        """
         if type == None:
             nstype=NetworkService.calculate_l2_nstype(interfaces=interfaces)
         else:
@@ -155,7 +191,7 @@ class NetworkService():
             else:
                 raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.get_fim_l2network_service_types()} or None for automatic selection")
 
-        #validate nstype and interface List
+        # validate nstype and interface List
         NetworkService.validate_nstype(nstype, interfaces)
 
         #Set default VLANs for P2P networks that did not assing VLANs
@@ -170,6 +206,19 @@ class NetworkService():
 
     @staticmethod
     def new_network_service(slice=None, name=None, nstype=None, interfaces=[]):
+        """
+        Creates a new FABRIC network service and returns the fablib instance.
+
+        :param slice: the fabric slice to build the network service with
+        :type slice: Slice
+        :param name: the name of the new network service
+        :type name: str
+        :param nstype: the type of network service to create
+        :type nstype: ServiceType
+        :param interfaces: a list of interfaces to
+        :return: the new fablib network service
+        :rtype: NetworkService
+        """
         fim_interfaces = []
         for interface in interfaces:
             fim_interfaces.append(interface.get_fim_interface())
@@ -179,7 +228,7 @@ class NetworkService():
                                                                  nstype=nstype,
                                                                  interfaces=fim_interfaces)
 
-        return NetworkService(slice = slice, fim_network_service = fim_network_service)
+        return NetworkService(slice=slice, fim_network_service=fim_network_service)
 
     @staticmethod
     def get_l3network_services(slice=None):
@@ -209,25 +258,42 @@ class NetworkService():
 
     @staticmethod
     def get_l2network_services(slice=None):
+        """
+        Gets a list of L2 network services on a fablib slice.
+
+        :param slice: the fablib slice from which to get the network services
+        :type slice: Slice
+        :return: a list of network services on slice
+        :rtype: list[NetworkService]
+        """
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
         fim_network_service = None
         for net_name, net in topology.network_services.items():
             if str(net.get_property('type')) in NetworkService.get_fim_l2network_service_types():
-                rtn_network_services.append(NetworkService(slice = slice, fim_network_service = net))
+                rtn_network_services.append(NetworkService(slice=slice, fim_network_service=net))
 
         return rtn_network_services
 
     @staticmethod
     def get_l2network_service(slice=None, name=None):
+        """
+        Gets a particular network service on a fablib slice.
 
+        :param slice: the fablib slice from which to get the network service
+        :type slice: Slice
+        :param name: the name of the network service to get
+        :type name: str
+        :raises Exception: if the network is not found
+        :return: the particular network service
+        :rtype: NetworkService
+        """
         for net in NetworkService.get_l2network_services(slice=slice):
             if net.get_name() == name:
                 return net
 
         raise Exception(f"Network not found. Slice {slice.name}, network {name}")
-
 
     @staticmethod
     def get_network_services(slice=None):
@@ -250,20 +316,18 @@ class NetworkService():
 
         raise Exception(f"Network not found. Slice {slice.name}, network {name}")
 
-
     def __init__(self, slice=None, fim_network_service=None):
         """
-        Constructor
-        :return:
+        Constructor. Sets the fablib slice and the FABRIC network service.
+
+        :param slice: the fablib slice to set as instance state
+        :type slice: Slice
+        :param fim_network_service: the FIM network service to set as instance state
+        :type fim_network_service: FIMNetworkService
         """
         super().__init__()
-        self.fim_network_service  = fim_network_service
+        self.fim_network_service = fim_network_service
         self.slice = slice
-
-        try:
-            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
-        except:
-            self.sliver = None
 
 
     def __str__(self):
@@ -282,6 +346,12 @@ class NetworkService():
 
 
     def get_slice(self):
+        """
+        Gets the fablib slice this network service is built on.
+
+        :return: the slice this network is on
+        :rtype: Slice
+        """
         return self.slice
 
     def get_site(self):
@@ -309,6 +379,12 @@ class NetworkService():
         return self.sliver
 
     def get_fim_network_service(self):
+        """
+        Gets the FABRIC network service this instance represents.
+
+        :return: the FIM network service
+        :rtype: FIMNetworkService
+        """
         return self.fim_network_service
 
     def get_error_message(self):
@@ -371,9 +447,21 @@ class NetworkService():
             return None
 
     def get_name(self):
+        """
+        Gets the name of this network service.
+
+        :return: the name of this network service
+        :rtype: str
+        """
         return self.get_fim_network_service().name
 
     def get_interfaces(self):
+        """
+        Gets the interfaces on this network service.
+
+        :return: the interfaces on this network service
+        :rtype: list[Interfaces]
+        """
         interfaces = []
         for interface in self.get_fim_network_service().interface_list:
             interfaces.append(self.get_slice().get_interface(name=interface.name))
@@ -381,6 +469,14 @@ class NetworkService():
         return interfaces
 
     def get_interface(self, name=None):
+        """
+        Gets a particular interface on this network service.
+
+        :param name: the name of the interface to search for
+        :type name: str
+        :return: the particular interface
+        :rtype: Interface
+        """
         for interface in self.get_fim_network_service().interface_list:
             if name in interface.name:
                 return self.get_slice().get_interface(name=interface.name)
@@ -388,6 +484,14 @@ class NetworkService():
         return None
 
     def has_interface(self, interface):
+        """
+        Determines whether this network service has a particular interface.
+
+        :param interface: the fablib interface to search for
+        :type interface: Interface
+        :return: whether this network service has interface
+        :rtype: bool
+        """
         for fim_interface in self.get_fim_network_service().interface_list:
             #print(f"fim_interface.name: {fim_interface.name}, interface.get_name(): {interface.get_name()}")
             if fim_interface.name.endswith(interface.get_name()):
