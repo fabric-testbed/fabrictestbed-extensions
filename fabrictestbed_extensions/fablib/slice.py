@@ -1089,7 +1089,7 @@ class Slice():
         logging.debug(f"network_iface_map: {self.network_iface_map}")
 
 
-    def jupyter_wait(self, timeout=600, interval=10, ):
+    def wait_jupyter(self, timeout=600, interval=10):
         from IPython.display import clear_output
         import time
         import random
@@ -1130,9 +1130,10 @@ class Slice():
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
-        print(f"\n{self.list_interfaces()}")
+        if len(self.get_interfaces()) > 0:
+            print(f"\n{self.list_interfaces()}")
 
-    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=60):
+    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, wait_jupyter=None, delay_post_boot_config=60):
         """
         Submits this fablib slice to be built on the slice manager.
 
@@ -1168,6 +1169,11 @@ class Slice():
         time.sleep(1)
         #self.update_slice()
         self.update()
+
+        if progress and wait_jupyter == 'text' and fablib.isJupyterNotebook():
+            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            return self.slice_id
+
 
         if wait:
             self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
