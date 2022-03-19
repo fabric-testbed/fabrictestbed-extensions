@@ -127,7 +127,11 @@ class Resources():
             return ""
 
     def get_site_names(self):
-        return self.topology.sites.keys()
+        site_name_list = []
+        for site_name in self.topology.sites.keys():
+            site_name_list.append(str(site_name))
+
+        return site_name_list
 
     def get_topology_site(self, site_name):
         try:

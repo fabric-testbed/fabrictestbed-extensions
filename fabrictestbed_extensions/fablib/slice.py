@@ -348,6 +348,25 @@ class Slice():
         else:
             return None
 
+    def isStable(self):
+        """
+        Tests is the slice is stable.
+
+        :return: True if slice is stable, False otherwise
+        :rtype: Boolean
+        """
+        #if self.get_state() in [ SliceState.StableOK,
+        #                         SliceState.StableError,
+        #                         SliceState.Closing,
+        #                         SliceState.Dead]:
+        if self.get_state() in [ "StableOK",
+                                 "StableError",
+                                 "Closing",
+                                 "Dead"]:
+            return True
+        else:
+            return False
+
     def get_state(self):
         """
         Gets the slice state off of the slice manager slice.
@@ -1068,6 +1087,50 @@ class Slice():
             target_node.clear_all_ifaces()
 
         logging.debug(f"network_iface_map: {self.network_iface_map}")
+
+
+    def jupyter_wait(self, timeout=600, interval=10, ):
+        from IPython.display import clear_output
+        import time
+        import random
+
+        start = time.time()
+
+        count = 0
+        while not self.isStable():
+            if time.time() > start + timeout:
+                raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
+
+            time.sleep(interval)
+            self.update()
+            node_list = self.list_nodes()
+
+            #pre-get the strings for quicker screen update
+            slice_string=str(self)
+            list_nodes_string=self.list_nodes()
+            time_string = f"{time.time() - start:.0f} sec"
+
+            # Clear screen
+            clear_output(wait=True)
+
+            #Print statuses
+            print(f"\n{slice_string}")
+            print(f"\nRetry: {count}, Time: {time_string}")
+            print(f"\n{list_nodes_string}")
+
+            count += 1
+
+        print(f"\nTime to stable {time.time() - start:.0f} seconds")
+
+        print("Running wait_ssh ... ", end="")
+        self.wait_ssh()
+        print(f"Time to ssh {time.time() - start:.0f} seconds")
+
+        print("Running post_boot_config ... ", end="")
+        self.post_boot_config()
+        print(f"Time to post boot config {time.time() - start:.0f} seconds")
+
+        print(f"\n{self.list_interfaces()}")
 
     def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, delay_post_boot_config=60):
         """

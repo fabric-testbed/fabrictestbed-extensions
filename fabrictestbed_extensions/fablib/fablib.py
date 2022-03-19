@@ -488,6 +488,19 @@ class fablib(AbcFabLIB):
     def set_log_level(log_level):
         fablib.log_level = log_level
 
+    @staticmethod
+    def isJupyterNotebook():
+        try:
+            shell = get_ipython().__class__.__name__
+            if shell == 'ZMQInteractiveShell':
+                return True   # Jupyter notebook or qtconsole
+            elif shell == 'TerminalInteractiveShell':
+                return False  # Terminal running IPython
+            else:
+                return False  # Other type (?)
+        except NameError:
+            return False
+
 
 fablib.set_log_level(logging.DEBUG)
 try:
