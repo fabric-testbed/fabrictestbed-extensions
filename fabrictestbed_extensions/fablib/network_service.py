@@ -329,6 +329,12 @@ class NetworkService():
         self.fim_network_service = fim_network_service
         self.slice = slice
 
+        try:
+            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+        except:
+            self.sliver = None
+
+
 
     def __str__(self):
         table = [ ["ID", self.get_reservation_id()],
@@ -359,6 +365,7 @@ class NetworkService():
             return self.get_sliver().sliver.site
         except Exception as e:
             logging.warning(f"Failed to get site: {e}")
+
             return None
 
     def get_layer(self):

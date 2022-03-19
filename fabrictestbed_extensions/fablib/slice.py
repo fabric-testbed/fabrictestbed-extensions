@@ -821,6 +821,9 @@ class Slice():
         :return: true when slice ssh successful
         :rtype: bool
         """
+        slice_name=self.sm_slice.slice_name
+        slice_id=self.sm_slice.slice_id
+
         timeout_start = time.time()
         slice = self.sm_slice
 
@@ -976,8 +979,6 @@ class Slice():
                         iface_map[node.get_name()] = node_os_iface
                         break
 
-                if found:
-                    break
 
 
             self.network_iface_map[net.get_name()] = iface_map
@@ -1116,6 +1117,7 @@ class Slice():
 
             self.test_ssh()
 
+            self.update()
             #Hack for now. needs to test for active nics before pbc
             time.sleep(delay_post_boot_config)
             self.post_boot_config()
