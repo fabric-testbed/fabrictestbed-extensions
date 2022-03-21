@@ -160,7 +160,7 @@ class Component():
         :rtype: list[Interface]
         """
 
-        from fabrictestbed_extensions.fablib.interface import Interface
+        #from fabrictestbed_extensions.fablib.interface import Interface
 
         ifaces = []
         for fim_interface in self.get_fim_component().interface_list:

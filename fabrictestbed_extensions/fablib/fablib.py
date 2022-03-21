@@ -111,7 +111,7 @@ class fablib(AbcFabLIB):
     def get_random_sites(count=1, avoid=[]):
         # Need to avoid SALT and MASS for now.
         # Real fix is to check availability
-        always_avoid=['SALT','MASS', 'NCSA']
+        always_avoid=['SALT','MASS']
 
         for site in always_avoid:
             if site not in avoid:
