@@ -62,7 +62,7 @@ from ipaddress import ip_address, IPv4Address
 #from .component import Component
 #from .node import Node
 #from .network_service import NetworkService
-from .. import images
+#from .. import images
 
 
 #class Interface(AbcFabLIB):

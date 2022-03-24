@@ -45,9 +45,11 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-from .abc_fablib import AbcFabLIB
+#from .abc_fablib import AbcFabLIB
+from fabrictestbed_extensions.fablib.abc_fablib import AbcFabLIB
 
-from .. import images
+
+#from .. import images
 
 
 class fablib(AbcFabLIB):
@@ -73,13 +75,30 @@ class fablib(AbcFabLIB):
         :return: a new SliceManager
         :rtype: SliceManager
         """
-        self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
-                                          cm_host=self.credmgr_host,
-                                          project_name='all',
-                                          scope='all')
+        # If you are using the FABRIC JupyterHub, the following three evnrionament vars
+        # were automatically provided when you logged in.
 
-        # Initialize the slice manager
-        self.slice_manager.initialize()
+        #if ( 'FABRIC_CREDMGR_HOST' not in  os.environ.keys() or
+        #        'FABRIC_ORCHESTRATOR_HOST' not in  os.environ.keys() or
+        #            'FABRIC_TOKEN_LOCATION' not in  os.environ.keys() or
+        #                'FABRIC_BASTION_HOST' not in  os.environ.keys() or
+        #        'FABRIC_BASTION_USERNAME' not in  os.environ.keys() or
+        #        'FABRIC_BASTION_KEY_LOCATION' not in  os.environ.keys() or
+        #        'FABRIC_SLICE_PRIVATE_KEY_FILE' not in  os.environ.keys() or
+        #        'FABRIC_SLICE_PUBLIC_KEY_FILE' not in  os.environ.keys()
+        #    ):
+        #    raise Exception("Missing envrionment variable")
+
+        try:
+            self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
+                                              cm_host=self.credmgr_host,
+                                              project_name='all',
+                                              scope='all')
+
+            # Initialize the slice manager
+            self.slice_manager.initialize()
+        except Exception as e:
+            logging.error(f"{e}")
 
         return self.slice_manager
 

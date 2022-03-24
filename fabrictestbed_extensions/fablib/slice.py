@@ -53,12 +53,13 @@ from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 #from .fabricx import FabricX
 
 #from .abc_fablib import AbcFabLIB
-from .interface import Interface
+#from .interface import Interface
 
-from .. import images
+#from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
 from fabrictestbed_extensions.fablib.node import Node
+from fabrictestbed_extensions.fablib.interface import Interface
 
 
 class Slice():
@@ -884,6 +885,11 @@ class Slice():
         # TODO: Add docstring after doc networking classes
         logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
 
+        for node in self.get_nodes():
+            #logging.info(f"Stopping NetworkManager on node {node.get_name()}")"
+            stdout, stderr = node.execute(f"sudo systemctl stop NetworkManager")
+            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+
         # Find the interface to network map
         logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
         self.build_interface_map()
@@ -1133,7 +1139,7 @@ class Slice():
         if len(self.get_interfaces()) > 0:
             print(f"\n{self.list_interfaces()}")
 
-    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, wait_jupyter=None, delay_post_boot_config=60):
+    def submit(self, wait=True, wait_timeout=360, wait_interval=10, progress=True, wait_jupyter="text", delay_post_boot_config=0):
         """
         Submits this fablib slice to be built on the slice manager.
 

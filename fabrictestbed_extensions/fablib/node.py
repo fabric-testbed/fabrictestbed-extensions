@@ -54,7 +54,7 @@ from fabrictestbed_extensions.fablib.fablib import fablib
 
 #from .interface import Interface
 #from .component import Component
-from .. import images
+#from .. import images
 
 #+------------------------+--------+
 #| Name                   | Status |
