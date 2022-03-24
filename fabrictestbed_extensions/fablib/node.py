@@ -45,37 +45,12 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-#from fim.user.node import Node as FIMNode
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
-#from .abc_fablib import AbcFabLIB
 from fabrictestbed_extensions.fablib.fablib import fablib
-#from .slice import Slice
 
-#from .interface import Interface
-#from .component import Component
-#from .. import images
 
-#+------------------------+--------+
-#| Name                   | Status |
-#+------------------------+--------+
-#| default_centos8_stream | active |
-#| default_centos9_stream | active |
-#| default_centos_7       | active |
-#| default_centos_8       | active |
-#| default_cirros         | active |
-#| default_debian_10      | active |
-#| default_fedora_35      | active |
-#| default_freebsd_13_zfs | active |
-#| default_openbsd_7      | active |
-#| default_rocky_8        | active |
-#| default_ubuntu_18      | active |
-#| default_ubuntu_20      | active |
-#| default_ubuntu_21      | active |
-#| default_ubuntu_22      | active |
-#+------------------------+--------+
 
-#class Node(AbcFabLIB):
 class Node():
     default_cores = 2
     default_ram = 8
@@ -136,6 +111,9 @@ class Node():
 
     def get_sliver(self):
         return self.sliver
+
+
+
 
     @staticmethod
     def new_node(slice=None, name=None, site=None, avoid=[]):

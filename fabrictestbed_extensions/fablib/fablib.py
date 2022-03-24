@@ -103,6 +103,24 @@ class fablib(AbcFabLIB):
         return self.slice_manager
 
     @staticmethod
+    def get_images():
+        return [ 'default_centos8_stream' ,
+                 'default_centos9_stream',
+                 'default_centos_7',
+                 'default_centos_8',
+                 'default_cirros',
+                 'default_debian_10',
+                 'default_fedora_35',
+                 'default_freebsd_13_zfs',
+                 'default_openbsd_7',
+                 'default_rocky_8' ,
+                 'default_ubuntu_18',
+                 'default_ubuntu_20',
+                 'default_ubuntu_21',
+                 'default_ubuntu_22'  ]
+
+
+    @staticmethod
     def get_site_names():
         return fablib.get_resources().get_site_names()
 
