@@ -195,8 +195,6 @@
 
    .. automethod:: __init__
 
-   .. automethod:: new_node
-
    .. automethod:: get_node
 
    .. automethod:: get_fim_node

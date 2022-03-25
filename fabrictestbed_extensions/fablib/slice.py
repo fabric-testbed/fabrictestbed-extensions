@@ -889,6 +889,7 @@ class Slice():
             #logging.info(f"Stopping NetworkManager on node {node.get_name()}")"
             stdout, stderr = node.execute(f"sudo systemctl stop NetworkManager")
             logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            pass
 
         # Find the interface to network map
         logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")

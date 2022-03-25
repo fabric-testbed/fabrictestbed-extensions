@@ -202,6 +202,16 @@ class Node():
             self.username = 'ubuntu'
         elif 'rocky'in self.get_image():
             self.username = 'rocky'
+        elif 'fedora'in self.get_image():
+            self.username = 'fedora'
+        elif 'cirros'in self.get_image():
+            self.username = 'cirros'
+        elif 'debian'in self.get_image():
+            self.username = 'debian'
+        elif 'freebsd'in self.get_image():
+            self.username = 'freebsd'
+        elif 'openbsd'in self.get_image():
+            self.username = 'openbsd'
         else:
             self.username = None
 
