@@ -241,6 +241,9 @@ class Node():
         labels.instance_parent = host_name
         self.get_fim_node().set_properties(labels=labels)
 
+        #set an attribute used to get host before Submit
+        self.host = host_name
+
     def get_slice(self):
         """
         Gets the fablib slice associated with this node.
@@ -330,6 +333,11 @@ class Node():
         :rtype: str
         """
         try:
+            try:
+                #If we set the host but have not yet submitted
+                return self.host
+            except:
+                pass
             return self.get_fim_node().get_property(pname='label_allocations').instance_parent
         except:
             return None

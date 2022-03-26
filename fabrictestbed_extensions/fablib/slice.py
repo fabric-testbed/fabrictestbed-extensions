@@ -537,7 +537,7 @@ class Slice():
                     return_components.append(component)
 
         except Exception as e:
-            print("get_components: exception")
+            print(f"get_components: exception {e}")
             #traceback.print_exc()
             pass
         return return_components
@@ -556,7 +556,7 @@ class Slice():
                     return_networks.append(NetworkService(slice = self, fim_network_service = net))
 
         except Exception as e:
-            print("get_network_services: exception")
+            print(f"get_network_services: exception {e}")
             #traceback.print_exc()
             pass
         return return_networks
@@ -578,7 +578,7 @@ class Slice():
             for node_name, node in self.get_fim_topology().nodes.items():
                 return_nodes.append(Node.get_node(self, node))
         except Exception as e:
-            print("get_nodes: exception")
+            print(f"get_nodes: exception {e}")
             #traceback.print_exc()
             pass
         return return_nodes

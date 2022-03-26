@@ -106,11 +106,12 @@ class NetworkService():
         rtn_nstype = None
         if len(sites) == 1:
             rtn_nstype = NetworkService.network_service_map['L2Bridge']
-        elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
-            #TODO: remove this when STS works on all links.
-            rtn_nstype = NetworkService.network_service_map['L2PTP']
-        elif len(sites) == 2  and basic_nic_count == 2 and len(interfaces) == 2:
-            rtn_nstype = NetworkService.network_service_map['L2STS']
+        #elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
+        #    #TODO: remove this when STS works on all links.
+        #    rtn_nstype = NetworkService.network_service_map['L2PTP']
+        elif len(sites) == 2:
+            if len(interfaces) >= 2:
+                rtn_nstype = NetworkService.network_service_map['L2STS']
         else:
             raise Exception(f"Invalid Network Service: Networks are limited to 2 unique sites. Site requested: {sites}")
 
@@ -131,9 +132,12 @@ class NetworkService():
         """
         sites = set([])
         nics = set([])
+        nodes = set([])
         for interface in interfaces:
             sites.add(interface.get_site())
             nics.add(interface.get_model())
+            nodes.add(interface.get_node())
+
 
         # models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
         if type == NetworkService.network_service_map['L2Bridge']:
@@ -147,10 +151,25 @@ class NetworkService():
                 raise Exception(f"Network type {type} does not support interfaces of type 'NIC_Basic'")
 
         elif type == NetworkService.network_service_map['L2STS']:
-            if not len(sites) == 2:
-                raise Exception(f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}")
+            exception_list = []
+            if  len(sites) != 2:
+                exception_list.append(f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}")
+            if len(interfaces) > 2:
+                hosts = set([])
+                for interface in interfaces:
+                    node = interface.get_node()
+                    if interface.get_model() == 'NIC_Basic':
+                        if node.get_host() == None:
+                            exception_list.append(f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing on the same host. Please see Node.set_host(host_nane) to explicitily bind a nodes to a specific host. Node {node.get_name()} is unbound.")
+                        elif node.get_host() in hosts:
+                            exception_list.append(f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing on the same host. Please see Node.set_host(host_nane) to explicitily bind a nodes to a specific host. Multiple nodes bound to {node.get_host()}.")
+                        else:
+                            hosts.add(node.get_host())
+
+            if len(exception_list) > 0:
+                raise Exception(f"{exception_list}")
         else:
-            raise Exception(f"Invalid l2 network type: {type}. Please choose from {NetworkService.get_fim_l2network_service_types()} or None for automatic selection")
+            raise Exception(f"Unknown network type {type}")
 
         return True
 
