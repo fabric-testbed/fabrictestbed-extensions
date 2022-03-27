@@ -63,6 +63,14 @@ class Resources():
         self.update()
 
     def __str__(self):
+        """
+        Creates a tabulated string of all the available resources.
+
+        Intended for printing available resources.
+
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
         table = []
         for site_name, site in self.topology.sites.items():
             #logging.debug(f"site -- {site}")
@@ -100,6 +108,16 @@ class Resources():
 
 
     def show_site(self, site_name):
+        """
+        Creates a tabulated string of all the available resources at a specific site.
+
+        Intended for printing available resources at a site.
+
+        :param site_name: site name
+        :type site_name: String
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
         try:
             site = self.get_topology_site(site_name)
 
@@ -127,6 +145,12 @@ class Resources():
             return ""
 
     def get_site_names(self):
+        """
+        Gets a list of all currently available site names
+
+        :return: list of site names
+        :rtype: List[String]
+        """
         site_name_list = []
         for site_name in self.topology.sites.keys():
             site_name_list.append(str(site_name))
@@ -134,6 +158,9 @@ class Resources():
         return site_name_list
 
     def get_topology_site(self, site_name):
+        """
+        Note intended as an API call
+        """
         try:
             return self.topology.sites[site_name]
         except Exception as e:
@@ -141,6 +168,16 @@ class Resources():
             return ""
 
     def get_component_capacity(self, site_name, component_model_name):
+        """
+        Gets gets the total site capacity of a component by model name.
+
+        :param site_name: site name
+        :type site_name: String
+        :param component_model_name: component model name
+        :type component_model_name: String
+        :return: total component capacity
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).components[component_model_name].capacities.unit
         except Exception as e:
@@ -148,6 +185,17 @@ class Resources():
             return 0
 
     def get_component_allocated(self, site_name, component_model_name):
+        """
+        Gets gets number of currrently allocated comoponents on a the site
+        by the component by model name.
+
+        :param site_name: site name
+        :type site_name: String
+        :param component_model_name: component model name
+        :type component_model_name: String
+        :return: currently allocated component of this model
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).components[component_model_name].capacity_allocations.unit
         except Exception as e:
@@ -155,6 +203,17 @@ class Resources():
             return 0
 
     def get_component_available(self, site_name, component_model_name):
+        """
+        Gets gets number of currrently available comoponents on a the site
+        by the component by model name.
+
+        :param site_name: site name
+        :type site_name: String
+        :param component_model_name: component model name
+        :type component_model_name: String
+        :return: currently available component of this model
+        :rtype: int
+        """
         try:
             return self.get_component_capacity(site_name, component_model_name) - self.get_component_allocated(site_name, component_model_name)
         except Exception as e:
@@ -163,6 +222,14 @@ class Resources():
 
 
     def get_location_lat_long(self, site_name):
+        """
+        Gets gets location of a site in latitude and longitude
+
+        :param site_name: site name
+        :type site_name: String
+        :return: latitude and longitude of the site
+        :rtype: Tuple(float,float)
+        """
         try:
             #site.get_property("location").to_latlon()
             return self.get_topology_site(site_name).get_property("location").to_latlon()
@@ -171,6 +238,14 @@ class Resources():
             return ""
 
     def get_location_postal(self, site_name):
+        """
+        Gets the location of a site by postal address
+
+        :param site_name: site name
+        :type site_name: String
+        :return: postal address of the site
+        :rtype: String
+        """
         try:
             return self.get_topology_site(site_name).location.postal
         except Exception as e:
@@ -178,6 +253,14 @@ class Resources():
             return ""
 
     def get_host_capacity(self, site_name):
+        """
+        Gets the number of worker hosts at the site
+
+        :param site_name: site name
+        :type site_name: String
+        :return: host count
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacities.unit
         except Exception as e:
@@ -185,6 +268,14 @@ class Resources():
             return 0
 
     def get_cpu_capacity(self, site_name):
+        """
+        Gets the total number of cpus at the site
+
+        :param site_name: site name
+        :type site_name: String
+        :return: cpu count
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacities.cpu
         except Exception as e:
@@ -192,6 +283,14 @@ class Resources():
             return 0
 
     def get_core_capacity(self, site_name):
+        """
+        Gets the total number of cores at the site
+
+        :param site_name: site name
+        :type site_name: String
+        :return: core count
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacities.core
         except Exception as e:
@@ -199,6 +298,14 @@ class Resources():
             return 0
 
     def get_core_allocated(self, site_name):
+        """
+        Gets the number of currently allocated cores at the site
+
+        :param site_name: site name
+        :type site_name: String
+        :return: core count
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacity_allocations.core
         except Exception as e:
@@ -206,6 +313,14 @@ class Resources():
             return 0
 
     def get_core_available(self, site_name):
+        """
+        Gets the number of currently available cores at the site
+
+        :param site_name: site name
+        :type site_name: String
+        :return: core count
+        :rtype: int
+        """
         try:
             return self.get_core_capacity(site_name) - self.get_core_allocated(site_name)
         except Exception as e:
@@ -213,6 +328,14 @@ class Resources():
             return self.get_core_capacity(site_name)
 
     def get_ram_capacity(self, site_name):
+        """
+        Gets the total amount of memory at the site in GB
+
+        :param site_name: site name
+        :type site_name: String
+        :return: ram in GB
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacities.ram
         except Exception as e:
@@ -220,6 +343,14 @@ class Resources():
             return 0
 
     def get_ram_allocated(self, site_name):
+        """
+        Gets the amount of memory currently  allocated the site in GB
+
+        :param site_name: site name
+        :type site_name: String
+        :return: ram in GB
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacity_allocations.ram
         except Exception as e:
@@ -227,6 +358,14 @@ class Resources():
             return 0
 
     def get_ram_available(self, site_name):
+        """
+        Gets the amount of memory currently  available the site in GB
+
+        :param site_name: site name
+        :type site_name: String
+        :return: ram in GB
+        :rtype: int
+        """
         try:
             return self.get_ram_capacity(site_name) - self.get_ram_allocated(site_name)
         except Exception as e:
@@ -234,6 +373,14 @@ class Resources():
             return self.get_ram_capacity(site_name)
 
     def get_disk_capacity(self, site_name):
+        """
+        Gets the total amount of disk available the site in GB
+
+        :param site_name: site name
+        :type site_name: String
+        :return: disk in GB
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacities.disk
         except Exception as e:
@@ -241,6 +388,14 @@ class Resources():
             return 0
 
     def get_disk_allocated(self, site_name):
+        """
+        Gets the amount of disk allocated the site in GB
+
+        :param site_name: site name
+        :type site_name: String
+        :return: disk in GB
+        :rtype: int
+        """
         try:
             return self.get_topology_site(site_name).capacity_allocations.disk
         except Exception as e:
@@ -248,6 +403,14 @@ class Resources():
             return 0
 
     def get_disk_available(self, site_name):
+        """
+        Gets the amount of disk available the site in GB
+
+        :param site_name: site name
+        :type site_name: String
+        :return: disk in GB
+        :rtype: int
+        """
         try:
             return self.get_disk_capacity(site_name) - self.get_disk_allocated(site_name)
         except Exception as e:
@@ -255,6 +418,10 @@ class Resources():
             return self.get_disk_capacity(site_name)
 
     def update(self):
+        """
+        Update the available resources by querying the FABRIC services
+
+        """
         return_status, topology = fablib.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
@@ -262,23 +429,39 @@ class Resources():
         self.topology = topology
 
     def get_topology(self, update=False):
+        """
+        Not intended for API use
+        """
         if update or self.topology == None: self.update()
 
         return self.topology
 
     def get_site_list(self, update=False):
+        """
+        Gets a list of all sites by name
+
+        :param update: (optional) set to True update available resources
+        :type update: bool
+        :return: list of site names
+        :rtype: List[String]
+        """
         if update or self.topology == None: self.update()
 
         rtn_sites = []
         for site_name, site in self.topology.sites.items():
             rtn_sites.append(site_name)
-            # site.get_property("location").to_latlon()
-            #site.get_property("name")
-            #print(f"{ site.get_property('cores')}")
 
         return rtn_sites
 
     def get_link_list(self, update=False):
+        """
+        Gets a list of all links by name
+
+        :param update: (optional) set to True update available resources
+        :type update: bool
+        :return: list of link names
+        :rtype: List[String]
+        """
         if update: self.update()
 
         rtn_links = []

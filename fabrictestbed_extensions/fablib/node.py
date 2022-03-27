@@ -86,6 +86,14 @@ class Node():
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
     def __str__(self):
+        """
+        Creates a tabulated string describing the properties of the node.
+
+        Intended for printing node information.
+
+        :return: Tabulated string of node information
+        :rtype: String
+        """
         table = [ ["ID", self.get_reservation_id()],
             ["Name", self.get_name()],
             ["Cores", self.get_cores()],
@@ -103,13 +111,15 @@ class Node():
 
         return tabulate(table) #, headers=["Property", "Value"])
 
-    def get_subnet(self):
-        try:
-            return self.get_fim_node().gateway.subnet
-        except:
-            return None
-
     def get_sliver(self):
+        """
+        Not intended as API call
+
+        Gets the node SM sliver
+
+        :return: SM sliver for the node
+        :rtype: Sliver
+        """
         return self.sliver
 
 
@@ -118,6 +128,8 @@ class Node():
     @staticmethod
     def new_node(slice=None, name=None, site=None, avoid=[]):
         """
+        Not intended for API call. See: Slice.add_node()
+
         Creates a new FABRIC node and returns a fablib node with the new node.
 
         :param slice: the fablib slice to build the new node on
@@ -144,6 +156,8 @@ class Node():
     @staticmethod
     def get_node(slice=None, node=None):
         """
+        Not intended for API call.
+
         Returns a new fablib node using existing FABRIC resources.
 
         :param slice: the fablib slice storing the existing node
@@ -158,6 +172,8 @@ class Node():
 
     def get_fim_node(self):
         """
+        Not intended for API call.
+
         Gets the FABRIC node associated with this fablib node.
 
         :return: the real FABRIC node
@@ -165,7 +181,7 @@ class Node():
         """
         return self.fim_node
 
-    def set_capacities(self, cores=2, ram=2, disk=2):
+    def set_capacities(self, cores=2, ram=2, disk=10):
         """
         Sets the capacities of the FABRIC node.
 
@@ -188,15 +204,25 @@ class Node():
         Sets the instance type of this fablib node on the FABRIC node.
 
         :param instance_type: the name of the instance type to set
-        :type instance_type: str
+        :type instance_type: String
         """
         self.get_fim_node().set_properties(capacity_hints=CapacityHints(instance_type=instance_type))
 
     def set_username(self, username=None):
         """
+        Not intended as an API call.
+
         Sets this fablib node's username
+
+        Optional username parameter. The username likely should be picked
+        to match the image type.
+
+        :param instance_type: (optional) the name of the instance type to set
+        :type instance_type: String
         """
-        if 'centos' in self.get_image():
+        if username != None:
+            self.username = username
+        elif 'centos' in self.get_image():
             self.username = 'centos'
         elif 'ubuntu' in self.get_image():
             self.username = 'ubuntu'
@@ -220,11 +246,11 @@ class Node():
         Sets the image information of this fablib node on the FABRIC node.
 
         :param image: the image reference to set
-        :type image: str
+        :type image: String
         :param username: the username of this fablib node. Currently unused.
-        :type username: str
+        :type username: String
         :param image_type: the image type to set
-        :type image_type: str
+        :type image_type: String
         """
         self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
@@ -234,7 +260,7 @@ class Node():
         Sets the hostname of this fablib node on the FABRIC node.
 
         :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
-        :type host_name: str
+        :type host_name: String
         """
         # example: host_name='renc-w2.fabric-testbed.net'
         labels = Labels()
@@ -258,7 +284,7 @@ class Node():
         Gets the name of the FABRIC node.
 
         :return: the name of the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().name
@@ -306,7 +332,7 @@ class Node():
         Gets the image reference on the FABRIC node.
 
         :return: the image reference on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().image_ref
@@ -318,7 +344,7 @@ class Node():
         Gets the image type on the FABRIC node.
 
         :return: the image type on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().image_type
@@ -330,7 +356,7 @@ class Node():
         Gets the hostname on the FABRIC node.
 
         :return: the hostname on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             try:
@@ -347,7 +373,7 @@ class Node():
         Gets the sitename on the FABRIC node.
 
         :return: the sitename on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().site
@@ -359,7 +385,7 @@ class Node():
         Gets the management IP on the FABRIC node.
 
         :return: management IP
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().management_ip
@@ -371,7 +397,7 @@ class Node():
         Gets the reservation ID on the FABRIC node.
 
         :return: reservation ID on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().get_property(pname='reservation_info').reservation_id
@@ -383,7 +409,7 @@ class Node():
         Gets the reservation state on the FABRIC node.
 
         :return: the reservation state on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().get_property(pname='reservation_info').reservation_state
@@ -395,7 +421,7 @@ class Node():
         Gets the error message on the FABRIC node.
 
         :return: the error message on the node
-        :rtype: str
+        :rtype: String
         """
         try:
             return self.get_fim_node().get_property(pname='reservation_info').error_message
@@ -407,7 +433,7 @@ class Node():
         Gets a list of the interfaces associated with the FABRIC node.
 
         :return: a list of interfaces on the node
-        :rtype: list[Interface]
+        :rtype: List[Interface]
         """
         from fabrictestbed_extensions.fablib.interface import Interface
 
@@ -420,7 +446,14 @@ class Node():
 
     def get_interface(self, name=None, network_name=None):
         """
-        Gets a particular interface associated with the FABRIC node.
+        Gets a particular interface associated with a FABRIC node.
+
+        Accepts either the interface name or a network_name. If a network name
+        is used this method will return the interface on the node that is
+        connected to the network specified.
+
+        If a name and network_name are both used, the interface name will
+        take precedence.
 
         :param name: interface name to search for
         :type name: str
@@ -450,34 +483,43 @@ class Node():
         Gets the username on this fablib node.
 
         :return: the username on this node
-        :rtype: str
+        :rtype: String
         """
         return self.username
 
     def get_public_key(self):
         """
-        Gets the public key on fablib slice.
+        Gets the public key on fablib node.
 
-        :return: the public key on the slice
-        :rtype: str
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
+
+        :return: the public key on the node
+        :rtype: String
         """
         return self.get_slice().get_slice_public_key()
 
     def get_public_key_file(self):
         """
-        Gets the public key file path on the fablib slice.
+        Gets the public key file path on the fablib node.
+
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
 
         :return: the public key path
-        :rtype: str
+        :rtype: String
         """
         return self.get_slice().get_slice_public_key_file()
 
     def get_private_key(self):
         """
-        Gets the private key on the fablib slice.
+        Gets the private key on the fablib node.
 
-        :return: the private key on the slice
-        :rtype: str
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
+
+        :return: the private key on the node
+        :rtype: String
         """
         return self.get_slice().get_slice_private_key()
 
@@ -485,8 +527,11 @@ class Node():
         """
         Gets the private key file path on the fablib slice.
 
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
+
         :return: the private key path
-        :rtype: str
+        :rtype: String
         """
         return self.get_slice().get_slice_private_key_file()
 
@@ -494,8 +539,11 @@ class Node():
         """
         Gets the private key passphrase on the FABLIB slice.
 
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
+
         :return: the private key passphrase
-        :rtype: str
+        :rtype: String
         """
         return self.get_slice().get_private_key_passphrase()
 
@@ -503,10 +551,18 @@ class Node():
         """
         Creates a new FABRIC component using this fablib node.
 
+        Example model include:
+        - NIC_Basic: A single port 100 Gbps SR-IOV Virtual Function on a Mellanox ConnectX-6
+        - NIC_ConnectX_5: A dual port 25 Gbps Mellanox ConnectX-5
+        - NIC_ConnectX_6: A dual port 100 Gbps Mellanox ConnectX-6
+        - NVME_P4510: NVMe Storage Device
+        - GPU_TeslaT4: Tesla T4 GPU
+        - GPU_RTX6000: RTX6000 GPU
+
         :param model: the name of the component model to add
-        :type model: str
+        :type model: String
         :param name: the name of the new component
-        :type name: str
+        :type name: String
         :return: the new component
         :rtype: Component
         """
@@ -518,7 +574,7 @@ class Node():
         Gets a list of components associated with this node.
 
         :return: a list of components on this node
-        :rtype: list[Component]
+        :rtype: List[Component]
         """
         from fabrictestbed_extensions.fablib.component import Component
         return_components = []
@@ -533,7 +589,7 @@ class Node():
         Gets a particular component associated with this node.
 
         :param name: the name of the component to search for
-        :type name: str
+        :type name: String
         :raise Exception: if component not found by name
         :return: the component on the FABRIC node
         :rtype: Component
@@ -549,7 +605,7 @@ class Node():
 
     def get_ssh_command(self):
         """
-        Gets the SSH command used to access this node.
+        Gets a SSH command used to access this node node from a terminal.
 
         :return: the SSH command to access this node
         :rtype: str
@@ -565,9 +621,9 @@ class Node():
         Checks if the IP string is a valid IP address.
 
         :param IP: the IP string to check
-        :type IP: str
+        :type IP: String
         :return: the type of IP address the IP string is, or 'Invalid'
-        :rtype: str
+        :rtype: String
         """
         try:
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
@@ -869,6 +925,22 @@ class Node():
         raise Exception("scp download failed")
 
     def upload_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+        """
+        Upload a directory to remote location on the node.
+
+        Makes a gzipped tarball of a directory and uploades it to a node. Then
+        unzips and tars the directory at the remote_directory_path
+
+        :param local_directory_path: the path to the directory to upload
+        :type local_directory_path: str
+        :param remote_directory_path: the destination path of the directory on the node
+        :type remote_directory_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP on failure
+        :type retry_interval: int
+        :raise Exception: if management IP is invalid
+        """
         import tarfile
         import os
 
@@ -889,6 +961,22 @@ class Node():
         return "success"
 
     def download_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+        """
+        Downloads a directory from remote location on the node.
+
+        Makes a gzipped tarball of a directory and downloads it from a node. Then
+        unzips and tars the directory at the local_directory_path
+
+        :param local_directory_path: the path to the directory to upload
+        :type local_directory_path: str
+        :param remote_directory_path: the destination path of the directory on the node
+        :type remote_directory_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP on failure
+        :type retry_interval: int
+        :raise Exception: if management IP is invalid
+        """
         import tarfile
         import os
         logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
@@ -924,14 +1012,14 @@ class Node():
             return False
         return True
 
-    #def wait_for_ssh(self, retry=6, retry_interval=10):
-    #    try:
-    #        self.execute('echo hello, fabric', retry=retry, retry_interval=retry_interval)
-    #    except:
-    #        return False
-    #    return True
-
     def get_management_os_interface(self):
+        """
+        Gets the name of the management interface used by the node's operating
+        system.
+
+        :return: interface name
+        :rtype: String
+        """
         # TODO: Add docstring after doc networking classes
         #Assumes that the default route uses the management network
         logging.debug(f"{self.get_name()}->get_management_os_interface")
@@ -945,7 +1033,13 @@ class Node():
                 return  i['dev']
 
     def get_dataplane_os_interfaces(self):
-        # TODO: Add docstring after doc networking classes
+        """
+        Gets a list of all the dataplane interface names used by the node's
+        operating system.
+
+        :return: interface names
+        :rtype: List[String]
+        """
         management_dev = self.get_management_os_interface()
 
         stdout, stderr = self.execute("sudo ip -j addr list")
@@ -958,12 +1052,20 @@ class Node():
         return dataplane_devs
 
     def flush_all_os_interfaces(self):
-        # TODO: Add docstring after doc networking classes
+        """
+        Flushes the configuration of all dataplane interfaces in the node.
+
+        """
         for iface in self.get_dataplane_os_interfaces():
             self.flush_os_interface(iface['ifname'])
 
     def flush_os_interface(self, os_iface):
-        # TODO: Add docstring after doc networking classes
+        """
+        Flush the configuration of an interface in the node
+
+        :param os_iface: the name of the interface to flush
+        :type os_iface: String
+        """
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
         stdout, stderr = self.execute(f"sudo ip -6 addr flush dev {os_iface}")
 
@@ -977,6 +1079,14 @@ class Node():
 
 
     def ip_route_add(self, subnet, gateway):
+        """
+        Add a route on the node.
+
+        :param subnet: The destination subnet
+        :type subnet:  IPv4Network or IPv6Network
+        :param gateway: The next hop gateway.
+        :type gateway: IPv4Address or IPv6Address
+        """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -990,6 +1100,14 @@ class Node():
 
 
     def ip_route_del(self, subnet, gateway):
+        """
+        Delete a route on the node.
+
+        :param subnet: The destination subnet
+        :type subnet:  IPv4Network or IPv6Network
+        :param gateway: The next hop gateway.
+        :type gateway: IPv4Address or IPv6Address
+        """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1002,6 +1120,16 @@ class Node():
             raise e
 
     def ip_addr_add(self, addr, subnet, interface):
+        """
+        Add an IP to an interface on the node.
+
+        :param addr: IP address
+        :type addr:  IPv4Address or IPv6Address
+        :param subnet: subnet.
+        :type subnet: IPv4Network or IPv6Network
+        :param interface: the FABlib interface.
+        :type interface: Interface
+        """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1014,6 +1142,16 @@ class Node():
             raise e
 
     def ip_addr_del(self, addr, subnet, interface):
+        """
+        Delete an IP to an interface on the node.
+
+        :param addr: IP address
+        :type addr:  IPv4Address or IPv6Address
+        :param subnet: subnet.
+        :type subnet: IPv4Network or IPv6Network
+        :param interface: the FABlib interface.
+        :type interface: Interface
+        """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1026,6 +1164,12 @@ class Node():
             raise e
 
     def ip_link_up(self, interface):
+        """
+        Bring up a link on an interface on the node.
+
+        :param interface: the FABlib interface.
+        :type interface: Interface
+        """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1038,6 +1182,12 @@ class Node():
             raise e
 
     def ip_link_down(self, interface):
+        """
+        Bring down a link on an interface on the node.
+
+        :param interface: the FABlib interface.
+        :type interface: Interface
+        """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1052,6 +1202,10 @@ class Node():
 
 
     def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+        """
+        Depricated
+
+        """
         # TODO: Add docstring after doc networking classes
         if cidr: cidr=str(cidr)
         if mtu: mtu=str(mtu)
@@ -1092,12 +1246,20 @@ class Node():
         stdout, stderr = self.execute(command)
 
     def clear_all_ifaces(self):
+        """
+        Flush all interfaces and delete VLAN os interfaces
+
+        """
         # TODO: Add docstring after doc networking classes
         self.remove_all_vlan_os_interfaces()
         self.flush_all_os_interfaces()
 
 
     def remove_all_vlan_os_interfaces(self):
+        """
+        Delete all VLAN os interfaces
+
+        """
         # TODO: Add docstring after doc networking classes
         management_os_iface = self.get_management_os_interface()
 
@@ -1114,6 +1276,10 @@ class Node():
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
 
     def get_interface_map(self):
+        """
+        Not intended for API use.
+
+        """
         # TODO: Add docstring after doc networking classes
         #data = {}
         #Get interface data
@@ -1139,6 +1305,10 @@ class Node():
         return interfaces
 
     def save_data(self):
+        """
+        Not intended for API use.
+
+        """
         # TODO: Add docstring after doc networking classes
         logging.debug(f"save_data: node {self.get_name()}")
 
@@ -1164,6 +1334,10 @@ class Node():
         self.upload_file(f'/tmp/fablib/fabric_data/{self.get_name()}.json', f'{self.get_name()}.json')
 
     def load_data(self):
+        """
+        Not intended for API use.
+
+        """
         # TODO: Add docstring after doc networking classes
         logging.debug(f"load_data: node {self.get_name()}")
 
@@ -1191,6 +1365,10 @@ class Node():
 
 
     def remove_vlan_os_interface(self, os_iface=None):
+        """
+        Remove one VLAN OS interface
+
+        """
         # TODO: Add docstring after doc networking classes
         command = f"sudo ip -j addr show {os_iface}"
         stdout, stderr = self.execute(command)
@@ -1207,6 +1385,10 @@ class Node():
         stdout, stderr = self.execute(command)
 
     def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None, interface=None):
+        """
+        Depricated
+
+        """
         # TODO: Add docstring after doc networking classes
 
         if vlan: vlan=str(vlan)
@@ -1244,6 +1426,12 @@ class Node():
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
 
     def ping_test(self, dst_ip):
+        """
+        Test a ping from the node to a destination IP
+
+        :param dst_ip: destination IP String.
+        :type dst_ip: String
+        """
         # TODO: Add docstring after doc networking classes
         logging.debug(f"ping_test: node {self.get_name()}")
 

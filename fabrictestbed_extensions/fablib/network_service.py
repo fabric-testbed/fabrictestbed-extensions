@@ -73,19 +73,30 @@ class NetworkService():
 
     @staticmethod
     def get_fim_l2network_service_types():
+        """
+        Not inteded for API use
+        """
         return NetworkService.fim_l2network_service_types
 
     @staticmethod
     def get_fim_l3network_service_types():
+        """
+        Not inteded for API use
+        """
         return NetworkService.fim_l3network_service_types
 
     @staticmethod
     def get_fim_network_service_types():
+        """
+        Not inteded for API use
+        """
         return NetworkService.get_fim_l2network_service_types() + NetworkService.get_fim_l3network_service_types()
 
     @staticmethod
     def calculate_l2_nstype(interfaces=None):
         """
+        Not inteded for API use
+
         Determines the L2 network service type based on the number of interfaces inputted.
 
         :param interfaces: a list of interfaces
@@ -120,6 +131,9 @@ class NetworkService():
     @staticmethod
     def validate_nstype(type, interfaces):
         """
+        Not inteded for API use
+
+
         Verifies the network service type against the number of interfaces.
 
         :param type: the network service type to check
@@ -175,6 +189,9 @@ class NetworkService():
 
     @staticmethod
     def new_l3network(slice=None, name=None, interfaces=[], type=None):
+        """
+        Not inteded for API use. See slice.add_l3network
+        """
         if type == "IPv6":
             nstype = ServiceType.FABNetv6
         else:
@@ -189,6 +206,8 @@ class NetworkService():
     @staticmethod
     def new_l2network(slice=None, name=None, interfaces=[], type=None):
         """
+        Not inteded for API use. See slice.add_l2network
+
         Creates a new L2 network service.
 
         :param slice: the fablib slice to build this network on
@@ -226,6 +245,9 @@ class NetworkService():
     @staticmethod
     def new_network_service(slice=None, name=None, nstype=None, interfaces=[]):
         """
+        Not inteded for API use. See slice.add_l2network
+
+
         Creates a new FABRIC network service and returns the fablib instance.
 
         :param slice: the fabric slice to build the network service with
@@ -251,6 +273,9 @@ class NetworkService():
 
     @staticmethod
     def get_l3network_services(slice=None):
+        """
+        Not inteded for API use.
+        """
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
@@ -267,7 +292,9 @@ class NetworkService():
 
     @staticmethod
     def get_l3network_service(slice=None, name=None):
-
+        """
+        Not inteded for API use.
+        """
         for net in NetworkService.get_l3network_services(slice=slice):
             if net.get_name() == name:
                 return net
@@ -278,6 +305,8 @@ class NetworkService():
     @staticmethod
     def get_l2network_services(slice=None):
         """
+        Not inteded for API use.
+
         Gets a list of L2 network services on a fablib slice.
 
         :param slice: the fablib slice from which to get the network services
@@ -298,6 +327,8 @@ class NetworkService():
     @staticmethod
     def get_l2network_service(slice=None, name=None):
         """
+        Not inteded for API use.
+
         Gets a particular network service on a fablib slice.
 
         :param slice: the fablib slice from which to get the network service
@@ -316,6 +347,10 @@ class NetworkService():
 
     @staticmethod
     def get_network_services(slice=None):
+        """
+        Not inteded for API use.
+        """
+
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
@@ -328,7 +363,9 @@ class NetworkService():
 
     @staticmethod
     def get_network_service(slice=None, name=None):
-
+        """
+        Not inteded for API use.
+        """
         for net in NetworkService.get_network_services(slice=slice):
             if net.get_name() == name:
                 return net
@@ -337,6 +374,8 @@ class NetworkService():
 
     def __init__(self, slice=None, fim_network_service=None):
         """
+        Not inteded for API use.
+
         Constructor. Sets the fablib slice and the FABRIC network service.
 
         :param slice: the fablib slice to set as instance state
@@ -356,6 +395,14 @@ class NetworkService():
 
 
     def __str__(self):
+        """
+        Creates a tabulated string describing the properties of the network service.
+
+        Intended for printing network service information.
+
+        :return: Tabulated string of network service information
+        :rtype: String
+        """
         table = [ ["ID", self.get_reservation_id()],
             ["Name", self.get_name()],
             ["Layer", self.get_layer()],
@@ -388,6 +435,12 @@ class NetworkService():
             return None
 
     def get_layer(self):
+        """
+        Gets the layer of the network services (L2 or L3)
+
+        :return: L2 or L3
+        :rtype: String
+        """
         try:
             return self.get_sliver().sliver.layer
         except Exception as e:
@@ -395,6 +448,12 @@ class NetworkService():
             return None
 
     def get_type(self):
+        """
+        Gets the type of the network services
+
+        :return: network service types
+        :rtype: String
+        """
         try:
             return self.get_sliver().sliver.resource_type
         except Exception as e:
@@ -406,6 +465,8 @@ class NetworkService():
 
     def get_fim_network_service(self):
         """
+        Not intended for API use
+
         Gets the FABRIC network service this instance represents.
 
         :return: the FIM network service
@@ -414,12 +475,24 @@ class NetworkService():
         return self.fim_network_service
 
     def get_error_message(self):
+        """
+        Gets the error messages
+
+        :return: network service types
+        :rtype: String
+        """
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').error_message
         except:
             return ""
 
     def get_gateway(self):
+        """
+        Gets the assigend gateway for a FABnetv L3 IPv6 or IPv4 network
+
+        :return: gateway IP
+        :rtype: IPv4Address or IPv6Network
+        """
         try:
             gateway = None
             if self.get_layer() == NSLayer.L3:
@@ -433,7 +506,19 @@ class NetworkService():
             logging.warning(f"Failed to get gateway: {e}")
             return None
 
-    def get_available_ips(self, count=100):
+    def get_available_ips(self, count=256):
+        """
+        Gets the IPs available for a FABnet L3 network.
+
+        Note: large IPv6 address spaces take considerable time to build this
+        list. By default this will return the first 256 addresses.  If you needed
+        more addresses, set the count parameter.
+
+        :param count: number of addresse to include
+        :type slice: Slice
+        :return: gateway IP
+        :rtype: List[IPv4Address]
+        """
         try:
             ip_list = []
             gateway = self.get_gateway()
@@ -446,6 +531,12 @@ class NetworkService():
             return None
 
     def get_subnet(self):
+        """
+        Gets the assigend subnet for a FABnetv L3 IPv6 or IPv4 network
+
+        :return: gateway IP
+        :rtype: IPv4Network or IPv6Network
+        """
         try:
             subnet = None
             if self.get_layer() == NSLayer.L3:
@@ -459,6 +550,12 @@ class NetworkService():
             return None
 
     def get_reservation_id(self):
+        """
+        Gets the reservation id of the network
+
+        :return: reservation ID
+        :rtype: String
+        """
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').reservation_id
         except:
@@ -466,6 +563,12 @@ class NetworkService():
             return None
 
     def get_reservation_state(self):
+        """
+        Gets the reservation state of the network
+
+        :return: reservation state
+        :rtype: String
+        """
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').reservation_state
         except:
@@ -477,7 +580,7 @@ class NetworkService():
         Gets the name of this network service.
 
         :return: the name of this network service
-        :rtype: str
+        :rtype: String
         """
         return self.get_fim_network_service().name
 
@@ -486,7 +589,7 @@ class NetworkService():
         Gets the interfaces on this network service.
 
         :return: the interfaces on this network service
-        :rtype: list[Interfaces]
+        :rtype: List[Interfaces]
         """
         interfaces = []
         for interface in self.get_fim_network_service().interface_list:
