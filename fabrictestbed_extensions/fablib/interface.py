@@ -62,7 +62,7 @@ from ipaddress import ip_address, IPv4Address
 #from .component import Component
 #from .node import Node
 #from .network_service import NetworkService
-from .. import images
+#from .. import images
 
 
 #class Interface(AbcFabLIB):
@@ -83,6 +83,14 @@ class Interface():
 
 
     def __str__(self):
+        """
+        Creates a tabulated string describing the properties of the interface.
+
+        Intended for printing interface information.
+
+        :return: Tabulated string of interface information
+        :rtype: String
+        """
         if self.get_network():
             network_name = self.get_network().get_name()
         else:
@@ -102,10 +110,14 @@ class Interface():
 
     def get_os_interface(self):
         """
-        Gets a formatted string with the OS interface name and the VLAN.
+        Gets a name of the interface the operating system uses for this
+        FABLib interface.
 
-        :return: OS interface information
-        :rtype: str
+        If the interface requires a FABRIC VLAN tag, the interface name retruned
+        will be the VLAN tagged.
+
+        :return: OS interface name
+        :rtype: String
         """
         try:
             #logging.debug(f"iface: {self}")
@@ -120,6 +132,12 @@ class Interface():
         return os_iface
 
     def get_mac(self):
+        """
+        Gets the MAC addrress of the interface.
+
+        :return: MAC address
+        :rtype: String
+        """
         try:
             os_iface = self.get_physical_os_interface()
             mac = os_iface['mac']
@@ -129,6 +147,10 @@ class Interface():
         return mac
 
     def get_physical_os_interface(self):
+        """
+        Not intended for API use
+        """
+
         if self.get_network() is None:
             return None
 
@@ -141,17 +163,33 @@ class Interface():
             return None
 
     def get_physical_os_interface_name(self):
+        """
+        Gets a name of the physical interface the operating system uses for this
+        FABLib interface.
+
+        If the interface requires a FABRIC VLAN tag, the base interface name
+        will be returned (i.e. not the VLAN tagged interface)
+
+        :return: physicla OS interface name
+        :rtype: String
+        """
         if self.get_physical_os_interface():
             return self.get_physical_os_interface()['ifname']
         else:
             return None
 
     def config_vlan_iface(self):
+        """
+        Not intended for API use
+        """
         if self.get_vlan() != None:
             self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
                                                   vlan=self.get_vlan(), interface=self)
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
+        """
+        Depricated
+        """
         if cidr: cidr=str(cidr)
         if mtu: mtu=str(mtu)
 
@@ -161,22 +199,52 @@ class Interface():
 
 
     def ip_addr_add(self, addr, subnet):
+        """
+        Add an IP address to the interface in the node.
+
+        :param addr: IP address
+        :type addr: IPv4Address or IPv6Address
+        :param subnet: subnet
+        :type subnet: IPv4Network or IPv4Network
+        """
         self.get_node().ip_addr_add(addr, subnet, self)
 
 
     def ip_addr_del(self, addr, subnet):
+        """
+        Delete an IP address to the interface in the node.
+
+        :param addr: IP address
+        :type addr: IPv4Address or IPv6Address
+        :param subnet: subnet
+        :type subnet: IPv4Network or IPv4Network
+        """
         self.get_node().ip_addr_del(addr, subnet, self)
 
     def ip_link_up(self):
+        """
+        Bring up the link on the interface.
+
+        """
         self.get_node().ip_link_up(self)
 
     def ip_link_down(self):
+        """
+        Bring down the link on the interface.
+
+        """
         self.get_node().ip_link_down(self)
 
 
 
 
     def set_vlan(self, vlan=None):
+        """
+        Set the VLAN on the FABRIC request.
+
+        :param addr: vlan
+        :type addr: String or int
+        """
         if vlan: vlan=str(vlan)
 
         if_labels = self.get_fim_interface().get_property(pname="labels")
@@ -184,12 +252,28 @@ class Interface():
         self.get_fim_interface().set_properties(labels=if_labels)
 
     def get_fim_interface(self):
+        """
+        Not intended for API use
+        """
         return self.fim_interface
 
     def get_bandwidth(self):
+        """
+        Gets the bandwidth of an interface. Basic NICs claim 0 bandwidth but
+        are 100 Gbps shared by all Basic NICs on the host.
+
+        :return: bandwith
+        :rtype: String
+        """
         return self.get_fim_interface().capacities.bw
 
     def get_vlan(self):
+        """
+        Gets the FABRIC VLAN of an interface.
+
+        :return: VLAN
+        :rtype: String
+        """
         try:
             vlan = self.get_fim_interface().get_property(pname="labels").vlan
         except:
@@ -205,12 +289,24 @@ class Interface():
             return None
 
     def get_reservation_state(self):
+        """
+        Gets the reservation state
+
+        :return: VLAN
+        :rtype: String
+        """
         try:
             return self.get_fim_interface().get_property(pname='reservation_info').reservation_state
         except:
             return None
 
     def get_error_message(self):
+        """
+        Gets the error messages
+
+        :return: error
+        :rtype: String
+        """
         try:
             return self.get_fim_interface().get_property(pname='reservation_info').error_message
         except:
@@ -222,7 +318,7 @@ class Interface():
         Gets the name of this interface.
 
         :return: the name of this interface
-        :rtype: str
+        :rtype: String
         """
         return self.get_fim_interface().name
 

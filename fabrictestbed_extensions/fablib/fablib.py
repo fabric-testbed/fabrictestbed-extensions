@@ -45,9 +45,11 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-from .abc_fablib import AbcFabLIB
+#from .abc_fablib import AbcFabLIB
+from fabrictestbed_extensions.fablib.abc_fablib import AbcFabLIB
 
-from .. import images
+
+#from .. import images
 
 
 class fablib(AbcFabLIB):
@@ -68,36 +70,92 @@ class fablib(AbcFabLIB):
 
     def build_slice_manager(self):
         """
+        Not a user facing API call.
+
         Creates a new SliceManager object.
 
         :return: a new SliceManager
         :rtype: SliceManager
         """
-        self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
-                                          cm_host=self.credmgr_host,
-                                          project_name='all',
-                                          scope='all')
+        try:
+            self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
+                                              cm_host=self.credmgr_host,
+                                              project_name='all',
+                                              scope='all')
 
-        # Initialize the slice manager
-        self.slice_manager.initialize()
+            # Initialize the slice manager
+            self.slice_manager.initialize()
+        except Exception as e:
+            logging.error(f"{e}")
 
         return self.slice_manager
 
     @staticmethod
+    def get_image_names():
+        """
+        Gets a list of available image names.
+
+        :return: list of image names as strings
+        :rtype: List[String]
+        """
+        return [ 'default_centos8_stream' ,
+                 'default_centos9_stream',
+                 'default_centos_7',
+                 'default_centos_8',
+                 'default_cirros',
+                 'default_debian_10',
+                 'default_fedora_35',
+                 'default_freebsd_13_zfs',
+                 'default_openbsd_7',
+                 'default_rocky_8' ,
+                 'default_ubuntu_18',
+                 'default_ubuntu_20',
+                 'default_ubuntu_21',
+                 'default_ubuntu_22'  ]
+
+
+    @staticmethod
     def get_site_names():
+        """
+        Gets a list of all available site names.
+
+        :return: list of site names as strings
+        :rtype: List[String]
+        """
         return fablib.get_resources().get_site_names()
 
     @staticmethod
     def list_sites():
+        """
+        Get a string used to print a tabular list of sites with state
+
+        :return: tabulated string of site state
+        :rtype: String
+        """
         return str(fablib.get_resources())
 
     @staticmethod
     def show_site(site_name):
+        """
+        Get a string used to print tabular info about a site
+
+        :param site_name: the name of a site
+        :type site_name: String
+        :return: tabulated string of site state
+        :rtype: String
+        """
         return str(fablib.get_resources().show_site(site_name))
 
 
     @staticmethod
     def get_resources():
+        """
+        Get a reference to the resourcs object. The resouces obeject
+        is used to query for availale resouces and capacities.
+
+        :return: the resouces object
+        :rtype: Resources
+        """
         if not fablib.fablib_object.resources:
             fablib.get_available_resources()
 
@@ -105,13 +163,31 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_random_site(avoid=[]):
+        """
+        Get a random site.
+
+        :param avoid: list of site names to avoid chosing
+        :type site_name: List[String]
+        :return: one site name
+        :rtype: String
+        """
         return fablib.get_random_sites(count=1, avoid=avoid)[0]
 
     @staticmethod
     def get_random_sites(count=1, avoid=[]):
+        """
+        Get a list of random sites names. Each site will be included at most once.
+
+        :param count: number of sites to return.
+        :type count: int
+        :param avoid: list of site names to avoid chosing
+        :type site_name: List[String]
+        :return: list of random site names.
+        :rtype: List[Sting]
+        """
         # Need to avoid SALT and MASS for now.
         # Real fix is to check availability
-        always_avoid=['SALT','MASS', 'NCSA']
+        always_avoid=['SALT', 'MASS']
 
         for site in always_avoid:
             if site not in avoid:
@@ -133,6 +209,8 @@ class fablib(AbcFabLIB):
     @staticmethod
     def init_fablib():
         """
+        Not intended to be called by the user.
+
         Static initializer for the fablib object.
         """
         if not hasattr(fablib, 'fablib_object'):
@@ -141,20 +219,25 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_default_slice_key():
         """
-        Gets the ABCFabLIB default_slice_key dictionary.
+        Gets the current default_slice_keys as a dictionary containg the
+        public and private slice keys.
+
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
 
         :return: default_slice_key dictionary from superclass
-        :rtype: dict[str, str]
+        :rtype: Dict[String, String]
         """
         return fablib.fablib_object.default_slice_key
 
     @staticmethod
     def get_config():
         """
-        Gets a dictionary mapping keywords to configured FABRIC values.
+        Gets a dictionary mapping keywords to configured FABRIC environment
+        variable values values.
 
         :return: dictionary mapping keywords to FABRIC values
-        :rtype: dict[str, str]
+        :rtype: Dict[String, String]
         """
         return {'credmgr_host': fablib.fablib_object.credmgr_host,
                 'orchestrator_host': fablib.fablib_object.orchestrator_host,
@@ -175,8 +258,11 @@ class fablib(AbcFabLIB):
         """
         Gets the default slice public key.
 
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
+
         :return: the slice public key on this fablib object
-        :rtype: str
+        :rtype: String
         """
         if 'slice_public_key' in fablib.fablib_object.default_slice_key.keys():
             return fablib.fablib_object.default_slice_key['slice_public_key']
@@ -188,8 +274,11 @@ class fablib(AbcFabLIB):
         """
         Gets the path to the default slice public key file.
 
+        Important! Slice key management is underdevelopment and this
+        functionality will likely change going forward.
+
         :return: the path to the slice public key on this fablib object
-        :rtype: str
+        :rtype: String
         """
         if 'slice_public_key_file' in fablib.fablib_object.default_slice_key.keys():
             return fablib.fablib_object.default_slice_key['slice_public_key_file']
@@ -201,8 +290,11 @@ class fablib(AbcFabLIB):
         """
         Gets the path to the default slice private key file.
 
+        Important! Slices key management is underdevelopment and this
+        functionality will likely change going forward.
+
         :return: the path to the slice private key on this fablib object
-        :rtype: str
+        :rtype: String
         """
         if 'slice_private_key_file' in fablib.fablib_object.default_slice_key.keys():
             return fablib.fablib_object.default_slice_key['slice_private_key_file']
@@ -214,8 +306,11 @@ class fablib(AbcFabLIB):
         """
         Gets the passphrase to the default slice private key.
 
+        Important! Slices key management is underdevelopment and this
+        functionality will likely change going forward.
+
         :return: the passphrase to the slice private key on this fablib object
-        :rtype: str
+        :rtype: String
         """
         if 'slice_private_key_passphrase' in fablib.fablib_object.default_slice_key.keys():
             return fablib.fablib_object.default_slice_key['slice_private_key_passphrase']
@@ -228,7 +323,7 @@ class fablib(AbcFabLIB):
         Gets the credential manager host site value.
 
         :return: the credential manager host site
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.credmgr_host
 
@@ -238,7 +333,7 @@ class fablib(AbcFabLIB):
         Gets the orchestrator host site value.
 
         :return: the orchestrator host site
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.orchestrator_host
 
@@ -248,7 +343,7 @@ class fablib(AbcFabLIB):
         Gets the FABRIC token location.
 
         :return: FABRIC token location
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.fabric_token
 
@@ -258,7 +353,7 @@ class fablib(AbcFabLIB):
         Gets the FABRIC Bastion username.
 
         :return: FABRIC Bastion username
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.bastion_username
 
@@ -268,7 +363,7 @@ class fablib(AbcFabLIB):
         Gets the FABRIC Bastion key filename.
 
         :return: FABRIC Bastion key filename
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.bastion_key_filename
 
@@ -278,33 +373,37 @@ class fablib(AbcFabLIB):
         Gets the FABRIC Bastion host address.
 
         :return: Bastion host public address
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.bastion_public_addr
 
     @staticmethod
     def get_bastion_private_ipv4_addr():
         """
-        Gets the FABRIC Bastion private IPv4 host address.
+        Gets the FABRIC Bastion private IPv4 host address. This is the
+        internally faceing IPv4 address needed to use paramiko
 
         :return: Bastion private IPv4 address
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.bastion_private_ipv4_addr
 
     @staticmethod
     def get_bastion_private_ipv6_addr():
         """
-        Gets the FABRIC Bastion private IPv6 host address.
+        Gets the FABRIC Bastion private IPv6 host address. This is the
+        internally faceing IPv4 address needed to use paramiko
 
         :return: Bastion private IPv6 address
-        :rtype: str
+        :rtype: String
         """
         return fablib.fablib_object.bastion_private_ipv6_addr
 
     @staticmethod
     def set_slice_manager(slice_manager):
         """
+        Not intended as API call
+
         Sets the slice manager of this fablib object.
 
         :param slice_manager: the slice manager to set
@@ -315,6 +414,9 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_slice_manager():
         """
+        Not intended as API call
+
+
         Gets the slice manager of this fablib object.
 
         :return: the slice manager on this fablib object
@@ -322,9 +424,6 @@ class fablib(AbcFabLIB):
         """
         return fablib.fablib_object.slice_manager
 
-    @staticmethod
-    def create_slice_manager():
-        return fablib.fablib_object.create_slice_manager()
 
     @staticmethod
     def new_slice(name):
@@ -332,7 +431,7 @@ class fablib(AbcFabLIB):
         Creates a new slice with the given name.
 
         :param name: the name to give the slice
-        :type name: str
+        :type name: String
         :return: a new slice
         :rtype: Slice
         """
@@ -343,11 +442,13 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_site_advertisment(site):
         """
-        Given a site name, gets information about the site.
+        Not intended for API use.
+
+        Given a site name, gets fim topology object for this site.
 
         :param site: a site name
-        :type site: str
-        :return: site information
+        :type site: String
+        :return: fim object for this site
         :rtype: Node
         """
         return_status, topology = fablib.get_slice_manager().resources()
@@ -358,6 +459,17 @@ class fablib(AbcFabLIB):
 
     @staticmethod
     def get_available_resources(update=False):
+        """
+        Get the available resources.
+
+        Optionally update the availalbe resources by querying the FABRIC
+        services. Otherwise, this method returns the exisitng information.
+
+        :param site: update
+        :type site: Bool
+        :return: Availalbe Resources object
+        :rtype: Resources
+        """
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if fablib.fablib_object.resources == None:
@@ -369,14 +481,20 @@ class fablib(AbcFabLIB):
         return fablib.fablib_object.resources
 
     @staticmethod
-    def get_slice_list(excludes=[SliceState.Dead,SliceState.Closing]):
+    def get_fim_slice(excludes=[SliceState.Dead,SliceState.Closing]):
         """
-        Gets a list of slices on the slice manager.
+        Not intended for API use.
+
+        Gets a list of fim slices from the slice manager.
+
+        By default this method ignores Dead and Closing slices. Optional,
+        parameter allows excluding a different list of slice states.  Pass
+        an empty list (i.e. excludes=[]) to get a list of all slices.
 
         :param excludes: A list of slice states to exclude from the output list
-        :type excludes: list[SliceState]
+        :type excludes: List[SliceState]
         :return: a list of slices
-        :rtypee: list[Slice]
+        :rtype: List[Slice]
         """
         return_status, slices = fablib.get_slice_manager().slices(excludes=excludes)
 
@@ -391,14 +509,16 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_slices(excludes=[SliceState.Dead,SliceState.Closing]):
         """
-        Gets a list of slices on the slice manager.
+        Gets a list of slices from the slice manager.
+
+        By default this method ignores Dead and Closing slices. Optional,
+        parameter allows excluding a different list of slice states.  Pass
+        an empty list (i.e. excludes=[]) to get a list of all slices.
 
         :param excludes: A list of slice states to exclude from the output list
-        :type excludes: list[SliceState]
-        :param verbose: An indicator for verbose output.
-        :type verbose: bool
+        :type excludes: List[SliceState]
         :return: a list of slices
-        :rtypee: list[Slice]
+        :rtype: List[Slice]
         """
         from fabrictestbed_extensions.fablib.slice import Slice
         import time
@@ -424,14 +544,17 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_slice(name=None, slice_id=None):
         """
-        Gets a slice off of the slice manager by name.
+        Gets a slice by name or slice_id. Dead and Closing slices may have
+        non-unique names and must be queried by slice_id.  Slices in all other
+        states are guaranteed to have unique names and can be queried by name.
+
+        If both a name and slicd_id are provided, the slice matching the
+        slice_id will be returned.
 
         :param name: The name of the desired slice
-        :type name: str
+        :type name: String
         :param slice_id: The ID of the desired slice
-        :type slice_id: str
-        :param verbose: An indicator for verbose output. Currently, this is unused
-        :type verbose: bool
+        :type slice_id: String
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
         :rtype: Slice
@@ -460,33 +583,64 @@ class fablib(AbcFabLIB):
         Deletes a slice by name.
 
         :param slice_name: the name of the slice to delete
-        :type slice_name: str
+        :type slice_name: String
         """
         slice = fablib.get_slice(slice_name)
         slice.delete()
 
     @staticmethod
-    def delete_all():
+    def delete_all(progress=True):
         """
-        Deletes all slices on the slice manager, besides those that are already closing or dead.
+        Deletes all slices on the slice manager.
+
+        :param progress: optional progess printing to stdout
+        :type progress: Bool
         """
         slices = fablib.get_slices()
 
         for slice in slices:
             try:
-                print(f"Deleting slice {slice.get_name()}", end='')
+                if progress: print(f"Deleting slice {slice.get_name()}", end='')
                 slice.delete()
-                print(f", Success!")
+                if progress: print(f", Success!")
             except Exception as e:
-                print(f", Failed!")
+                if progress: print(f", Failed!")
 
     @staticmethod
     def get_log_level():
+        """
+        Gets the current log level for logging
+        """
         return fablib.log_level
 
     @staticmethod
     def set_log_level(log_level):
+        """
+        Sets the current log level for logging
+
+        Options:  logging.DEBUG
+                  logging.INFO
+                  logging.WARNING
+                  logging.ERROR
+                  logging.CRITICAL
+
+        :param log_level: new log level
+        :type progress: Level
+        """
         fablib.log_level = log_level
+
+    @staticmethod
+    def isJupyterNotebook():
+        try:
+            shell = get_ipython().__class__.__name__
+            if shell == 'ZMQInteractiveShell':
+                return True   # Jupyter notebook or qtconsole
+            elif shell == 'TerminalInteractiveShell':
+                return False  # Terminal running IPython
+            else:
+                return False  # Other type (?)
+        except NameError:
+            return False
 
 
 fablib.set_log_level(logging.DEBUG)

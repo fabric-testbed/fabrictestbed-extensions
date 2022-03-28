@@ -42,33 +42,9 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-#from fabrictestbed_extensions.fablib.interface import Interface
-
-#from fabrictestbed_extensions.fabricx.fabricx import FabricX
-#from fabrictestbed_extensions.fabricx.slicex import SliceX
-#from fabrictestbed_extensions.fabricx.nodex import NodeX
-#from .slicex import SliceX
-#from .nodex import NodeX
-#from .fabricx import FabricX
-
 
 from ipaddress import ip_address, IPv4Address
 
-
-#from fim.user import node
-
-#from fim.user.component import Component as FIMComponent
-
-#from .slice import Slice
-#from .node import Node
-
-
-#from .abc_fablib import AbcFabLIB
-
-#from .. import images
-
-
-# class Component(AbcFabLIB):
 class Component():
     component_model_map = { 'NIC_Basic': ComponentModelType.SharedNIC_ConnectX_6,
                             'NIC_ConnectX_6': ComponentModelType.SmartNIC_ConnectX_6,
@@ -79,7 +55,14 @@ class Component():
                             }
 
     def __str__(self):
+        """
+        Creates a tabulated string describing the properties of the component.
 
+        Intended for printing component information.
+
+        :return: Tabulated string of component information
+        :rtype: String
+        """
         table = [   [ "Name", self.get_name() ],
                     [ "Details", self.get_details() ],
                     [ "Disk (G)", self.get_disk() ],
@@ -93,9 +76,14 @@ class Component():
 
 
     def list_interfaces(self):
+        """
+        Creates a tabulated string describing all components in the slice.
 
+        Intended for printing a list of all components.
 
-
+        :return: Tabulated srting of all components information
+        :rtype: String
+        """
         table = []
         for iface in self.get_interfaces():
 
@@ -115,12 +103,17 @@ class Component():
 
     @staticmethod
     def calculate_name(node=None, name=None):
+        """
+        Not intended for API use
+        """
         # Hack to make it possile to find interfaces
         return f"{node.get_name()}-{name}"
 
     @staticmethod
     def new_component(node=None, model=None, name=None):
         """
+        Not intended for API use
+
         Creates a new FIM component on the fablib node inputted.
 
         :param node: the fablib node to build the component on
@@ -141,6 +134,8 @@ class Component():
 
     def __init__(self, node=None, fim_component=None):
         """
+        Not intended for API use
+
         Constructor. Sets the FIM component and fablib node to the inputted values.
 
         :param node: the fablib node to build the component on
@@ -157,7 +152,7 @@ class Component():
         Gets the interfaces attached to this fablib component's FABRIC component.
 
         :return: a list of the interfaces on this component.
-        :rtype: list[Interface]
+        :rtype: List[Interface]
         """
 
         from fabrictestbed_extensions.fablib.interface import Interface
@@ -170,6 +165,8 @@ class Component():
 
     def get_fim_component(self):
         """
+        Not intended for API use
+
         Gets the FABRIC component this fablib component represents.
 
         :return: the FABRIC component on this component
@@ -200,7 +197,7 @@ class Component():
         Gets the name of the site this component's node is on.
 
         :return: the site name this node is on
-        :rtype: str
+        :rtype: String
         """
         return self.node.get_site()
 
@@ -214,6 +211,9 @@ class Component():
         return self.get_fim_component().name
 
     def get_details(self):
+        """
+        Not intended for API use
+        """
         return self.get_fim_component().details
 
     def get_disk(self):
@@ -226,12 +226,30 @@ class Component():
         return self.get_fim_component().get_property(pname='capacity_allocations').disk
 
     def get_unit(self):
+        """
+        Get unit count for this component.
+
+        :return: unit
+        :rtype: int
+        """
         return self.get_fim_component().get_property(pname='capacity_allocations').unit
 
     def get_pci_addr(self):
+        """
+        Get the PIC device ID for this component.
+
+        :return: PCI device ID
+        :rtype: String
+        """
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
     def get_model(self):
+        """
+        Get FABlib model name for this component.
+
+        :return: FABlib model name
+        :rtype: String
+        """
         #TODO: This a hack that need a real fix
         if str(self.get_type()) == "SmartNIC" and str(self.get_fim_model()) == "ConnectX-6":
             return 'NIC_ConnectX_6'
@@ -249,6 +267,12 @@ class Component():
             return None
 
     def get_reservation_id(self):
+        """
+        Get reservation ID for this component.
+
+        :return:  reservation ID
+        :rtype: String
+        """
         try:
             #This does not work
             #print(f"{self.get_fim_component()}")
@@ -257,22 +281,39 @@ class Component():
             return None
 
     def get_reservation_state(self):
+        """
+        Get reservation state for this component.
+
+        :return:  reservation state
+        :rtype: String
+        """
         try:
             return self.get_fim_component().get_property(pname='reservation_info').reservation_state
         except:
             return None
 
     def get_error_message(self):
+        """
+        Get error message for this component.
+
+        :return:  reservation state
+        :rtype: String
+        """
         try:
             return self.get_fim_component().get_property(pname='reservation_info').error_message
         except:
             return ""
 
     def get_fim_model(self):
+        """
+        Not for API use
+        """
         return self.get_fim_component().model
 
     def get_type(self):
         """
+        Not for API use
+
         Gets the type of this component.
 
         :return: the type of component
@@ -281,6 +322,14 @@ class Component():
         return self.get_fim_component().type
 
     def configure_nvme(self, mount_point='/mnt/nvme_mount'):
+        """
+        Configure the NVMe drive.
+
+        Note this works but may be reorganzied. 
+
+        :param mount_point: The mount point in the filesystem. Default = /mnt/nvme_mount
+        :type mount_point: String
+        """
         output = []
         try:
             output.append(self.node.execute('sudo fdisk -l /dev/nvme*'))
