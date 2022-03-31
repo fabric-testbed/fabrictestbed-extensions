@@ -83,8 +83,7 @@ class ComponentTest(AbcTest):
 
         topology = ExperimentTopology()
 
-        cap = Capacities()
-        cap.set_fields(core=cores, ram=ram, disk=disk)
+        cap = Capacities(core=cores, ram=ram, disk=disk)
 
         slice_name = name_prefix+'-'+component_model_name+'-'+str(site_name)
 

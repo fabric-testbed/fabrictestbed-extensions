@@ -314,8 +314,7 @@ class NetworkBencharks(AbcTest):
         t = ExperimentTopology()
 
         #Node1
-        cap = Capacities()
-        cap.set_fields(core=test['src']['core'], ram=test['src']['ram'], disk=test['src']['disk'])
+        cap = Capacities(core=test['src']['core'], ram=test['src']['ram'], disk=test['src']['disk'])
         n1 = t.add_node(name='node1', site=site1)
         n1.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         if test['src']['nic'] == 'SmartNIC_ConnectX_6':
@@ -327,8 +326,7 @@ class NetworkBencharks(AbcTest):
 
 
         #Node2
-        cap = Capacities()
-        cap.set_fields(core=test['dst']['core'], ram=test['dst']['ram'], disk=test['dst']['disk'])
+        cap = Capacities(core=test['dst']['core'], ram=test['dst']['ram'], disk=test['dst']['disk'])
         n2 = t.add_node(name='node2', site=site2)
         n2.set_properties(capacities=cap, image_type='qcow2', image_ref='default_ubuntu_20')
         if test['dst']['nic'] == 'SmartNIC_ConnectX_6':
@@ -441,7 +439,7 @@ class NetworkBencharks(AbcTest):
         return output
 
 
-    def run_tests_all_tests(self, test_name, site1, site2, verbose=True):
+    def run_tests_all_tests(self, test_name, site1, site2, verbose=False):
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
         self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
@@ -474,7 +472,7 @@ class NetworkBencharks(AbcTest):
         self.run_tests(test_name, n1['node'], n2['node'], n1['dataplane_ip'], n2['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
 
 
-    def test_all_ptp(self, tests, verbose=True, create_slices=True):
+    def test_all_ptp(self, tests, verbose=False, create_slices=True):
 
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
@@ -607,8 +605,7 @@ class NetworkBencharks(AbcTest):
 
         #server
         server = test['server']
-        cap = Capacities()
-        cap.set_fields(core=server['core'], ram=server['ram'], disk=server['disk'])
+        cap = Capacities(core=server['core'], ram=server['ram'], disk=server['disk'])
         node = t.add_node(name=server['node_name'], site=site)
 
         print("Create node: {}, core: {}, ram: {}, disk: {}".format(server['node_name'],server['core'],server['ram'],server['disk']))
@@ -626,8 +623,7 @@ class NetworkBencharks(AbcTest):
         for client in test['clients']:
             site = client['site']
             #Node2
-            cap = Capacities()
-            cap.set_fields(core=client['core'], ram=client['ram'], disk=client['disk'])
+            cap = Capacities(core=client['core'], ram=client['ram'], disk=client['disk'])
             node = t.add_node(name=client['node_name'], site=site)
 
             print("Create node: {}, core: {}, ram: {}, disk: {}".format(client['node_name'],client['core'],client['ram'],client['disk']))
@@ -679,8 +675,7 @@ class NetworkBencharks(AbcTest):
 
         #server
         server = test['server']
-        cap = Capacities()
-        cap.set_fields(core=server['core'], ram=server['ram'], disk=server['disk'])
+        cap = Capacities(core=server['core'], ram=server['ram'], disk=server['disk'])
         node = t.add_node(name=server['node_name'], site=site)
 
         #temp for testign
@@ -704,8 +699,7 @@ class NetworkBencharks(AbcTest):
         for client in test['clients']:
 
             #Node2
-            cap = Capacities()
-            cap.set_fields(core=client['core'], ram=client['ram'], disk=client['disk'])
+            cap = Capacities(core=client['core'], ram=client['ram'], disk=client['disk'])
             node = t.add_node(name=client['node_name'], site=site)
 
             #labels = Labels()
@@ -749,7 +743,7 @@ class NetworkBencharks(AbcTest):
 
         return slice
 
-    def test_s2s(self, test_name, test=None, verbose=True, create_slice=True):
+    def test_s2s(self, test_name, test=None, verbose=False, create_slice=True):
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
         self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
@@ -811,7 +805,7 @@ class NetworkBencharks(AbcTest):
         return all_results
 
 
-    def test_l2bridge(self, test_name, test=None, verbose=True, create_slice=True):
+    def test_l2bridge(self, test_name, test=None, verbose=False, create_slice=True):
         credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
         orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
         self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')

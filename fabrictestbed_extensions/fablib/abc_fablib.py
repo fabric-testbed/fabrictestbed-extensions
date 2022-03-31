@@ -50,8 +50,7 @@ class AbcFabLIB(ABC):
 
     def __init__(self):
         """
-        Constructor
-        :return:
+        Constructor. Sets environment variables for important FABRIC values.
         """
         super().__init__()
 
