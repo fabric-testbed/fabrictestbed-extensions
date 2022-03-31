@@ -656,6 +656,37 @@ class Node():
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
+
+    def execute_thread(self, command):
+        import threading
+
+        try:
+            self.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+        except Exception as e:
+            self.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+
+    def execute_thread_start(self, command, name=None):
+        import threading
+
+        if not hasattr(self, 'execute_thread_outputs'):
+            self.execute_thread_outputs = {}
+
+        thread = threading.Thread(name=name, target=self.execute_thread, args=(command,))
+        self.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+
+        thread.start()
+        return thread
+
+    def execute_thread_join(self, thread):
+        import threading
+        thread.join()
+
+        print(f"Node: {self.get_name()}, {self.execute_thread_outputs}")
+
+        return self.execute_thread_outputs[thread.getName()]
+
+
+
     def execute(self, command, retry=3, retry_interval=10):
         """
         Runs a command on the FABRIC node.
