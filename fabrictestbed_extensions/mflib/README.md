@@ -8,16 +8,16 @@ A common directory structure will help standardize the code.
 * The MeasurementFramework repo is cloned into /home/mfuser/MeasurementFramework
 * A services directory holds the scripts, files, json and variable files for each service.
  * /home/mfuser/services 
-* Each service has their control scripts in a /home/mfuser/services/<service-name> directory. 
-  * /home/mfuser/services/<service-name>/create.py
-  * /home/mfuser/services/<service-name>/upate.py
-  * /home/mfuser/services/<service-name>/start.py
-  * /home/mfuser/services/<service-name>/stop.py
-  * /home/mfuser/services/<service-name>/remove.py
+* Each service has their control scripts in a /home/mfuser/services/\<service-name> directory. 
+  * /home/mfuser/services/\<service-name>/create.py
+  * /home/mfuser/services/\<service-name>/upate.py
+  * /home/mfuser/services/\<service-name>/start.py
+  * /home/mfuser/services/\<service-name>/stop.py
+  * /home/mfuser/services/\<service-name>/remove.py
 * Each service has a landing spot for uploaded json and files. 
-  * /home/mfuser/services/<service-name>/files
+  * /home/mfuser/services/\<service-name>/files
 * Each service should consider caching results.
-* Each service has a /home/mfuser/services/<service-name>/readme.md file.
+* Each service has a /home/mfuser/services/\<service-name>/readme.md file.
 
 fablib is used to upload files and to run the commands on the meas node. Each method described below uses fablib to ensure the the files are successfully uploaded to the meas node. Fablib also ensures that the corresponding python script succesfully runs or reports an error to the user. 
 
@@ -26,7 +26,7 @@ Turns out making the mfuser may be problematic since there is no good fablib way
 
 
 
-#Methods
+# Methods
 
 ## init
 The init method will check/setup the slice. 
@@ -76,6 +76,25 @@ Having the remove.py file in a standard location will also make it easy to remov
  * The remove.py file can be anything that the service creator wants it to do. It could run a bash script at some location, start ansible scripts, etc..
 
 
+# Return JSON
+Each method's python script returns a JSON that contains some basic facts about the command results. A minimal JSON would be:
+
+```
+{ 
+    "success":True/False,
+}
+```
+
+More optional values.
+
+```
+{ 
+    "success":True/False,
+    "msg": "Error or success message."
+    "progress_file": <Progress filename for long running commands>
+    "data": { <Extra data of your choosing>},
+}
+```
 
 
 # Possible additions
