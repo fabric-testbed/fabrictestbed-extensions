@@ -70,6 +70,7 @@ class Node():
         super().__init__()
         self.fim_node = node
         self.slice = slice
+	self.docker_image = None
 
         #Try to set the username.
         try:
