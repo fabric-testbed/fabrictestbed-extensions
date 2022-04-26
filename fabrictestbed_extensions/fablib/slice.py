@@ -528,7 +528,7 @@ class Slice():
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, host=None, avoid=[]):
+    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, docker_image=None, host=None, avoid=[]):
         """
         Creates a new node on this fablib slice.
 
@@ -565,7 +565,9 @@ class Slice():
 
         if host:
             node.set_host(host)
-
+	
+	if docker_image:
+	    node.set_docker_image(docker_image)
 
         return node
 
@@ -1051,6 +1053,35 @@ class Slice():
                 return False
         return True
 
+    def link(self):
+	for node in self.get_nodes():
+		if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y -qq docker")
+    		if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y -q docker.io")
+    		ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
+    		node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}")
+
+    		interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
+    		NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
+
+    		try:
+        		if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools")
+        		if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools")
+    		except Exception as e"
+        		logging.error(f"Error installing docker on node {node.get_name()}")
+        		logging.error(e, exc_info=True)
+
+    	for iface in interfaces:
+        	try:
+            		node.execute(f'sudo ip link set dev {iface} promisc on')
+            		node.execute(f'sudo ip link set {iface} netns {NSPID}')
+            		node.execute(f'docker exec Docker ip link set dev {iface} up')
+            		node.execute(f'docker exec Docker ip link set dev {iface} promisc on')
+            		node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1')
+        	except Exception as e:
+            		logging.error(f"Interface: {iface} failed to link")
+            		logging.error("--> Try installing docker or docker.io on container <--")
+            		logging.error(e, exc_info=True)
+    
     def post_boot_config(self):
         """
         Run post boot configuration.  Typically, this is run automatically during
@@ -1089,6 +1120,8 @@ class Slice():
             except Exception as e:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
+	
+	for node in self.get_nodes(): link(node)
 
     def load_config(self):
         """

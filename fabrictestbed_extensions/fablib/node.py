@@ -70,6 +70,7 @@ class Node():
         super().__init__()
         self.fim_node = node
         self.slice = slice
+	self.docker_image = None
 
         #Try to set the username.
         try:
@@ -255,6 +256,15 @@ class Node():
         self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
 
+    def set_docker_image(self, docker_image):
+        """
+        Sets the docker image information of this fablib node on the FABRIC node.
+        :param docker_image: the docker image reference to set
+        :type docker_image: String
+        """
+        
+        self.docker_image = docker_image
+
     def set_host(self, host_name=None):
         """
         Sets the hostname of this fablib node on the FABRIC node.
@@ -348,6 +358,17 @@ class Node():
         """
         try:
             return self.get_fim_node().image_type
+        except:
+            return None
+
+    def get_docker_image(self):
+        """
+        Gets the docker image reference on the FABRIC node.
+        :return: the docker image reference on the node
+        :rtype: String
+        """
+        try:
+            return self.docker_image
         except:
             return None
 
@@ -656,7 +677,7 @@ class Node():
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
-    def execute(self, command, retry=3, retry_interval=10):
+    def execute(self, command, retry=3, retry_interval=10, vm=False):
         """
         Runs a command on the FABRIC node.
 
@@ -669,6 +690,8 @@ class Node():
         :raise Exception: if management IP is invalid
         """
         import logging
+
+	if self.get_docker_image() and not vm: command = "docker exec Docker " + command
 
         logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
