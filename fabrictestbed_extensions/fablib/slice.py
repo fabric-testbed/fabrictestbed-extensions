@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
+import ipaddress
 import os
 import traceback
 import re
@@ -1054,33 +1054,37 @@ class Slice():
         return True
 
     def link(self):
-	for node in self.get_nodes():
-		if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y -qq docker")
-    		if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y -q docker.io")
-    		ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
-    		node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}")
+        for node in self.get_nodes():
+            if node.get_image() in ["rocky", "centos", "fedora"]:
+                node.execute("sudo yum install -y -qq docker")
 
-    		interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
-    		NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
+            if node.get_image() in ["ubuntu", "debian"]:
+                node.execute("sudo apt-get install -y -q docker.io")
 
-    		try:
-        		if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools")
-        		if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools")
-    		except Exception as e"
-        		logging.error(f"Error installing docker on node {node.get_name()}")
-        		logging.error(e, exc_info=True)
+            ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
+            node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}")
 
-    	for iface in interfaces:
-        	try:
-            		node.execute(f'sudo ip link set dev {iface} promisc on')
-            		node.execute(f'sudo ip link set {iface} netns {NSPID}')
-            		node.execute(f'docker exec Docker ip link set dev {iface} up')
-            		node.execute(f'docker exec Docker ip link set dev {iface} promisc on')
-            		node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1')
-        	except Exception as e:
-            		logging.error(f"Interface: {iface} failed to link")
-            		logging.error("--> Try installing docker or docker.io on container <--")
-            		logging.error(e, exc_info=True)
+            interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
+            NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
+
+            try:
+                if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools")
+                if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools")
+            except Exception as e:
+                logging.error(f"Error installing docker on node {node.get_name()}")
+                logging.error(e, exc_info=True)
+
+            for iface in interfaces:
+                try:
+                        node.execute(f'sudo ip link set dev {iface} promisc on')
+                        node.execute(f'sudo ip link set {iface} netns {NSPID}')
+                        node.execute(f'docker exec Docker ip link set dev {iface} up')
+                        node.execute(f'docker exec Docker ip link set dev {iface} promisc on')
+                        node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1')
+                except Exception as e:
+                        logging.error(f"Interface: {iface} failed to link")
+                        logging.error("--> Try installing docker or docker.io on container <--")
+                        logging.error(e, exc_info=True)
     
     def post_boot_config(self):
         """
@@ -1120,8 +1124,8 @@ class Slice():
             except Exception as e:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
-	
-	for node in self.get_nodes(): link(node)
+
+	    #for node in self.get_nodes(): link(node)
 
     def load_config(self):
         """
