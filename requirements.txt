@@ -4,4 +4,4 @@ ipywidgets
 ipyleaflet
 ipycytoscape
 tabulate
-fabrictestbed>=1.2rc4
+fabrictestbed>=1.2rc5

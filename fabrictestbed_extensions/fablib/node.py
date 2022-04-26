@@ -1158,7 +1158,7 @@ class Node():
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {iface.get_os_interface()} ")
+            self.execute(f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
         except Exception as e:
             logging.warning(f"Failed to del addr: {e}")
             raise e

@@ -31,6 +31,8 @@ import functools
 import time
 import logging
 import random
+
+from IPython import get_ipython
 from tabulate import tabulate
 
 
