@@ -21,6 +21,8 @@ class mflib():
     
     # Need the slice name to connect to slice
     slicename = None
+    # The slice ojb
+    slice = None
     # Need private key to access the mfuser on the meas node. It is stored on the slice users account on the meas node.
     mfuser_private_key_file = os.path.join(local_storage_directory, "mfuser_private_key")
     # The slice's meas node 
@@ -42,6 +44,10 @@ class mflib():
         Constructor. Builds MFManager for mflib object.
         """
         super().__init__()
+        try:
+            os.makedirs("/tmp/mflib")
+        except:
+            pass
 
     def init(self,slicename):
         """
@@ -56,6 +62,7 @@ class mflib():
         print(f"Init-ing {slicename}")
         self.slicename = slicename
         
+        self.slice = fablib.get_slice(name=slicename)
         ########################
         # Check for prequisites
         #######################
@@ -84,7 +91,7 @@ class mflib():
                 pass
             
             
-            slice = fablib.get_slice(name=slicename)
+            #slice = fablib.get_slice(name=slicename)
             
             
             #######################################
@@ -92,49 +99,55 @@ class mflib():
             # & Get hosts info for hosts.ini
             ######################################
             #if "meas_network" in bss and bss["meas_network"] =="ok":
+            
             if True:
-                num=1
-                base = "10.0.0."
-                hosts = []
-                print("Setting measurement nic IPs")
-                for node in slice.get_nodes():
-                    for interface in node.get_interfaces():
-                        if ("Meas_Nic" in interface.get_name()):
-                            ip = base + str(num)
-                            interface.set_ip(ip = ip, cidr = "24")
-                            hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
-                            num+=1
+                self._make_hosts_ini_file(set_ip=True)
+            
+            
+#             if True:
+                
+#                 num=1
+#                 base = "10.0.0."
+#                 hosts = []
+#                 print("Setting measurement nic IPs")
+#                 for node in self.slice.get_nodes():
+#                     for interface in node.get_interfaces():
+#                         if ("Meas_Nic" in interface.get_name()):
+#                             ip = base + str(num)
+#                             interface.set_ip(ip = ip, cidr = "24")
+#                             hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
+#                             num+=1
 
 
-                print("Creating Ansible Hosts File\n")
-                # Prometheus e_Elk
-                hosts_txt = ""
-                e_hosts_txt = ""
+#                 print("Creating Ansible Hosts File\n")
+#                 # Prometheus e_Elk
+#                 hosts_txt = ""
+#                 e_hosts_txt = ""
 
-                experiment_nodes = "[Experiment_Nodes]\n"
-                e_experiment_nodes = "[workers]\n"
-                for host in hosts:
-                    if "_meas_node" in host:
+#                 experiment_nodes = "[Experiment_Nodes]\n"
+#                 e_experiment_nodes = "[workers]\n"
+#                 for host in hosts:
+#                     if "_meas_node" in host:
 
-                        hosts_txt += "[Meas_Node]\n"
-                        hosts_txt += host + '\n\n'
+#                         hosts_txt += "[Meas_Node]\n"
+#                         hosts_txt += host + '\n\n'
 
-                        e_hosts_txt += "[elk]\n"
-                        e_hosts_txt += host + '\n\n'
+#                         e_hosts_txt += "[elk]\n"
+#                         e_hosts_txt += host + '\n\n'
 
-                    else: # It is an experimenters node
-                        experiment_nodes += host + '\n'
-                        e_experiment_nodes += host + '\n'
+#                     else: # It is an experimenters node
+#                         experiment_nodes += host + '\n'
+#                         e_experiment_nodes += host + '\n'
 
-                hosts_txt += experiment_nodes
-                e_hosts_txt += e_experiment_nodes
-                with open('/tmp/mflib/promhosts.ini', 'w') as f:
-                    f.write(hosts_txt)
-                with open('/tmp/mflib/elkhosts.ini', 'w') as f:
-                    f.write(e_hosts_txt)
+#                 hosts_txt += experiment_nodes
+#                 e_hosts_txt += e_experiment_nodes
+#                 with open('/tmp/mflib/promhosts.ini', 'w') as f:
+#                     f.write(hosts_txt)
+#                 with open('/tmp/mflib/elkhosts.ini', 'w') as f:
+#                     f.write(e_hosts_txt)
 
                 
-            print("ansible hosts done")    
+#             print("ansible hosts done")    
                 
                 
             ######################   
@@ -194,7 +207,7 @@ class mflib():
 
                 #Add user
                 threads = []
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("sudo useradd -G root -m mfuser")])
                     except Exception as e:
@@ -203,7 +216,7 @@ class mflib():
                        thread[0].execute_thread_join(thread[1])
                 #Setup ssh 
                 threads = []
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")])
                     except Exception as e:
@@ -213,7 +226,7 @@ class mflib():
 
                 #Edit commands
                 threads=[]
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")])
                     except Exception as e:
@@ -222,7 +235,7 @@ class mflib():
                        thread[0].execute_thread_join(thread[1])
 
                 #Upload keys
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
                     except Exception as e:
@@ -230,7 +243,7 @@ class mflib():
 
                 #Edit commands
                 threads=[]
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
                     except Exception as e:
@@ -240,7 +253,7 @@ class mflib():
 
                 #Raise Key
                 threads=[]
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")])
                     except Exception as e:
@@ -250,7 +263,7 @@ class mflib():
 
                 #Authorize key
                 threads=[]
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("sudo chmod 644 /home/mfuser/.ssh/authorized_keys; sudo chown mfuser:mfuser /home/mfuser/.ssh/authorized_keys")])
                     except Exception as e:
@@ -260,7 +273,7 @@ class mflib():
 
                 #Installs
                 threads=[]
-                for node in slice.get_nodes():
+                for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("curl -fsSL https://test.docker.com -o test-docker.sh; sudo sh test-docker.sh; sudo apt-get -y update; sudo apt-get install -y python3-pip; sudo pip install docker")])
                     except Exception as e:
@@ -308,9 +321,7 @@ class mflib():
 #             print(stdout)
 #             print(stderr)
             
-            print("done for now")
-            return True
-        
+         
             self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
             self.meas_node.execute("sudo mv promhosts.ini mf_git/promhosts.ini")
             
@@ -318,10 +329,10 @@ class mflib():
             self.meas_node.execute("sudo mv elkhosts.ini mf_git/elkhosts.ini")
             
             #Keys needed for elk calls
-            self.meas_node.upload_file("/tmp/mflib/mfuser","ansible")
-            self.meas_node.execute("mv ansible .ssh/ansible; chmod 700 .ssh/ansible")
-            self.meas_node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
-            self.meas_node.execute(" mv ansible.pub .ssh/ansible.pub; chmod 700 .ssh/ansible.pub")
+#             self.meas_node.upload_file("/tmp/mflib/mfuser","ansible")
+#             self.meas_node.execute("mv ansible .ssh/ansible; chmod 700 .ssh/ansible")
+#             self.meas_node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
+#             self.meas_node.execute(" mv ansible.pub .ssh/ansible.pub; chmod 700 .ssh/ansible.pub")
             
 #             self.meas_node.execute("pip install ansible")
             
@@ -332,6 +343,10 @@ class mflib():
             
             
 #             self.meas_node.execute("/home/ubuntu/.local/bin/ansible-galaxy install cloudalchemy.node_exporter")
+
+            print("done for now")
+            return True
+        
             self.meas_node.execute("cd mf_git/instrumentize/ansible/fabric_experiment_instramentize;/home/ubuntu/.local/bin/ansible-playbook -i ~/mf_git/promhosts.ini -b playbook_fabric_experiment_install_prometheus.yml")
             
             self.meas_node.execute("sudo apt install acl -y")
@@ -446,8 +461,8 @@ class mflib():
         :rtype: Boolean
         """
         try:
-            slice = fablib.get_slice(self.slicename)
-            for node in slice.get_nodes():
+            #slice = fablib.get_slice(self.slicename)
+            for node in self.slice.get_nodes():
                 if node.get_name() == self.measurement_node_name:
                     self.meas_node = node 
                     return True 
@@ -633,6 +648,72 @@ class mflib():
         
         
         
+    def _make_hosts_ini_file(self, set_ip=False):
+        hosts = []
+        print("hsoting")
+#         for node in self.slice.get_nodes():
+#             print(node.get_name() )
+#             for interface in node.get_interfaces():
+#                 if ("Meas_Nic" in interface.get_name()):
+
+#                     ip = interface.get_ip()
+#                     hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
+#                     num+=1
+
+                    
+                    
+                    
+        num=1
+        base = "10.0.0."
+        hosts = []
+        print("Setting measurement nic IPs")
+        for node in self.slice.get_nodes():
+            for interface in node.get_interfaces():
+                if ("Meas_Nic" in interface.get_name()):
+                    ip = base + str(num)
+                   
+                    if set_ip:
+                        interface.set_ip(ip = ip, cidr = "24")
+                    hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
+                    num+=1
+
+
+        print("Creating Ansible Hosts File\n")
+        # Prometheus e_Elk
+        hosts_txt = ""
+        e_hosts_txt = ""
+
+        experiment_nodes = "[Experiment_Nodes]\n"
+        e_experiment_nodes = "[workers]\n"
+        for host in hosts:
+            if "_meas_node" in host:
+
+                hosts_txt += "[Meas_Node]\n"
+                hosts_txt += host + '\n\n'
+
+                e_hosts_txt += "[elk]\n"
+                e_hosts_txt += host + '\n\n'
+
+            else: # It is an experimenters node
+                experiment_nodes += host + '\n'
+                e_experiment_nodes += host + '\n'
+
+        hosts_txt += experiment_nodes
+        e_hosts_txt += e_experiment_nodes
+        with open('/tmp/mflib/promhosts.ini', 'w') as f:
+            f.write(hosts_txt)
+        with open('/tmp/mflib/elkhosts.ini', 'w') as f:
+            f.write(e_hosts_txt)
+
+        print("Uploading hosts files")
+        # Upload
+        self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
+        self.meas_node.execute("sudo mv promhosts.ini /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
+                                                      
+
+        self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
+        self.meas_node.execute("sudo mv elkhosts.ini /home/hosts/mf_git/elkhosts.ini")
+        
         
         
     def _clone_mf_repo(self):
@@ -690,13 +771,14 @@ class mflib():
         try:
             local_file_path = self.bootstrap_status_file
             remote_file_path =  os.path.join("bootstrap_status.json")
-            print(local_file_path)
-            print(remote_file_path)
+            #print(local_file_path)
+            #print(remote_file_path)
             file_attributes = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
             #print(file_attributes)
             
             return True
         except Exception as e:
+            print("Bootstrap download has failed.")
             print(f"Fail: {e}")
         return False  
     
