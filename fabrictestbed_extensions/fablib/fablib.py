@@ -82,7 +82,7 @@ class fablib(AbcFabLIB):
         try:
             self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
                                               cm_host=self.credmgr_host,
-                                              project_name='all',
+                                              project_name=self.project_name,
                                               scope='all')
 
             # Initialize the slice manager
