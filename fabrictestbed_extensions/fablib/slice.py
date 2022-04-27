@@ -23,46 +23,25 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 import ipaddress
-import os
-import traceback
-import re
 
-import functools
 import time
 import logging
 from tabulate import tabulate
 
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
-import importlib.resources as pkg_resources
-from typing import List, Union
+from typing import List
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-#from fabrictestbed.slice_manager import Slice as SMSlice
+from fabrictestbed.slice_editor import ExperimentTopology
+from fabrictestbed.slice_manager import Status, SliceState
 
-#from fabrictestbed_extensions.fablib.network_service import NetworkService
-
-
-#from .slicex import SliceX
-#from .nodex import NodeX
-#from .fabricx import FabricX
-
-#from .abc_fablib import AbcFabLIB
-#from .interface import Interface
-
-#from .. import images
 
 from fabrictestbed_extensions.fablib.fablib import fablib
 from fabrictestbed_extensions.fablib.node import Node
 from fabrictestbed_extensions.fablib.interface import Interface
 
 
-class Slice():
+class Slice:
 
     def __init__(self, name=None):
         """
@@ -73,7 +52,6 @@ class Slice():
         """
         super().__init__()
 
-        #print(f"Creating Slice: Name: {name}, Slice: {slice}")
         self.network_iface_map = None
         self.slice_name = name
         self.sm_slice = None
@@ -91,14 +69,13 @@ class Slice():
         :return: Tabulated string of slice information
         :rtype: String
         """
-        table = [   [ "Slice Name", self.sm_slice.slice_name ],
-                    [ "Slice ID", self.sm_slice.slice_id ],
-                    [ "Slice State", self.sm_slice.slice_state ],
-                    [ "Lease End", self.sm_slice.lease_end ],
-                    ]
+        table = [["Slice Name", self.sm_slice.slice_name],
+                 ["Slice ID", self.sm_slice.slice_id],
+                 ["Slice State", self.sm_slice.slice_state],
+                 ["Lease End", self.sm_slice.lease_end]
+                ]
 
         return tabulate(table)
-
 
     def list_nodes(self):
         """
@@ -125,7 +102,8 @@ class Slice():
                                 node.get_error_message(),
                                 ] )
 
-        return tabulate(table, headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image","Management IP",  "State", "Error" ])
+        return tabulate(table, headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image",
+                                        "Management IP", "State", "Error"])
 
     def list_interfaces(self):
         """
@@ -159,9 +137,8 @@ class Slice():
                                 iface.get_os_interface(),
                                 ] )
 
-        return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
-
-
+        return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC",
+                                        "Physical OS Interface", "OS Interface"])
 
     @staticmethod
     def new_slice(name=None):
@@ -215,8 +192,6 @@ class Slice():
             except Exception as e:
                 logging.error(f"Slice {slice.slice_name} config could not loaded: slice.get_slice")
                 logging.error(e, exc_info=True)
-
-
         return slice
 
     def get_fim_topology(self):
@@ -249,7 +224,8 @@ class Slice():
         return_status, slices = fablib.get_slice_manager().slices(excludes=[])
         if fablib.get_log_level() == logging.DEBUG:
             end = time.time()
-            logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): elapsed time: {end - start} seconds")
+            logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
+                          f"elapsed time: {end - start} seconds")
 
         if return_status == Status.OK:
             self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
@@ -291,18 +267,13 @@ class Slice():
     def get_sliver(self, reservation_id):
         slivers = self.get_slivers()
         sliver = list(filter(lambda x: x.reservation_id == reservation_id, slivers ))[0]
-
         return sliver
 
-
     def get_slivers(self):
-
         if not hasattr(self, 'slivers') or not self.slivers:
             self.update_slivers()
 
         return self.slivers
-
-
 
     def update(self):
         """
@@ -321,18 +292,6 @@ class Slice():
             logging.warning(f"slice.update_slivers failed: {e}")
 
         self.update_topology()
-
-    def get_slice_public_key(self):
-        """
-        Gets the slice public key.
-
-        Important! Slice key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: the public key
-        :rtype: String
-        """
-        return self.slice_key['slice_public_key']
 
     def get_private_key_passphrase(self):
         """
@@ -565,9 +524,9 @@ class Slice():
 
         if host:
             node.set_host(host)
-	
-	if docker_image:
-	    node.set_docker_image(docker_image)
+
+        if docker_image:
+            node.set_docker_image(docker_image)
 
         return node
 
@@ -827,8 +786,6 @@ class Slice():
             pass
         return return_networks
 
-
-
     def get_networks(self):
         """
         Gets all network services (L2 and L3) in this slice
@@ -996,7 +953,6 @@ class Slice():
         else:
             logging.debug(f'Slice {self.get_name()}, NOT loading interface map')
 
-
         return self.network_iface_map
 
     def wait_ssh(self, timeout=360, interval=10, progress=False):
@@ -1034,15 +990,16 @@ class Slice():
             if progress: print(".", end = '')
 
             if time.time() >= timeout_start + timeout:
-                if progress: print(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
-                raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout,slice.slice_name,slice.slice_state))
+                if progress:
+                    print(f" Timeout exceeded ({timeout} sec). Slice: {slice.slice_name} ({slice.slice_state})")
+                raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.slice_name} ({slice.slice_state})")
 
             time.sleep(interval)
             self.update()
 
     def test_ssh(self):
         """
-        Tests all nodes in the slices are accessble via ssh.
+        Tests all nodes in the slices are accessible via ssh.
 
         :return: indicator for whether or not all nodes were ssh-able
         :rtype: bool
@@ -1125,7 +1082,7 @@ class Slice():
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-	    #for node in self.get_nodes(): link(node)
+        #for node in self.get_nodes(): link(node)
 
     def load_config(self):
         """
@@ -1231,8 +1188,6 @@ class Slice():
                         iface_map[node.get_name()] = node_os_iface
                         break
 
-
-
             self.network_iface_map[net.get_name()] = iface_map
 
         for net in self.get_l2networks():
@@ -1315,12 +1270,10 @@ class Slice():
                     if found:
                         break
 
-
             self.network_iface_map[net.get_name()] = iface_map
             target_node.clear_all_ifaces()
 
         logging.debug(f"network_iface_map: {self.network_iface_map}")
-
 
     def wait_jupyter(self, timeout=600, interval=10):
         from IPython.display import clear_output
@@ -1417,7 +1370,6 @@ class Slice():
         if progress and wait_jupyter == 'text' and fablib.isJupyterNotebook():
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
-
 
         if wait:
             self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
