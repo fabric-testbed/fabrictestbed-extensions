@@ -48,6 +48,10 @@ class mflib():
             os.makedirs("/tmp/mflib")
         except:
             pass
+        
+    def instrumentize():
+        mf.create(prometheus)
+        #etc...
 
     def init(self,slicename):
         """
@@ -102,52 +106,6 @@ class mflib():
             
             if True:
                 self._make_hosts_ini_file(set_ip=True)
-            
-            
-#             if True:
-                
-#                 num=1
-#                 base = "10.0.0."
-#                 hosts = []
-#                 print("Setting measurement nic IPs")
-#                 for node in self.slice.get_nodes():
-#                     for interface in node.get_interfaces():
-#                         if ("Meas_Nic" in interface.get_name()):
-#                             ip = base + str(num)
-#                             interface.set_ip(ip = ip, cidr = "24")
-#                             hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
-#                             num+=1
-
-
-#                 print("Creating Ansible Hosts File\n")
-#                 # Prometheus e_Elk
-#                 hosts_txt = ""
-#                 e_hosts_txt = ""
-
-#                 experiment_nodes = "[Experiment_Nodes]\n"
-#                 e_experiment_nodes = "[workers]\n"
-#                 for host in hosts:
-#                     if "_meas_node" in host:
-
-#                         hosts_txt += "[Meas_Node]\n"
-#                         hosts_txt += host + '\n\n'
-
-#                         e_hosts_txt += "[elk]\n"
-#                         e_hosts_txt += host + '\n\n'
-
-#                     else: # It is an experimenters node
-#                         experiment_nodes += host + '\n'
-#                         e_experiment_nodes += host + '\n'
-
-#                 hosts_txt += experiment_nodes
-#                 e_hosts_txt += e_experiment_nodes
-#                 with open('/tmp/mflib/promhosts.ini', 'w') as f:
-#                     f.write(hosts_txt)
-#                 with open('/tmp/mflib/elkhosts.ini', 'w') as f:
-#                     f.write(e_hosts_txt)
-
-                
-#             print("ansible hosts done")    
                 
                 
             ######################   
@@ -817,4 +775,10 @@ class mflib():
         return False  
     
     
-    
+    # TODO
+    def _update_bootstrap(self, key, value):
+        """
+        Updates the given key to the given value in the bootstrap_status.json file on the meas node.
+        """
+        pass
+        
