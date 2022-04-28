@@ -7,6 +7,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 from os import chmod
 
+import string
+import random
 import paramiko
 
 #https://learn.fabric-testbed.net/knowledge-base/using-ipv4-only-resources-like-github-or-docker-hub-from-ipv6-fabric-sites/
@@ -426,15 +428,34 @@ class mflib():
         :param data: A JSON serializable dictionary 
         :type data: dict
         """
+        
+            
+        letters = string.ascii_letters
         try:
-            local_file_path = "tmp_mf_service_data.json"
-            remote_file_path = os.path.join(self.services_directory, service, "data.json")
-            with open(local_file_path) as datafile:
+            # Create temp file for serialized json data
+            randdataname = "mf_service_data_" + "".join(random.choice(letters) for i in range(10))
+            local_file_path = os.path.join("/tmp", randdataname)
+            with open(local_file_path, 'w') as datafile:
+                print("dumping data")
                 json.dump(data, datafile)
-            stdout, stderr = self.meas_node.upload_file(local_file_path, remote_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
+            
+            # Create remote filenames
+            final_remote_file_path = os.path.join(self.services_directory, service, "data.json")
+            remote_tmp_file_path = os.path.join("/tmp", randdataname)
+    
+            # upload file
+            fa = self.meas_node.upload_file(local_file_path, remote_tmp_file_path)
+            
+            # mv file to final location
+            cmd = f"sudo mv {remote_tmp_file_path} {final_remote_file_path};  sudo chown mfuser:mfuser {final_remote_file_path}"
+            
+            self.meas_node.execute(cmd)
+            
+            # Remove local temp file.
+            os.remove(local_file_path)
+            
         except Exception as e:
-            print(f"Fail: {e}")
-
+            print(f"Fail: {e}")  
 
 
     def _upload_service_files(self, service, files):
@@ -448,6 +469,7 @@ class mflib():
         :return: ?
         :rtype: ?
         """
+        letters = string.ascii_letters
 
         # TODO could add option to upload a directory of files using fablib.upload_directory
         try:
@@ -456,9 +478,24 @@ class mflib():
                 # file is local path
                 local_file_path = file 
                 filename = os.path.basename(file)
-                remote_file_path = os.path.join(self.services_directory, service, filename)
+                final_remote_file_path = os.path.join(self.services_directory, service, filename)
+                #remote_file_path = os.path.join("/tmp/mf_file_transfer/service/filename")
+                #remote_file_path = os.path.join(f"/tmp/{filename}")
+                randfilename = "mf_file_" + "".join(random.choice(letters) for i in range(10))
+                remote_tmp_file_path = os.path.join("/tmp", randfilename)
+                
+                
+                print(local_file_path)
+                print(filename)
+                print(remote_tmp_file_path)
+                print(final_remote_file_path)
+                
+                
                 # upload file
-                stdout, stderr = self.meas_node.upload_file(local_file_path, remote_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
+                fa = self.meas_node.upload_file(local_file_path, remote_tmp_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
+                cmd = f"sudo mv {remote_tmp_file_path} {final_remote_file_path};  sudo chown mfuser:mfuser {final_remote_file_path}; sudo rm {remote_tmp_file_path}"
+                print(cmd)
+                self.meas_node.execute(cmd)
         except Exception as e:
             print(f"Fail: {e}")
 
@@ -493,6 +530,8 @@ class mflib():
         :type service: String
         :param filename: The filename to download from the meas node.
         """
+        print("!!!!!!!!!!!!!!!!!!!!_download_service_file is not yet implemented!!!!!!!!!!!!!!!!!!!!!!!!!")
+        return
         # 
         #  Download a file from a service directory
         # Probably most useful for grabbing output from a command run.
@@ -503,70 +542,6 @@ class mflib():
             stdout, stderr = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
         except Exception as e:
             print(f"Fail: {e}")
-        
-        
-        
-        
-#############untested############################        
-    def _execute( self, command):
-        """
-        Does the same thing that node.execute would do in fablib, but uses the mfuser account.
-        """
-       
-        key = paramiko.RSAKey.from_private_key_file(self.mfuser_private_key_file)
-        bastion=paramiko.SSHClient()
-        bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        #bastion.connect(bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_private_key_file)
-        bastion.connect(fablib.get_bastion_public_addr(), username=fablib.get_bastion_username(), key_filename=fablib.get_bastion_key_filename())
-
-        bastion_transport = bastion.get_transport()
-        src_addr = (bastion_private_ipv6_addr, 22)
-
-        dest_addr = (self.meas_ip, self.meas_port)
-        bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
-
-
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(self.meas_ip,username=mfuser,pkey = key, sock=bastion_channel)
-
-        stdin, stdout, stderr = client.exec_command(command )
-
-        stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
-        stderr_str = str(stderr.read(),'utf-8').replace('\\n','\n')
-
-        client.close()
-
-        return  (stdout, stderr)   
-        
-    def _scp_file(isrcfile, destfile):
-        print("SCPing file: {0}".format(srcfile))
-
-        key = paramiko.RSAKey.from_private_key_file(self.mfuser_private_key_file)
-        bastion=paramiko.SSHClient()
-        bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        bastion.connect(bastion_public_addr, username=self.bastion_username, key_filename=self.bastion_private_key_file)
-
-        bastion_transport = bastion.get_transport()
-        src_addr = (bastion_private_ipv6_addr, 22)
-
-        dest_addr = (self.meas_ip, self.meas_port)
-        bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
-
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(self.meas_ip,username=mfuser,pkey = key, sock=bastion_channel)
-
-        sftp = client.open_sftp()
-        sftp.put(srcfile, destfile)
-        sftp.close()
-        client.close()
-##################end untested############################
-        
         
         
     def _make_hosts_ini_file(self, set_ip=False):
