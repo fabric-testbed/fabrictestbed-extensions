@@ -49,8 +49,11 @@ class mflib():
         except:
             pass
         
-    def instrumentize():
-        mf.create(prometheus)
+    def instrumentize(self):
+        print("Setting up Prometheus")
+        self.create("prometheus")
+        
+        print("Instrumentize Done.")
         #etc...
 
     def init(self,slicename):
@@ -59,14 +62,14 @@ class mflib():
         :param slicename: The name of the slice.
         :rtype: String
         """
-        # Ensure the slice is setup with a meas node and mfuser.
-        # Ensure the MeasusrementFramework repo has been cloned on the meas node.
-        # Ensure mfuser accounts are created on all nodes
-        
         print(f"Init-ing {slicename}")
-        self.slicename = slicename
         
+        ########################
+        # Get slice 
+        ########################
+        self.slicename = slicename
         self.slice = fablib.get_slice(name=slicename)
+        
         ########################
         # Check for prequisites
         #######################
@@ -79,41 +82,28 @@ class mflib():
         print(f"Found meas node as {self.meas_node.get_name()}")
         
         bss = self.get_bootstrap_status()
+        print("bootstrap status is")
+        print(bss)
         
         if ("status" in bss and bss["status"] == "ready"):
-            #Slice already instrumentized and ready to go.
+            # Slice already instrumentized and ready to go.
             self.get_mfuser_private_key() 
             print("Slice Measurement Framework is ready")
             return
         else: 
-            return
+            
+            ###############################
             # Need to do some boostrapping
-            
-            try:
-                os.makedirs("/tmp/mflib")
-            except:
-                pass
-            
-            
-            #slice = fablib.get_slice(name=slicename)
-            
-            
-            #######################################
-            # Create measurement network interfaces  
-            # & Get hosts info for hosts.ini
-            ######################################
-            #if "meas_network" in bss and bss["meas_network"] =="ok":
-            
-            if True:
-                self._make_hosts_ini_file(set_ip=True)
-                
+            ###############################
+ 
+
                 
             ######################   
             # Create MFUser keys
             #####################
             #if "mfuser_keys" in bss and bss["mfuser_keys"] =="ok":
             if True:
-                print ("Generating Ansible User Keys\n")
+                print ("Generating MFUser Keys\n")
                 key = rsa.generate_private_key(
                     backend=crypto_default_backend(),
                     public_exponent=65537,
@@ -148,7 +138,7 @@ class mflib():
                 private_key_file.close()
                 chmod("/tmp/mflib/mfuser", 0o600);
 
-            print("MFUser keys Done")
+                print("MFUser keys Done")
             
             
                 
@@ -158,11 +148,8 @@ class mflib():
             #if "mfusers" in bss and bss["mfusers"] =="ok":
             if True:  
                 #Install mflib user/environment
-                print("Installing mfuser\n")
-    #             for node in slice.get_nodes():
-    #                 if(node.get_name()=="_meas_node"):
-    #                     self.meas_node = node
-
+                print("Installing mfusers\n")
+   
                 #Add user
                 threads = []
                 for node in self.slice.get_nodes():
@@ -229,6 +216,7 @@ class mflib():
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
+                # TODO move to meas node ansible script
                 #Installs
                 threads=[]
                 for node in self.slice.get_nodes():
@@ -239,70 +227,45 @@ class mflib():
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
-            print("mf users done")
+              
             
+                # Upload mfuser private key to meas node & move to mfuser account
+                self.meas_node.upload_file("/tmp/mflib/mfuser","mfuser")
+                # cp so as to keep a key copy where the slice owner can grab it
+                self.meas_node.execute("sudo cp mfuser /home/mfuser/.ssh/mfuser; sudo chown mfuser:mfuser /home/mfuser/.ssh/mfuser; sudo chmod 600 /home/mfuser/.ssh/mfuser")
+
+                print("mfusers done")
             
-            # Upload mfuser private key to meas node & move to mfuser account
-            self.meas_node.upload_file("/tmp/mflib/mfuser","mfuser")
-            # cp so as to keep a key copy where the slice owner can grab it
-            self.meas_node.execute("sudo cp mfuser /home/mfuser/.ssh/mfuser; sudo chown mfuser:mfuser /home/mfuser/.ssh/mfuser; sudo chmod 600 /home/mfuser/.ssh/mfuser")
-            
-            
+
             #######################
             # Clone mf repo 
             #######################
             #if "repo_cloned" in bss and bss["repo_cloned"] =="ok":
             if True:
                 self._clone_mf_repo()
+                
+                
+                
+            #######################################
+            # Create measurement network interfaces  
+            # & Get hosts info for hosts.ini
+            ######################################
+            #if "meas_network" in bss and bss["meas_network"] =="ok":
+            if True:
+                self._make_hosts_ini_file(set_ip=True)
+                
+                
             
             #######################
             # Run Bootstrap script
             ######################
             #if "bootstrap_script" in bss and bss["bootstrap_script"] =="ok":
             if True:
+                print("Bootstrapping measurement node.")
                 self._run_bootstrap_script()
             
-            #Instrumentize
-            print("Instrumentizing nodes\n")
-            
-            
-            
-            # Now Switch to mfuser
-            
-            # Clone MF repo
-            #stdout, stderr = self.meas_node.execute("sudo -u mfuser git clone https://github.com/fabric-testbed/MeasurementFramework.git /home/mfuser/mf_git;" )#sudo mf_git/instrumentize/experiment_bootstrap/install_ansible.sh")
-            #print(stdout)
-            #print(stderr)
-            
-#             cmd = "git clone https://github.com/fabric-testbed/MeasurementFramework.git mf_git"
-#             stdout, stderr = self._execute(cmd)
-#             print(stdout)
-#             print(stderr)
-            
-         
-            self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
-            self.meas_node.execute("sudo mv promhosts.ini mf_git/promhosts.ini")
-            
-            self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
-            self.meas_node.execute("sudo mv elkhosts.ini mf_git/elkhosts.ini")
-            
-            #Keys needed for elk calls
-#             self.meas_node.upload_file("/tmp/mflib/mfuser","ansible")
-#             self.meas_node.execute("mv ansible .ssh/ansible; chmod 700 .ssh/ansible")
-#             self.meas_node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
-#             self.meas_node.execute(" mv ansible.pub .ssh/ansible.pub; chmod 700 .ssh/ansible.pub")
-            
-#             self.meas_node.execute("pip install ansible")
-            
-#             self.meas_node.execute("/home/ubuntu/.local/bin/ansible-galaxy collection install community.crypto")
-#             self.meas_node.execute("/home/ubuntu/.local/bin/ansible-galaxy collection install community.docker")
-#             self.meas_node.execute("/home/ubuntu/.local/bin/ansible-galaxy install geerlingguy.docker")
-            
-            
-            
-#             self.meas_node.execute("/home/ubuntu/.local/bin/ansible-galaxy install cloudalchemy.node_exporter")
-
-            print("done for now")
+            self._update_bootstrap("status", "ready")
+            print("Init Done")
             return True
         
             self.meas_node.execute("cd mf_git/instrumentize/ansible/fabric_experiment_instramentize;/home/ubuntu/.local/bin/ansible-playbook -i ~/mf_git/promhosts.ini -b playbook_fabric_experiment_install_prometheus.yml")
@@ -468,7 +431,7 @@ class mflib():
             remote_file_path = os.path.join(self.services_directory, service, "data.json")
             with open(local_file_path) as datafile:
                 json.dump(data, datafile)
-            stdout, stderr = node.upload_file(self, local_file_path, remote_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
+            stdout, stderr = self.meas_node.upload_file(local_file_path, remote_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
         except Exception as e:
             print(f"Fail: {e}")
 
@@ -495,7 +458,7 @@ class mflib():
                 filename = os.path.basename(file)
                 remote_file_path = os.path.join(self.services_directory, service, filename)
                 # upload file
-                stdout, stderr = node.upload_file(self, local_file_path, remote_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
+                stdout, stderr = self.meas_node.upload_file(local_file_path, remote_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
         except Exception as e:
             print(f"Fail: {e}")
 
@@ -607,20 +570,7 @@ class mflib():
         
         
     def _make_hosts_ini_file(self, set_ip=False):
-        hosts = []
-        print("hsoting")
-#         for node in self.slice.get_nodes():
-#             print(node.get_name() )
-#             for interface in node.get_interfaces():
-#                 if ("Meas_Nic" in interface.get_name()):
-
-#                     ip = interface.get_ip()
-#                     hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
-#                     num+=1
-
-                    
-                    
-                    
+        hosts = []                    
         num=1
         base = "10.0.0."
         hosts = []
@@ -631,6 +581,7 @@ class mflib():
                     ip = base + str(num)
                    
                     if set_ip:
+                        print("setting interface ip")
                         interface.set_ip(ip = ip, cidr = "24")
                     hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
                     num+=1
@@ -666,9 +617,13 @@ class mflib():
         print("Uploading hosts files")
         # Upload
         self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
-        self.meas_node.execute("sudo mv promhosts.ini /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
-                                                      
-
+        stdout, stderr = self.meas_node.execute("sudo mv promhosts.ini /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
+        print(stdout)
+        print(stderr)
+        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
+        print(stdout)
+        print(stderr)
+        
         self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
         self.meas_node.execute("sudo mv elkhosts.ini /home/hosts/mf_git/elkhosts.ini")
         
@@ -705,16 +660,23 @@ class mflib():
         :rtype: dict
         """
         if force or not os.path.exists(self.bootstrap_status_file):
-            self._download_bootstrap_status()
-
+            if not self._download_bootstrap_status():
+                print("Boostrap file was not downloaded.")
+                return {}
+        
+            
         if os.path.exists(self.bootstrap_status_file):
-           #?? parse the file to see what the status is
             with open(self.bootstrap_status_file) as bsf:
-                bootstrap_dict = json.load(bsf)
-                print(bootstrap_dict)
-                if bootstrap_dict:
-                    return bootstrap_dict 
-                else:
+                try:
+                    bootstrap_dict = json.load(bsf)
+                    print(bootstrap_dict)
+                    if bootstrap_dict:
+                        return bootstrap_dict 
+                    else:
+                        return {}
+                except Exception as e:
+                    print(f"Bootstrap failed to decode")
+                    print(f"Fail: {e}")
                     return {}
         else:
             return {}
@@ -731,13 +693,14 @@ class mflib():
             remote_file_path =  os.path.join("bootstrap_status.json")
             #print(local_file_path)
             #print(remote_file_path)
-            file_attributes = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+            file_attributes = self.meas_node.download_file(local_file_path, remote_file_path, retry=1) #, retry=3, retry_interval=10): # note retry is really tries
             #print(file_attributes)
             
             return True
         except Exception as e:
             print("Bootstrap download has failed.")
             print(f"Fail: {e}")
+            return False
         return False  
     
     
@@ -780,5 +743,27 @@ class mflib():
         """
         Updates the given key to the given value in the bootstrap_status.json file on the meas node.
         """
-        pass
+        
+        
+        #self.download_bootstrap_status()
+        bsf_dict = {}
+        bsf_dict[key] = value
+        
+        with open(self.bootstrap_status_file, "w") as bsf:
+            json.dump(bsf_dict, bsf)
+    
+        try:
+            local_file_path = self.bootstrap_status_file
+            remote_file_path =  os.path.join("bootstrap_status.json")
+            #print(local_file_path)
+            #print(remote_file_path)
+            file_attributes = self.meas_node.upload_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+            #print(file_attributes)
+            
+            return True
+        except Exception as e:
+            print("Bootstrap upload has failed.")
+            print(f"Fail: {e}")
+        return False  
+    
         
