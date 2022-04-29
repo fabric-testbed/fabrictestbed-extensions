@@ -316,7 +316,7 @@ class mflib():
         :param files: List of filepaths to be uploaded.
         :type files: List of Strings
         """
-        self._run_on_meas_node(service, "create", data, files)
+        return self._run_on_meas_node(service, "create", data, files)
 
     def update(self, service, data=None, files=[]):
         """
@@ -328,7 +328,7 @@ class mflib():
         :param files: List of filepaths to be uploaded.
         :type files: List of Strings
         """
-        self._run_on_meas_node(service, "update", data, files)
+        return self._run_on_meas_node(service, "update", data, files)
 
     def info(self, service, data=None):
         """
@@ -338,7 +338,7 @@ class mflib():
         :param data: Data to be passed to a JSON file place in the service's meas node directory.
         :type data: JSON serializable object.
         """
-        self._run_on_meas_node(service, "info", data)
+        return self._run_on_meas_node(service, "info", data)
 
         
         
@@ -347,14 +347,14 @@ class mflib():
         Restarts a stopped service using existing configs on meas node.
         """
         for service in services:
-            self._run_on_meas_node(service, "start")
+            return self._run_on_meas_node(service, "start")
 
     def stop(self, services=[]):
         """
         Stops a service, does not remove the service, just stops it from using resources.
         """
         for service in services:
-            self._run_on_meas_node(service, "stop")
+            return self._run_on_meas_node(service, "stop")
 
     def status(self, services=[]):
         """
@@ -362,14 +362,14 @@ class mflib():
         Returns predefined status info. Does not change the running of the service.
         """ 
         for service in services:
-            self._run_on_meas_node(service, "status")
+            return self._run_on_meas_node(service, "status")
 
     def remove(self, services=[]):
         """
         Stops a service running and removes anything setup on the experiment's nodes. Service will then need to be re-created using the create command before service can be started again.
         """
         for service in services:
-            self._run_on_meas_node(service, "remove")
+            return self._run_on_meas_node(service, "remove")
 
 
 
@@ -436,7 +436,7 @@ class mflib():
             randdataname = "mf_service_data_" + "".join(random.choice(letters) for i in range(10))
             local_file_path = os.path.join("/tmp", randdataname)
             with open(local_file_path, 'w') as datafile:
-                print("dumping data")
+                #print("dumping data")
                 json.dump(data, datafile)
             
             # Create remote filenames
@@ -456,6 +456,8 @@ class mflib():
             
         except Exception as e:
             print(f"Fail: {e}")  
+            return False
+        return True
 
 
     def _upload_service_files(self, service, files):
@@ -485,10 +487,10 @@ class mflib():
                 remote_tmp_file_path = os.path.join("/tmp", randfilename)
                 
                 
-                print(local_file_path)
-                print(filename)
-                print(remote_tmp_file_path)
-                print(final_remote_file_path)
+#                 print(local_file_path)
+#                 print(filename)
+#                 print(remote_tmp_file_path)
+#                 print(final_remote_file_path)
                 
                 
                 # upload file
@@ -498,6 +500,8 @@ class mflib():
                 self.meas_node.execute(cmd)
         except Exception as e:
             print(f"Fail: {e}")
+            return False
+        return True
 
 
     def _run_service_command( self, service, command ):
@@ -518,9 +522,23 @@ class mflib():
             stdout, stderr = self.meas_node.execute(full_command) #retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key"
         except Exception as e:
             print(f"Fail: {e}")
-        print(stdout)
-        print(stderr)
-        return (stdout, stderr)
+#         print(type(stdout))
+#         print(stdout)
+#         print(stderr)
+        try:
+            # Convert the json string to a dict
+            jsonstr = stdout
+            # remove non json string
+            jsonstr = jsonstr[ jsonstr.find('{'):jsonstr.rfind('}')+1]
+            # Need to "undo" what the exceute command did
+            jsonstr = jsonstr.replace('\n','\\n')
+            #print(jsonstr)
+            ret_data = json.loads(jsonstr)
+            return ret_data
+        except Exception as e:
+            print("Unable to convert returned comand json.")
+            print(f"Fail: {e}")
+        return {} #(stdout, stderr)
 
 
     def _download_service_file(self, service, filename):
