@@ -443,8 +443,8 @@ class NetworkBencharks(AbcTest):
     def run_tests_all_tests(self, test_name, site1, site2, verbose=False):
         credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
         orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
-        project_name = os.environ[Constants.FABRIC_PROJECT_NAME]
-        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name=project_name,
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
                                           scope='all')
         self.slice_manager .initialize()
 
@@ -476,9 +476,9 @@ class NetworkBencharks(AbcTest):
     def test_all_ptp(self, tests, verbose=False, create_slices=True):
         credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
         orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
-        project_name = os.environ[Constants.FABRIC_PROJECT_NAME]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
 
-        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name=project_name,
+        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
                                      scope='all')
 
         # Initialize the slice manager
@@ -748,8 +748,8 @@ class NetworkBencharks(AbcTest):
     def test_s2s(self, test_name, test=None, verbose=False, create_slice=True):
         credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
         orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
-        project_name = os.environ[Constants.FABRIC_PROJECT_NAME]
-        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name=project_name,
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
                                           scope='all')
         self.slice_manager.initialize()
 
@@ -808,8 +808,8 @@ class NetworkBencharks(AbcTest):
     def test_l2bridge(self, test_name, test=None, verbose=False, create_slice=True):
         credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
         orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
-        project_name = os.environ[Constants.FABRIC_PROJECT_NAME]
-        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name=project_name,
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
                                           scope='all')
         self.slice_manager.initialize()
 

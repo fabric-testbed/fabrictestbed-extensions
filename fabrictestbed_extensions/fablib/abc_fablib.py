@@ -43,12 +43,10 @@ class AbcFabLIB(ABC):
         """
         Constructor. Sets environment variables for important FABRIC values.
         """
-        super().__init__()
-
         self.credmgr_host = None
         self.orchestrator_host = None
         self.fabric_token = None
-        self.project_name = None
+        self.project_id = None
 
         self.bastion_username = None
         self.bastion_key_filename = None
@@ -75,8 +73,8 @@ class AbcFabLIB(ABC):
         if Constants.FABRIC_TOKEN_LOCATION in os.environ:
             self.fabric_token=os.environ[Constants.FABRIC_TOKEN_LOCATION]
 
-        if Constants.FABRIC_PROJECT_NAME in os.environ:
-            self.project_name = os.environ[Constants.FABRIC_PROJECT_NAME]
+        if Constants.FABRIC_PROJECT_ID in os.environ:
+            self.project_id = os.environ[Constants.FABRIC_PROJECT_ID]
 
         #Basstion host setup
         if self.FABRIC_BASTION_USERNAME in os.environ:

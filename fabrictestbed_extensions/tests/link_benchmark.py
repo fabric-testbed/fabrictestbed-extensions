@@ -167,8 +167,8 @@ class LinkBenchmark(AbcTest):
     def test_ptp_accross_two_sites(site1, site2, test_list, verbose = True):
         credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
         orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
-        project_name = os.environ[Constants.FABRIC_PROJECT_NAME]
-        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name=project_name,
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
                                      scope='all')
         slice_manager.initialize()
 
