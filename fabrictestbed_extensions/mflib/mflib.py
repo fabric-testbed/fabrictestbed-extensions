@@ -537,6 +537,8 @@ class mflib():
             return ret_data
         except Exception as e:
             print("Unable to convert returned comand json.")
+            print(stdout)
+            print(stderr)
             print(f"Fail: {e}")
         return {} #(stdout, stderr)
 
