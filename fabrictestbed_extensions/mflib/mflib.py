@@ -576,11 +576,12 @@ class mflib():
                     if set_ip:
                         print("setting interface ip")
                         interface.set_ip(ip = ip, cidr = "24")
-                    hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
+                    #hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1} node_exporter_username={3} node_exporter_password={3} snmp_community_string={4} grafana_admin_password={3} fabric_prometheus_ht_user={3} fabric_prometheus_ht_password={3}".format(node.get_name(), ip ,"mfuser","fabric","not-in-use"))
+                    hosts.append("{0} ansible_host={1} hostname={1} ansible_ssh_user={2} node_exporter_listen_ip={1}".format(node.get_name(), ip ,"mfuser"))
                     num+=1
 
 
-        print("Creating Ansible Hosts File\n")
+        # print("Creating Ansible Hosts File\n")
         # Prometheus e_Elk
         hosts_txt = ""
         e_hosts_txt = ""
@@ -607,15 +608,15 @@ class mflib():
         with open('/tmp/mflib/elkhosts.ini', 'w') as f:
             f.write(e_hosts_txt)
 
-        print("Uploading hosts files")
+        #print("Uploading hosts files")
         # Upload
         self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
         stdout, stderr = self.meas_node.execute("sudo mv promhosts.ini /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
-        print(stdout)
-        print(stderr)
+        #print(stdout)
+        #print(stderr)
         stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
-        print(stdout)
-        print(stderr)
+        #print(stdout)
+        #print(stderr)
         
         self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
         self.meas_node.execute("sudo mv elkhosts.ini /home/hosts/mf_git/elkhosts.ini")
