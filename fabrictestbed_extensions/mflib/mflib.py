@@ -53,8 +53,8 @@ class mflib():
         
     def instrumentize(self):
         print("Setting up Prometheus")
-        self.create("prometheus")
-        
+        prom_data = self.create("prometheus")
+        print(prom_data)
         print("Instrumentize Done.")
         #etc...
 
