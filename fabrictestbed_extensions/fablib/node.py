@@ -683,7 +683,7 @@ class Node():
 
                 client = paramiko.SSHClient()
                 #client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                #client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
