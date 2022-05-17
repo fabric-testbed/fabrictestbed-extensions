@@ -606,6 +606,43 @@ class Node():
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
+
+    def execute_thread(self, command):
+        import threading
+
+        try:
+            #TODO: put threads somee other than on the fablib_object
+            fablib.fablib_object.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+            #self.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+        except Exception as e:
+            fablib.fablib_object.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+            #self.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+
+    def execute_thread_start(self, command, name=None):
+        import threading
+
+        if not hasattr(self, 'execute_thread_outputs'):
+            fablib.fablib_object.execute_thread_outputs = {}
+            #self.execute_thread_outputs = {}
+
+        thread = threading.Thread(name=name, target=self.execute_thread, args=(command,))
+        fablib.fablib_object.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+        #self.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+
+        thread.start()
+        return thread
+
+    def execute_thread_join(self, thread):
+        import threading
+        thread.join()
+
+        #print(f"Node: {self.get_name()}, {fablib.fablib_object.execute_thread_outputs}, {self.execute_thread_outputs}")
+        #print(f"Node: {self.get_name()}, {self.execute_thread_outputs}")
+
+        return fablib.fablib_object.execute_thread_outputs[thread.getName()]
+        #return self.execute_thread_outputs[thread.getName()]
+
+
     def execute(self, command, retry=3, retry_interval=10):
         """
         Runs a command on the FABRIC node.
@@ -645,7 +682,7 @@ class Node():
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
                 client = paramiko.SSHClient()
-                client.load_system_host_keys()
+                #client.load_system_host_keys()
                 client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
