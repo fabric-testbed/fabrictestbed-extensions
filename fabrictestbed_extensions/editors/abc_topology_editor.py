@@ -28,9 +28,9 @@ import traceback
 from abc import ABC, abstractmethod
 from typing import List
 
-from fabric_cf.orchestrator.orchestrator_proxy import SliceState
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentCatalog
+
 
 class AbcTopologyEditor(ABC):
     EXPERIMENT_STATE_UNSUBMITTED = "unsubmitted"
@@ -39,9 +39,6 @@ class AbcTopologyEditor(ABC):
     EXPERIMENT_STATE_DELETED = "deleted or error"
 
     DEFAULT_SLICE_SELECT_VALUE = '<Choose Slice>'
-
-
-
 
     def __init__(self):
         self.slice_manager = SliceManager()
@@ -61,19 +58,18 @@ class AbcTopologyEditor(ABC):
         if return_status != Status.OK:
             print("Failed to get advertised_topology: {}".format(self.advertised_topology))
 
-
     def remove_experiment(self, experiment):
         """
-        Remove and exeriment from the editor.
+        Remove and experiment from the editor.
         Does not delete the slice.
         :param experiment:
         :return:
         """
-        #Unset current experiment
-        if(experiment == self.current_experiment):
+        # Unset current experiment
+        if experiment == self.current_experiment:
             self.current_experiment = None
 
-        #remove the experiment
+        # remove the experiment
         self.experiments.remove(experiment)
 
     def delete_experiment(self, experiment):
@@ -302,12 +298,12 @@ class AbcTopologyEditor(ABC):
         # Create new list of slices
         #new_experiments_list = []
         for slice in existing_slices:
-            experiment = self.get_experiment_by_name(slice.slice_name)
+            experiment = self.get_experiment_by_name(slice.name)
 
             if experiment == None:
                 #New experiment
                 print("Getting topology for new slice")
-                experiment = {'slice_name': slice.slice_name,
+                experiment = {'slice_name': slice.name,
                               'slice_id': slice.slice_id,
                               'editor_slice_state': self.EXPERIMENT_STATE_LIVE,
                               'slice': slice,

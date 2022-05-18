@@ -54,12 +54,6 @@ class AbcFabLIB(ABC):
         self.bastion_private_ipv4_addr = '0.0.0.0'
         self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
 
-        #self.slice_public_key = None
-        #self.slice_public_key_file = None
-        #self.slice_private_key = None
-        #self.slice_private_key_file = None
-        #self.slice_private_key_passphrase = None
-
         self.slice_keys = {}
         self.default_slice_key = {}
         self.slice_keys['default'] = self.default_slice_key

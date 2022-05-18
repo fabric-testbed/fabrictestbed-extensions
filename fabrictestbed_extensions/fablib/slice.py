@@ -26,24 +26,30 @@ import ipaddress
 
 import time
 import logging
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice, Sliver as OrchestratorSliver
 from tabulate import tabulate
 
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
-from typing import List
+from typing import List, Union, Dict
 
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import Status, SliceState
 
 
 from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
+from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
 
 
 class Slice:
 
-    def __init__(self, name=None):
+    def __init__(self, name: str = None):
         """
         Constructor. Sets the default slice state to be callable.
 
@@ -57,6 +63,7 @@ class Slice:
         self.sm_slice = None
         self.slice_id = None
         self.topology = None
+        self.slivers = []
 
         self.slice_key = fablib.get_default_slice_key()
 
@@ -69,10 +76,10 @@ class Slice:
         :return: Tabulated string of slice information
         :rtype: String
         """
-        table = [["Slice Name", self.sm_slice.slice_name],
+        table = [["Slice Name", self.sm_slice.name],
                  ["Slice ID", self.sm_slice.slice_id],
-                 ["Slice State", self.sm_slice.slice_state],
-                 ["Lease End", self.sm_slice.lease_end]
+                 ["Slice State", self.sm_slice.state],
+                 ["Lease End", self.sm_slice.lease_end_time]
                 ]
 
         return tabulate(table)
@@ -141,7 +148,7 @@ class Slice:
                                         "Physical OS Interface", "OS Interface"])
 
     @staticmethod
-    def new_slice(name=None):
+    def new_slice(name: str = None):
         """
         Create a new slice
 
@@ -156,7 +163,7 @@ class Slice:
         return slice
 
     @staticmethod
-    def get_slice(sm_slice=None, load_config=True):
+    def get_slice(sm_slice: OrchestratorSlice = None, load_config: bool = True):
         """
         Not intended for API use.
 
@@ -173,10 +180,10 @@ class Slice:
         """
         logging.info("slice.get_slice()")
 
-        slice = Slice(name=sm_slice.slice_name)
+        slice = Slice(name=sm_slice.name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
-        slice.slice_name = sm_slice.slice_name
+        slice.slice_name = sm_slice.name
 
         slice.topology = fablib.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
 
@@ -194,7 +201,7 @@ class Slice:
                 logging.error(e, exc_info=True)
         return slice
 
-    def get_fim_topology(self):
+    def get_fim_topology(self) -> ExperimentTopology:
         """
         Not recommended for most users.
 
@@ -241,12 +248,12 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
-        #Update topology
+        # Update topology
         return_status, new_topo = fablib.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
         if return_status != Status.OK:
             raise Exception("Failed to get slice topology: {}, {}".format(return_status, new_topo))
 
-        #Set slice attibutes
+        # Set slice attibutes
         self.topology = new_topo
 
     def update_slivers(self):
@@ -264,9 +271,9 @@ class Slice:
 
         raise Exception(f"{slivers}")
 
-    def get_sliver(self, reservation_id):
+    def get_sliver(self, reservation_id: str) -> OrchestratorSliver:
         slivers = self.get_slivers()
-        sliver = list(filter(lambda x: x.reservation_id == reservation_id, slivers ))[0]
+        sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
         return sliver
 
     def get_slivers(self):
@@ -353,7 +360,7 @@ class Slice:
         else:
             return None
 
-    def isStable(self):
+    def isStable(self) -> bool:
         """
         Tests is the slice is stable. Stable means all requests for
         to add/remove/modify slice resouces have completed.  Both successful
@@ -370,14 +377,14 @@ class Slice:
         else:
             return False
 
-    def get_state(self):
+    def get_state(self) -> str:
         """
         Gets the slice state off of the slice manager slice.
 
         :return: the slice state
         :rtype: SliceState
         """
-        return self.sm_slice.slice_state
+        return self.sm_slice.state
 
     def get_name(self):
         """
@@ -404,9 +411,9 @@ class Slice:
         :return: timestamp when lease ends
         :rtype: String
         """
-        return self.sm_slice.lease_end
+        return self.sm_slice.lease_end_time
 
-    def add_l2network(self, name=None, interfaces=[], type=None):
+    def add_l2network(self, name: str = None, interfaces: List[Interface] = [], type: str = None):
         """
         Adds a new L2 network service to this slice.
 
@@ -442,7 +449,7 @@ class Slice:
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_l3network(self, name=None, interfaces=[], type='IPv4'):
+    def add_l3network(self, name: str = None, interfaces: List[Interface] = [], type: str = 'IPv4'):
         """
         Adds a new L3 network service to this slice.
 
@@ -487,7 +494,8 @@ class Slice:
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, docker_image=None, host=None, avoid=[]):
+    def add_node(self, name: str, site: str = None, cores: int = 2, ram: int = 8, disk: int = 10, image: str = None,
+                 docker_image: str = None, host: str = None, avoid: List[str] = []):
         """
         Creates a new node on this fablib slice.
 
@@ -530,7 +538,7 @@ class Slice:
 
         return node
 
-    def get_object_by_reservation(self, reservation_id):
+    def get_object_by_reservation(self, reservation_id: str) -> Union[Node, NetworkService, Interface, None]:
         """
         Gets an object associated with this slice by its reservation ID.
 
@@ -557,7 +565,7 @@ class Slice:
 
         return None
 
-    def get_error_messages(self):
+    def get_error_messages(self) -> List[dict]:
         """
         Gets the error messages found in the sliver notices.
 
@@ -579,7 +587,7 @@ class Slice:
 
         return origin_notices
 
-    def get_notices(self):
+    def get_notices(self) -> Dict[str, str]:
         """
         Gets a dictionary all sliver notices keyed by reservation id.
 
@@ -598,7 +606,7 @@ class Slice:
 
         return notices
 
-    def get_components(self):
+    def get_components(self) -> List[Component]:
         """
         Gets all components in this slice.
 
@@ -622,7 +630,7 @@ class Slice:
             pass
         return return_components
 
-    def get_nodes(self):
+    def get_nodes(self) -> List[Node]:
         """
         Gets a list of all nodes in this slice.
 
@@ -644,7 +652,7 @@ class Slice:
             pass
         return return_nodes
 
-    def get_node(self, name):
+    def get_node(self, name: str) -> Node:
         """
         Gets a node from the slice by name.
 
@@ -661,7 +669,7 @@ class Slice:
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_interfaces(self):
+    def get_interfaces(self) -> List[Interface]:
         """
         Gets all interfaces in this slice.
 
@@ -676,7 +684,7 @@ class Slice:
                 interfaces.append(interface)
         return interfaces
 
-    def get_interface(self, name=None):
+    def get_interface(self, name: str = None) -> Interface:
         """
         Gets a particular interface from this slice.
 
@@ -692,7 +700,7 @@ class Slice:
 
         raise Exception("Interface not found: {}".format(name))
 
-    def get_l3networks(self):
+    def get_l3networks(self) -> List[NetworkService]:
         """
         Gets all L3 networks services in this slice
 
@@ -708,7 +716,7 @@ class Slice:
 
         return []
 
-    def get_l3network(self, name=None):
+    def get_l3network(self, name: str = None) -> NetworkService or None:
         """
         Gets a particular L3 network service from this slice.
 
@@ -726,7 +734,7 @@ class Slice:
             logging.info(e, exc_info=True)
         return None
 
-    def get_l2networks(self):
+    def get_l2networks(self) -> List[NetworkService]:
         """
         Gets a list of the L2 network services on this slice.
 
@@ -742,7 +750,7 @@ class Slice:
 
         return []
 
-    def get_l2network(self, name=None):
+    def get_l2network(self, name: str = None) -> NetworkService or None:
         """
         Gets a particular L2 network service from this slice.
 
@@ -759,8 +767,7 @@ class Slice:
             logging.info(e, exc_info=True)
         return None
 
-
-    def get_network_services(self):
+    def get_network_services(self) -> List[NetworkService]:
         """
         Not intended for API use. See: slice.get_networks()
 
@@ -777,8 +784,8 @@ class Slice:
         #fails for topology that does not have nodes
         try:
             for net_name, net in self.get_fim_topology().network_services.items():
-                if str(net.get_property('type')) in NetworkService.fim_network_service_types:
-                    return_networks.append(NetworkService(slice = self, fim_network_service = net))
+                if str(net.get_property('type')) in NetworkService.get_fim_network_service_types():
+                    return_networks.append(NetworkService(slice=self, fim_network_service=net))
 
         except Exception as e:
             print(f"get_network_services: exception {e}")
@@ -786,7 +793,7 @@ class Slice:
             pass
         return return_networks
 
-    def get_networks(self):
+    def get_networks(self) -> List[NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice
 
@@ -802,7 +809,7 @@ class Slice:
 
         return []
 
-    def get_network(self, name=None):
+    def get_network(self, name: str = None) -> NetworkService or None:
         """
         Gest a particular network service from this slice.
 
@@ -814,7 +821,7 @@ class Slice:
         from fabrictestbed_extensions.fablib.network_service import NetworkService
 
         try:
-            return NetworkService.get_network_service(self,name)
+            return NetworkService.get_network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
         return None
@@ -832,11 +839,11 @@ class Slice:
 
         self.topology = None
 
-    def renew(self, end_date):
+    def renew(self, end_date: str):
         """
         Renews the FABRIC slice's lease to the new end date.
 
-        Date is of the form: "%Y-%m-%d %H:%M:%S"
+        Date is of the form: "%Y-%m-%d %H:%M:%S %z"
 
         Example of formating a date for 1 day from now:
 
@@ -852,7 +859,7 @@ class Slice:
         if return_status != Status.OK:
             raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
 
-    def build_error_exception_string(self):
+    def build_error_exception_string(self) -> str:
         """
         Not intended for API use
 
@@ -864,7 +871,7 @@ class Slice:
 
         self.update()
 
-        exception_string =  f"Slice Exception: Slice Name: {self.get_name()}, Slice ID: {self.get_slice_id()}: "
+        exception_string = f"Slice Exception: Slice Name: {self.get_name()}, Slice ID: {self.get_slice_id()}: "
 
         for error in self.get_error_messages():
             notice = error['notice']
@@ -872,7 +879,8 @@ class Slice:
 
             sliver_extra = ""
             if isinstance(sliver, Node):
-                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, State: {sliver.get_reservation_state()}, "
+                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, " \
+                               f"State: {sliver.get_reservation_state()}, "
 
             # skip errors that are caused by slice error
             if 'Closing reservation due to failure in slice' in notice:
@@ -882,7 +890,7 @@ class Slice:
 
         return exception_string
 
-    def wait(self, timeout=360, interval=10, progress=False):
+    def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
 
@@ -908,12 +916,12 @@ class Slice:
             return_status, slices = fablib.get_slice_manager().slices(excludes=[])
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
-                if slice.slice_state == "StableOK":
+                if slice.state == "StableOK":
                     if progress:
-                        print(" Slice state: {}".format(slice.slice_state))
+                        print(" Slice state: {}".format(slice.state))
                     return slice
-                if slice.slice_state == "Closing" or slice.slice_state == "Dead" or slice.slice_state == "StableError":
-                    if progress: print(" Slice state: {}".format(slice.slice_state))
+                if slice.state == "Closing" or slice.state == "Dead" or slice.state == "StableError":
+                    if progress: print(" Slice state: {}".format(slice.state))
                     try:
                         exception_string = self.build_error_exception_string()
                     except Exception as e:
@@ -929,14 +937,13 @@ class Slice:
             time.sleep(interval)
 
         if time.time() >= timeout_start + timeout:
-            raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout, slice.slice_name,
-                                                                                slice.slice_state))
+            raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout, slice.name, slice.state))
 
         # Update the fim topology (wait to avoid get topology bug)
         # time.sleep(interval)
         self.update()
 
-    def get_interface_map(self):
+    def get_interface_map(self) -> dict:
         """
         Not intended for API use. Will change as the testbed funtionallity
         developes.
@@ -947,7 +954,7 @@ class Slice:
         :rtype: Dict
         """
         # TODO: Add docstring after doc networking classes
-        if not hasattr(self, 'network_iface_map') or self.network_iface_map == None:
+        if not hasattr(self, 'network_iface_map') or self.network_iface_map is None:
             logging.debug(f'Slice {self.get_name()}, loading interface map')
             self.load_interface_map()
         else:
@@ -955,7 +962,7 @@ class Slice:
 
         return self.network_iface_map
 
-    def wait_ssh(self, timeout=360, interval=10, progress=False):
+    def wait_ssh(self, timeout: int = 360, interval: int = 10, progress: bool = False):
         """
         Waits for all nodes to be accesible via ssh.
 
@@ -969,8 +976,6 @@ class Slice:
         :return: true when slice ssh successful
         :rtype: bool
         """
-        slice_name=self.sm_slice.slice_name
-        slice_id=self.sm_slice.slice_id
 
         timeout_start = time.time()
         slice = self.sm_slice
@@ -991,13 +996,13 @@ class Slice:
 
             if time.time() >= timeout_start + timeout:
                 if progress:
-                    print(f" Timeout exceeded ({timeout} sec). Slice: {slice.slice_name} ({slice.slice_state})")
-                raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.slice_name} ({slice.slice_state})")
+                    print(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
+                raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
 
             time.sleep(interval)
             self.update()
 
-    def test_ssh(self):
+    def test_ssh(self) -> bool:
         """
         Tests all nodes in the slices are accessible via ssh.
 
@@ -1057,7 +1062,8 @@ class Slice:
         for node in self.get_nodes():
             #logging.info(f"Stopping NetworkManager on node {node.get_name()}")"
             stdout, stderr = node.execute(f"sudo systemctl stop NetworkManager")
-            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': "
+                         f"stdout: {stdout}\nstderr: {stderr}")
             pass
 
         # Find the interface to network map
@@ -1175,7 +1181,8 @@ class Slice:
 
                     logging.debug(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {test_ip} to {gateway}")
                     test_result = node.ping_test(gateway)
-                    logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {test_ip} to {gateway}: {test_result}")
+                    logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  "
+                                  f"- {test_ip} to {gateway}: {test_result}")
 
                     if iface.get_vlan() == None:
                         node.flush_os_interface(node_os_iface_name)
@@ -1252,7 +1259,8 @@ class Slice:
 
                         logging.debug(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
                         test_result = node.ping_test(dst_ip)
-                        logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}: {test_result}")
+                        logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  "
+                                      f"- {ip} to {dst_ip}: {test_result}")
 
                         if iface.get_vlan() == None:
                             node.flush_os_interface(node_os_iface_name)
@@ -1275,7 +1283,7 @@ class Slice:
 
         logging.debug(f"network_iface_map: {self.network_iface_map}")
 
-    def wait_jupyter(self, timeout=600, interval=10):
+    def wait_jupyter(self, timeout: int = 600, interval: int = 10):
         from IPython.display import clear_output
         import time
         import random
@@ -1319,7 +1327,8 @@ class Slice:
         if len(self.get_interfaces()) > 0:
             print(f"\n{self.list_interfaces()}")
 
-    def submit(self, wait=True, wait_timeout=600, wait_interval=10, progress=True, wait_jupyter="text"):
+    def submit(self, wait: int = True, wait_timeout: int = 600, wait_interval:int = 10, progress: int = True,
+               wait_jupyter: str = "text"):
         """
         Submits a slice request to FABRIC.
 

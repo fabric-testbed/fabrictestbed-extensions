@@ -5,3 +5,4 @@ ipyleaflet
 ipycytoscape
 tabulate
 fabrictestbed>=1.2.4
+paramiko

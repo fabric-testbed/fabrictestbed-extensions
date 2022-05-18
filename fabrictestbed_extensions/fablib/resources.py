@@ -23,34 +23,18 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
-import time
 import logging
 from tabulate import tabulate
 
+from typing import List, Tuple
 
-import importlib.resources as pkg_resources
-from typing import List
-
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
-
-#from .. import images
-
+from fabrictestbed.slice_editor import AdvertisedTopology
+from fabrictestbed.slice_editor import Capacities
+from fabrictestbed.slice_manager import Status
 from fabrictestbed_extensions.fablib.fablib import fablib
-#from fabrictestbed_extensions.fablib.node import Node
 
 
-class Resources():
+class Resources:
 
     def __init__(self):
         """
@@ -62,7 +46,7 @@ class Resources():
         self.topology = None
         self.update()
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Creates a tabulated string of all the available resources.
 
@@ -106,8 +90,7 @@ class Resources():
                                         "RTX6000 (GPU)",
                                         ])
 
-
-    def show_site(self, site_name):
+    def show_site(self, site_name: str) -> str:
         """
         Creates a tabulated string of all the available resources at a specific site.
 
@@ -144,7 +127,7 @@ class Resources():
 
             return ""
 
-    def get_site_names(self):
+    def get_site_names(self) -> List[str]:
         """
         Gets a list of all currently available site names
 
@@ -157,7 +140,7 @@ class Resources():
 
         return site_name_list
 
-    def get_topology_site(self, site_name):
+    def get_topology_site(self, site_name: str) -> str:
         """
         Note intended as an API call
         """
@@ -167,7 +150,7 @@ class Resources():
             logging.warning(f"Failed to get site {site_name}")
             return ""
 
-    def get_component_capacity(self, site_name, component_model_name):
+    def get_component_capacity(self, site_name: str, component_model_name: str) -> int:
         """
         Gets gets the total site capacity of a component by model name.
 
@@ -184,7 +167,7 @@ class Resources():
             logging.warning(f"Failed to get {component_model_name} capacity {site_name}")
             return 0
 
-    def get_component_allocated(self, site_name, component_model_name):
+    def get_component_allocated(self, site_name: str, component_model_name: str) -> int:
         """
         Gets gets number of currrently allocated comoponents on a the site
         by the component by model name.
@@ -202,7 +185,7 @@ class Resources():
             logging.warning(f"Failed to get {component_model_name} alloacted {site_name}")
             return 0
 
-    def get_component_available(self, site_name, component_model_name):
+    def get_component_available(self, site_name: str, component_model_name: str) -> int:
         """
         Gets gets number of currrently available comoponents on a the site
         by the component by model name.
@@ -220,8 +203,7 @@ class Resources():
             logging.warning(f"Failed to get {component_model_name} available {site_name}")
             return self.get_component_capacity(site_name, component_model_name)
 
-
-    def get_location_lat_long(self, site_name):
+    def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -235,9 +217,9 @@ class Resources():
             return self.get_topology_site(site_name).get_property("location").to_latlon()
         except Exception as e:
             logging.warning(f"Failed to get location postal {site_name}")
-            return ""
+            return 0, 0
 
-    def get_location_postal(self, site_name):
+    def get_location_postal(self, site_name: str) -> str:
         """
         Gets the location of a site by postal address
 
@@ -252,7 +234,7 @@ class Resources():
             logging.warning(f"Failed to get location postal {site_name}")
             return ""
 
-    def get_host_capacity(self, site_name):
+    def get_host_capacity(self, site_name: str) -> int:
         """
         Gets the number of worker hosts at the site
 
@@ -267,7 +249,7 @@ class Resources():
             logging.warning(f"Failed to get host count {site_name}")
             return 0
 
-    def get_cpu_capacity(self, site_name):
+    def get_cpu_capacity(self, site_name: str) -> int:
         """
         Gets the total number of cpus at the site
 
@@ -282,7 +264,7 @@ class Resources():
             logging.warning(f"Failed to get cpu capacity {site_name}")
             return 0
 
-    def get_core_capacity(self, site_name):
+    def get_core_capacity(self, site_name: str) -> int:
         """
         Gets the total number of cores at the site
 
@@ -297,7 +279,7 @@ class Resources():
             logging.warning(f"Failed to get core capacity {site_name}")
             return 0
 
-    def get_core_allocated(self, site_name):
+    def get_core_allocated(self, site_name: str) -> int:
         """
         Gets the number of currently allocated cores at the site
 
@@ -312,7 +294,7 @@ class Resources():
             logging.warning(f"Failed to get cores alloacted {site_name}")
             return 0
 
-    def get_core_available(self, site_name):
+    def get_core_available(self, site_name: str) -> int:
         """
         Gets the number of currently available cores at the site
 
@@ -327,7 +309,7 @@ class Resources():
             logging.warning(f"Failed to get cores available {site_name}")
             return self.get_core_capacity(site_name)
 
-    def get_ram_capacity(self, site_name):
+    def get_ram_capacity(self, site_name: str) -> int:
         """
         Gets the total amount of memory at the site in GB
 
@@ -342,7 +324,7 @@ class Resources():
             logging.warning(f"Failed to get ram capacity {site_name}")
             return 0
 
-    def get_ram_allocated(self, site_name):
+    def get_ram_allocated(self, site_name: str) -> int:
         """
         Gets the amount of memory currently  allocated the site in GB
 
@@ -357,7 +339,7 @@ class Resources():
             logging.warning(f"Failed to get ram alloacted {site_name}")
             return 0
 
-    def get_ram_available(self, site_name):
+    def get_ram_available(self, site_name: str) -> int:
         """
         Gets the amount of memory currently  available the site in GB
 
@@ -372,7 +354,7 @@ class Resources():
             logging.warning(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site_name)
 
-    def get_disk_capacity(self, site_name):
+    def get_disk_capacity(self, site_name: str) -> int:
         """
         Gets the total amount of disk available the site in GB
 
@@ -387,7 +369,7 @@ class Resources():
             logging.warning(f"Failed to get disk capacity {site_name}")
             return 0
 
-    def get_disk_allocated(self, site_name):
+    def get_disk_allocated(self, site_name: str) -> int:
         """
         Gets the amount of disk allocated the site in GB
 
@@ -402,7 +384,7 @@ class Resources():
             logging.warning(f"Failed to get disk alloacted {site_name}")
             return 0
 
-    def get_disk_available(self, site_name):
+    def get_disk_available(self, site_name: str) -> int:
         """
         Gets the amount of disk available the site in GB
 
@@ -428,15 +410,15 @@ class Resources():
 
         self.topology = topology
 
-    def get_topology(self, update=False):
+    def get_topology(self, update: bool = False) -> AdvertisedTopology:
         """
         Not intended for API use
         """
-        if update or self.topology == None: self.update()
+        if update or self.topology is None: self.update()
 
         return self.topology
 
-    def get_site_list(self, update=False):
+    def get_site_list(self, update: bool = False) -> List[str]:
         """
         Gets a list of all sites by name
 
@@ -445,7 +427,8 @@ class Resources():
         :return: list of site names
         :rtype: List[String]
         """
-        if update or self.topology == None: self.update()
+        if update or self.topology is None:
+            self.update()
 
         rtn_sites = []
         for site_name, site in self.topology.sites.items():
@@ -453,7 +436,7 @@ class Resources():
 
         return rtn_sites
 
-    def get_link_list(self, update=False):
+    def get_link_list(self, update: bool = False) -> List[str]:
         """
         Gets a list of all links by name
 
@@ -462,7 +445,8 @@ class Resources():
         :return: list of link names
         :rtype: List[String]
         """
-        if update: self.update()
+        if update:
+            self.update()
 
         rtn_links = []
         for link_name, link in self.topology.links.items():

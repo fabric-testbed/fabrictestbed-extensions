@@ -23,29 +23,20 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
-import time
-import logging
 from tabulate import tabulate
-
-
-import importlib.resources as pkg_resources
 from typing import List
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_editor import ComponentModelType, Component
 
-from ipaddress import ip_address, IPv4Address
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from fabrictestbed_extensions.fablib.slice import Slice
+    from fabrictestbed_extensions.fablib.node import Node
+    from fabrictestbed_extensions.fablib.interface import Interface
+    from fabrictestbed.slice_editor import Component as FimComponent
 
-class Component():
+
+class Component:
     component_model_map = { 'NIC_Basic': ComponentModelType.SharedNIC_ConnectX_6,
                             'NIC_ConnectX_6': ComponentModelType.SmartNIC_ConnectX_6,
                             'NIC_ConnectX_5': ComponentModelType.SmartNIC_ConnectX_5,
@@ -74,8 +65,7 @@ class Component():
 
         return tabulate(table)
 
-
-    def list_interfaces(self):
+    def list_interfaces(self) -> List[str]:
         """
         Creates a tabulated string describing all components in the slice.
 
@@ -86,7 +76,7 @@ class Component():
         """
         table = []
         for iface in self.get_interfaces():
-
+            network_name = ""
             if iface.get_network():
                 network_name = iface.get_network().get_name()
 
@@ -102,7 +92,7 @@ class Component():
         return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
 
     @staticmethod
-    def calculate_name(node=None, name=None):
+    def calculate_name(node: Node = None, name: str = None) -> str:
         """
         Not intended for API use
         """
@@ -110,7 +100,7 @@ class Component():
         return f"{node.get_name()}-{name}"
 
     @staticmethod
-    def new_component(node=None, model=None, name=None):
+    def new_component(node: Node = None, model: str = None, name: str = None):
         """
         Not intended for API use
 
@@ -132,7 +122,7 @@ class Component():
             model_type=Component.component_model_map[model], name=name))
         # return Component(node = node, model=model, name=name)
 
-    def __init__(self, node=None, fim_component=None):
+    def __init__(self, node: Node = None, fim_component: FimComponent = None):
         """
         Not intended for API use
 
@@ -147,7 +137,7 @@ class Component():
         self.fim_component = fim_component
         self.node = node
 
-    def get_interfaces(self):
+    def get_interfaces(self) -> List[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
@@ -156,14 +146,13 @@ class Component():
         """
 
         from fabrictestbed_extensions.fablib.interface import Interface
-
         ifaces = []
         for fim_interface in self.get_fim_component().interface_list:
             ifaces.append(Interface(component=self, fim_interface=fim_interface))
 
         return ifaces
 
-    def get_fim_component(self):
+    def get_fim_component(self) -> FimComponent:
         """
         Not intended for API use
 
@@ -174,7 +163,7 @@ class Component():
         """
         return self.fim_component
 
-    def get_slice(self):
+    def get_slice(self) -> Slice:
         """
         Gets the fablib slice associated with this component's node.
 
@@ -183,7 +172,7 @@ class Component():
         """
         return self.node.get_slice()
 
-    def get_node(self):
+    def get_node(self) -> Node:
         """
         Gets the fablib node this component is associated with.
 
@@ -192,7 +181,7 @@ class Component():
         """
         return self.node
 
-    def get_site(self):
+    def get_site(self) -> str:
         """
         Gets the name of the site this component's node is on.
 
@@ -201,7 +190,7 @@ class Component():
         """
         return self.node.get_site()
 
-    def get_name(self):
+    def get_name(self) -> str:
         """
         Gets the name of this component from the FABRIC component.
 
@@ -210,13 +199,13 @@ class Component():
         """
         return self.get_fim_component().name
 
-    def get_details(self):
+    def get_details(self) -> str:
         """
         Not intended for API use
         """
         return self.get_fim_component().details
 
-    def get_disk(self):
+    def get_disk(self) -> int:
         """
         Gets the amount of disk space on this component.
 
@@ -225,7 +214,7 @@ class Component():
         """
         return self.get_fim_component().get_property(pname='capacity_allocations').disk
 
-    def get_unit(self):
+    def get_unit(self) -> int:
         """
         Get unit count for this component.
 
@@ -234,7 +223,7 @@ class Component():
         """
         return self.get_fim_component().get_property(pname='capacity_allocations').unit
 
-    def get_pci_addr(self):
+    def get_pci_addr(self) -> str:
         """
         Get the PIC device ID for this component.
 
@@ -243,7 +232,7 @@ class Component():
         """
         return self.get_fim_component().get_property(pname='label_allocations').bdf
 
-    def get_model(self):
+    def get_model(self) -> str:
         """
         Get FABlib model name for this component.
 
@@ -266,7 +255,7 @@ class Component():
         else:
             return None
 
-    def get_reservation_id(self):
+    def get_reservation_id(self) -> str or None:
         """
         Get reservation ID for this component.
 
@@ -280,7 +269,7 @@ class Component():
         except:
             return None
 
-    def get_reservation_state(self):
+    def get_reservation_state(self) -> str or None:
         """
         Get reservation state for this component.
 
@@ -292,7 +281,7 @@ class Component():
         except:
             return None
 
-    def get_error_message(self):
+    def get_error_message(self) -> str:
         """
         Get error message for this component.
 
@@ -304,13 +293,13 @@ class Component():
         except:
             return ""
 
-    def get_fim_model(self):
+    def get_fim_model(self) -> str:
         """
         Not for API use
         """
         return self.get_fim_component().model
 
-    def get_type(self):
+    def get_type(self) -> str:
         """
         Not for API use
 
