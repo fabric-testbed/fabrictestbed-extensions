@@ -1052,6 +1052,19 @@ class Node():
         except ValueError:
             return "Invalid"
 
+    def ip_addr_list(self, output='json'):
+
+        try:
+
+            if output == 'json':
+                stdout, stderr = self.execute(f"sudo  ip -j addr list")
+                return json.loads(stdout)
+            else:
+                stdout, stderr = self.execute(f"sudo ip list")
+                return stdout
+        except Exception as e:
+            logging.warning(f"Failed to get ip addr list: {e}")
+            raise e
 
     def ip_route_add(self, subnet, gateway):
         """

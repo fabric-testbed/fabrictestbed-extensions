@@ -139,12 +139,35 @@ class Interface():
         :rtype: String
         """
         try:
-            os_iface = self.get_physical_os_interface()
-            mac = os_iface['mac']
+            #os_iface = self.get_physical_os_interface()
+            #mac = os_iface['mac']
+            mac = self.get_fim_interface().get_property(pname="label_allocations").mac
         except:
             mac = None
 
         return mac
+
+    def get_os_dev(self):
+        """
+        Gets json output of 'ip addr list' for the interface.
+
+        :return: device description
+        :rtype: Dict
+        """
+
+        ip_addr_list_json = self.get_node().ip_addr_list(output='json')
+
+        # print(f"{node.ip_addr_list()}")
+        mac = self.get_mac()
+        #print(f"{mac}")
+        for dev in ip_addr_list_json:
+            #print(f"dev['address']: {dev['address']}")
+            if str(dev['address'].upper()) == str(mac.upper()):
+                #print(f"{dev}")
+                #print(f"device name: {dev['ifname']}")
+                return dev
+
+        return None
 
     def get_physical_os_interface(self):
         """
@@ -173,10 +196,7 @@ class Interface():
         :return: physicla OS interface name
         :rtype: String
         """
-        if self.get_physical_os_interface():
-            return self.get_physical_os_interface()['ifname']
-        else:
-            return None
+        return self.get_os_dev()['ifname']
 
     def config_vlan_iface(self):
         """
