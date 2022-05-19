@@ -936,25 +936,6 @@ class Slice:
         # time.sleep(interval)
         self.update()
 
-    def get_interface_map(self):
-        """
-        Not intended for API use. Will change as the testbed funtionallity
-        developes.
-
-        Gets the map of OS interfaces to networks.
-
-        :return: true when slice ssh successful
-        :rtype: Dict
-        """
-        # TODO: Add docstring after doc networking classes
-        if not hasattr(self, 'network_iface_map') or self.network_iface_map == None:
-            logging.debug(f'Slice {self.get_name()}, loading interface map')
-            self.load_interface_map()
-        else:
-            logging.debug(f'Slice {self.get_name()}, NOT loading interface map')
-
-        return self.network_iface_map
-
     def wait_ssh(self, timeout=360, interval=10, progress=False):
         """
         Waits for all nodes to be accesible via ssh.
@@ -1061,19 +1042,19 @@ class Slice:
             pass
 
         # Find the interface to network map
-        logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
-        self.build_interface_map()
+        #logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
+        #self.build_interface_map()
 
         # Interface map in nodes
 
-        for node in self.get_nodes():
-            if fablib.get_log_level() == logging.DEBUG:
-                try:
-                    logging.debug(f"Node data {node.get_name()}: interface_map: {node.get_interface_map()}")
-                except Exception as e:
-                    logging.error(e, exc_info=True)
-
-            node.save_data()
+        #for node in self.get_nodes():
+        #    if fablib.get_log_level() == logging.DEBUG:
+        #        try:
+        #            logging.debug(f"Node data {node.get_name()}: interface_map: {node.get_interface_map()}")
+        #        except Exception as e:
+        #            logging.error(e, exc_info=True)
+        #
+        #    node.save_data()
 
         for interface in self.get_interfaces():
             try:
@@ -1084,26 +1065,6 @@ class Slice:
 
         #for node in self.get_nodes(): link(node)
 
-    def load_config(self):
-        """
-        Not intended as a API call.
-
-        Loads the slice configuration.
-        """
-        self.load_interface_map()
-
-    def load_interface_map(self):
-        """
-        Not intended as a API call.
-
-        Generates an empty network interface map.
-        """
-        self.network_iface_map = {}
-        for net in self.get_networks():
-            self.network_iface_map[net.get_name()] = {}
-
-        for node in self.get_nodes():
-            node.load_data()
 
     def validIPAddress(self, IP: str):
         """
@@ -1114,166 +1075,6 @@ class Slice:
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:
             return "Invalid"
-
-    def build_interface_map(self):
-        """
-        Not intended as a API call.
-
-        """
-        # TODO: Add docstring after doc networking classes
-        self.network_iface_map = {}
-
-        for net in self.get_l3networks():
-            logging.debug(f"net: {net}")
-            #gateway = IPv4Address(net.get_gateway())
-            #test_ip = gateway + 1
-            #subnet = IPv4Network(net.get_subnet())
-            if self.validIPAddress(net.get_gateway()) == 'IPv4':
-                gateway = IPv4Address(net.get_gateway())
-                subnet = IPv4Network(net.get_subnet())
-            elif self.validIPAddress(net.get_gateway()) == 'IPv6':
-                gateway = IPv6Address(net.get_gateway())
-                subnet = IPv6Network(net.get_subnet())
-            else:
-                raise Exception(f"FABNetv4: Gateway IP Invalid: {net.get_gateway()}")
-
-            test_ip = gateway + 1
-            #ip_base,cidr = net.get_subnet().split('/')
-            #logging.debug(f"L3 gateway: {gateway}")
-            #logging.debug(f"L3 test_ip: {test_ip}")
-
-            logging.debug(f"L3 subnet: {subnet}")
-            logging.debug(f"L3 gateway: {gateway}")
-            logging.debug(f"L3 test_ip: {test_ip}")
-
-            iface_map = {}
-
-            logging.info(f"Buiding iface map for l3 network: {net.get_name()}")
-            for iface in net.get_interfaces():
-                logging.debug(f"iface: {iface.get_name()}")
-                node = iface.get_node()
-                #node.clear_all_ifaces()
-                node_os_ifaces = node.get_dataplane_os_interfaces()
-
-                logging.debug(f"Test_node: {node.get_name()}: {node.get_ssh_command()}")
-                logging.debug(f"Test_tface: {iface.get_name()}")
-                logging.debug(f"node_os_ifaces: {node_os_ifaces}")
-                logging.debug(f"iface.get_vlan(): {iface.get_vlan()}")
-
-                found = False
-                for node_os_iface in node_os_ifaces:
-                    node_os_iface_name = node_os_iface['ifname']
-
-                    #set interface
-                    node.set_ip_os_interface(os_iface=node_os_iface_name,
-                                             vlan=iface.get_vlan(),
-                                             ip=test_ip,
-                                             cidr=subnet.prefixlen)
-
-                    #ping test
-                    #logging.debug(f"Node: {node.get_name()}: {node_os_iface_name}, {iface.get_vlan()}, {test_ip}")
-
-                    logging.debug(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {test_ip} to {gateway}")
-                    test_result = node.ping_test(gateway)
-                    logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {test_ip} to {gateway}: {test_result}")
-
-                    if iface.get_vlan() == None:
-                        node.flush_os_interface(node_os_iface_name)
-                    else:
-                        node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
-
-                    if test_result:
-                        logging.debug(f"test_result true: {test_result}")
-                        found = True
-                        iface_map[node.get_name()] = node_os_iface
-                        break
-
-            self.network_iface_map[net.get_name()] = iface_map
-
-        for net in self.get_l2networks():
-            iface_map = {}
-
-            logging.info(f"Buiding iface map for l2 network: {net.get_name()}")
-            ifaces = net.get_interfaces()
-
-            #target iface/node
-            target_iface =  ifaces.pop()
-
-            target_node = target_iface.get_node()
-            target_os_ifaces = target_node.get_dataplane_os_interfaces()
-            target_node.clear_all_ifaces()
-
-            logging.debug(f"{target_node.get_ssh_command()}")
-
-            target_iface_nums = []
-            for target_os_iface in target_os_ifaces:
-                target_os_iface_name = target_os_iface['ifname']
-                iface_num=target_os_ifaces.index(target_os_iface)+1
-                target_node.set_ip_os_interface(os_iface=target_os_iface_name,
-                                                  vlan=target_iface.get_vlan(),
-                                                  ip=f'192.168.{iface_num}.1',
-                                                  cidr = '24'
-                                                 )
-                target_iface_nums.append(iface_num)
-
-            logging.debug(f"target_node: {target_node.get_name()}")
-            logging.debug(f"target_iface: {target_iface.get_name()}")
-            logging.debug(f"target_iface.get_vlan(): {target_iface.get_vlan()}")
-            logging.debug(f"target_os_ifaces: {target_os_ifaces}")
-
-            for iface in ifaces:
-                node = iface.get_node()
-                node.clear_all_ifaces()
-                node_os_ifaces = node.get_dataplane_os_interfaces()
-
-                logging.debug(f"test_node: {node.get_name()}: {node.get_ssh_command()}")
-                logging.debug(f"test_iface: {iface.get_name()}")
-                logging.debug(f"node_os_ifaces: {node_os_ifaces}")
-                logging.debug(f"iface.get_vlan(): {iface.get_vlan()}")
-                logging.debug(f"{node.get_ssh_command()}")
-
-                found = False
-                for node_os_iface in node_os_ifaces:
-                    node_os_iface_name = node_os_iface['ifname']
-                    logging.debug(f"target_iface_nums: {target_iface_nums}")
-                    for net_num in target_iface_nums:
-                        dst_ip=f'192.168.{net_num}.1'
-
-                        ip=f'192.168.{net_num}.2'
-
-                        #set interface
-                        node.set_ip_os_interface(os_iface=node_os_iface_name,
-                                                 vlan=iface.get_vlan(),
-                                                 ip=ip,
-                                                 cidr='24')
-
-                        #ping test
-                        logging.debug(f"Node: {node.get_name()}: {node_os_iface_name}, {iface.get_vlan()}, {ip}")
-
-                        logging.debug(f"ping test {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}")
-                        test_result = node.ping_test(dst_ip)
-                        logging.debug(f"Ping test result: {node.get_name()}:{node_os_iface_name} ->  - {ip} to {dst_ip}: {test_result}")
-
-                        if iface.get_vlan() == None:
-                            node.flush_os_interface(node_os_iface_name)
-                        else:
-                            node.remove_vlan_os_interface(os_iface=f"{node_os_iface_name}.{iface.get_vlan()}")
-
-                        if test_result:
-                            logging.debug(f"test_result true: {test_result}")
-                            target_iface_nums = [ net_num ]
-                            found = True
-                            iface_map[node.get_name()] = node_os_iface
-                            iface_map[target_node.get_name()] = target_os_ifaces[net_num-1]
-                            break
-
-                    if found:
-                        break
-
-            self.network_iface_map[net.get_name()] = iface_map
-            target_node.clear_all_ifaces()
-
-        logging.debug(f"network_iface_map: {self.network_iface_map}")
 
     def wait_jupyter(self, timeout=600, interval=10):
         from IPython.display import clear_output

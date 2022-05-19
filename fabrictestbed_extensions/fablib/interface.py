@@ -196,7 +196,10 @@ class Interface():
         :return: physicla OS interface name
         :rtype: String
         """
-        return self.get_os_dev()['ifname']
+        try:
+            return self.get_os_dev()['ifname']
+        except:
+            return None
 
     def config_vlan_iface(self):
         """
