@@ -777,7 +777,7 @@ class Slice:
         #fails for topology that does not have nodes
         try:
             for net_name, net in self.get_fim_topology().network_services.items():
-                if str(net.get_property('type')) in NetworkService.fim_network_service_types:
+                if str(net.get_property('type')) in NetworkService.get_fim_network_service_types():
                     return_networks.append(NetworkService(slice = self, fim_network_service = net))
 
         except Exception as e:
@@ -1041,6 +1041,8 @@ class Slice:
             logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
             pass
 
+
+
         # Find the interface to network map
         #logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
         #self.build_interface_map()
@@ -1059,6 +1061,11 @@ class Slice:
         for interface in self.get_interfaces():
             try:
                 interface.config_vlan_iface()
+
+                #Toggle all ifaces off/on.  
+                iface.ip_link_down()
+                iface.ip_link_up()
+
             except Exception as e:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)

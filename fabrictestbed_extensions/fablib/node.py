@@ -1121,7 +1121,12 @@ class Node():
             ip_command = "sudo ip"
 
         try:
+            self.ip_link_down(subnet, interface)
+            self.ip_link_up(subnet, interface)
+
             self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
+
+
         except Exception as e:
             logging.warning(f"Failed to add addr: {e}")
             raise e
@@ -1157,7 +1162,7 @@ class Node():
         """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
-        elif type(subnet) == IPv4Network:
+        else:
             ip_command = "sudo ip"
 
         try:
@@ -1176,7 +1181,7 @@ class Node():
         """
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
-        elif type(subnet) == IPv4Network:
+        else:
             ip_command = "sudo ip"
 
         try:

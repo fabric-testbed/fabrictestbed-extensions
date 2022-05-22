@@ -249,14 +249,14 @@ class Interface():
         Bring up the link on the interface.
 
         """
-        self.get_node().ip_link_up(self)
+        self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):
         """
         Bring down the link on the interface.
 
         """
-        self.get_node().ip_link_down(self)
+        self.get_node().ip_link_down(None, self)
 
 
 
