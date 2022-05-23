@@ -16,7 +16,7 @@ import paramiko
 class mflib():
     
     measurement_node_name = "_meas_node"
-    repo_branch = "experiment_mflib"
+    repo_branch = "main"
     
     # Place to put downloaded files?
     local_storage_directory = "/tmp/mflib"
