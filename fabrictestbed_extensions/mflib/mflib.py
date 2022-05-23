@@ -55,6 +55,9 @@ class mflib():
         print("Setting up Prometheus")
         prom_data = self.create("prometheus")
         print(prom_data)
+        print("Setting up ELK")
+        elk_data = self.create("elk")
+        print(elk_data)
         print("Instrumentize Done.")
         #etc...
 
@@ -621,7 +624,7 @@ class mflib():
         #print(stderr)
         
         self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
-        self.meas_node.execute("sudo mv elkhosts.ini /home/hosts/mf_git/elkhosts.ini")
+        self.meas_node.execute("sudo mv elkhosts.ini /home/mfuser/mf_git/elkhosts.ini")
         
         
         
