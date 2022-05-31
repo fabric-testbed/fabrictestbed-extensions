@@ -606,6 +606,43 @@ class Node():
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
+
+    def execute_thread(self, command):
+        import threading
+
+        try:
+            #TODO: put threads somee other than on the fablib_object
+            fablib.fablib_object.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+            #self.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+        except Exception as e:
+            fablib.fablib_object.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+            #self.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+
+    def execute_thread_start(self, command, name=None):
+        import threading
+
+        if not hasattr(self, 'execute_thread_outputs'):
+            fablib.fablib_object.execute_thread_outputs = {}
+            #self.execute_thread_outputs = {}
+
+        thread = threading.Thread(name=name, target=self.execute_thread, args=(command,))
+        fablib.fablib_object.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+        #self.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+
+        thread.start()
+        return thread
+
+    def execute_thread_join(self, thread):
+        import threading
+        thread.join()
+
+        #print(f"Node: {self.get_name()}, {fablib.fablib_object.execute_thread_outputs}, {self.execute_thread_outputs}")
+        #print(f"Node: {self.get_name()}, {self.execute_thread_outputs}")
+
+        return fablib.fablib_object.execute_thread_outputs[thread.getName()]
+        #return self.execute_thread_outputs[thread.getName()]
+
+
     def execute(self, command, retry=3, retry_interval=10):
         """
         Runs a command on the FABRIC node.
@@ -645,8 +682,8 @@ class Node():
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
                 client = paramiko.SSHClient()
-                client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                #client.load_system_host_keys()
+                #client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
@@ -1015,6 +1052,22 @@ class Node():
         except ValueError:
             return "Invalid"
 
+    def ip_addr_list(self, output='json', update=False):
+
+        try:
+            if hasattr(self, 'ip_addr_list_json') and update == False:
+                return self.ip_addr_list_json
+            else:
+                if output == 'json':
+                    stdout, stderr = self.execute(f"sudo  ip -j addr list")
+                    self.ip_addr_list_json = json.loads(stdout)
+                    return self.ip_addr_list_json
+                else:
+                    stdout, stderr = self.execute(f"sudo ip list")
+                    return stdout
+        except Exception as e:
+            logging.warning(f"Failed to get ip addr list: {e}")
+            raise e
 
     def ip_route_add(self, subnet, gateway):
         """
@@ -1035,6 +1088,51 @@ class Node():
             logging.warning(f"Failed to add route: {e}")
             raise e
 
+    def network_manager_stop(self):
+        try:
+            # for iface in self.get_interfaces():
+            #     dev = iface.get_os_interface()
+            #     if dev != None:
+            #         logging.info(f"nmcli delete con for {dev}")
+            #         logging.info(f"sudo nmcli -t -g GENERAL.CONNECTION device show {dev}")
+            #         stdout, stderr = self.execute(f"sudo nmcli -t -g GENERAL.CONNECTION device show {dev}")
+            #         logging.info(f"stdout: {stdout}, stderr: {stderr}")
+            #
+            #         conn = stdout.rstrip('\n')
+            #         if conn != '':
+            #             logging.info(f"sudo nmcli conn delete '{conn}'")
+            #             stdout, stderr = self.execute(f"sudo nmcli conn delete '{conn}'")
+            #             logging.info(f"stdout: {stdout}, stderr: {stderr}")
+            #         else:
+            #             logging.info(f"No conn for device. conn: '{conn}'")
+
+            stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager")
+            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+
+            #for iface in self.get_interfaces():
+            #    try:
+            #        iface.ip_link_down()
+            #    except Exception as e:
+            #        logging.info(f"Attempt to bring down dev failed")
+            #
+            #    try:
+            #        iface.ip_link_up()
+            #    except Exception as e:
+            #        logging.info(f"Attempt to bring up dev failed")
+
+
+
+        except Exception as e:
+            logging.warning(f"Failed to stop network manager: {e}")
+            raise e
+
+    def network_manager_start(self):
+        try:
+            stdout, stderr = self.execute(f"sudo systemctl start NetworkManager")
+            logging.info(f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+        except Exception as e:
+            logging.warning(f"Failed to start network manager: {e}")
+            raise e
 
     def ip_route_del(self, subnet, gateway):
         """
@@ -1071,7 +1169,12 @@ class Node():
             ip_command = "sudo ip"
 
         try:
+            self.ip_link_down(subnet, interface)
+            self.ip_link_up(subnet, interface)
+
             self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
+
+
         except Exception as e:
             logging.warning(f"Failed to add addr: {e}")
             raise e
@@ -1105,10 +1208,19 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-        if type(subnet) == IPv6Network:
-            ip_command = "sudo ip -6"
-        elif type(subnet) == IPv4Network:
+
+        if interface.get_network().get_layer() == NSLayer.L3:
+            if interface.get_network().get_type() == ServiceType.FABNetv6:
+                ip_command = "sudo ip -6"
+            elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                ip_command = "sudo ip"
+        else:
             ip_command = "sudo ip"
+
+        #if type(subnet) == IPv6Network:
+        #    ip_command = "sudo ip -6"
+        #else:
+        #    ip_command = "sudo ip"
 
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} up")
@@ -1124,10 +1236,19 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-        if type(subnet) == IPv6Network:
-            ip_command = "sudo ip -6"
-        elif type(subnet) == IPv4Network:
+
+        if interface.get_network().get_layer() == NSLayer.L3:
+            if interface.get_network().get_type() == ServiceType.FABNetv6:
+                ip_command = "sudo ip -6"
+            elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                ip_command = "sudo ip"
+        else:
             ip_command = "sudo ip"
+
+        #if type(subnet) == IPv6Network:
+        #    ip_command = "sudo ip -6"
+        #else:
+        #    ip_command = "sudo ip"
 
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down")
@@ -1207,91 +1328,6 @@ class Node():
             #If iface is vlan linked to base iface
             if 'link' in i.keys():
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
-
-    def get_interface_map(self):
-        """
-        Not intended for API use.
-        """
-        # TODO: Add docstring after doc networking classes
-        #data = {}
-        #Get interface data
-        logging.debug(f"get_interface_map: node {self.get_name()}")
-
-        interfaces = {}
-        for i in self.get_interfaces():
-            logging.debug(f"get_interface_map: i: {i}")
-
-            #print(f"interface: {i.get_name()}")
-            #print(f"os_interface: {i.get_physical_os_interface()}")
-            if i.get_network() != None:
-                logging.debug(f"i.get_network().get_name(): {i.get_network().get_name()}")
-                network_name = i.get_network().get_name()
-                #print(f"network: {i.get_network().get_name()}")
-            else:
-                logging.debug(f"i.get_network(): None")
-                network_name = None
-                #print(f"network: None")
-
-            interfaces[i.get_name()] =  { 'network':  network_name,
-                         'os_interface':  i.get_physical_os_interface() }
-        return interfaces
-
-    def save_data(self):
-        """
-        Not intended for API use.
-        """
-        # TODO: Add docstring after doc networking classes
-        logging.debug(f"save_data: node {self.get_name()}")
-
-        interfaces = {}
-        for i in self.get_interfaces():
-            #print(f"interface: {i.get_name()}")
-            #print(f"os_interface: {i.get_physical_os_interface()}")
-            if i.get_network() != None:
-                network_name = i.get_network().get_name()
-                #print(f"network: {i.get_network().get_name()}")
-            else:
-                network_name = None
-                #print(f"network: None")
-
-            interfaces[i.get_name()] =  { 'network':  network_name,
-                         'os_interface':  i.get_physical_os_interface() }
-
-        with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'w') as outfile:
-            json.dump(interfaces, outfile)
-
-        #print(f"interfaces: {json.dumps(interfaces).replace('\"','\\"')}")
-
-        self.upload_file(f'/tmp/fablib/fabric_data/{self.get_name()}.json', f'{self.get_name()}.json')
-
-    def load_data(self):
-        """
-        Not intended for API use.
-        """
-        # TODO: Add docstring after doc networking classes
-        logging.debug(f"load_data: node {self.get_name()}")
-
-        try:
-            self.download_file(f'/tmp/fablib/fabric_data/{self.get_name()}.json',f'{self.get_name()}.json')
-
-            interfaces=""
-            with open(f'/tmp/fablib/fabric_data/{self.get_name()}.json', 'r') as infile:
-                interfaces = json.load(infile)
-
-            interface_map = self.get_slice().network_iface_map #= self.get_slice().get_interface_map()
-            #print(f"interfaces {interfaces}")
-            for interface_name, net_map in interfaces.items():
-                logging.debug(f"interface_name: {interface_name}, {net_map}")
-                if net_map['network'] != None:
-                    interface_map[net_map['network']][self.get_name()] = net_map['os_interface']
-
-            self.get_slice().network_iface_map = interface_map
-            logging.debug(f"{self.get_slice().network_iface_map}")
-        except Exception as e:
-            logging.error(f"load data fail: {e}")
-            logging.error(e, exc_info=True)
-            raise e
-
 
 
     def remove_vlan_os_interface(self, os_iface=None):
