@@ -105,6 +105,7 @@ class Slice:
         return tabulate(table, headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image",
                                         "Management IP", "State", "Error"])
 
+
     def list_interfaces(self):
         """
         Creates a tabulated string describing all interfaces in the slice.
@@ -114,16 +115,46 @@ class Slice:
         :return: Tabulated string of all interfaces
         :rtype: String
         """
+
+        from concurrent.futures import ThreadPoolExecutor
+
+        executor = ThreadPoolExecutor(10)
+
+        net_name_threads = {}
+        node_name_threads = {}
+        physical_os_interface_name_threads = {}
+        os_interface_threads = {}
+        for iface in self.get_interfaces():
+            if iface.get_network():
+                logging.info(f"Starting get network name thread for iface {iface.get_name()} ")
+                net_name_threads[iface.get_name()] = executor.submit(iface.get_network().get_name)
+
+            if iface.get_node():
+                logging.info(f"Starting get node name thread for iface {iface.get_name()} ")
+                node_name_threads[iface.get_name()] = executor.submit(iface.get_node().get_name)
+
+            logging.info(f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} ")
+            physical_os_interface_name_threads[iface.get_name()] = executor.submit(iface.get_physical_os_interface_name)
+
+            logging.info(f"Starting get get_os_interface_threads for iface {iface.get_name()} ")
+            os_interface_threads[iface.get_name()] = executor.submit(iface.get_os_interface)
+
+
         table = []
         for iface in self.get_interfaces():
 
             if iface.get_network():
-                network_name = iface.get_network().get_name()
+                #network_name = iface.get_network().get_name()
+                logging.info(f"Getting results from get network name thread for iface {iface.get_name()} ")
+                network_name = net_name_threads[iface.get_name()].result()
             else:
                 network_name = None
 
             if iface.get_node():
-                node_name = iface.get_node().get_name()
+                #node_name = iface.get_node().get_name()
+                logging.info(f"Getting results from get node name thread for iface {iface.get_name()} ")
+                node_name = node_name_threads[iface.get_name()].result()
+
             else:
                 node_name = None
 
@@ -133,8 +164,8 @@ class Slice:
                                 iface.get_bandwidth(),
                                 iface.get_vlan(),
                                 iface.get_mac(),
-                                iface.get_physical_os_interface_name(),
-                                iface.get_os_interface(),
+                                physical_os_interface_name_threads[iface.get_name()].result(),
+                                os_interface_threads[iface.get_name()].result(),
                                 ] )
 
         return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC",
@@ -1023,7 +1054,7 @@ class Slice:
                         logging.error(f"Interface: {iface} failed to link")
                         logging.error("--> Try installing docker or docker.io on container <--")
                         logging.error(e, exc_info=True)
-    
+
     def post_boot_config(self):
         """
         Run post boot configuration.  Typically, this is run automatically during
@@ -1032,45 +1063,54 @@ class Slice:
         Only use this method after a non-blocking submit call and only call it
         once.
         """
-        # TODO: Add docstring after doc networking classes
+        #import threading
+        from concurrent.futures import ThreadPoolExecutor
+
+        executor = ThreadPoolExecutor(10)
+
         logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
 
+        node_threads = []
         for node in self.get_nodes():
-            #logging.info(f"Stopping NetworkManager on node {node.get_name()}")"
-            stdout, stderr = node.execute(f"sudo systemctl stop NetworkManager")
-            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            logging.info(f"Starting thread: {node.get_name()}_network_manager_stop")
+            node_thread = executor.submit(node.network_manager_stop)
+            #node_thread = threading.Thread(name=f'{node.get_name()}_network_manager_stop', target=node.network_manager_stop)
+            #node_thread.start()
+            node_threads.append(node_thread)
+            #node.network_manager_stop()
             pass
 
+        for node_thread in node_threads:
+            #logging.info(f"Waiting for thread: {node_thread.getName()} ")
+            #node_thread.join()
+            node_thread.result()
+            #logging.info(f"Done thread: {node_thread.getName()}")
 
-
-        # Find the interface to network map
-        #logging.info(f"build_interface_map: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
-        #self.build_interface_map()
-
-        # Interface map in nodes
-
-        #for node in self.get_nodes():
-        #    if fablib.get_log_level() == logging.DEBUG:
-        #        try:
-        #            logging.debug(f"Node data {node.get_name()}: interface_map: {node.get_interface_map()}")
-        #        except Exception as e:
-        #            logging.error(e, exc_info=True)
-        #
-        #    node.save_data()
 
         for interface in self.get_interfaces():
             try:
                 interface.config_vlan_iface()
-
-                #Toggle all ifaces off/on.  
-                iface.ip_link_down()
-                iface.ip_link_up()
-
             except Exception as e:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        #for node in self.get_nodes(): link(node)
+
+        iface_threads=[]
+        for interface in self.get_interfaces():
+            try:
+                #iface.ip_link_down()
+                #iface.ip_link_up()
+                iface_threads.append(executor.submit(interface.ip_link_toggle))
+            except Exception as e:
+                logging.error(f"Interface: {interface.get_name()} failed to toggle")
+                logging.error(e, exc_info=True)
+
+        for iface_thread in iface_threads:
+            iface_thread.result()
+
+
+
+        #for node in self.get_nodes(): link(node)11
 
 
     def validIPAddress(self, IP: str):
@@ -1116,9 +1156,9 @@ class Slice:
 
         print(f"\nTime to stable {time.time() - start:.0f} seconds")
 
-        print("Running wait_ssh ... ", end="")
-        self.wait_ssh()
-        print(f"Time to ssh {time.time() - start:.0f} seconds")
+        #print("Running wait_ssh ... ", end="")
+        #self.wait_ssh()
+        #print(f"Time to ssh {time.time() - start:.0f} seconds")
 
         print("Running post_boot_config ... ", end="")
         self.post_boot_config()
@@ -1126,6 +1166,8 @@ class Slice:
 
         if len(self.get_interfaces()) > 0:
             print(f"\n{self.list_interfaces()}")
+            print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
+
 
     def submit(self, wait=True, wait_timeout=600, wait_interval=10, progress=True, wait_jupyter="text"):
         """
@@ -1152,7 +1194,6 @@ class Slice:
         :rtype: String
         """
         from fabrictestbed_extensions.fablib.fablib import fablib
-        fabric = fablib()
 
         if not wait:
             progress = False
@@ -1180,13 +1221,13 @@ class Slice:
             return self.slice_id
 
         if wait:
-            self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
+            #self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
 
             if progress:
                 print("Running post boot config ... ",end="")
 
             self.update()
-            self.test_ssh()
+            #self.test_ssh()
             self.post_boot_config()
 
         if progress:

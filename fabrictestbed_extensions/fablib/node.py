@@ -1052,16 +1052,19 @@ class Node():
         except ValueError:
             return "Invalid"
 
-    def ip_addr_list(self, output='json'):
+    def ip_addr_list(self, output='json', update=False):
 
         try:
-
-            if output == 'json':
-                stdout, stderr = self.execute(f"sudo  ip -j addr list")
-                return json.loads(stdout)
+            if hasattr(self, 'ip_addr_list_json') and update == False:
+                return self.ip_addr_list_json
             else:
-                stdout, stderr = self.execute(f"sudo ip list")
-                return stdout
+                if output == 'json':
+                    stdout, stderr = self.execute(f"sudo  ip -j addr list")
+                    self.ip_addr_list_json = json.loads(stdout)
+                    return self.ip_addr_list_json
+                else:
+                    stdout, stderr = self.execute(f"sudo ip list")
+                    return stdout
         except Exception as e:
             logging.warning(f"Failed to get ip addr list: {e}")
             raise e
@@ -1085,6 +1088,51 @@ class Node():
             logging.warning(f"Failed to add route: {e}")
             raise e
 
+    def network_manager_stop(self):
+        try:
+            # for iface in self.get_interfaces():
+            #     dev = iface.get_os_interface()
+            #     if dev != None:
+            #         logging.info(f"nmcli delete con for {dev}")
+            #         logging.info(f"sudo nmcli -t -g GENERAL.CONNECTION device show {dev}")
+            #         stdout, stderr = self.execute(f"sudo nmcli -t -g GENERAL.CONNECTION device show {dev}")
+            #         logging.info(f"stdout: {stdout}, stderr: {stderr}")
+            #
+            #         conn = stdout.rstrip('\n')
+            #         if conn != '':
+            #             logging.info(f"sudo nmcli conn delete '{conn}'")
+            #             stdout, stderr = self.execute(f"sudo nmcli conn delete '{conn}'")
+            #             logging.info(f"stdout: {stdout}, stderr: {stderr}")
+            #         else:
+            #             logging.info(f"No conn for device. conn: '{conn}'")
+
+            stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager")
+            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+
+            #for iface in self.get_interfaces():
+            #    try:
+            #        iface.ip_link_down()
+            #    except Exception as e:
+            #        logging.info(f"Attempt to bring down dev failed")
+            #
+            #    try:
+            #        iface.ip_link_up()
+            #    except Exception as e:
+            #        logging.info(f"Attempt to bring up dev failed")
+
+
+
+        except Exception as e:
+            logging.warning(f"Failed to stop network manager: {e}")
+            raise e
+
+    def network_manager_start(self):
+        try:
+            stdout, stderr = self.execute(f"sudo systemctl start NetworkManager")
+            logging.info(f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+        except Exception as e:
+            logging.warning(f"Failed to start network manager: {e}")
+            raise e
 
     def ip_route_del(self, subnet, gateway):
         """
@@ -1160,10 +1208,19 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-        if type(subnet) == IPv6Network:
-            ip_command = "sudo ip -6"
+
+        if interface.get_network().get_layer() == NSLayer.L3:
+            if interface.get_network().get_type() == ServiceType.FABNetv6:
+                ip_command = "sudo ip -6"
+            elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                ip_command = "sudo ip"
         else:
             ip_command = "sudo ip"
+
+        #if type(subnet) == IPv6Network:
+        #    ip_command = "sudo ip -6"
+        #else:
+        #    ip_command = "sudo ip"
 
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} up")
@@ -1179,10 +1236,19 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-        if type(subnet) == IPv6Network:
-            ip_command = "sudo ip -6"
+
+        if interface.get_network().get_layer() == NSLayer.L3:
+            if interface.get_network().get_type() == ServiceType.FABNetv6:
+                ip_command = "sudo ip -6"
+            elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                ip_command = "sudo ip"
         else:
             ip_command = "sudo ip"
+
+        #if type(subnet) == IPv6Network:
+        #    ip_command = "sudo ip -6"
+        #else:
+        #    ip_command = "sudo ip"
 
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down")

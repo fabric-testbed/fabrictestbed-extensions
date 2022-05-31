@@ -30,6 +30,8 @@ import re
 import functools
 import time
 import logging
+
+from fim.user import Flags
 from tabulate import tabulate
 
 
@@ -58,7 +60,7 @@ from ipaddress import ip_address, IPv4Address
 
 
 #from .abc_fablib import AbcFabLIB
-#from .slice import Slice
+#from .slice Slice
 #from .component import Component
 #from .node import Node
 #from .network_service import NetworkService
@@ -108,6 +110,23 @@ class Interface():
         return tabulate(table)
 
 
+    def set_auto_config(self):
+        fim_iface = self.get_fim_interface()
+        fim_iface.flags = Flags(auto_config=True)
+        #fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
+
+        #labels = Labels()
+        #labels.instance_parent = host_name
+        #self.get_fim_node().set_properties(labels=labels)
+
+        #if_labels = Labels.update(if_labels, ipv4=str(next(ips)), ipv4_subnet=str(network))
+        # if_labels = Labels.update(if_labels, vlan="200", ipv4=str(next(ips)))
+        #fim_iface.set_properties(labels=if_labels)
+
+    def unset_auto_config(self):
+        fim_iface = self.get_fim_interface()
+        fim_iface.flags = Flags(auto_config=False)
+
     def get_os_interface(self):
         """
         Gets a name of the interface the operating system uses for this
@@ -150,7 +169,7 @@ class Interface():
     def get_os_dev(self):
         """
         Gets json output of 'ip addr list' for the interface.
-
+s
         :return: device description
         :rtype: Dict
         """
@@ -257,6 +276,15 @@ class Interface():
 
         """
         self.get_node().ip_link_down(None, self)
+        #self.execute(f"sudo sysctl net.ipv6.conf.{self.get_physical_os_interface_name()}.disable_ipv6=1")
+
+    def ip_link_toggle(self):
+        """
+        Toggle the dev down then up.
+
+        """
+        self.get_node().ip_link_down(None, self)
+        self.get_node().ip_link_up(None, self)
 
 
 

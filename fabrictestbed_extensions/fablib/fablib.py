@@ -58,8 +58,6 @@ class fablib(AbcFabLIB):
 
     log_level = logging.INFO
 
-    #dafault_sites = [ 'TACC', 'MAX', 'UTAH', 'NCSA', 'MICH', 'WASH', 'DALL', 'SALT', 'STAR']
-
     def __init__(self):
         """
         Constructor. Builds SliceManager for fablib object.
@@ -93,12 +91,12 @@ class fablib(AbcFabLIB):
         return self.slice_manager
 
     @staticmethod
-    def get_image_names():
+    def get_image_names() -> list[str]:
         """
         Gets a list of available image names.
 
         :return: list of image names as strings
-        :rtype: List[String]
+        :rtype: list[str]
         """
         return [ 'default_centos8_stream' ,
                  'default_centos9_stream',
@@ -117,22 +115,22 @@ class fablib(AbcFabLIB):
 
 
     @staticmethod
-    def get_site_names():
+    def get_site_names() -> list[str]:
         """
         Gets a list of all available site names.
 
         :return: list of site names as strings
-        :rtype: List[String]
+        :rtype: list[str]
         """
         return fablib.get_resources().get_site_names()
 
     @staticmethod
-    def list_sites():
+    def list_sites() -> str:
         """
         Get a string used to print a tabular list of sites with state
 
         :return: tabulated string of site state
-        :rtype: String
+        :rtype: str
         """
         return str(fablib.get_resources())
 
@@ -152,8 +150,8 @@ class fablib(AbcFabLIB):
     @staticmethod
     def get_resources():
         """
-        Get a reference to the resourcs object. The resouces obeject
-        is used to query for availale resouces and capacities.
+        Get a reference to the resources object. The resouces obeject
+        is used to query for available resources and capacities.
 
         :return: the resouces object
         :rtype: Resources
@@ -164,7 +162,7 @@ class fablib(AbcFabLIB):
         return fablib.fablib_object.resources
 
     @staticmethod
-    def get_random_site(avoid=[]):
+    def get_random_site(avoid: list[str] = []) -> str:
         """
         Get a random site.
 
@@ -176,7 +174,7 @@ class fablib(AbcFabLIB):
         return fablib.get_random_sites(count=1, avoid=avoid)[0]
 
     @staticmethod
-    def get_random_sites(count=1, avoid=[]):
+    def get_random_sites(count: int = 1, avoid: list[str] = []) -> list[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -187,9 +185,8 @@ class fablib(AbcFabLIB):
         :return: list of random site names.
         :rtype: List[Sting]
         """
-        # Need to avoid SALT and MASS for now.
-        # Real fix is to check availability
-        always_avoid=['SALT', 'MASS']
+        # Hack to always avoid a list of sites. Real fix is to check availability
+        always_avoid=[]
 
         for site in always_avoid:
             if site not in avoid:
