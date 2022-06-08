@@ -39,9 +39,7 @@ from fabrictestbed.slice_editor import (
     Capacities
 )
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
-
-
+from fabrictestbed.util.constants import Constants
 
 from .abc_test import AbcTest
 
@@ -167,9 +165,11 @@ class LinkBenchmark(AbcTest):
 
     @staticmethod
     def test_ptp_accross_two_sites(site1, site2, test_list, verbose = True):
-        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
-        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
+        credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
+                                     scope='all')
         slice_manager.initialize()
 
         t = ExperimentTopology()

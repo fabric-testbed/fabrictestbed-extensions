@@ -9,6 +9,8 @@ import re
 import importlib.resources as pkg_resources
 from typing import List
 
+from fabrictestbed.util.constants import Constants
+
 from .abc_test import AbcTest
 
 from .. import images
@@ -438,13 +440,13 @@ class NetworkBencharks(AbcTest):
 
         return output
 
-
     def run_tests_all_tests(self, test_name, site1, site2, verbose=False):
-        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
-        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
+        credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
+                                          scope='all')
         self.slice_manager .initialize()
-
 
         slice = self.create_ptp_test_slice(test_name, site1, site2, verbose = True)
 
@@ -471,13 +473,13 @@ class NetworkBencharks(AbcTest):
         n2 = nodes['node2']
         self.run_tests(test_name, n1['node'], n2['node'], n1['dataplane_ip'], n2['dataplane_ip'], [self.latency_test, self.mtu_test, self.bandwidth_test])
 
-
     def test_all_ptp(self, tests, verbose=False, create_slices=True):
+        credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
 
-        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
-
-        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
+        slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
+                                     scope='all')
 
         # Initialize the slice manager
         slice_manager.initialize()
@@ -744,11 +746,12 @@ class NetworkBencharks(AbcTest):
         return slice
 
     def test_s2s(self, test_name, test=None, verbose=False, create_slice=True):
-        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
-        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
+        credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
+                                          scope='all')
         self.slice_manager.initialize()
-
 
         if create_slice:
             slice = self.create_s2s_test_slice(test_name, test=test, verbose=verbose)
@@ -765,14 +768,11 @@ class NetworkBencharks(AbcTest):
             raise Exception("run_ssh_test failed to get topology. slice; {}, error {}".format(str(slice),str(topology)))
 
         #print("topology: {}".format(str(topology)))
-
-
         server_node = topology.nodes[test['server']['node_name']]
         server_name = server_node.name
         server_dataplane_ip='192.168.1.1'
         print("Config server: {}".format(str(server_name)))
         self.configure_test_node(server_node, server_dataplane_ip)
-
 
         all_results = {}
 
@@ -806,9 +806,11 @@ class NetworkBencharks(AbcTest):
 
 
     def test_l2bridge(self, test_name, test=None, verbose=False, create_slice=True):
-        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
-        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_name='all', scope='all')
+        credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
+        self.slice_manager = SliceManager(oc_host=orchestrator_host, cm_host=credmgr_host, project_id=project_id,
+                                          scope='all')
         self.slice_manager.initialize()
 
         site = test['site']

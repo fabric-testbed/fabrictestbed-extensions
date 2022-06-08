@@ -558,7 +558,7 @@ class NetworkService():
         """
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').reservation_id
-        except:
+        except Exception as e:
             logging.warning(f"Failed to get reservation_id: {e}")
             return None
 
@@ -571,7 +571,7 @@ class NetworkService():
         """
         try:
             return self.get_fim_network_service().get_property(pname='reservation_info').reservation_state
-        except:
+        except Exception as e:
             logging.warning(f"Failed to get reservation_state: {e}")
             return None
 

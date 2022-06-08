@@ -4,14 +4,4 @@ ipywidgets
 ipyleaflet
 ipycytoscape
 tabulate
-fabrictestbed>=1.1.4
-urllib3==1.26.5
-six==1.15.0
-python-dateutil==2.8.1
-pytest==6.2.1
-packaging==20.8
-networkx==2.6.2
-decorator==4.4.2
-certifi==2020.12.5
-attrs==20.3.0
-Pygments==2.9.0
+fabrictestbed>=1.2.4

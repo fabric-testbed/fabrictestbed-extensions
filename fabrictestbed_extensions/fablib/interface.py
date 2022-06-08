@@ -30,6 +30,8 @@ import re
 import functools
 import time
 import logging
+
+from fim.user import Flags
 from tabulate import tabulate
 
 
@@ -58,7 +60,7 @@ from ipaddress import ip_address, IPv4Address
 
 
 #from .abc_fablib import AbcFabLIB
-#from .slice import Slice
+#from .slice Slice
 #from .component import Component
 #from .node import Node
 #from .network_service import NetworkService
@@ -108,6 +110,23 @@ class Interface():
         return tabulate(table)
 
 
+    def set_auto_config(self):
+        fim_iface = self.get_fim_interface()
+        fim_iface.flags = Flags(auto_config=True)
+        #fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
+
+        #labels = Labels()
+        #labels.instance_parent = host_name
+        #self.get_fim_node().set_properties(labels=labels)
+
+        #if_labels = Labels.update(if_labels, ipv4=str(next(ips)), ipv4_subnet=str(network))
+        # if_labels = Labels.update(if_labels, vlan="200", ipv4=str(next(ips)))
+        #fim_iface.set_properties(labels=if_labels)
+
+    def unset_auto_config(self):
+        fim_iface = self.get_fim_interface()
+        fim_iface.flags = Flags(auto_config=False)
+
     def get_os_interface(self):
         """
         Gets a name of the interface the operating system uses for this
@@ -139,12 +158,35 @@ class Interface():
         :rtype: String
         """
         try:
-            os_iface = self.get_physical_os_interface()
-            mac = os_iface['mac']
+            #os_iface = self.get_physical_os_interface()
+            #mac = os_iface['mac']
+            mac = self.get_fim_interface().get_property(pname="label_allocations").mac
         except:
             mac = None
 
         return mac
+
+    def get_os_dev(self):
+        """
+        Gets json output of 'ip addr list' for the interface.
+s
+        :return: device description
+        :rtype: Dict
+        """
+
+        ip_addr_list_json = self.get_node().ip_addr_list(output='json')
+
+        # print(f"{node.ip_addr_list()}")
+        mac = self.get_mac()
+        #print(f"{mac}")
+        for dev in ip_addr_list_json:
+            #print(f"dev['address']: {dev['address']}")
+            if str(dev['address'].upper()) == str(mac.upper()):
+                #print(f"{dev}")
+                #print(f"device name: {dev['ifname']}")
+                return dev
+
+        return None
 
     def get_physical_os_interface(self):
         """
@@ -173,9 +215,9 @@ class Interface():
         :return: physicla OS interface name
         :rtype: String
         """
-        if self.get_physical_os_interface():
-            return self.get_physical_os_interface()['ifname']
-        else:
+        try:
+            return self.get_os_dev()['ifname']
+        except:
             return None
 
     def config_vlan_iface(self):
@@ -226,14 +268,23 @@ class Interface():
         Bring up the link on the interface.
 
         """
-        self.get_node().ip_link_up(self)
+        self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):
         """
         Bring down the link on the interface.
 
         """
-        self.get_node().ip_link_down(self)
+        self.get_node().ip_link_down(None, self)
+        #self.execute(f"sudo sysctl net.ipv6.conf.{self.get_physical_os_interface_name()}.disable_ipv6=1")
+
+    def ip_link_toggle(self):
+        """
+        Toggle the dev down then up.
+
+        """
+        self.get_node().ip_link_down(None, self)
+        self.get_node().ip_link_up(None, self)
 
 
 

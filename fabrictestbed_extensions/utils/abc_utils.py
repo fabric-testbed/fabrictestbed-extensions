@@ -32,6 +32,8 @@ from typing import List
 from fabric_cf.orchestrator.orchestrator_proxy import SliceState
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
+from fabrictestbed.util.constants import Constants
+
 
 class AbcUtils(ABC):
 
@@ -65,16 +67,18 @@ class AbcUtils(ABC):
 
     @staticmethod
     def create_slice_manager():
-        credmgr_host = os.environ['FABRIC_CREDMGR_HOST']
-        print(f"FABRIC Credential Manager   : {credmgr_host}")
+        credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        project_id = os.environ[Constants.FABRIC_PROJECT_ID]
 
-        orchestrator_host = os.environ['FABRIC_ORCHESTRATOR_HOST']
+        print(f"FABRIC Credential Manager   : {credmgr_host}")
         print(f"FABRIC Orchestrator         : {orchestrator_host}")
+        print(f"FABRIC Project Id           : {project_id}")
 
         slice_manager = SliceManager(oc_host=orchestrator_host,
-                             cm_host=credmgr_host,
-                             project_name='all',
-                             scope='all')
+                                     cm_host=credmgr_host,
+                                     project_id=project_id,
+                                     scope='all')
 
         # Initialize the slice manager
         slice_manager.initialize()
