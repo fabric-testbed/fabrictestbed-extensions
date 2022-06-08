@@ -632,7 +632,7 @@ class mflib():
         """
         Clone the repo to the mfuser on the meas node.|
         """
-        cmd = f"sudo -u mfuser git clone -b {self.repo_branch} https://github.com/fabric-testbed/MeasurementFramework.git /home/mfuser/mf_git"
+        cmd = f"sudo -u mfuser git clone -b {self.repo_branch} https://github.com/cpemberton3/MeasurementFramework.git /home/mfuser/mf_git"
         stdout, stderr = self.meas_node.execute(cmd)
         #print(stdout)
         #print(stderr)
