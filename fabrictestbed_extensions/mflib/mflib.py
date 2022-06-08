@@ -300,6 +300,7 @@ class mflib():
         
         meas = slice.add_node(name="_meas_node", site=site)
         meas.set_capacities(cores="4", ram="16", disk="50")
+        meas.set_capscities(cores=meas.default_cores, ram=meas.default_cores, disk=meas.default_disk)
         meas.set_image("default_ubuntu_20")
         interfaces.append(meas.add_component(model='NIC_Basic', name="Meas_Nic").get_interfaces()[0])
         meas_net = slice.add_l2network(name="_meas_net", interfaces=interfaces)
