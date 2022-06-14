@@ -119,9 +119,6 @@ class Node():
         """
         return self.sliver
 
-
-
-
     @staticmethod
     def new_node(slice=None, name=None, site=None, avoid=[]):
         """
@@ -1209,13 +1206,17 @@ class Node():
         :type interface: Interface
         """
 
-        if interface.get_network().get_layer() == NSLayer.L3:
-            if interface.get_network().get_type() == ServiceType.FABNetv6:
-                ip_command = "sudo ip -6"
-            elif interface.get_network().get_type() == ServiceType.FABNetv4:
+        try:
+            if interface.get_network().get_layer() == NSLayer.L3:
+                if interface.get_network().get_type() == ServiceType.FABNetv6:
+                    ip_command = "sudo ip -6"
+                elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                    ip_command = "sudo ip"
+            else:
                 ip_command = "sudo ip"
-        else:
-            ip_command = "sudo ip"
+        except Exception as e:
+            logging.warning(f"Failed to down link: {e}")
+            return
 
         #if type(subnet) == IPv6Network:
         #    ip_command = "sudo ip -6"
@@ -1236,14 +1237,17 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-
-        if interface.get_network().get_layer() == NSLayer.L3:
-            if interface.get_network().get_type() == ServiceType.FABNetv6:
-                ip_command = "sudo ip -6"
-            elif interface.get_network().get_type() == ServiceType.FABNetv4:
+        try:
+            if interface.get_network().get_layer() == NSLayer.L3:
+                if interface.get_network().get_type() == ServiceType.FABNetv6:
+                    ip_command = "sudo ip -6"
+                elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                    ip_command = "sudo ip"
+            else:
                 ip_command = "sudo ip"
-        else:
-            ip_command = "sudo ip"
+        except Exception as e:
+            logging.warning(f"Failed to down link: {e}")
+            return
 
         #if type(subnet) == IPv6Network:
         #    ip_command = "sudo ip -6"
@@ -1253,7 +1257,7 @@ class Node():
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down")
         except Exception as e:
-            logging.warning(f"Failed to up link: {e}")
+            logging.warning(f"Failed to down link: {e}")
             raise e
 
 

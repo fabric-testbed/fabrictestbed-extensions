@@ -32,7 +32,7 @@ from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Net
 
 from typing import List
 
-from fabrictestbed.slice_editor import ExperimentTopology
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities, Labels
 from fabrictestbed.slice_manager import Status, SliceState
 
 
@@ -517,6 +517,37 @@ class Slice:
         """
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
+
+    def add_facility_port(self, name=None, site=None, vlan=None):
+        """
+                Adds a new L2 facility port to this slice
+
+                TODO: add more description
+
+                :param name: name of the facility port
+                :type name: String
+                :param site: site
+                :type site: String
+                :param vlan: vlan
+                :type vlan: String
+                :return: a new L2 facility port
+                :rtype: NetworkService
+                """
+        #from fabrictestbed_extensions.fablib.network_service import NetworkService
+        #return Node.new_facility_port(slice=self,  name=name, site=site, vlan=vlan)
+
+
+
+        fim_facility_port = self.get_fim_topology().add_facility(name=name, site=site, capacities=Capacities(bw=10),
+                                       labels=Labels(vlan=vlan))
+
+        print(f"fim_facility_port: {fim_facility_port}")
+
+        facility_port = Node(slice=self, node=fim_facility_port)
+
+        #fim_interface = fim_facility_port.interface_list[0]
+
+        return facility_port
 
     def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, docker_image=None, host=None, avoid=[]):
         """

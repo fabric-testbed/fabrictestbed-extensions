@@ -105,6 +105,7 @@ class NetworkService():
         :return: the network service type
         :rtype: ServiceType
         """
+
         # if there is a basic NIC, WAN must be STS
         basic_nic_count = 0
 
@@ -144,6 +145,10 @@ class NetworkService():
         :return: true if the network service type is valid based on the number of interfaces
         :rtype: bool
         """
+
+        # Hack for testing
+        return True
+
         sites = set([])
         nics = set([])
         nodes = set([])
@@ -190,7 +195,7 @@ class NetworkService():
     @staticmethod
     def new_l3network(slice=None, name=None, interfaces=[], type=None):
         """
-        Not inteded for API use. See slice.add_l3network
+        Not intended for API use. See slice.add_l3network
         """
         if type == "IPv6":
             nstype = ServiceType.FABNetv6
@@ -206,7 +211,7 @@ class NetworkService():
     @staticmethod
     def new_l2network(slice=None, name=None, interfaces=[], type=None):
         """
-        Not inteded for API use. See slice.add_l2network
+        Not intended for API use. See slice.add_l2network
 
         Creates a new L2 network service.
 
