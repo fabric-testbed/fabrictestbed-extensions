@@ -212,7 +212,7 @@ s
         If the interface requires a FABRIC VLAN tag, the base interface name
         will be returned (i.e. not the VLAN tagged interface)
 
-        :return: physicla OS interface name
+        :return: physicl OS interface name
         :rtype: String
         """
         try:
