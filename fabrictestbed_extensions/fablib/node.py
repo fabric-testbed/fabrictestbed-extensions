@@ -685,7 +685,8 @@ class Node():
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-                stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
+                #stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
+                stdin, stdout, stderr = client.exec_command(command)
                 rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                 rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
 
