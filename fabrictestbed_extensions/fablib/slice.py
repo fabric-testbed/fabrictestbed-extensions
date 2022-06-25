@@ -60,7 +60,10 @@ class Slice:
         self.slice_id = None
         self.topology = None
 
-        self.slice_key = fablib.get_default_slice_key()
+        self.slice_key = self.fablib_manager.get_default_slice_key()
+
+    def get_fablib_manager(self):
+        return self.fablib_manager
 
     def __str__(self):
         """
@@ -189,7 +192,7 @@ class Slice:
         return slice
 
     @staticmethod
-    def get_slice(sm_slice=None, load_config=True):
+    def get_slice(fablib_manager, sm_slice=None, load_config=True):
         """
         Not intended for API use.
 
@@ -206,12 +209,12 @@ class Slice:
         """
         logging.info("slice.get_slice()")
 
-        slice = Slice(name=sm_slice.slice_name)
+        slice = Slice(fablib_manager, name=sm_slice.slice_name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.slice_name
 
-        slice.topology = fablib.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
+        slice.topology = fablib_manager.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
 
         try:
             slice.update()
@@ -251,11 +254,11 @@ class Slice:
         :raises Exception: if slice manager slice no longer exists
         """
         import time
-        if fablib.get_log_level() == logging.DEBUG:
+        if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = fablib.get_slice_manager().slices(excludes=[])
-        if fablib.get_log_level() == logging.DEBUG:
+        return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[])
+        if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
             logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
                           f"elapsed time: {end - start} seconds")
@@ -275,7 +278,7 @@ class Slice:
         :raises Exception: if topology could not be gotten from slice manager
         """
         #Update topology
-        return_status, new_topo = fablib.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
+        return_status, new_topo = self.fablib_manager.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
         if return_status != Status.OK:
             raise Exception("Failed to get slice topology: {}, {}".format(return_status, new_topo))
 
@@ -290,7 +293,7 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
-        status, slivers = fablib.get_slice_manager().slivers(slice_object=self.sm_slice)
+        status, slivers = self.fablib_manager.get_slice_manager().slivers(slice_object=self.sm_slice)
         if status == Status.OK:
             self.slivers = slivers
             return
@@ -897,7 +900,7 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
-        return_status, result = fablib.get_slice_manager().delete(slice_object=self.sm_slice)
+        return_status, result = self.fablib_manager.get_slice_manager().delete(slice_object=self.sm_slice)
 
         if return_status != Status.OK:
             raise Exception("Failed to delete slice: {}, {}".format(return_status, result))
@@ -918,7 +921,7 @@ class Slice:
         :param end_date: String
         :raises Exception: if renewal fails
         """
-        return_status, result = fablib.get_slice_manager().renew(slice_object=self.sm_slice,
+        return_status, result = self.fablib_manager.get_slice_manager().renew(slice_object=self.sm_slice,
                                                                  new_lease_end_time=end_date)
 
         if return_status != Status.OK:
@@ -976,8 +979,8 @@ class Slice:
         if progress:
             print("Waiting for slice .", end='')
         while time.time() < timeout_start + timeout:
-            # return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
-            return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+            # return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+            return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[])
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.slice_state == "StableOK":
@@ -1243,7 +1246,7 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        return_status, slice_reservations = fablib.get_slice_manager().create(slice_name=self.slice_name,
+        return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(slice_name=self.slice_name,
                                                                 slice_graph=slice_graph,
                                                                 ssh_key=self.get_slice_public_key())
         if return_status != Status.OK:
@@ -1257,7 +1260,7 @@ class Slice:
         #self.update_slice()
         self.update()
 
-        if progress and wait_jupyter == 'text' and fablib.isJupyterNotebook():
+        if progress and wait_jupyter == 'text' and self.fablib_manager.isJupyterNotebook():
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 

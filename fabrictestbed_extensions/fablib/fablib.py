@@ -1038,7 +1038,7 @@ class FablibManager():
         :return: a list of slices
         :rtype: List[Slice]
         """
-        from fabrictestbed_extensions.self.slice import Slice
+        from fabrictestbed_extensions.fablib.slice import Slice
         import time
 
         if self.get_log_level() == logging.DEBUG:
@@ -1053,7 +1053,7 @@ class FablibManager():
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(Slice.get_slice(sm_slice=slice, load_config=False))
+                return_slices.append(Slice.get_slice(self, sm_slice=slice, load_config=False))
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices

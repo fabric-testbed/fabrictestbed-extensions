@@ -60,7 +60,7 @@ class Node():
     default_image = 'default_rocky_8'
 
 
-    def __init__(self, fablib_manager, slice, node):
+    def __init__(self, slice, node):
         """
         Constructor. Sets the fablib slice and FIM node based on arguments.
         :param slice: the fablib slice to have this node on
@@ -71,7 +71,7 @@ class Node():
         super().__init__()
         self.fim_node = node
         self.slice = slice
-        self.fablib_manager = fablib_manager
+        #self.fablib_manager = fablib_manager
 
         #Try to set the username.
         try:
@@ -86,6 +86,9 @@ class Node():
 
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
+
+    def get_fablib_manager(self):
+        return self.slice.get_fablib_manager()
 
     def __str__(self):
         """
@@ -560,8 +563,8 @@ class Node():
         :rtype: str
         """
         return 'ssh -i {} -J {}@{} {}@{}'.format(self.get_private_key_file(),
-                                           self.fablib_manager.get_bastion_username(),
-                                           self.fablib_manager.get_bastion_public_addr(),
+                                           self.get_fablib_manager().get_bastion_username(),
+                                           self.get_fablib_manager().get_bastion_public_addr(),
                                            self.get_username(),
                                            self.get_management_ip())
 
@@ -610,21 +613,21 @@ class Node():
 
         try:
             #TODO: put threads somee other than on the fablib_object
-            self.fablib_manager.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+            self.get_fablib_manager().execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
             #self.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
         except Exception as e:
-            self.fablib_manager.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+            self.get_fablib_manager().execute_thread_outputs[threading.current_thread().getName()] = ("",e)
             #self.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
 
     def execute_thread_start(self, command, name=None):
         import threading
 
         if not hasattr(self, 'execute_thread_outputs'):
-            self.fablib_manager.execute_thread_outputs = {}
+            self.get_fablib_manager().execute_thread_outputs = {}
             #self.execute_thread_outputs = {}
 
         thread = threading.Thread(name=name, target=self.execute_thread, args=(command,))
-        self.fablib_manager.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+        self.get_fablib_manager().execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
         #self.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
 
         thread.start()
@@ -634,10 +637,10 @@ class Node():
         import threading
         thread.join()
 
-        #print(f"Node: {self.get_name()}, {self.fablib_manager.execute_thread_outputs}, {self.execute_thread_outputs}")
+        #print(f"Node: {self.get_name()}, {self.get_fablib_manager().execute_thread_outputs}, {self.execute_thread_outputs}")
         #print(f"Node: {self.get_name()}, {self.execute_thread_outputs}")
 
-        return self.fablib_manager.execute_thread_outputs[thread.getName()]
+        return self.get_fablib_manager().execute_thread_outputs[thread.getName()]
         #return self.execute_thread_outputs[thread.getName()]
 
 
@@ -656,15 +659,15 @@ class Node():
 
         logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
-        if self.fablib_manager.get_log_level() == logging.DEBUG:
+        if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.fablib_manager.get_bastion_private_ipv4_addr(), 22)
+            src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
         elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.fablib_manager.get_bastion_private_ipv6_addr(), 22)
+            src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
         else:
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
@@ -674,7 +677,7 @@ class Node():
                 key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.fablib_manager.get_bastion_public_addr(), username=self.fablib_manager.get_bastion_username(), key_filename=self.fablib_manager.get_bastion_key_filename())
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=self.get_fablib_manager().get_bastion_username(), key_filename=self.get_fablib_manager().get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
@@ -695,7 +698,7 @@ class Node():
                 client.close()
                 bastion_channel.close()
 
-                if self.fablib_manager.get_log_level() == logging.DEBUG:
+                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds")
 
@@ -722,7 +725,7 @@ class Node():
                     raise e
 
                 #Fail, try again
-                if self.fablib_manager.get_log_level() == logging.DEBUG:
+                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
                     logging.debug(e, exc_info=True)
 
@@ -749,15 +752,15 @@ class Node():
 
         logging.debug(f"upload node: {self.get_name()}, local_file_path: {local_file_path}")
 
-        if self.fablib_manager.get_log_level() == logging.DEBUG:
+        if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.fablib_manager.get_bastion_private_ipv4_addr(), 22)
+            src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
         elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.fablib_manager.get_bastion_private_ipv6_addr(), 22)
+            src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
@@ -768,7 +771,7 @@ class Node():
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.fablib_manager.get_bastion_public_addr(), username=self.fablib_manager.get_bastion_username(), key_filename=self.fablib_manager.get_bastion_key_filename())
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=self.get_fablib_manager().get_bastion_username(), key_filename=self.get_fablib_manager().get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
@@ -787,7 +790,7 @@ class Node():
 
                 bastion_channel.close()
 
-                if self.fablib_manager.get_log_level() == logging.DEBUG:
+                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(f"Running node.upload_file(): file: {local_file_path}, elapsed time: {end - start} seconds")
 
@@ -838,15 +841,15 @@ class Node():
         logging.debug(f"download node: {self.get_name()}, remote_file_path: {remote_file_path}")
 
 
-        if self.fablib_manager.get_log_level() == logging.DEBUG:
+        if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.fablib_manager.get_bastion_private_ipv4_addr(), 22)
+            src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
         elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.fablib_manager.get_bastion_private_ipv6_addr(), 22)
+            src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
@@ -857,7 +860,7 @@ class Node():
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.fablib_manager.get_bastion_public_addr(), username=self.fablib_manager.get_bastion_username(), key_filename=self.fablib_manager.get_bastion_key_filename())
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=self.get_fablib_manager().get_bastion_username(), key_filename=self.get_fablib_manager().get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
@@ -876,7 +879,7 @@ class Node():
 
                 bastion_channel.close()
 
-                if self.fablib_manager.get_log_level() == logging.DEBUG:
+                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(f"Running node.download(): file: {remote_file_path}, elapsed time: {end - start} seconds")
 
