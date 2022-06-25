@@ -114,17 +114,17 @@ class fablib():
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
 
-        :return: the resouces object
+        :return: the resources object
         :rtype: Resources
         """
-        return fablib.default_fablib_manager
+        return fablib.default_fablib_manager.get_resources()
 
     @staticmethod
     def get_random_site(avoid: list[str] = []) -> str:
         """
         Get a random site.
 
-        :param avoid: list of site names to avoid chosing
+        :param avoid: list of site names to avoid choosing
         :type site_name: List[String]
         :return: one site name
         :rtype: String
@@ -1170,4 +1170,4 @@ class FablibManager():
 #                    datefmt='%H:%M:%S')
 
 # init fablib object
-fablib.fablib_object = FablibManager()
+fablib.default_fablib_manager = FablibManager()
