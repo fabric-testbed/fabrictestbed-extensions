@@ -43,7 +43,7 @@ from fabrictestbed_extensions.fablib.interface import Interface
 
 class Slice:
 
-    def __init__(self, name=None):
+    def __init__(self, fablib_manager, name=None):
         """
         Constructor. Sets the default slice state to be callable.
 
@@ -51,6 +51,8 @@ class Slice:
         :type name: str
         """
         super().__init__()
+
+        self.fablib_manager = fablib_manager
 
         self.network_iface_map = None
         self.slice_name = name
@@ -172,7 +174,7 @@ class Slice:
                                         "Physical OS Interface", "OS Interface"])
 
     @staticmethod
-    def new_slice(name=None):
+    def new_slice(fablib_manager, name=None):
         """
         Create a new slice
 
@@ -182,7 +184,7 @@ class Slice:
         :rtype: Slice
         """
 
-        slice = Slice(name=name)
+        slice = Slice(fablib_manager, name=name)
         slice.topology = ExperimentTopology()
         return slice
 

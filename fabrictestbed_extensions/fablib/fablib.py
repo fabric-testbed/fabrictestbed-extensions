@@ -959,7 +959,7 @@ class FablibManager():
         """
         # fabric = fablib()
         from fabrictestbed_extensions.fablib.slice import Slice
-        return Slice.new_slice(name=name)
+        return Slice.new_slice(self, name=name)
 
     def get_site_advertisment(self, site):
         """
