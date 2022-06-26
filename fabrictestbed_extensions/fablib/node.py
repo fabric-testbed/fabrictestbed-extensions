@@ -71,7 +71,6 @@ class Node():
         super().__init__()
         self.fim_node = node
         self.slice = slice
-        #self.fablib_manager = fablib_manager
 
         #Try to set the username.
         try:
@@ -665,9 +664,12 @@ class Node():
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            #src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            src_addr = ('0.0.0.0',22)
+
         elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            #src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            src_addr = ('0:0:0:0:0:0:0:0',22)
         else:
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)

@@ -35,7 +35,6 @@ import random
 from IPython import get_ipython
 from tabulate import tabulate
 
-
 import importlib.resources as pkg_resources
 from typing import List
 
@@ -49,13 +48,11 @@ from fabrictestbed.slice_editor import (
 from fabrictestbed.util.constants import Constants
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
-
-#from .abc_fablib import AbcFabLIB
+# from .abc_fablib import AbcFabLIB
 from fabrictestbed_extensions.fablib.fablib_manager import FablibManager
 
 
-
-#from .. import images
+# from .. import images
 
 
 class fablib():
@@ -106,7 +103,6 @@ class fablib():
         :rtype: String
         """
         return fablib.default_fablib_manager.show_site(site_name)
-
 
     @staticmethod
     def get_resources():
@@ -330,7 +326,6 @@ class fablib():
         """
         return fablib.default_fablib_manager.get_slice_manager()
 
-
     @staticmethod
     def new_slice(name):
         """
@@ -373,7 +368,7 @@ class fablib():
         return fablib.default_fablib_manager.get_available_resources(update=update)
 
     @staticmethod
-    def get_fim_slice(excludes=[SliceState.Dead,SliceState.Closing]):
+    def get_fim_slice(excludes=[SliceState.Dead, SliceState.Closing]):
         """
         Not intended for API use.
 
@@ -391,7 +386,7 @@ class fablib():
         return fablib.default_fablib_manager.get_fim_slice(excludes=excludes)
 
     @staticmethod
-    def get_slices(excludes=[SliceState.Dead,SliceState.Closing]):
+    def get_slices(excludes=[SliceState.Dead, SliceState.Closing]):
         """
         Gets a list of slices from the slice manager.
 
@@ -424,7 +419,7 @@ class fablib():
         :return: the slice, if found
         :rtype: Slice
         """
-        return fablib.default_fablib_manager.get_slice(name=name,slice_id=slice_id)
+        return fablib.default_fablib_manager.get_slice(name=name, slice_id=slice_id)
 
     @staticmethod
     def delete_slice(slice_name=None):
@@ -484,47 +479,73 @@ class FablibManager():
     FABRIC_SLICE_PUBLIC_KEY_FILE = "FABRIC_SLICE_PUBLIC_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_FILE = "FABRIC_SLICE_PRIVATE_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
+    FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
+    FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
+
+    LOG_LEVELS = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL
+    }
+
+    default_fabric_rc = os.environ['HOME'] + '/work/fabric_config/fabric_rc'
+    default_log_level = 'INFO'
+    default_log_file = '/tmp/fablib/fablib.log'
+    default_data_dir = '/tmp/fablib'
 
     fablib_object = None
 
+    def read_fabric_rc(self, file_path):
+        vars = {}
+
+        # file_path = os.environ[‘HOME’]+”/work/fabric_config/fabric_rc”
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                for line in f:
+                    if line.startswith('export'):
+                        var_name = line.split('=')[0].split('export')[1].strip()
+                        var_value = line.split('=')[1].strip()
+                        vars[var_name] = var_value
+        return vars
+
     def __init__(self,
+                 fabric_rc=None,
                  credmgr_host=None,
                  orchestrator_host=None,
                  fabric_token=None,
                  project_id=None,
                  bastion_username=None,
                  bastion_key_filename=None,
-                 log_level=logging.INFO,
-                 log_file='/tmp/fablib/fablib.log',
-                 data_dir='/tmp/fablib/fabric_data'):
+                 log_level=None,
+                 log_file=None,
+                 data_dir=None):
         """
-        Constructor. Builds SliceManager for fablib object.
+        Constructor. Builds FablibManager.  Tries to get configuration from:
+
+         - constructor parameters (high priority)
+         - fabric_rc file (middle priority)
+         - environment variables (low priority)
+         - defaults (if needed and possible)
 
         """
         super().__init__()
 
-        #self.log_level = log_level
-        #self.log_file = log_file
-        self.set_log_level(log_level)
-        self.set_log_file(log_file)
+        # init attributes
+        self.bastion_passphrase = None
+        self.log_file = self.default_log_file
+        self.log_level = self.default_log_level
+        self.set_log_level(self.log_level)
 
+        #self.set_log_file(log_file)
         self.data_dir = data_dir
 
-        self.credmgr_host = credmgr_host
-        self.orchestrator_host = orchestrator_host
-        self.fabric_token = fabric_token
-        self.project_id = project_id
-
-        self.bastion_username = bastion_username
-        self.bastion_key_filename = bastion_key_filename
-        self.bastion_public_addr = None
-        self.bastion_private_ipv4_addr = '0.0.0.0'
-        self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
-
-        self.slice_keys = {}
+        # Setup slice key dict
+        # self.slice_keys = {}
         self.default_slice_key = {}
-        self.slice_keys['default'] = self.default_slice_key
 
+        # Set config values from env vars
         if Constants.FABRIC_CREDMGR_HOST in os.environ:
             self.credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
 
@@ -544,10 +565,10 @@ class FablibManager():
             self.bastion_key_filename = os.environ[self.FABRIC_BASTION_KEY_LOCATION]
         if self.FABRIC_BASTION_HOST in os.environ:
             self.bastion_public_addr = os.environ[self.FABRIC_BASTION_HOST]
-        if self.FABRIC_BASTION_HOST_PRIVATE_IPV4 in os.environ:
-            self.bastion_private_ipv4_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV4]
-        if self.FABRIC_BASTION_HOST_PRIVATE_IPV6 in os.environ:
-            self.bastion_private_ipv6_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV6]
+        # if self.FABRIC_BASTION_HOST_PRIVATE_IPV4 in os.environ:
+        #    self.bastion_private_ipv4_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV4]
+        # if self.FABRIC_BASTION_HOST_PRIVATE_IPV6 in os.environ:
+        #    self.bastion_private_ipv6_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV6]
 
         # Slice Keys
         if self.FABRIC_SLICE_PUBLIC_KEY_FILE in os.environ:
@@ -562,9 +583,73 @@ class FablibManager():
             self.default_slice_key['slice_private_key_passphrase'] = os.environ[
                 self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
 
+        # Set config values from fabric_rc file
+        if fabric_rc == None:
+            fabric_rc = self.default_fabric_rc
+
+        fabric_rc_dict = self.read_fabric_rc(fabric_rc)
+
+        if Constants.FABRIC_CREDMGR_HOST in fabric_rc_dict:
+            self.credmgr_host = fabric_rc_dict[Constants.FABRIC_CREDMGR_HOST]
+
+        if Constants.FABRIC_ORCHESTRATOR_HOST in fabric_rc_dict:
+            self.orchestrator_host = fabric_rc_dict[Constants.FABRIC_ORCHESTRATOR_HOST]
+
+        if 'FABRIC_TOKEN_LOCATION' in fabric_rc_dict:
+            self.fabric_token = fabric_rc_dict['FABRIC_TOKEN_LOCATION']
+            os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.fabric_token
+
+        if 'FABRIC_PROJECT_ID' in fabric_rc_dict:
+            self.project_id = fabric_rc_dict['FABRIC_PROJECT_ID']
+            os.environ['FABRIC_PROJECT_ID'] = self.project_id
+
+        # Basstion host setup
+        if self.FABRIC_BASTION_HOST in fabric_rc_dict:
+            self.bastion_public_addr = fabric_rc_dict[self.FABRIC_BASTION_HOST]
+        if self.FABRIC_BASTION_USERNAME in fabric_rc_dict:
+            self.bastion_username = fabric_rc_dict[self.FABRIC_BASTION_USERNAME]
+        if self.FABRIC_BASTION_KEY_LOCATION in fabric_rc_dict:
+            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_BASTION_KEY_LOCATION]
+        if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
+            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+
+        # Slice keys
+        if self.FABRIC_SLICE_PRIVATE_KEY_FILE in fabric_rc_dict:
+            self.default_slice_key['slice_private_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_FILE]
+        if self.FABRIC_SLICE_PUBLIC_KEY_FILE in fabric_rc_dict:
+            self.default_slice_key['slice_public_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE]
+            with open(fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE], "r") as fd:
+                self.default_slice_key['slice_public_key'] = fd.read().strip()
+        if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
+            self.default_slice_key['slice_private_key_passphrase'] = fabric_rc_dict[
+                self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+
+        if self.FABRIC_LOG_FILE in fabric_rc_dict:
+            self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE])
+        if self.FABRIC_LOG_LEVEL in fabric_rc_dict:
+            self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL])
+
+        # Set config values from constructor arguments
+        if credmgr_host != None:
+            self.credmgr_host = credmgr_host
+        if orchestrator_host != None:
+            self.orchestrator_host = orchestrator_host
+        if fabric_token != None:
+            self.fabric_token = fabric_token
+        if project_id != None:
+            self.project_id = project_id
+        if bastion_username != None:
+            self.bastion_username = bastion_username
+        if bastion_key_filename != None:
+            self.bastion_key_filename = bastion_key_filename
+
+        # self.bastion_private_ipv4_addr = '0.0.0.0'
+        # self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
+
+        # Create slice manager
         self.slice_manager = None
-        self.build_slice_manager()
         self.resources = None
+        self.build_slice_manager()
 
     def set_data_dir(self, data_dir):
         """
@@ -594,11 +679,14 @@ class FablibManager():
         :param log_level: new log level
         :type progress: Level
         """
-        fablib.log_level = log_level
+        self.log_level = log_level
 
-        logging.basicConfig(filename=self.log_file, level=self.log_level,
+        logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                             format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                             datefmt='%H:%M:%S')
+
+    def get_log_file(self):
+        return self.log_file
 
     def set_log_file(self, log_file):
         """
@@ -615,10 +703,9 @@ class FablibManager():
         except Exception as e:
             logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
-        logging.basicConfig(filename=self.log_file,level=self.log_level,
-            format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-            datefmt='%H:%M:%S')
-
+        logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+                            format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                            datefmt='%H:%M:%S')
 
     def build_slice_manager(self):
         """
@@ -633,12 +720,15 @@ class FablibManager():
             self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
                                               cm_host=self.credmgr_host,
                                               project_id=self.project_id,
+                                              token_location=self.fabric_token,
+                                              initialize=True,
                                               scope='all')
 
             # Initialize the slice manager
             self.slice_manager.initialize()
         except Exception as e:
-            logging.error(f"{e}")
+            # logging.error(f"{e}")
+            logging.error(e, exc_info=True)
 
         return self.slice_manager
 
@@ -777,17 +867,18 @@ class FablibManager():
         return {'credmgr_host': self.credmgr_host,
                 'orchestrator_host': self.orchestrator_host,
                 'fabric_token': self.fabric_token,
+                'project_id': self.project_id,
                 'bastion_username': self.bastion_username,
                 'bastion_key_filename': self.bastion_key_filename,
                 'bastion_public_addr': self.bastion_public_addr,
-                'bastion_passphrase': None,
-                'bastion_private_ipv4_addr': self.bastion_private_ipv4_addr,
-                'slice_public_key': self.get_default_slice_public_key(),
+                'bastion_passphrase': self.bastion_passphrase,
+                # 'bastion_private_ipv4_addr': self.bastion_private_ipv4_addr,
+                # 'slice_public_key': self.get_default_slice_public_key(),
                 'slice_public_key_file': self.get_default_slice_public_key_file(),
                 'slice_private_key_file': self.get_default_slice_private_key_file(),
                 'fabric_slice_private_key_passphrase': self.get_default_slice_private_key_passphrase(),
-                'fablib_log_file': None,
-                'fablib_log_level': None
+                'fablib_log_file': self.get_log_file(),
+                'fablib_log_level': self.get_log_level()
 
                 }
 
@@ -1154,17 +1245,17 @@ class FablibManager():
             return False
 
 
-#fablib.set_log_level(logging.DEBUG)
-#try:
+# fablib.set_log_level(logging.DEBUG)
+# try:
 #    os.makedirs("/tmp/fablib")
-#except:
+# except:
 #    pass
-#try:
+# try:
 #    os.makedirs("/tmp/fablib/fabric_data")
-#except:
+# except:
 #   pass
 
-#logging.basicConfig(filename='/tmp/fablib/fablib.log',
+# logging.basicConfig(filename='/tmp/fablib/fablib.log',
 #                    level=fablib.get_log_level(),
 #                    format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
 #                    datefmt='%H:%M:%S')
