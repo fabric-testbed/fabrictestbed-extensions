@@ -1253,7 +1253,7 @@ class Node():
             else:
                 ip_command = "sudo ip"
         except Exception as e:
-            logging.warning(f"Failed to down link: {e}")
+            #logging.warning(f"Failed to down link: {e}")
             return
 
         #if type(subnet) == IPv6Network:

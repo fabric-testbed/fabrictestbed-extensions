@@ -642,6 +642,15 @@ class FablibManager():
             self.bastion_username = bastion_username
         if bastion_key_filename != None:
             self.bastion_key_filename = bastion_key_filename
+        if log_level != None:
+            self.set_log_level(log_level)
+        if log_file != None:
+            self.set_log_file(log_file)
+        if data_dir != None:
+            self.data_dir = data_dir
+
+
+
 
         # self.bastion_private_ipv4_addr = '0.0.0.0'
         # self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
