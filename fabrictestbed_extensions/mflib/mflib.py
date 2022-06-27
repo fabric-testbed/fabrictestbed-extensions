@@ -52,6 +52,7 @@ class mflib():
             pass
         
     def instrumentize(self):
+        #print("Skipping Prometheus")
         print("Setting up Prometheus")
         prom_data = self.create("prometheus")
         print(prom_data)
@@ -717,7 +718,7 @@ class mflib():
         if os.path.exists(self.mfuser_private_key_file):
                 return True 
         else:
-            return False 
+            return False
 
 
     def _download_mfuser_private_key(self):
@@ -766,3 +767,26 @@ class mflib():
         return False  
     
         
+    ############################
+    # Upload Dashboard Function
+    ###########################
+    
+    def upload_ELK_dashboards(self, local_directory):
+        count = 1
+        #base = "~/mf_git/instrumentize/elk/dashboards/customdash"
+        for dashboard in os.listdir(local_directory):
+            if dashboard.endswith(".ndjson"):
+                #remote_file_path = base + str(count) + ".ndjson"
+                remote_file_path = "customdash" + str(count) + ".ndjson"
+                print(local_directory + "/" + dashboard)
+                print(remote_file_path)
+                self.meas_node.upload_file(local_directory + "/" + dashboard, remote_file_path)
+                try:
+                    full_command = "sudo cp ~/customdash" + str(count) + ".ndjson /home/mfuser/mf_git/instrumentize/elk/dashboards"
+                    stdout, stderr = self.meas_node.execute(full_command) #retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key"
+                    print(stdout)
+                    print(stderr)
+                except Exception as e:
+                    print(f"Fail: {e}")
+                count = count + 1
+            
