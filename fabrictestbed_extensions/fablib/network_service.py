@@ -106,12 +106,17 @@ class NetworkService():
         :rtype: ServiceType
         """
 
+        from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+
         # if there is a basic NIC, WAN must be STS
         basic_nic_count = 0
 
         sites = set([])
+        includes_facility_port = False
         for interface in interfaces:
             sites.add(interface.get_site())
+            if isinstance(interface.get_component() , FacilityPort):
+                includes_facility_port = True
             if interface.get_model()=="NIC_Basic":
                 basic_nic_count += 1
 
@@ -122,7 +127,10 @@ class NetworkService():
         #    #TODO: remove this when STS works on all links.
         #    rtn_nstype = NetworkService.network_service_map['L2PTP']
         elif len(sites) == 2:
-            if len(interfaces) >= 2:
+            if includes_facility_port:
+                # For now WAN FacilityPorts require L2PTP
+                rtn_nstype = NetworkService.network_service_map['L2PTP']
+            elif len(interfaces) >= 2:
                 rtn_nstype = NetworkService.network_service_map['L2STS']
         else:
             raise Exception(f"Invalid Network Service: Networks are limited to 2 unique sites. Site requested: {sites}")
@@ -239,11 +247,26 @@ class NetworkService():
 
         #Set default VLANs for P2P networks that did not assing VLANs
         if nstype == ServiceType.L2PTP: # or nstype == ServiceType.L2STS:
-            for interface in interfaces:
-                if interface.get_model() != 'NIC_Basic' and not interface.get_vlan():
-                    #TODO: Long term we might have muliple vlan on one property
-                    # and will need to make sure they are unique.  For now this okay
-                    interface.set_vlan("100")
+            vlan1 = interfaces[0].get_vlan()
+            vlan2 = interfaces[1].get_vlan()
+
+            if vlan1 == None and vlan2 == None:
+                # TODO: Long term we might have multiple vlan on one property
+                # and will need to make sure they are unique.  For now this okay
+                interfaces[0].set_vlan("100")
+                interfaces[1].set_vlan("100")
+            elif vlan1 == None and vlan2 != None:
+                # Match VLANs if one is set.
+                interfaces[0].set_vlan(vlan2)
+            elif vlan1 != None and vlan2 == None:
+                # Match VLANs if one is set.
+                interfaces[1].set_vlan(vlan1)
+
+
+            #for interface in interfaces:
+            #    if interface.get_model() != 'NIC_Basic' and not interface.get_vlan():
+            #
+            #        interface.set_vlan("100")
 
         return NetworkService.new_network_service(slice=slice, name=name, nstype=nstype, interfaces=interfaces)
 

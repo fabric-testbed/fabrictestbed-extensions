@@ -643,7 +643,7 @@ class Node():
         #return self.execute_thread_outputs[thread.getName()]
 
 
-    def execute(self, command, retry=3, retry_interval=10):
+    def execute(self, command, retry=3, retry_interval=10, username=None, private_key_file=None, private_key_passphrase=None):
         """
         Runs a command on the FABRIC node.
         :param command: the command to run
@@ -674,12 +674,32 @@ class Node():
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
+
+
+        bastion_username=self.get_fablib_manager().get_bastion_username()
+        bastion_key_file=self.get_fablib_manager().get_bastion_key_filename()
+
+        if username != None:
+            node_username = username
+        else:
+            node_username=self.username
+
+        if private_key_file != None:
+            node_key_file = private_key_file
+        else:
+            node_key_file=self.get_private_key_file()
+
+        if private_key_passphrase != None:
+            node_key_passphrase = private_key_passphrase
+        else:
+            node_key_passphrase=self.get_private_key_file()
+
         for attempt in range(retry):
             try:
-                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
+                key = self.__get_paramiko_key(private_key_file=node_key_file, get_private_key_passphrase=node_key_passphrase)
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=self.get_fablib_manager().get_bastion_username(), key_filename=self.get_fablib_manager().get_bastion_key_filename())
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=bastion_username, key_filename=bastion_key_file)
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
@@ -689,7 +709,7 @@ class Node():
                 #client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-                client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
+                client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
 
                 #stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
                 stdin, stdout, stderr = client.exec_command(command)

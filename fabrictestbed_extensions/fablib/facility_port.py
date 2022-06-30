@@ -95,6 +95,9 @@ class FacilityPort():
         """
         return self.get_fim_interface().name
 
+    def get_site(self):
+        return self.fim_interface.site
+
     @staticmethod
     def new_facility_port(slice=None, name=None, site=None, vlan=None, bandwidth=10):
 

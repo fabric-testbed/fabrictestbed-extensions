@@ -49,7 +49,7 @@ from fabrictestbed.util.constants import Constants
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 # from .abc_fablib import AbcFabLIB
-from fabrictestbed_extensions.fablib.fablib_manager import FablibManager
+#from fabrictestbed_extensions.fablib.fablib_manager import FablibManager
 
 
 # from .. import images
