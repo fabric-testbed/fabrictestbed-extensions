@@ -607,40 +607,49 @@ class Node():
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
 
-    def execute_thread(self, command):
-        import threading
+    # def execute_thread(self, command):
+    #     import threading
+    #
+    #     try:
+    #         #TODO: put threads on some other than on the fablib_object
+    #         self.get_fablib_manager().execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+    #         #self.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
+    #     except Exception as e:
+    #         self.get_fablib_manager().execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+    #         #self.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
+    #
+    # def execute_thread_start(self, command, name=None):
+    #     import threading
+    #
+    #     if not hasattr(self, 'execute_thread_outputs'):
+    #         self.get_fablib_manager().execute_thread_outputs = {}
+    #         #self.execute_thread_outputs = {}
+    #
+    #     thread = threading.Thread(name=name, target=self.execute_thread, args=(command,))
+    #     self.get_fablib_manager().execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+    #     #self.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
+    #
+    #     thread.start()
+    #     return thread
+    #
+    # def execute_thread_join(self, thread):
+    #     import threading
+    #     thread.join()
+    #
+    #     #print(f"Node: {self.get_name()}, {self.get_fablib_manager().execute_thread_outputs}, {self.execute_thread_outputs}")
+    #     #print(f"Node: {self.get_name()}, {self.execute_thread_outputs}")
+    #
+    #     return self.get_fablib_manager().execute_thread_outputs[thread.getName()]
+    #     #return self.execute_thread_outputs[thread.getName()]
 
-        try:
-            #TODO: put threads somee other than on the fablib_object
-            self.get_fablib_manager().execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
-            #self.execute_thread_outputs[threading.current_thread().getName()] = self.execute(command)
-        except Exception as e:
-            self.get_fablib_manager().execute_thread_outputs[threading.current_thread().getName()] = ("",e)
-            #self.execute_thread_outputs[threading.current_thread().getName()] = ("",e)
-
-    def execute_thread_start(self, command, name=None):
-        import threading
-
-        if not hasattr(self, 'execute_thread_outputs'):
-            self.get_fablib_manager().execute_thread_outputs = {}
-            #self.execute_thread_outputs = {}
-
-        thread = threading.Thread(name=name, target=self.execute_thread, args=(command,))
-        self.get_fablib_manager().execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
-        #self.execute_thread_outputs[thread.getName()] = ("",f"Thread {thread.getName()} Started")
-
-        thread.start()
-        return thread
-
-    def execute_thread_join(self, thread):
-        import threading
-        thread.join()
-
-        #print(f"Node: {self.get_name()}, {self.get_fablib_manager().execute_thread_outputs}, {self.execute_thread_outputs}")
-        #print(f"Node: {self.get_name()}, {self.execute_thread_outputs}")
-
-        return self.get_fablib_manager().execute_thread_outputs[thread.getName()]
-        #return self.execute_thread_outputs[thread.getName()]
+    def execute_thread(self, command, retry=3, retry_interval=10, username=None, private_key_file=None, private_key_passphrase=None):
+        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.execute,
+                                                                                 command,
+                                                                                 retry=retry,
+                                                                                 retry_interval=retry_interval,
+                                                                                 username=username,
+                                                                                 private_key_file=private_key_file,
+                                                                                 private_key_passphrase=private_key_passphrase)
 
 
     def execute(self, command, retry=3, retry_interval=10, username=None, private_key_file=None, private_key_passphrase=None):
@@ -756,6 +765,13 @@ class Node():
 
         raise Exception("ssh failed: Should not get here")
 
+    def upload_file_thread(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.upload_file,
+                                                                               local_file_path,
+                                                                               remote_file_path,
+                                                                               retry=retry,
+                                                                               retry_interval=retry_interval)
+
     def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         """
         Upload a local file to a remote location on the node.
@@ -780,9 +796,11 @@ class Node():
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            src_addr = ('0.0.0.0', 22)
         elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            src_addr = ('0:0:0:0:0:0:0:0', 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
@@ -843,6 +861,14 @@ class Node():
 
         raise Exception("scp upload failed")
 
+    def download_file_thread(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.download_file,
+                                                                               local_file_path,
+                                                                               remote_file_path,
+                                                                               retry=retry,
+                                                                               retry_interval=retry_interval)
+
+
     def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
         """
         Download a remote file from the node to a local destination.
@@ -869,9 +895,12 @@ class Node():
         #Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            src_addr = ('0.0.0.0', 22)
+
         elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            src_addr = ('0:0:0:0:0:0:0:0', 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
@@ -932,6 +961,13 @@ class Node():
 
         raise Exception("scp download failed")
 
+    def upload_directory_thread(self, local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.upload_directory,
+                                                                               local_directory_path,
+                                                                               remote_directory_path,
+                                                                               retry=retry,
+                                                                               retry_interval=retry_interval)
+
     def upload_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
         """
         Upload a directory to remote location on the node.
@@ -965,6 +1001,13 @@ class Node():
         os.remove(temp_file)
         self.execute("mkdir -p "+remote_directory_path + "; tar -xf " + temp_file + " -C " + remote_directory_path + "; rm " + temp_file, retry, retry_interval)
         return "success"
+
+    def download_directory_thread(self, local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.download_directory,
+                                                                               local_directory_path,
+                                                                               remote_directory_path,
+                                                                               retry=retry,
+                                                                               retry_interval=retry_interval)
 
     def download_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
         """

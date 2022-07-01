@@ -47,6 +47,7 @@ from fabrictestbed.slice_editor import (
 
 from fabrictestbed.util.constants import Constants
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from concurrent.futures import ThreadPoolExecutor
 
 # from .abc_fablib import AbcFabLIB
 #from fabrictestbed_extensions.fablib.fablib_manager import FablibManager
@@ -497,6 +498,9 @@ class FablibManager():
 
     fablib_object = None
 
+    ssh_thread_pool_executor = None
+
+
     def read_fabric_rc(self, file_path):
         vars = {}
 
@@ -531,6 +535,9 @@ class FablibManager():
 
         """
         super().__init__()
+
+        #initialized thread pool for ssh connections
+        self.ssh_thread_pool_executor = ThreadPoolExecutor(10)
 
         # init attributes
         self.bastion_passphrase = None
@@ -659,6 +666,10 @@ class FablibManager():
         self.slice_manager = None
         self.resources = None
         self.build_slice_manager()
+
+
+    def get_ssh_thread_pool_executor(self):
+        return self.ssh_thread_pool_executor
 
     def set_data_dir(self, data_dir):
         """
