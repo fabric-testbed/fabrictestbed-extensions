@@ -492,7 +492,7 @@ class mflib():
             stdout, stderr = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
             
         except Exception as e:
-            print(f"Fail: {e}")
+            print(f"Download mfuser Keys Failed: {e}")
 
 
     def find_meas_node(self):
@@ -508,7 +508,7 @@ class mflib():
                     self.meas_node = node 
                     return True 
         except Exception as e:
-            print(f"Fail: {e}")
+            print(f"Find Measure Node Failed: {e}")
         self.meas_node = None
         return False
 
@@ -573,7 +573,7 @@ class mflib():
             os.remove(local_file_path)
             
         except Exception as e:
-            print(f"Fail: {e}")  
+            print(f"Service Data Upload Failed: {e}")  
             return False
         return True
 
@@ -618,7 +618,7 @@ class mflib():
                 self.meas_node.execute(cmd)
 
         except Exception as e:
-            print(f"Fail: {e}")
+            print(f"Service File Upload Failed: {e}")
             return False
         return True
 
@@ -640,7 +640,7 @@ class mflib():
             full_command = f"sudo -u mfuser python3 {self.services_directory}/{service}/{command}.py"
             stdout, stderr = self.meas_node.execute(full_command) #retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key"
         except Exception as e:
-            print(f"Fail: {e}")
+            print(f"Service Commnad Run Failed: {e}")
 #         print(type(stdout))
 #         print(stdout)
 #         print(stderr)
@@ -871,7 +871,7 @@ class mflib():
             #print(file_attributes)
             return True
         except Exception as e:
-            print(f"Fail: {e}")
+            print(f"Download mfuser private key Failed: {e}")
         return False  
     
     
@@ -924,7 +924,7 @@ class mflib():
 
         except Exception as e:
             print("Common hosts.ini download has failed.")
-            print(f"Fail: {e}")
+            print(f"downloading common hosts file Failed: {e}")
             return ""
         
     
