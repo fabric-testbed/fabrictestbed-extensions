@@ -130,6 +130,8 @@ class mflib():
             # Create MFUser keys
             #####################
             if "mfuser_keys" in bss and bss["mfuser_keys"] =="ok":
+                print( "mfuser_keys already generated" )
+            else:
             #if True:
                 print ("Generating MFUser Keys...")
                 key = rsa.generate_private_key(
@@ -183,6 +185,8 @@ class mflib():
             # Add mfusers
             ##############################
             if "mfusers" in bss and bss["mfusers"] =="ok":
+                print("mfusers already setup.")
+            else:
             #if True:  
                 #Install mflib user/environment
                 print("Installing mfusers...")
@@ -266,6 +270,8 @@ class mflib():
             # Clone mf repo 
             #######################
             if "repo_cloned" in bss and bss["repo_cloned"] =="ok":
+                print("repo already cloned.")
+            else:
             #if True:
                 self._clone_mf_repo()
                 self._update_bootstrap("repo_cloned", "ok")
@@ -277,6 +283,8 @@ class mflib():
             # & Get hosts info for hosts.ini
             ######################################
             if "meas_network" in bss and bss["meas_network"] =="ok":
+                print("measurement network already setup.")
+            else:
             #if True:
                 self._make_hosts_ini_file(set_ip=True)
                 self._update_bootstrap("meas_network", "ok")
@@ -287,6 +295,8 @@ class mflib():
             # Run Bootstrap script
             ######################
             if "bootstrap_script" in bss and bss["bootstrap_script"] =="ok":
+                print("Bootstrap script aleady run on measurment node.")
+            else:
             #if True:
                 print("Bootstrapping measurement node...")
                 self._run_bootstrap_script()
@@ -294,6 +304,8 @@ class mflib():
 
 
             if "bootstrap_ansible" in bss and bss["bootstrap_ansible"] =="ok":
+                print("Bootstrap ansible script already run on measurement node.")
+            else:
             #if True:
                 print("Bootstrapping measurement node...")
                 self._run_bootstrap_ansible()
@@ -758,7 +770,7 @@ class mflib():
         stdout, stderr = self.meas_node.execute(cmd)
         #print(stdout)
         #print(stderr)
-        print("Boostrap script done.")
+        print("Boostrap script done")
 
     def _run_bootstrap_ansible(self):
         """
@@ -768,7 +780,7 @@ class mflib():
         stdout, stderr = self.meas_node.execute(cmd)
         #print(stdout)
         #print(stderr)
-        print("Boostrap ansible script done.")
+        print("Boostrap ansible script done")
         
 
     ############################
@@ -861,7 +873,6 @@ class mflib():
         except Exception as e:
             print(f"Fail: {e}")
         return False  
-    
     
     
     def _update_bootstrap(self, key, value):
