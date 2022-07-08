@@ -20,13 +20,25 @@ class mflib():
     
     # Place to put downloaded files?
     local_storage_directory = "/tmp/mflib"
+    # Place to keep local files for the init'd slice
+    local_slice_directory = ""
     
     # Need the slice name to connect to slice
     slicename = None
     # The slice ojb
     slice = None
+    
+    # mfuser keys
+    # base keyfile names
+    mfuser_private_key_filename = "mfuser_private_key"
+    mfuser_public_key_filename = "mfuser_public_key"
+
+    local_mfuser_private_key_filename = os.path.join(local_storage_directory, "mfuser_private_key")
+    local_mfuser_public_key_filename = os.path.join(local_storage_directory, "mfuser_public_key")
+
     # Need private key to access the mfuser on the meas node. It is stored on the slice users account on the meas node.
-    mfuser_private_key_file = os.path.join(local_storage_directory, "mfuser_private_key")
+    # mfuser_private_key_file = os.path.join(local_storage_directory, "mfuser_private_key")
+    # mfuser_private_key_file = os.path.join(local_storage_directory, "mfuser_public_key")
     # The slice's meas node 
     meas_node = None
       
@@ -52,14 +64,15 @@ class mflib():
             pass
         
     def instrumentize(self):
-        print("Setting up Prometheus")
+        print("Setting up Prometheus...")
         prom_data = self.create("prometheus")
         print(prom_data)
-        print("Setting up ELK")
+        print("Setting up ELK...")
         elk_data = self.create("elk")
         print(elk_data)
+        # Install the default grafana dashboards.
+        grafana_manager_data = self.create("grafana_manager")
         print("Instrumentize Done.")
-        #etc...
 
     def init(self,slicename):
         """
@@ -67,14 +80,20 @@ class mflib():
         :param slicename: The name of the slice.
         :rtype: String
         """
-        print(f"Init-ing {slicename}")
+
+        print(f'Inititializing slice "{slicename}" for MeasurementFramework.')
         
         ########################
         # Get slice 
         ########################
         self.slicename = slicename
         self.slice = fablib.get_slice(name=slicename)
-        
+        # create dir for slicename
+        self.local_slice_directory = os.path.join(self.local_storage_directory, slicename)
+        try:
+            os.makedirs(self.local_slice_directory)
+        except:
+            pass
         ########################
         # Check for prequisites
         #######################
@@ -87,13 +106,17 @@ class mflib():
         print(f"Found meas node as {self.meas_node.get_name()}")
         
         bss = self.get_bootstrap_status()
-        print("bootstrap status is")
-        print(bss)
+        if bss:
+            print("Bootstrap status is")
+            print(bss)
+        else:
+            print("Bootstrap status not found. Will now start bootstrap process...")
+            
         
         if ("status" in bss and bss["status"] == "ready"):
             # Slice already instrumentized and ready to go.
             self.get_mfuser_private_key() 
-            print("Slice Measurement Framework is ready")
+            print("Bootstrap status indicates Slice Measurement Framework is ready.")
             return
         else: 
             
@@ -106,9 +129,9 @@ class mflib():
             ######################   
             # Create MFUser keys
             #####################
-            #if "mfuser_keys" in bss and bss["mfuser_keys"] =="ok":
-            if True:
-                print ("Generating MFUser Keys\n")
+            if "mfuser_keys" in bss and bss["mfuser_keys"] =="ok":
+            #if True:
+                print ("Generating MFUser Keys...")
                 key = rsa.generate_private_key(
                     backend=crypto_default_backend(),
                     public_exponent=65537,
@@ -131,29 +154,38 @@ class mflib():
                 public_key_str = public_key.decode('utf-8')
 
                 # Save public key & change mode
-                public_key_file = open("/tmp/mflib/mfuser.pub", 'w');
+                public_key_file = open(self.local_mfuser_public_key_filename, 'w');
+                #public_key_file = open("/tmp/mflib/mfuser.pub", 'w');
                 public_key_file.write(public_key_str);
                 public_key_file.write('\n');
                 public_key_file.close()
-                chmod("/tmp/mflib/mfuser.pub", 0o644);
+                #chmod("/tmp/mflib/mfuser.pub", 0o644);
+                chmod(self.local_mfuser_public_key_filename, 0o644);
+
 
                 # Save private key & change mode
-                private_key_file = open("/tmp/mflib/mfuser", 'w');
+                private_key_file = open(self.local_mfuser_private_key_filename, 'w');
+                #private_key_file = open("/tmp/mflib/mfuser", 'w');
                 private_key_file.write(private_key_str);
                 private_key_file.close()
-                chmod("/tmp/mflib/mfuser", 0o600);
+                #chmod("/tmp/mflib/mfuser", 0o600);
+                chmod(self.local_mfuser_private_key_filename, 0o600);
 
-                print("MFUser keys Done")
+                # Upload mfuser keys to default user dir for future retrieval
+                self._upload_mfuser_keys()
+
+                self._update_bootstrap("mfuser_keys", "ok")
+                print("MFUser keys Done.")
             
             
                 
             ###############################
             # Add mfusers
             ##############################
-            #if "mfusers" in bss and bss["mfusers"] =="ok":
-            if True:  
+            if "mfusers" in bss and bss["mfusers"] =="ok":
+            #if True:  
                 #Install mflib user/environment
-                print("Installing mfusers\n")
+                print("Installing mfusers...")
    
                 #Add user
                 threads = []
@@ -164,7 +196,8 @@ class mflib():
                         print(f"Fail: {e}")
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
-                #Setup ssh 
+                        
+                #Setup ssh directory
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
@@ -174,7 +207,7 @@ class mflib():
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
-                #Edit commands
+                #Add mfuser to sudoers
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
@@ -185,17 +218,20 @@ class mflib():
                        thread[0].execute_thread_join(thread[1])
 
                 #Upload keys
+                # Ansible.pub is nolonger a good name here
                 for node in self.slice.get_nodes():
                     try:
-                        node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
+                        #node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
+                        node.upload_file(self.local_mfuser_public_key_filename ,"ansible.pub")
                     except Exception as e:
                         print(f"Fail: {e}")
-
+                        
                 #Edit commands
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
                         threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
+                        #threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
                     except Exception as e:
                         print(f"Fail: {e}")
                 for thread in threads:
@@ -221,33 +257,18 @@ class mflib():
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
-                # TODO move to meas node ansible script
-                #Installs
-                threads=[]
-                for node in self.slice.get_nodes():
-                    try:
-                        threads.append([node,node.execute_thread_start("curl -fsSL https://test.docker.com -o test-docker.sh; sudo sh test-docker.sh; sudo apt-get -y update; sudo apt-get install -y python3-pip; sudo pip install docker")])
-                    except Exception as e:
-                        print(f"Fail: {e}")
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
-
-              
-            
-                # Upload mfuser private key to meas node & move to mfuser account
-                self.meas_node.upload_file("/tmp/mflib/mfuser","mfuser")
-                # cp so as to keep a key copy where the slice owner can grab it
-                self.meas_node.execute("sudo cp mfuser /home/mfuser/.ssh/mfuser; sudo chown mfuser:mfuser /home/mfuser/.ssh/mfuser; sudo chmod 600 /home/mfuser/.ssh/mfuser")
-
-                print("mfusers done")
+                self._copy_mfuser_keys_to_mfuser_on_meas_node()
+                self._update_bootstrap("mfusers", "ok")
+                print("mfuser installations Done.")
             
 
             #######################
             # Clone mf repo 
             #######################
-            #if "repo_cloned" in bss and bss["repo_cloned"] =="ok":
-            if True:
+            if "repo_cloned" in bss and bss["repo_cloned"] =="ok":
+            #if True:
                 self._clone_mf_repo()
+                self._update_bootstrap("repo_cloned", "ok")
                 
                 
                 
@@ -255,30 +276,33 @@ class mflib():
             # Create measurement network interfaces  
             # & Get hosts info for hosts.ini
             ######################################
-            #if "meas_network" in bss and bss["meas_network"] =="ok":
-            if True:
+            if "meas_network" in bss and bss["meas_network"] =="ok":
+            #if True:
                 self._make_hosts_ini_file(set_ip=True)
+                self._update_bootstrap("meas_network", "ok")
                 
                 
             
             #######################
             # Run Bootstrap script
             ######################
-            #if "bootstrap_script" in bss and bss["bootstrap_script"] =="ok":
-            if True:
-                print("Bootstrapping measurement node.")
+            if "bootstrap_script" in bss and bss["bootstrap_script"] =="ok":
+            #if True:
+                print("Bootstrapping measurement node...")
                 self._run_bootstrap_script()
+                self._update_bootstrap("bootstrap_script", "ok")
+
+
+            if "bootstrap_ansible" in bss and bss["bootstrap_ansible"] =="ok":
+            #if True:
+                print("Bootstrapping measurement node...")
+                self._run_bootstrap_ansible()
             
+
             self._update_bootstrap("status", "ready")
-            print("Init Done")
-            return True
-        
-            self.meas_node.execute("cd mf_git/instrumentize/ansible/fabric_experiment_instramentize;/home/ubuntu/.local/bin/ansible-playbook -i ~/mf_git/promhosts.ini -b playbook_fabric_experiment_install_prometheus.yml")
-            
-            self.meas_node.execute("sudo apt install acl -y")
-            
-            print("done heres what to do...tunnel to grafana via bastion")
-            
+            print("Inititialization Done.")
+
+
                 
     #def submit(self,slice):    
     def addMeasNode(self,slice):
@@ -301,7 +325,7 @@ class mflib():
         meas = slice.add_node(name="_meas_node", site=site)
         #meas.set_capacities(cores="4", ram="16", disk="50")
         #meas.set_capacities(cores="2", ram="8", disk="10")
-        meas.set_capscities(cores=meas.default_cores, ram=meas.default_cores, disk=meas.default_disk)
+        meas.set_capacities(cores=meas.default_cores, ram=meas.default_cores, disk=meas.default_disk)
         meas.set_image("default_ubuntu_20")
         interfaces.append(meas.add_component(model='NIC_Basic', name="Meas_Nic").get_interfaces()[0])
         meas_net = slice.add_l2network(name="_meas_net", interfaces=interfaces)
@@ -380,6 +404,83 @@ class mflib():
 
 # Utility Methods
      
+
+    def _upload_mfuser_keys(self, private_filename=None, public_filename=None):
+        """
+        Uploads the mfuser keys to the default user for easy access later.
+        """
+        if  private_filename is None:
+            private_filename=self.local_mfuser_private_key_filename
+        if  public_filename is None:
+            public_filename=self.local_mfuser_public_key_filename
+
+        try:
+            local_file_path = private_filename
+            remote_file_path = self.mfuser_private_key_filename
+            stdout, stderr = self.meas_node.upload_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+        except TypeError:
+            pass 
+            # TODO set file permissions on remote
+            # This error is happening due to the file permmissions not being correctly set on the remote?
+        except Exception as e:
+            print(f"Failed Private Key Upload: {e}")
+
+        try:
+            local_file_path = public_filename
+            remote_file_path = self.mfuser_public_key_filename
+            stdout, stderr = self.meas_node.upload_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+        except TypeError:
+            pass 
+            # TODO set file permissions on remote
+            # This error is happening due to the file permmissions not being correctly set on the remote?   
+            # Errors are:
+            # Failed Private Key Upload: cannot unpack non-iterable SFTPAttributes object
+            # Failed Public Key Upload: cannot unpack non-iterable SFTPAttributes object     
+        except Exception as e:
+            print(f"Failed Public Key Upload: {e}")
+
+
+        # Set the permissions correctly on the remote machine.
+        cmd = f"chmod 644 {self.mfuser_public_key_filename}"
+        self.meas_node.execute(cmd)
+        cmd = f"chmod 600 {self.mfuser_private_key_filename}"
+        self.meas_node.execute(cmd)
+        
+    def _copy_mfuser_keys_to_mfuser_on_meas_node(self):
+        """
+        Copies mfuser keys from default location to mfuser .ssh folder and sets ownership & permissions.
+        """
+        try:
+            cmd = f"sudo cp {self.mfuser_public_key_filename} /home/mfuser/.ssh/{self.mfuser_public_key_filename}; sudo chown mfuser:mfuser /home/mfuser/.ssh/{self.mfuser_public_key_filename}; sudo chmod 644 /home/mfuser/.ssh/{self.mfuser_public_key_filename}"
+            self.meas_node.execute(cmd)
+        
+            cmd = f"sudo cp {self.mfuser_private_key_filename} /home/mfuser/.ssh/{self.mfuser_private_key_filename}; sudo chown mfuser:mfuser /home/mfuser/.ssh/{self.mfuser_private_key_filename}; sudo chmod 600 /home/mfuser/.ssh/{self.mfuser_private_key_filename}"
+            self.meas_node.execute(cmd)
+        except Exception as e:
+            print(f"Failed mfuser key user key copy: {e}")
+
+
+    def _download_mfuser_keys(self, private_filename=None, public_filename=None):
+        """
+        Downloads the mfuser keys.
+        """
+        if  private_filename is None:
+            private_filename=self.local_mfuser_private_key_filename
+        if  public_filename is None:
+            public_filename=self.local_mfuser_public_key_filename
+        
+
+        try:
+            local_file_path = private_filename
+            remote_file_path = self.mfuser_private_key_filename
+            stdout, stderr = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+
+            local_file_path = public_filename
+            remote_file_path = self.mfuser_public_key_filename
+            stdout, stderr = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+            
+        except Exception as e:
+            print(f"Fail: {e}")
 
 
     def find_meas_node(self):
@@ -503,6 +604,7 @@ class mflib():
                 cmd = f"sudo mv {remote_tmp_file_path} {final_remote_file_path};  sudo chown mfuser:mfuser {final_remote_file_path}; sudo rm {remote_tmp_file_path}"
                 print(cmd)
                 self.meas_node.execute(cmd)
+
         except Exception as e:
             print(f"Fail: {e}")
             return False
@@ -555,14 +657,13 @@ class mflib():
         :type service: String
         :param filename: The filename to download from the meas node.
         """
-        print("!!!!!!!!!!!!!!!!!!!!_download_service_file is not yet implemented!!!!!!!!!!!!!!!!!!!!!!!!!")
-        return
+
         # 
         #  Download a file from a service directory
         # Probably most useful for grabbing output from a command run.
         # TODO figure out how to name/where to put file locally
         try:
-            local_file_path = os.path.join(local_storage_directory, service, filename)
+            local_file_path = os.path.join(self.local_slice_directory, service, filename)
             remote_file_path = os.path.join(self.services_directory, service, filename)
             stdout, stderr = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
         except Exception as e:
@@ -615,18 +716,28 @@ class mflib():
         with open('/tmp/mflib/elkhosts.ini', 'w') as f:
             f.write(e_hosts_txt)
 
-        #print("Uploading hosts files")
-        # Upload
+        # Upload the files to the meas node and move to correct locations
+
+        # Upload Prom hosts
         self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
-        stdout, stderr = self.meas_node.execute("sudo mv promhosts.ini /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
-        #print(stdout)
-        #print(stderr)
-        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
-        #print(stdout)
-        #print(stderr)
+
+        # create a common version of hosts.ini for all to access
+        stdout, stderr = self.meas_node.execute("sudo mkdir -p /home/mfuser/services/common")
+        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/services")
+        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/services/common")
+        stdout, stderr = self.meas_node.execute("sudo cp promhosts.ini /home/mfuser/services/common/hosts.ini")
+        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/services/common/hosts.ini")
         
+        # create the promhosts.ini file
+        stdout, stderr = self.meas_node.execute("sudo mv promhosts.ini /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
+        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
+        
+        # Upload the elkhosts.ini file.
         self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
-        self.meas_node.execute("sudo mv elkhosts.ini /home/mfuser/mf_git/elkhosts.ini")
+
+        # create the elk.ini file
+        stdout, stderr = self.meas_node.execute("sudo mv elkhosts.ini /home/mfuser/mf_git/elkhosts.ini")
+        stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/mf_git/elkhosts.ini")
         
         
         
@@ -641,13 +752,23 @@ class mflib():
         
     def _run_bootstrap_script(self):
         """
-        Run the initial boostrap script in the meas node mf repo.
+        Run the initial bootstrap script in the meas node mf repo.
         """
         cmd = f'sudo -u mfuser /home/mfuser/mf_git/instrumentize/experiment_bootstrap/bootstrap.sh'
         stdout, stderr = self.meas_node.execute(cmd)
-        print(stdout)
-        print(stderr)
-        print("Boostrap script done")
+        #print(stdout)
+        #print(stderr)
+        print("Boostrap script done.")
+
+    def _run_bootstrap_ansible(self):
+        """
+        Run the initial bootstrap ansible scripts in the meas node mf repo.
+        """
+        cmd = f'sudo -u mfuser python3 /home/mfuser/mf_git/instrumentize/experiment_bootstrap/bootstrap_docker.py'
+        stdout, stderr = self.meas_node.execute(cmd)
+        #print(stdout)
+        #print(stderr)
+        print("Boostrap ansible script done.")
         
 
     ############################
@@ -662,7 +783,7 @@ class mflib():
         """
         if force or not os.path.exists(self.bootstrap_status_file):
             if not self._download_bootstrap_status():
-                print("Boostrap file was not downloaded.")
+                #print("Boostrap file was not downloaded. Bootstrap most likely has not been done.")
                 return {}
         
             
@@ -698,6 +819,9 @@ class mflib():
             #print(file_attributes)
             
             return True
+        except FileNotFoundError:
+            pass 
+            # Most likely the file does not exist because it has not yet been created. So we will ignore this exception.
         except Exception as e:
             print("Bootstrap download has failed.")
             print(f"Fail: {e}")
@@ -713,10 +837,10 @@ class mflib():
         :return: True if file is found, false otherwise. 
         :rtype: Boolean
         """
-        if force or not os.path.exists(self.mfuser_key_file):
+        if force or not os.path.exists(self.local_mfuser_private_key_filename):
             self._download_mfuser_private_key()
 
-        if os.path.exists(self.mfuser_private_key_file):
+        if os.path.exists(self.local_mfuser_private_key_filename):
                 return True 
         else:
             return False 
@@ -729,8 +853,8 @@ class mflib():
         :rtype: Boolean
         """
         try:
-            local_file_path = self.mfuser_private_key_file
-            remote_file_path =  os.path.join("mfuser")
+            local_file_path = self.local_mfuser_private_key_filename
+            remote_file_path =  self.mfuser_private_key_filename
             file_attributes = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
             #print(file_attributes)
             return True
@@ -739,15 +863,14 @@ class mflib():
         return False  
     
     
-    # TODO
+    
     def _update_bootstrap(self, key, value):
         """
         Updates the given key to the given value in the bootstrap_status.json file on the meas node.
         """
-        
-        
+        bsf_dict = self.get_bootstrap_status()
         #self.download_bootstrap_status()
-        bsf_dict = {}
+        #bsf_dict = {}
         bsf_dict[key] = value
         
         with open(self.bootstrap_status_file, "w") as bsf:
@@ -762,9 +885,35 @@ class mflib():
             #print(file_attributes)
             
             return True
+
         except Exception as e:
             print("Bootstrap upload has failed.")
             print(f"Fail: {e}")
         return False  
     
         
+
+    def _download_common_hosts(self):
+        """
+        Downloaded file will be stored locally for future reference.  
+        :return:
+        :rtype: 
+        """
+        try:
+            local_file_path = self.common_hosts_file
+            remote_file_path =  os.path.join("/home/mfuser/services/common/hosts.ini")
+            #print(local_file_path)
+            #print(remote_file_path)
+            file_attributes = self.meas_node.download_file(local_file_path, remote_file_path, retry=1) #, retry=3, retry_interval=10): # note retry is really tries
+            #print(file_attributes)
+            
+            with open(local_file_path) as f:
+                hosts_text = f.read()
+                return hosts_text
+
+        except Exception as e:
+            print("Common hosts.ini download has failed.")
+            print(f"Fail: {e}")
+            return ""
+        
+    
