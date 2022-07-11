@@ -120,7 +120,7 @@ class FacilityPort():
         :rtype: Node
         """
         from fabrictestbed_extensions.fablib.facility_port import FacilityPort
-        return FacilityPort(slice, slice, facility_port)
+        return FacilityPort(slice, facility_port)
 
     def get_slice(self):
         """
