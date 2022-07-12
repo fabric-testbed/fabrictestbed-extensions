@@ -38,7 +38,6 @@ from fim.slivers.network_service import ServiceType, NSLayer
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 
-
 class NetworkService:
     network_service_map = { 'L2Bridge': ServiceType.L2Bridge,
                             'L2PTP': ServiceType.L2PTP,
