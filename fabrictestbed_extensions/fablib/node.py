@@ -405,8 +405,6 @@ class Node():
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
-        from fabrictestbed_extensions.fablib.interface import Interface
-
         interfaces = []
         for component in self.get_components():
             for interface in component.get_interfaces():
@@ -430,9 +428,6 @@ class Node():
         :return: an interface on the node
         :rtype: Interface
         """
-
-        from fabrictestbed_extensions.fablib.interface import Interface
-
         if name is not None:
             for component in self.get_components():
                 for interface in component.get_interfaces():
@@ -532,7 +527,6 @@ class Node():
         from fabrictestbed_extensions.fablib.component import Component
         return_components = []
         for component_name, component in self.get_fim_node().components.items():
-            # return_components.append(Component(self,component))
             return_components.append(Component(self,component))
 
         return return_components
@@ -1288,10 +1282,11 @@ class Node():
             logging.warning(f"Failed to down link: {e}")
             return
 
-        #if type(subnet) == IPv6Network:
-        #    ip_command = "sudo ip -6"
-        #else:
-        #    ip_command = "sudo ip"
+        try:
+            self.execute(f"{ip_command} link set dev {interface.get_physical_os_interface()} up")
+        except Exception as e:
+            logging.warning(f"Failed to up link: {e}")
+            raise e
 
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} up")
@@ -1318,11 +1313,6 @@ class Node():
         except Exception as e:
             #logging.warning(f"Failed to down link: {e}")
             return
-
-        #if type(subnet) == IPv6Network:
-        #    ip_command = "sudo ip -6"
-        #else:
-        #    ip_command = "sudo ip"
 
         try:
             self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down")
@@ -1446,17 +1436,12 @@ class Node():
             logging.warning(f"Failed to get network layer and/or type: {e}")
             ip_command = "sudo ip"
 
-
-        #if interface. == "IPv4":
-        #    ip_command = "sudo ip"
-        #elif self.validIPAddress(ip) == "IPv6":
-        #    ip_command = "sudo ip -6"
-        #else:
-        #    logging.debug(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string. Config VLAN interface only.")
-
         command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
-
         stdout, stderr = self.execute(command)
+
+        command = f'{ip_command} link set dev {os_iface} up'
+        stdout, stderr = self.execute(command)
+
         command = f'{ip_command} link set dev {os_iface}.{vlan} up'
         stdout, stderr = self.execute(command)
 

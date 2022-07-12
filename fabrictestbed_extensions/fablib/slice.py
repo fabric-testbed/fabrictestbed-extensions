@@ -538,29 +538,8 @@ class Slice:
                 :return: a new L2 facility port
                 :rtype: NetworkService
                 """
-        #from fabrictestbed_extensions.fablib.network_service import NetworkService
-        #return Node.new_facility_port(slice=self,  name=name, site=site, vlan=vlan)
-
         from fabrictestbed_extensions.fablib.facility_port import FacilityPort
-
-
-
-        #fim_facility_port = self.get_fim_topology().add_facility(name=name, site=site, capacities=Capacities(bw=10), labels=Labels(vlan=vlan))
-
-        #fim_facility_port = self.get_fim_topology().add_facility(name='Chameleon-StarLight', site='STAR', capacities=Capacities(bw=10),
-        #               labels=Labels(vlan=vlan))
-
         return FacilityPort.new_facility_port(slice=self, name=name, site=site, vlan=vlan)
-
-        #print(f"fim_facility_port: {fim_facility_port}")
-
-        #facility_port = Node(slice=self, node=fim_facility_port)
-
-        #fim_interface = fim_facility_port.interface_list[0]
-
-        #return FacilityPort(self,fim_facility_port)
-
-
 
     def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, docker_image=None, host=None, avoid=[]):
         """
@@ -1265,7 +1244,7 @@ class Slice:
             return self.slice_id
 
         if wait:
-            #self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
+            self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
 
             if progress:
                 print("Running post boot config ... ",end="")

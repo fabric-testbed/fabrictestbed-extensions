@@ -77,7 +77,6 @@ class FacilityPort():
         :rtype: String
         """
         table = [ ["name", self.get_name()],
-            ]
 
         return tabulate(table) #, headers=["Property", "Value"])
 
@@ -104,7 +103,6 @@ class FacilityPort():
         fim_facility_port = slice.get_fim_topology().add_facility(name=name, site=site,
                                                                  capacities=Capacities(bw=bandwidth),
                                                                  labels=Labels(vlan=vlan))
-        #print(f"fim_facility_port: {fim_facility_port}")
         return FacilityPort(slice, fim_facility_port)
 
     @staticmethod
