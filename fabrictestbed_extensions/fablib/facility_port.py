@@ -76,7 +76,7 @@ class FacilityPort():
         :return: Tabulated string of node information
         :rtype: String
         """
-        table = [ ["name", self.get_name()],
+        table = [ ["name", self.get_name()] ]
 
         return tabulate(table) #, headers=["Property", "Value"])
 

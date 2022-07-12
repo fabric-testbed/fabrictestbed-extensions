@@ -77,7 +77,7 @@ class Slice:
         table = [["Slice Name", self.sm_slice.slice_name],
                  ["Slice ID", self.sm_slice.slice_id],
                  ["Slice State", self.sm_slice.slice_state],
-                 ["Lease End", self.sm_slice.lease_end]
+                 ["Lease End (UTC)", self.sm_slice.lease_end]
                 ]
 
         return tabulate(table)
@@ -541,7 +541,7 @@ class Slice:
         from fabrictestbed_extensions.fablib.facility_port import FacilityPort
         return FacilityPort.new_facility_port(slice=self, name=name, site=site, vlan=vlan)
 
-    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, docker_image=None, host=None, avoid=[]):
+    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, instance_type=None, docker_image=None, host=None, avoid=[]):
         """
         Creates a new node on this fablib slice.
 
@@ -571,7 +571,11 @@ class Slice:
         """
         from fabrictestbed_extensions.fablib.node import Node
         node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
-        node.set_capacities(cores=cores, ram=ram, disk=disk)
+
+        if instance_type:
+            node.set_instance_type(instance_type)
+        else:
+            node.set_capacities(cores=cores, ram=ram, disk=disk)
 
         if image:
             node.set_image(image)
@@ -890,18 +894,18 @@ class Slice:
         """
         Renews the FABRIC slice's lease to the new end date.
 
-        Date is of the form: "%Y-%m-%d %H:%M:%S"
+        Date is in UTC and of the form: "%Y-%m-%d %H:%M:%S"
 
-        Example of formating a date for 1 day from now:
+        Example of formatting a date for 1 day from now:
 
-        end_date = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        end_date = (datetime.datetime.utcnow() + datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
 
 
         :param end_date: String
         :raises Exception: if renewal fails
         """
         return_status, result = self.fablib_manager.get_slice_manager().renew(slice_object=self.sm_slice,
-                                                                 new_lease_end_time=end_date)
+                                                                 new_lease_end_time=f"{end_date} +0000")
 
         if return_status != Status.OK:
             raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
