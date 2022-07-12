@@ -1,4 +1,7 @@
 # fabrictestbed-extensions
+[![Requirements Status](https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements.svg?branch=main)](https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements/?branch=main)
+
+[![PyPI](https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic)](https://pypi.org/project/fabrictestbed-extensions/)
 
 Extensions for the FABRIC API/CLI.  
 

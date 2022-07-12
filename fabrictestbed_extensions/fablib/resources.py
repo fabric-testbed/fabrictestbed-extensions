@@ -31,18 +31,18 @@ from typing import List, Tuple
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_editor import Capacities
 from fabrictestbed.slice_manager import Status
-from fabrictestbed_extensions.fablib.fablib import fablib
 
 
 class Resources:
 
-    def __init__(self):
+    def __init__(self,  fablib_manager):
         """
         Constructor
         :return:
         """
         super().__init__()
 
+        self.fablib_manager = fablib_manager
         self.topology = None
         self.update()
 
@@ -399,12 +399,15 @@ class Resources:
             logging.warning(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site_name)
 
+    def get_fablib_manager(self):
+        return self.fablib_manager
+
     def update(self):
         """
         Update the available resources by querying the FABRIC services
 
         """
-        return_status, topology = fablib.get_slice_manager().resources()
+        return_status, topology = self.get_fablib_manager().get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
 
