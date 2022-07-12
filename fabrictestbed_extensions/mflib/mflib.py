@@ -33,12 +33,10 @@ class mflib():
     mfuser_private_key_filename = "mfuser_private_key"
     mfuser_public_key_filename = "mfuser_public_key"
 
+    # Local copy filenames
     local_mfuser_private_key_filename = os.path.join(local_storage_directory, "mfuser_private_key")
     local_mfuser_public_key_filename = os.path.join(local_storage_directory, "mfuser_public_key")
 
-    # Need private key to access the mfuser on the meas node. It is stored on the slice users account on the meas node.
-    # mfuser_private_key_file = os.path.join(local_storage_directory, "mfuser_private_key")
-    # mfuser_private_key_file = os.path.join(local_storage_directory, "mfuser_public_key")
     # The slice's meas node 
     meas_node = None
       
@@ -558,7 +556,7 @@ class mflib():
                 json.dump(data, datafile)
             
             # Create remote filenames
-            final_remote_file_path = os.path.join(self.services_directory, service, "data.json")
+            final_remote_file_path = os.path.join(self.services_directory, service, "data", "data.json")
             remote_tmp_file_path = os.path.join("/tmp", randdataname)
     
             # upload file
@@ -598,23 +596,15 @@ class mflib():
                 # file is local path
                 local_file_path = file 
                 filename = os.path.basename(file)
-                final_remote_file_path = os.path.join(self.services_directory, service, filename)
-                #remote_file_path = os.path.join("/tmp/mf_file_transfer/service/filename")
-                #remote_file_path = os.path.join(f"/tmp/{filename}")
+                final_remote_file_path = os.path.join(self.services_directory, service, "files", filename)
+
                 randfilename = "mf_file_" + "".join(random.choice(letters) for i in range(10))
                 remote_tmp_file_path = os.path.join("/tmp", randfilename)
-                
-                
-#                 print(local_file_path)
-#                 print(filename)
-#                 print(remote_tmp_file_path)
-#                 print(final_remote_file_path)
-                
                 
                 # upload file
                 fa = self.meas_node.upload_file(local_file_path, remote_tmp_file_path) # retry=3, retry_interval=10, username="mfuser", private_key="mfuser_private_key")
                 cmd = f"sudo mv {remote_tmp_file_path} {final_remote_file_path};  sudo chown mfuser:mfuser {final_remote_file_path}; sudo rm {remote_tmp_file_path}"
-                print(cmd)
+ 
                 self.meas_node.execute(cmd)
 
         except Exception as e:
