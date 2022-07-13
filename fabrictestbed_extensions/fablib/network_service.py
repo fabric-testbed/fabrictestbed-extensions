@@ -40,14 +40,14 @@ from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 
 class NetworkService:
-    network_service_map = { 'L2Bridge': ServiceType.L2Bridge,
-                            'L2PTP': ServiceType.L2PTP,
-                            'L2STS': ServiceType.L2STS,
-                            }
+    network_service_map = {'L2Bridge': ServiceType.L2Bridge,
+                           'L2PTP': ServiceType.L2PTP,
+                           'L2STS': ServiceType.L2STS,
+                          }
 
     # Type names used in fim network services
-    fim_l2network_service_types = [ 'L2Bridge', 'L2PTP', 'L2STS']
-    fim_l3network_service_types = [ 'FABNetv4', 'FABNetv6']
+    fim_l2network_service_types = ['L2Bridge', 'L2PTP', 'L2STS']
+    fim_l3network_service_types = ['FABNetv4', 'FABNetv6']
 
 
     @staticmethod
@@ -84,6 +84,9 @@ class NetworkService:
         :return: the network service type
         :rtype: ServiceType
         """
+
+        from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+
         # if there is a basic NIC, WAN must be STS
         basic_nic_count = 0
 
@@ -91,7 +94,6 @@ class NetworkService:
         includes_facility_port = False
         for interface in interfaces:
             sites.add(interface.get_site())
-            from fabrictestbed_extensions.fablib.facility_port import FacilityPort
             if isinstance(interface.get_component(), FacilityPort):
                 includes_facility_port = True
             if interface.get_model()=="NIC_Basic":
