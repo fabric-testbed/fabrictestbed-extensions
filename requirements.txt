@@ -4,5 +4,5 @@ ipywidgets
 ipyleaflet
 ipycytoscape
 tabulate
-fabrictestbed>=1.3rc3
+fabrictestbed>=1.3rc4
 paramiko
