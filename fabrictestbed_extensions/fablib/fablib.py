@@ -61,7 +61,7 @@ class fablib():
 
     @staticmethod
     def get_fablib_manager():
-        return
+        return fablib.default_fablib_manager
 
     @staticmethod
     def get_image_names() -> list[str]:
@@ -81,7 +81,7 @@ class fablib():
         :return: list of site names as strings
         :rtype: list[str]
         """
-        return fablib.default_fablib_manager().get_site_names()
+        return fablib.get_fablib_manager().get_site_names()
 
     @staticmethod
     def list_sites() -> str:
