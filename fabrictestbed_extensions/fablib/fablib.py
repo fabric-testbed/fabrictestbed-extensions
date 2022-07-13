@@ -400,7 +400,7 @@ class fablib():
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.default_fablib_manager.XXget_slices(excludes=excludes)
+        return fablib.default_fablib_manager.get_slices(excludes=excludes)
 
     @staticmethod
     def get_slice(name=None, slice_id=None):
