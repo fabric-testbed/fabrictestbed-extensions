@@ -22,10 +22,12 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
@@ -75,6 +77,23 @@ class Interface:
 
         return tabulate(table)
 
+    def set_auto_config(self):
+        fim_iface = self.get_fim_interface()
+        fim_iface.flags = Flags(auto_config=True)
+        #fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
+
+        #labels = Labels()
+        #labels.instance_parent = host_name
+        #self.get_fim_node().set_properties(labels=labels)
+
+        #if_labels = Labels.update(if_labels, ipv4=str(next(ips)), ipv4_subnet=str(network))
+        # if_labels = Labels.update(if_labels, vlan="200", ipv4=str(next(ips)))
+        #fim_iface.set_properties(labels=if_labels)
+
+    def unset_auto_config(self):
+        fim_iface = self.get_fim_interface()
+        fim_iface.flags = Flags(auto_config=False)
+
     def get_os_interface(self) -> str:
         """
         Gets a name of the interface the operating system uses for this
@@ -106,12 +125,30 @@ class Interface:
         :rtype: String
         """
         try:
-            os_iface = self.get_physical_os_interface()
-            mac = os_iface['mac']
+            #os_iface = self.get_physical_os_interface()
+            #mac = os_iface['mac']
+            mac = self.get_fim_interface().get_property(pname="label_allocations").mac
         except:
             mac = None
 
         return mac
+
+    def get_os_dev(self):
+        """
+        Gets json output of 'ip addr list' for the interface.
+
+        :return: device description
+        :rtype: Dict
+        """
+
+        ip_addr_list_json = self.get_node().ip_addr_list(output='json')
+
+        mac = self.get_mac()
+        for dev in ip_addr_list_json:
+            if str(dev['address'].upper()) == str(mac.upper()):
+                return dev
+
+        return None
 
     def get_physical_os_interface(self):
         """
@@ -137,19 +174,19 @@ class Interface:
         If the interface requires a FABRIC VLAN tag, the base interface name
         will be returned (i.e. not the VLAN tagged interface)
 
-        :return: physicla OS interface name
+        :return: physical OS interface name
         :rtype: String
         """
-        if self.get_physical_os_interface():
-            return self.get_physical_os_interface()['ifname']
-        else:
+        try:
+            return self.get_os_dev()['ifname']
+        except:
             return None
 
     def config_vlan_iface(self):
         """
         Not intended for API use
         """
-        if self.get_vlan() != None:
+        if self.get_vlan() is not None:
             self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
                                                   vlan=self.get_vlan(), interface=self)
 
@@ -191,23 +228,32 @@ class Interface:
         Bring up the link on the interface.
 
         """
-        self.get_node().ip_link_up(self)
+        self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):
         """
         Bring down the link on the interface.
 
         """
-        self.get_node().ip_link_down(self)
+        self.get_node().ip_link_down(None, self)
 
-    def set_vlan(self, vlan=None):
+    def ip_link_toggle(self):
+        """
+        Toggle the dev down then up.
+
+        """
+        self.get_node().ip_link_down(None, self)
+        self.get_node().ip_link_up(None, self)
+
+    def set_vlan(self, vlan: Any = None):
         """
         Set the VLAN on the FABRIC request.
 
         :param addr: vlan
         :type addr: String or int
         """
-        if vlan: vlan=str(vlan)
+        if vlan:
+            vlan = str(vlan)
 
         if_labels = self.get_fim_interface().get_property(pname="labels")
         if_labels.vlan = str(vlan)
