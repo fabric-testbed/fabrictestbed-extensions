@@ -38,6 +38,8 @@ import paramiko
 #https://learn.fabric-testbed.net/knowledge-base/using-ipv4-only-resources-like-github-or-docker-hub-from-ipv6-fabric-sites/
 
 class mflib():
+
+    sanity_version = "1.0.0"
     
     measurement_node_name = "_meas_node"
     repo_branch = "main"
