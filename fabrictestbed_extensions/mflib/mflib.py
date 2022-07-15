@@ -39,7 +39,7 @@ import paramiko
 
 class mflib():
 
-    sanity_version = "1.0.7"
+    sanity_version = "1.0.8"
     # measurement_node_name = "_meas_node"
     # repo_branch = "main"
     
@@ -994,9 +994,14 @@ class mflib():
 
     def download_common_hosts(self):
         """
-        Downloaded file will be stored locally for future reference.  
-        :return:
-        :rtype: 
+        Downloads hosts.ini file and returns file text.
+        Downloaded hosts.ini file will be stored locally for future reference.  
+        :param service: The name of the service.
+        :type service: String 
+        :param method: The method name such as create, update, info, start, stop, remove.
+        :type method: String
+        :return: Writes file to local storage and returns text of the log file.
+        :rtype: String
         """
         try:
             local_file_path = self.common_hosts_file
@@ -1008,19 +1013,24 @@ class mflib():
             
             with open(local_file_path) as f:
                 hosts_text = f.read()
-                return hosts_text
+                return local_file_path, hosts_text
 
         except Exception as e:
             print("Common hosts.ini download has failed.")
             print(f"downloading common hosts file Failed: {e}")
-            return ""
+            return "",""
         
     
     def download_log_file(self, service, method):
         """
-        Downloaded file will be stored locally for future reference.  
-        :return:
-        :rtype: 
+        Download the log file for the given service and method.
+        Downloaded file will be stored locally for future reference. 
+        :param service: The name of the service.
+        :type service: String 
+        :param method: The method name such as create, update, info, start, stop, remove.
+        :type method: String
+        :return: Writes file to local storage and returns text of the log file.
+        :rtype: String
         """
         try:
             local_file_path = os.path.join( self.local_slice_directory, f"{method}.log")
@@ -1032,9 +1042,9 @@ class mflib():
             
             with open(local_file_path) as f:
                 log_text = f.read()
-                return log_text
+                return local_file_path, log_text
 
         except Exception as e:
             print("Service log download has failed.")
-            print(f"downloading service log file Failed: {e}")
-            return ""
+            print(f"Downloading service log file has Failed. It may not exist: {e}")
+            return "",""
