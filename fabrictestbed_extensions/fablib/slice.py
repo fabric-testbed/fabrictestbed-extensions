@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+from __future__ import annotations
 import ipaddress
 
 import time
@@ -73,6 +74,9 @@ class Slice:
 
         self.slice_key = fablib_manager.get_default_slice_key()
 
+    def get_fablib_manager(self):
+        return self.fablib_manager
+
     def __str__(self):
         """
         Creates a tabulated string describing the properties of the slice.
@@ -101,7 +105,6 @@ class Slice:
         """
         table = []
         for node in self.get_nodes():
-
             table.append([node.get_reservation_id(),
                           node.get_name(),
                           node.get_site(),
@@ -192,14 +195,13 @@ class Slice:
         return slice
 
     @staticmethod
-    def get_slice(fablib_manager: FablibManager, sm_slice: OrchestratorSlice = None, load_config: bool = True):
+    def get_slice(fablib_manager: FablibManager, sm_slice: OrchestratorSlice = None):
         """
         Not intended for API use.
 
         Gets an existing fablib slice using a slice manager slice
         :param fablib_manager:
         :param sm_slice:
-        :param load_config:
         :return: Slice
         """
         logging.info("slice.get_slice()")
@@ -209,20 +211,18 @@ class Slice:
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.name
 
-        slice.topology = fablib_manager.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
-
         try:
-            slice.update()
+            slice.update_topology()
         except Exception as e:
-            logging.error(f"Slice {slice.slice_name} could not be updated: slice.get_slice")
+            logging.error(f"Slice {slice.slice_name} could not update topology: slice.get_slice")
             logging.error(e, exc_info=True)
 
-        if load_config:
-            try:
-                slice.load_config()
-            except Exception as e:
-                logging.error(f"Slice {slice.slice_name} config could not loaded: slice.get_slice")
-                logging.error(e, exc_info=True)
+        try:
+            slice.update_slivers()
+        except Exception as e:
+            logging.error(f"Slice {slice.slice_name} could not update slivers: slice.get_slice")
+            logging.error(e, exc_info=True)
+
         return slice
 
     def get_fim_topology(self) -> ExperimentTopology:
@@ -237,23 +237,20 @@ class Slice:
         """
         return self.topology
 
-    def update_slice(self):
+    def update_slice(self) :
         """
         Note recommended for most users.  See Slice.update() method.
 
         Updates this slice manager slice to store the most up-to-date
         slice manager slice
 
-        :param verbose: indicator for verbose output
-        :type verbose: bool
         :raises Exception: if slice manager slice no longer exists
         """
-        import time
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
         return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[], slice_id=self.slice_id,
-                                                                               slice_name=self.slice_name)
+                                                                               name=self.slice_name)
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
             logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
@@ -274,6 +271,11 @@ class Slice:
         :raises Exception: if topology could not be gotten from slice manager
         """
         # Update topology
+        if self.sm_slice.model is not None and self.sm_slice.model != '':
+            self.topology = ExperimentTopology()
+            self.topology.load(graph_string=self.sm_slice.model)
+            return
+
         return_status, new_topo = self.fablib_manager.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
         if return_status != Status.OK:
             raise Exception("Failed to get slice topology: {}, {}".format(return_status, new_topo))
@@ -289,6 +291,8 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        if self.sm_slice is None:
+            return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(slice_object=self.sm_slice)
         if status == Status.OK:
             self.slivers = slivers
@@ -302,7 +306,7 @@ class Slice:
         return sliver
 
     def get_slivers(self) -> List[OrchestratorSliver]:
-        if not hasattr(self, 'slivers') or not self.slivers:
+        if not self.slivers:
             self.update_slivers()
 
         return self.slivers
@@ -384,6 +388,13 @@ class Slice:
             return self.slice_key['slice_private_key_file']
         else:
             return None
+
+    def is_dead_or_closing(self):
+        if self.get_state() in ["Closing",
+                                "Dead"]:
+            return True
+        else:
+            return False
 
     def isStable(self) -> bool:
         """
@@ -680,9 +691,6 @@ class Slice:
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
-        from fabrictestbed_extensions.fablib.node import Node
-        #self.update()
-
         return_nodes = []
 
         # fails for topology that does not have nodes
@@ -940,7 +948,7 @@ class Slice:
         while time.time() < timeout_start + timeout:
             # return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
             return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[], slice_id=self.slice_id,
-                                                                                   slice_name=self.slice_name)
+                                                                                   name=self.slice_name)
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.state == "StableOK":
@@ -1064,6 +1072,9 @@ class Slice:
         Only use this method after a non-blocking submit call and only call it
         once.
         """
+        if self.is_dead_or_closing():
+            print(f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config")
+            return
         executor = ThreadPoolExecutor(10)
 
         logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
@@ -1091,7 +1102,7 @@ class Slice:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        iface_threads=[]
+        iface_threads = []
         for interface in self.get_interfaces():
             try:
                 #iface.ip_link_down()
@@ -1127,11 +1138,10 @@ class Slice:
 
             time.sleep(interval)
             self.update()
-            node_list = self.list_nodes()
 
             #pre-get the strings for quicker screen update
-            slice_string=str(self)
-            list_nodes_string=self.list_nodes()
+            slice_string = str(self)
+            list_nodes_string = self.list_nodes()
             time_string = f"{time.time() - start:.0f} sec"
 
             # Clear screen

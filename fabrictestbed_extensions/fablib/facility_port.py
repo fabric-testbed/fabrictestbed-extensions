@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+from __future__ import annotations
 from tabulate import tabulate
 
 from fabrictestbed.slice_editor import Labels, Capacities

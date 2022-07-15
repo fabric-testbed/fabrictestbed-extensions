@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+from __future__ import annotations
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
@@ -33,7 +34,8 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
-    from fim.user.interface import Interface as FimInterface
+
+from fim.user.interface import Interface as FimInterface
 
 
 class Interface:
@@ -381,7 +383,7 @@ class Interface:
         :return: the network service this interface is on
         :rtype: NetworkService
         """
-        if hasattr(self, 'network'):
+        if self.network is not None:
             #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
             return self.network
         else:

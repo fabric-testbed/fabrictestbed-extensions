@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
+from __future__ import annotations
 import os
 import logging
 import random
@@ -531,9 +531,7 @@ class FablibManager:
         self.log_file = self.default_log_file
         self.log_level = self.default_log_level
         self.set_log_level(self.log_level)
-
-        #self.set_log_file(log_file)
-        self.data_dir = data_dir
+        self.data_dir = None
 
         # Setup slice key dict
         # self.slice_keys = {}
@@ -639,9 +637,17 @@ class FablibManager:
         if log_level is not None:
             self.set_log_level(log_level)
         if log_file is not None:
-            self.set_log_file(log_file)
+            self.log_level = log_file
         if data_dir is not None:
             self.data_dir = data_dir
+
+        self.set_log_file(log_file=self.log_file)
+        self.set_data_dir(data_dir=self.data_dir)
+
+        if self.log_file is not None and self.log_level is not None:
+            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                                datefmt='%H:%M:%S')
 
         self.bastion_private_ipv4_addr = '0.0.0.0'
         self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
@@ -683,10 +689,6 @@ class FablibManager:
         :type progress: Level
         """
         self.log_level = log_level
-
-        logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                            format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                            datefmt='%H:%M:%S')
 
     def get_log_file(self) -> str:
         return self.log_file
@@ -1146,7 +1148,7 @@ class FablibManager:
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(Slice.get_slice(self, sm_slice=slice, load_config=False))
+                return_slices.append(Slice.get_slice(self, sm_slice=slice))
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices

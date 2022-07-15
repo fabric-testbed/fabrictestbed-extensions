@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+from __future__ import annotations
 import json
 import time
 import paramiko
@@ -43,7 +44,6 @@ from fabrictestbed.slice_editor import Capacities
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.fablib import fablib
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed.slice_editor import Node as FimNode
 
@@ -65,6 +65,7 @@ class Node:
         self.fim_node = node
         self.slice = slice
         self.host = None
+        self.ip_addr_list_json = None
 
         # Try to set the username.
         try:
@@ -132,6 +133,7 @@ class Node:
         :rtype: Node
         """
         if site is None:
+            from fabrictestbed_extensions.fablib.fablib import fablib
             [site] = fablib.get_random_sites(avoid=avoid)
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
@@ -326,11 +328,8 @@ class Node:
         :rtype: String
         """
         try:
-            try:
-                #If we set the host but have not yet submitted
+            if self.host is not None:
                 return self.host
-            except:
-                pass
             return self.get_fim_node().get_property(pname='label_allocations').instance_parent
         except:
             return None
@@ -568,12 +567,14 @@ class Node:
         # rather than relying on execptions
         if get_private_key_passphrase:
             try:
-                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),
+                                                             password=self.get_private_key_passphrase())
             except:
                 pass
 
             try:
-                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file(),
+                                                                        password=self.get_private_key_passphrase())
             except:
                 pass
         else:
@@ -648,7 +649,7 @@ class Node:
         if private_key_passphrase is not None:
             node_key_passphrase = private_key_passphrase
         else:
-            node_key_passphrase=self.get_private_key_file()
+            node_key_passphrase=self.get_private_key_passphrase()
 
         for attempt in range(retry):
             try:
@@ -1057,7 +1058,7 @@ class Node:
     def ip_addr_list(self, output='json', update=False):
 
         try:
-            if hasattr(self, 'ip_addr_list_json') and update == False:
+            if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
             else:
                 if output == 'json':
@@ -1110,7 +1111,8 @@ class Node:
             #             logging.info(f"No conn for device. conn: '{conn}'")
 
             stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager")
-            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop "
+                         f"NetworkManager': stdout: {stdout}\nstderr: {stderr}")
 
             #for iface in self.get_interfaces():
             #    try:

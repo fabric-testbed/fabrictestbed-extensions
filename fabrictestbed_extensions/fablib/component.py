@@ -22,18 +22,19 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
-from tabulate import tabulate
-from typing import List
-
-from fabrictestbed.slice_editor import ComponentModelType, Component
-
+from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
-    from fabrictestbed.slice_editor import Component as FimComponent
+
+from tabulate import tabulate
+from typing import List
+
+from fabrictestbed.slice_editor import ComponentModelType
+from fabrictestbed.slice_editor import Component as FimComponent
 
 
 class Component:
