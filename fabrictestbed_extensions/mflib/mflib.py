@@ -39,52 +39,121 @@ import paramiko
 
 class mflib():
 
-    sanity_version = "1.0.0"
-    
-    measurement_node_name = "_meas_node"
-    repo_branch = "main"
+    sanity_version = "1.0.7"
+    # measurement_node_name = "_meas_node"
+    # repo_branch = "main"
     
     # Place to put downloaded files?
-    local_storage_directory = "/tmp/mflib"
+    # Only set in __init__ local_storage_directory = "/tmp/mflib"
     # Place to keep local files for the init'd slice
-    local_slice_directory = ""
+    # moved to property local_slice_directory = ""
     
-    # Need the slice name to connect to slice
-    slicename = None
-    # The slice ojb
-    slice = None
+    # @property 
+    # def local_slice_directory(self):
+    #     return self._local_slice_directory
+    # @local_slice_directory.setter
+    # def local_slice_directory(self, value):
+    #     self._local_slice_directory = value 
+
+
+    @property
+    def slicename(self):
+        return self._slicename 
+    @slicename.setter
+    def slicename( self, value ):
+        # Set the slice name
+        self._slicename = value 
+
+        # Create the local slice directory
+        try:
+            os.makedirs(self.local_slice_directory)
+        except FileExistsError:
+            pass 
+        
+            # TODO add check for exiests
+
+    @property
+    def local_slice_directory(self):
+        return os.path.join(self.local_storage_directory, self.slicename)
+        
+    @property 
+    def bootstrap_status_file(self):
+        return os.path.join(self.local_slice_directory, "bootstrap_status.json")
+
+    @property 
+    def common_hosts_file(self):
+        return os.path.join(self.local_slice_directory, "hosts.ini")    
+
+    @property 
+    def local_mfuser_private_key_filename(self):
+        return os.path.join(self.local_slice_directory, "mfuser_private_key")    
+
+    @property 
+    def local_mfuser_public_key_filename(self):
+        return os.path.join(self.local_slice_directory, "mfuser_pubic_key")    
+
+    # @property 
+    # def (self):
+    #     return os.path.join(self.local_slice_directory, "")    
     
+
+    # Place to keep common hosts.ini file
+    #common_hosts_file = "" #os.path.join(local_storage_directory, "hosts.ini")
+    
+       
     # mfuser keys
     # base keyfile names
-    mfuser_private_key_filename = "mfuser_private_key"
-    mfuser_public_key_filename = "mfuser_public_key"
+    # mfuser_private_key_filename = "mfuser_private_key"
+    # mfuser_public_key_filename = "mfuser_public_key"
 
-    # Local copy filenames
-    local_mfuser_private_key_filename = os.path.join(local_storage_directory, "mfuser_private_key")
-    local_mfuser_public_key_filename = os.path.join(local_storage_directory, "mfuser_public_key")
+    # # Local copy filenames
+    # local_mfuser_private_key_filename = "" #os.path.join(local_storage_directory, "mfuser_private_key")
+    # local_mfuser_public_key_filename = "" #os.path.join(local_storage_directory, "mfuser_public_key")
 
     # The slice's meas node 
-    meas_node = None
+    #meas_node = None
       
     # Keep a copy of the bootstrap status
-    bootstrap_status_file = os.path.join(local_storage_directory, "bootstrap_status.json")
+    #bootstrap_status_file = "" #os.path.join(local_storage_directory, "bootstrap_status.json")
 
-    # Services directory on meas node
-    services_directory = os.path.join("/", "home", "mfuser", "services")
+    # # Services directory on meas node
+    # services_directory = os.path.join("/", "home", "mfuser", "services")
 
     # Many methods use the followig parameter set
     # service - unique service name
     # command - command to run in services directory on meas node
     # data - JSON serializable object
     # files - list of files to upload
-    def __init__(self):
+    def __init__(self, local_storage_directory="/tmp/mflib"):
         """
         Constructor. Builds MFManager for mflib object.
         """
         super().__init__()
+
+        
+        self.repo_branch = "dev"
+
+        # The slicename
+        self._slicename = ""
+        # The slice object
+        self.slice = None
+        # The meas_node object
+        self.meas_node = None 
+
+        # The following are normally constant values
+        # Name given to the meas node
+        self.measurement_node_name = "_meas_node"
+        # Services directory on meas node
+        self.services_directory = os.path.join("/", "home", "mfuser", "services")
+        # Base names for keys
+        self.mfuser_private_key_filename = "mfuser_private_key"
+        self.mfuser_public_key_filename = "mfuser_public_key"
+
+
         try:
-            os.makedirs("/tmp/mflib")
-        except:
+            self.local_storage_directory = local_storage_directory
+            os.makedirs(self.local_storage_directory)
+        except FileExistsError:
             pass
         
     def instrumentize(self):
@@ -112,12 +181,15 @@ class mflib():
         ########################
         self.slicename = slicename
         self.slice = fablib.get_slice(name=slicename)
-        # create dir for slicename
-        self.local_slice_directory = os.path.join(self.local_storage_directory, slicename)
-        try:
-            os.makedirs(self.local_slice_directory)
-        except:
-            pass
+        
+        
+        # # create dir for slicename - moved to property
+        # self.local_slice_directory = os.path.join(self.local_storage_directory, slicename)
+        # try:
+        #     os.makedirs(self.local_slice_directory)
+        # except:
+        #     pass
+
         ########################
         # Check for prequisites
         #######################
@@ -145,7 +217,7 @@ class mflib():
         else: 
             
             ###############################
-            # Need to do some boostrapping
+            # Need to do some bootstrapping
             ###############################
  
 
@@ -322,7 +394,7 @@ class mflib():
                 print("Bootstrap script aleady run on measurment node.")
             else:
             #if True:
-                print("Bootstrapping measurement node...")
+                print("Bootstrapping measurement node via bash...")
                 self._run_bootstrap_script()
                 self._update_bootstrap("bootstrap_script", "ok")
 
@@ -331,7 +403,7 @@ class mflib():
                 print("Bootstrap ansible script already run on measurement node.")
             else:
             #if True:
-                print("Bootstrapping measurement node...")
+                print("Bootstrapping measurement node via ansible...")
                 self._run_bootstrap_ansible()
             
 
@@ -786,7 +858,7 @@ class mflib():
         stdout, stderr = self.meas_node.execute(cmd)
         #print(stdout)
         #print(stderr)
-        print("Boostrap script done")
+        print("Bootstrap script done")
 
     def _run_bootstrap_ansible(self):
         """
@@ -796,7 +868,7 @@ class mflib():
         stdout, stderr = self.meas_node.execute(cmd)
         #print(stdout)
         #print(stderr)
-        print("Boostrap ansible script done")
+        print("Bootstrap ansible script done")
         
 
     ############################
@@ -811,7 +883,7 @@ class mflib():
         """
         if force or not os.path.exists(self.bootstrap_status_file):
             if not self._download_bootstrap_status():
-                #print("Boostrap file was not downloaded. Bootstrap most likely has not been done.")
+                #print("Bootstrap file was not downloaded. Bootstrap most likely has not been done.")
                 return {}
         
             
@@ -920,7 +992,7 @@ class mflib():
     
         
 
-    def _download_common_hosts(self):
+    def download_common_hosts(self):
         """
         Downloaded file will be stored locally for future reference.  
         :return:
@@ -944,3 +1016,25 @@ class mflib():
             return ""
         
     
+    def download_log_file(self, service, method):
+        """
+        Downloaded file will be stored locally for future reference.  
+        :return:
+        :rtype: 
+        """
+        try:
+            local_file_path = os.path.join( self.local_slice_directory, f"{method}.log")
+            remote_file_path =  os.path.join("/","home","mfuser","services", service, "log", f"{method}.log")
+            #print(local_file_path)
+            #print(remote_file_path)
+            file_attributes = self.meas_node.download_file(local_file_path, remote_file_path, retry=1) #, retry=3, retry_interval=10): # note retry is really tries
+            #print(file_attributes)
+            
+            with open(local_file_path) as f:
+                log_text = f.read()
+                return log_text
+
+        except Exception as e:
+            print("Service log download has failed.")
+            print(f"downloading service log file Failed: {e}")
+            return ""
