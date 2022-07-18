@@ -32,7 +32,7 @@ from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Net
 
 from typing import List
 
-from fabrictestbed.slice_editor import ExperimentTopology
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities, Labels
 from fabrictestbed.slice_manager import Status, SliceState
 
 
@@ -43,7 +43,7 @@ from fabrictestbed_extensions.fablib.interface import Interface
 
 class Slice:
 
-    def __init__(self, name=None):
+    def __init__(self, fablib_manager, name=None):
         """
         Constructor. Sets the default slice state to be callable.
 
@@ -52,13 +52,18 @@ class Slice:
         """
         super().__init__()
 
+        self.fablib_manager = fablib_manager
+
         self.network_iface_map = None
         self.slice_name = name
         self.sm_slice = None
         self.slice_id = None
         self.topology = None
 
-        self.slice_key = fablib.get_default_slice_key()
+        self.slice_key = self.fablib_manager.get_default_slice_key()
+
+    def get_fablib_manager(self):
+        return self.fablib_manager
 
     def __str__(self):
         """
@@ -72,10 +77,20 @@ class Slice:
         table = [["Slice Name", self.sm_slice.slice_name],
                  ["Slice ID", self.sm_slice.slice_id],
                  ["Slice State", self.sm_slice.slice_state],
-                 ["Lease End", self.sm_slice.lease_end]
+                 ["Lease End (UTC)", self.sm_slice.lease_end]
                 ]
 
         return tabulate(table)
+
+    def save(self, filename):
+        self.get_fim_topology().serialize(filename)
+
+    def load(self, filename):
+        self.network_iface_map = None
+        self.sm_slice = None
+        self.slice_id = None
+
+        self.get_fim_topology().load(file_name=filename)
 
     def list_nodes(self):
         """
@@ -172,7 +187,7 @@ class Slice:
                                         "Physical OS Interface", "OS Interface"])
 
     @staticmethod
-    def new_slice(name=None):
+    def new_slice(fablib_manager, name=None):
         """
         Create a new slice
 
@@ -182,12 +197,12 @@ class Slice:
         :rtype: Slice
         """
 
-        slice = Slice(name=name)
+        slice = Slice(fablib_manager, name=name)
         slice.topology = ExperimentTopology()
         return slice
 
     @staticmethod
-    def get_slice(sm_slice=None, load_config=True):
+    def get_slice(fablib_manager, sm_slice=None, load_config=True):
         """
         Not intended for API use.
 
@@ -204,12 +219,12 @@ class Slice:
         """
         logging.info("slice.get_slice()")
 
-        slice = Slice(name=sm_slice.slice_name)
+        slice = Slice(fablib_manager, name=sm_slice.slice_name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.slice_name
 
-        slice.topology = fablib.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
+        slice.topology = fablib_manager.get_slice_manager().get_slice_topology(slice_object=slice.sm_slice)
 
         try:
             slice.update()
@@ -249,11 +264,11 @@ class Slice:
         :raises Exception: if slice manager slice no longer exists
         """
         import time
-        if fablib.get_log_level() == logging.DEBUG:
+        if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = fablib.get_slice_manager().slices(excludes=[])
-        if fablib.get_log_level() == logging.DEBUG:
+        return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[])
+        if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
             logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
                           f"elapsed time: {end - start} seconds")
@@ -273,7 +288,7 @@ class Slice:
         :raises Exception: if topology could not be gotten from slice manager
         """
         #Update topology
-        return_status, new_topo = fablib.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
+        return_status, new_topo = self.fablib_manager.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
         if return_status != Status.OK:
             raise Exception("Failed to get slice topology: {}, {}".format(return_status, new_topo))
 
@@ -288,7 +303,7 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
-        status, slivers = fablib.get_slice_manager().slivers(slice_object=self.sm_slice)
+        status, slivers = self.fablib_manager.get_slice_manager().slivers(slice_object=self.sm_slice)
         if status == Status.OK:
             self.slivers = slivers
             return
@@ -518,7 +533,25 @@ class Slice:
         from fabrictestbed_extensions.fablib.network_service import NetworkService
         return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
 
-    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, docker_image=None, host=None, avoid=[]):
+    def add_facility_port(self, name=None, site=None, vlan=None):
+        """
+                Adds a new L2 facility port to this slice
+
+                TODO: add more description
+
+                :param name: name of the facility port
+                :type name: String
+                :param site: site
+                :type site: String
+                :param vlan: vlan
+                :type vlan: String
+                :return: a new L2 facility port
+                :rtype: NetworkService
+                """
+        from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+        return FacilityPort.new_facility_port(slice=self, name=name, site=site, vlan=vlan)
+
+    def add_node(self, name, site=None, cores=2, ram=8, disk=10, image=None, instance_type=None, docker_image=None, host=None, avoid=[]):
         """
         Creates a new node on this fablib slice.
 
@@ -548,7 +581,11 @@ class Slice:
         """
         from fabrictestbed_extensions.fablib.node import Node
         node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
-        node.set_capacities(cores=cores, ram=ram, disk=disk)
+
+        if instance_type:
+            node.set_instance_type(instance_type)
+        else:
+            node.set_capacities(cores=cores, ram=ram, disk=disk)
 
         if image:
             node.set_image(image)
@@ -856,7 +893,7 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
-        return_status, result = fablib.get_slice_manager().delete(slice_object=self.sm_slice)
+        return_status, result = self.fablib_manager.get_slice_manager().delete(slice_object=self.sm_slice)
 
         if return_status != Status.OK:
             raise Exception("Failed to delete slice: {}, {}".format(return_status, result))
@@ -867,18 +904,18 @@ class Slice:
         """
         Renews the FABRIC slice's lease to the new end date.
 
-        Date is of the form: "%Y-%m-%d %H:%M:%S"
+        Date is in UTC and of the form: "%Y-%m-%d %H:%M:%S"
 
-        Example of formating a date for 1 day from now:
+        Example of formatting a date for 1 day from now:
 
-        end_date = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        end_date = (datetime.datetime.utcnow() + datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
 
 
         :param end_date: String
         :raises Exception: if renewal fails
         """
-        return_status, result = fablib.get_slice_manager().renew(slice_object=self.sm_slice,
-                                                                 new_lease_end_time=end_date)
+        return_status, result = self.fablib_manager.get_slice_manager().renew(slice_object=self.sm_slice,
+                                                                 new_lease_end_time=f"{end_date} +0000")
 
         if return_status != Status.OK:
             raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
@@ -935,8 +972,8 @@ class Slice:
         if progress:
             print("Waiting for slice .", end='')
         while time.time() < timeout_start + timeout:
-            # return_status, slices = fablib.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
-            return_status, slices = fablib.get_slice_manager().slices(excludes=[])
+            # return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[SliceState.Dead,SliceState.Closing])
+            return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[])
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.slice_state == "StableOK":
@@ -1202,7 +1239,7 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        return_status, slice_reservations = fablib.get_slice_manager().create(slice_name=self.slice_name,
+        return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(slice_name=self.slice_name,
                                                                 slice_graph=slice_graph,
                                                                 ssh_key=self.get_slice_public_key())
         if return_status != Status.OK:
@@ -1216,12 +1253,12 @@ class Slice:
         #self.update_slice()
         self.update()
 
-        if progress and wait_jupyter == 'text' and fablib.isJupyterNotebook():
+        if progress and wait_jupyter == 'text' and self.fablib_manager.isJupyterNotebook():
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 
         if wait:
-            #self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
+            self.wait_ssh(timeout=wait_timeout,interval=wait_interval,progress=progress)
 
             if progress:
                 print("Running post boot config ... ",end="")
