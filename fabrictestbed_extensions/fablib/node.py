@@ -254,6 +254,15 @@ class Node():
         #set an attribute used to get host before Submit
         self.host = host_name
 
+    def set_site(self, site):
+        """
+        Sets the hostname of this fablib node on the FABRIC node.
+        :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
+        :type host_name: String
+        """
+        # example: host_name='renc-w2.fabric-testbed.net'
+        self.get_fim_node().site = site
+
     def get_slice(self):
         """
         Gets the fablib slice associated with this node.
