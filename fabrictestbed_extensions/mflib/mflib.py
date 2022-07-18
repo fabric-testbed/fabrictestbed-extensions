@@ -39,7 +39,7 @@ import paramiko
 
 class mflib():
 
-    sanity_version = "1.0.8"
+    sanity_version = "1.0.9"
     # measurement_node_name = "_meas_node"
     # repo_branch = "main"
     
@@ -811,15 +811,19 @@ class mflib():
 
         hosts_txt += experiment_nodes
         e_hosts_txt += e_experiment_nodes
-        with open('/tmp/mflib/promhosts.ini', 'w') as f:
+
+        local_prom_hosts_filename = os.path.join(self.local_slice_directory, "promhosts.ini")
+        local_elk_hosts_filename = os.path.join(self.local_slice_directory, "elkhosts.ini")
+
+        with open(local_prom_hosts_filename, 'w') as f:
             f.write(hosts_txt)
-        with open('/tmp/mflib/elkhosts.ini', 'w') as f:
+        with open(local_elk_hosts_filename, 'w') as f:
             f.write(e_hosts_txt)
 
         # Upload the files to the meas node and move to correct locations
 
         # Upload Prom hosts
-        self.meas_node.upload_file("/tmp/mflib/promhosts.ini","promhosts.ini")
+        self.meas_node.upload_file(local_prom_hosts_filename,"promhosts.ini")
 
         # create a common version of hosts.ini for all to access
         stdout, stderr = self.meas_node.execute("sudo mkdir -p /home/mfuser/services/common")
@@ -833,7 +837,7 @@ class mflib():
         stdout, stderr = self.meas_node.execute("sudo chown mfuser:mfuser /home/mfuser/mf_git/instrumentize/ansible/fabric_experiment_instramentize/promhosts.ini")
         
         # Upload the elkhosts.ini file.
-        self.meas_node.upload_file("/tmp/mflib/elkhosts.ini","elkhosts.ini")
+        self.meas_node.upload_file(local_elk_hosts_filename,"elkhosts.ini")
 
         # create the elk.ini file
         stdout, stderr = self.meas_node.execute("sudo mv elkhosts.ini /home/mfuser/mf_git/elkhosts.ini")
