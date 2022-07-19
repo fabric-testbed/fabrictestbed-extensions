@@ -856,8 +856,11 @@ class FablibManager:
         return self.default_slice_key
 
     def show_config(self):
+        table = []
         for var, val in self.get_config().items():
-            print(f"{var} = {val}")
+            table.append([str(var), str(val)])
+
+        print(f"{tabulate(table)}")
 
         return
 

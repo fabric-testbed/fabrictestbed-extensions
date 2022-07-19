@@ -94,6 +94,16 @@ class Slice:
 
         return tabulate(table)
 
+    def save(self, filename):
+        self.get_fim_topology().serialize(filename)
+
+    def load(self, filename):
+        self.network_iface_map = None
+        self.sm_slice = None
+        self.slice_id = None
+
+        self.get_fim_topology().load(file_name=filename)
+
     def list_nodes(self):
         """
         Creates a tabulated string describing all nodes in the slice.
