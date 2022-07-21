@@ -47,6 +47,7 @@ from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed.slice_editor import Node as FimNode
 
+
 class Node:
     default_cores = 2
     default_ram = 8
@@ -133,8 +134,7 @@ class Node:
         :rtype: Node
         """
         if site is None:
-            from fabrictestbed_extensions.fablib.fablib import fablib
-            [site] = fablib.get_random_sites(avoid=avoid)
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))
