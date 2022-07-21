@@ -60,7 +60,10 @@ class fablib():
     default_fablib_manager = None
 
     @staticmethod
-    def get_fablib_manager():
+    def get_default_fablib_manager():
+        if fablib.default_fablib_manager == None:
+            fablib.default_fablib_manager = FablibManager()
+
         return fablib.default_fablib_manager
 
     @staticmethod
@@ -71,7 +74,7 @@ class fablib():
         :return: list of image names as strings
         :rtype: list[str]
         """
-        return fablib.default_fablib_manager.get_image_names()
+        return fablib.get_default_fablib_manager().get_image_names()
 
     @staticmethod
     def get_site_names() -> list[str]:
@@ -81,7 +84,7 @@ class fablib():
         :return: list of site names as strings
         :rtype: list[str]
         """
-        return fablib.get_fablib_manager().get_site_names()
+        return fablib.get_default_fablib_manager().get_site_names()
 
     @staticmethod
     def list_sites() -> str:
@@ -91,7 +94,7 @@ class fablib():
         :return: tabulated string of site state
         :rtype: str
         """
-        return fablib.default_fablib_manager.list_sites()
+        return fablib.get_default_fablib_manager().list_sites()
 
     @staticmethod
     def show_site(site_name):
@@ -103,7 +106,7 @@ class fablib():
         :return: tabulated string of site state
         :rtype: String
         """
-        return fablib.default_fablib_manager.show_site(site_name)
+        return fablib.get_default_fablib_manager().show_site(site_name)
 
     @staticmethod
     def get_resources():
@@ -114,7 +117,7 @@ class fablib():
         :return: the resources object
         :rtype: Resources
         """
-        return fablib.default_fablib_manager.get_resources()
+        return fablib.get_default_fablib_manager().get_resources()
 
     @staticmethod
     def get_random_site(avoid: list[str] = []) -> str:
@@ -126,7 +129,7 @@ class fablib():
         :return: one site name
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_random_site(avoid=avoid)
+        return fablib.get_default_fablib_manager().get_random_site(avoid=avoid)
 
     @staticmethod
     def get_random_sites(count: int = 1, avoid: list[str] = []) -> list[str]:
@@ -140,7 +143,7 @@ class fablib():
         :return: list of random site names.
         :rtype: List[Sting]
         """
-        return fablib.default_fablib_manager.get_random_sites(count=count, avoid=avoid)
+        return fablib.get_default_fablib_manager().get_random_sites(count=count, avoid=avoid)
 
     @staticmethod
     def init_fablib():
@@ -149,7 +152,7 @@ class fablib():
 
         Static initializer for the fablib object.
         """
-        return fablib.default_fablib_manager.init_fablib()
+        return fablib.get_default_fablib_manager().init_fablib()
 
     @staticmethod
     def get_default_slice_key():
@@ -163,11 +166,11 @@ class fablib():
         :return: default_slice_key dictionary from superclass
         :rtype: Dict[String, String]
         """
-        return fablib.default_fablib_manager.get_default_slice_key()
+        return fablib.get_default_fablib_manager().get_default_slice_key()
 
     @staticmethod
     def show_config():
-        return fablib.default_fablib_manager.show_config()
+        return fablib.get_default_fablib_manager().show_config()
 
     @staticmethod
     def get_config():
@@ -178,7 +181,7 @@ class fablib():
         :return: dictionary mapping keywords to FABRIC values
         :rtype: Dict[String, String]
         """
-        return fablib.default_fablib_manager.get_config()
+        return fablib.get_default_fablib_manager().get_config()
 
     @staticmethod
     def get_default_slice_public_key():
@@ -191,7 +194,7 @@ class fablib():
         :return: the slice public key on this fablib object
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_default_slice_public_key()
+        return fablib.get_default_fablib_manager().get_default_slice_public_key()
 
     @staticmethod
     def get_default_slice_public_key_file():
@@ -204,7 +207,7 @@ class fablib():
         :return: the path to the slice public key on this fablib object
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_default_slice_public_key_file()
+        return fablib.get_default_fablib_manager().get_default_slice_public_key_file()
 
     @staticmethod
     def get_default_slice_private_key_file():
@@ -217,7 +220,7 @@ class fablib():
         :return: the path to the slice private key on this fablib object
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_default_slice_private_key_file()
+        return fablib.get_default_fablib_manager().get_default_slice_private_key_file()
 
     @staticmethod
     def get_default_slice_private_key_passphrase():
@@ -230,7 +233,7 @@ class fablib():
         :return: the passphrase to the slice private key on this fablib object
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_default_slice_private_key_passphrase()
+        return fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
 
     @staticmethod
     def get_credmgr_host():
@@ -240,7 +243,7 @@ class fablib():
         :return: the credential manager host site
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_credmgr_host()
+        return fablib.get_default_fablib_manager().get_credmgr_host()
 
     @staticmethod
     def get_orchestrator_host():
@@ -250,7 +253,7 @@ class fablib():
         :return: the orchestrator host site
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_orchestrator_host()
+        return fablib.get_default_fablib_manager().get_orchestrator_host()
 
     @staticmethod
     def get_fabric_token():
@@ -260,7 +263,7 @@ class fablib():
         :return: FABRIC token location
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_fabric_token()
+        return fablib.get_default_fablib_manager().get_fabric_token()
 
     @staticmethod
     def get_bastion_username():
@@ -270,7 +273,7 @@ class fablib():
         :return: FABRIC Bastion username
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_bastion_username()
+        return fablib.get_default_fablib_manager().get_bastion_username()
 
     @staticmethod
     def get_bastion_key_filename():
@@ -280,7 +283,7 @@ class fablib():
         :return: FABRIC Bastion key filename
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_bastion_key_filename()
+        return fablib.get_default_fablib_manager().get_bastion_key_filename()
 
     @staticmethod
     def get_bastion_public_addr():
@@ -290,7 +293,7 @@ class fablib():
         :return: Bastion host public address
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_bastion_public_addr()
+        return fablib.get_default_fablib_manager().get_bastion_public_addr()
 
     @staticmethod
     def get_bastion_private_ipv4_addr():
@@ -301,7 +304,7 @@ class fablib():
         :return: Bastion private IPv4 address
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_bastion_private_ipv4_addr()
+        return fablib.get_default_fablib_manager().get_bastion_private_ipv4_addr()
 
     @staticmethod
     def get_bastion_private_ipv6_addr():
@@ -312,7 +315,7 @@ class fablib():
         :return: Bastion private IPv6 address
         :rtype: String
         """
-        return fablib.default_fablib_manager.get_bastion_private_ipv6_addr()
+        return fablib.get_default_fablib_manager().get_bastion_private_ipv6_addr()
 
     @staticmethod
     def get_slice_manager():
@@ -325,7 +328,7 @@ class fablib():
         :return: the slice manager on this fablib object
         :rtype: SliceManager
         """
-        return fablib.default_fablib_manager.get_slice_manager()
+        return fablib.get_default_fablib_manager().get_slice_manager()
 
     @staticmethod
     def new_slice(name):
@@ -337,7 +340,7 @@ class fablib():
         :return: a new slice
         :rtype: Slice
         """
-        return fablib.default_fablib_manager.new_slice(name)
+        return fablib.get_default_fablib_manager().new_slice(name)
 
     @staticmethod
     def get_site_advertisment(site):
@@ -351,7 +354,7 @@ class fablib():
         :return: fim object for this site
         :rtype: Node
         """
-        return fablib.default_fablib_manager.get_site_advertisment(site)
+        return fablib.get_default_fablib_manager().get_site_advertisment(site)
 
     @staticmethod
     def get_available_resources(update=False):
@@ -366,7 +369,7 @@ class fablib():
         :return: Availalbe Resources object
         :rtype: Resources
         """
-        return fablib.default_fablib_manager.get_available_resources(update=update)
+        return fablib.get_default_fablib_manager().get_available_resources(update=update)
 
     @staticmethod
     def get_fim_slice(excludes=[SliceState.Dead, SliceState.Closing]):
@@ -384,7 +387,7 @@ class fablib():
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.default_fablib_manager.get_fim_slice(excludes=excludes)
+        return fablib.get_default_fablib_manager().get_fim_slice(excludes=excludes)
 
     @staticmethod
     def get_slices(excludes=[SliceState.Dead, SliceState.Closing]):
@@ -400,7 +403,7 @@ class fablib():
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.default_fablib_manager.get_slices(excludes=excludes)
+        return fablib.get_default_fablib_manager().get_slices(excludes=excludes)
 
     @staticmethod
     def get_slice(name=None, slice_id=None):
@@ -420,7 +423,7 @@ class fablib():
         :return: the slice, if found
         :rtype: Slice
         """
-        return fablib.default_fablib_manager.get_slice(name=name, slice_id=slice_id)
+        return fablib.get_default_fablib_manager().get_slice(name=name, slice_id=slice_id)
 
     @staticmethod
     def delete_slice(slice_name=None):
@@ -430,7 +433,7 @@ class fablib():
         :param slice_name: the name of the slice to delete
         :type slice_name: String
         """
-        return fablib.default_fablib_manager.delete_slice(slice_name=slice_name)
+        return fablib.get_default_fablib_manager().delete_slice(slice_name=slice_name)
 
     @staticmethod
     def delete_all(progress=True):
@@ -440,14 +443,14 @@ class fablib():
         :param progress: optional progess printing to stdout
         :type progress: Bool
         """
-        return fablib.default_fablib_manager.delete_all(progress=progress)
+        return fablib.get_default_fablib_manager().delete_all(progress=progress)
 
     @staticmethod
     def get_log_level():
         """
         Gets the current log level for logging
         """
-        return fablib.default_fablib_manager.get_log_level()
+        return fablib.get_default_fablib_manager().get_log_level()
 
     @staticmethod
     def set_log_level(log_level):
@@ -463,11 +466,11 @@ class fablib():
         :param log_level: new log level
         :type progress: Level
         """
-        return fablib.default_fablib_manager.set_log_level(log_level)
+        return fablib.get_default_fablib_manager().set_log_level(log_level)
 
     @staticmethod
     def isJupyterNotebook():
-        return fablib.default_fablib_manager.isJupyterNotebook()
+        return fablib.get_default_fablib_manager().isJupyterNotebook()
 
 
 class FablibManager():
@@ -706,6 +709,12 @@ class FablibManager():
                             datefmt='%H:%M:%S')
 
     def get_log_file(self):
+        """
+        Gets the current log file for logging
+
+        :return log_file: new log level
+        :rtype log_file: string
+        """
         return self.log_file
 
     def set_log_file(self, log_file):
@@ -749,6 +758,7 @@ class FablibManager():
         except Exception as e:
             # logging.error(f"{e}")
             logging.error(e, exc_info=True)
+            raise e
 
         return self.slice_manager
 
@@ -820,7 +830,7 @@ class FablibManager():
         """
         Get a random site.
 
-        :param avoid: list of site names to avoid chosing
+        :param avoid: list of site names to avoid choosing
         :type site_name: List[String]
         :return: one site name
         :rtype: String
@@ -1240,21 +1250,6 @@ class FablibManager():
         """
         return self.log_level
 
-    def set_log_level(self, log_level):
-        """
-        Sets the current log level for logging
-
-        Options:  logging.DEBUG
-                  logging.INFO
-                  logging.WARNING
-                  logging.ERROR
-                  logging.CRITICAL
-
-        :param log_level: new log level
-        :type progress: Level
-        """
-        self.log_level = log_level
-
     def isJupyterNotebook(self):
         try:
             shell = get_ipython().__class__.__name__
@@ -1284,4 +1279,4 @@ class FablibManager():
 #                    datefmt='%H:%M:%S')
 
 # init fablib object
-fablib.default_fablib_manager = FablibManager()
+#fablib.default_fablib_manager = FablibManager()
