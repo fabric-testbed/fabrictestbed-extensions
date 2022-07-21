@@ -702,7 +702,14 @@ class FablibManager():
         :param log_level: new log level
         :type progress: Level
         """
+
         self.log_level = log_level
+
+        try:
+            if not os.path.isdir(os.path.dirname(self.log_file)):
+                os.makedirs(os.path.dirname(self.log_file))
+        except Exception as e:
+            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
         logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                             format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
