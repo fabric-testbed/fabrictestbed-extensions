@@ -36,28 +36,11 @@ from fabrictestbed.util.constants import Constants
 
 
 class AbcUtils(ABC):
-
-
-    #os.environ['FABRIC_CREDMGR_HOST']='cm.fabric-testbed.net'
-    #os.environ['FABRIC_ORCHESTRATOR_HOST']='orchestrator.fabric-testbed.net'
-    #os.environ['FABRIC_TOKEN_LOCATION']=os.environ['HOME']+'/work/fabric_token.json'
-
-    #os.environ['FABRIC_BASTION_USERNAME']=<INSERT_YOUR_FABRIC_USERNAME>
-    #os.environ['FABRIC_BASTION_KEY_LOCATION']=os.environ['HOME']+'/work/.ssh/id_rsa_fabric'
-
-    #os.environ['FABRIC_SLICE_PRIVATE_KEY_FILE']=os.environ['HOME']+'/.ssh/id_rsa'
-    #os.environ['FABRIC_SLICE_PUBLIC_KEY_FILE']=os.environ['HOME']+'/.ssh/id_rsa.pub'
-
-
-
     bastion_username = os.environ['FABRIC_BASTION_USERNAME']
-    #bastion_keyfile = ''
 
     bastion_public_addr = os.environ['FABRIC_BASTION_HOST']
     bastion_private_ipv4_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV4']
     bastion_private_ipv6_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV6']
-
-        #self.bastion_key_filename = '/Users/pruth/FABRIC/TESTING/pruth_fabric_rsa'
     bastion_key_filename = os.environ['HOME'] + "/.ssh/pruth_fabric_rsa"
 
     node_ssh_key = None
@@ -84,10 +67,6 @@ class AbcUtils(ABC):
         slice_manager.initialize()
 
         return slice_manager
-
-
-
-
 
     @abstractmethod
     def run(self, create_slice=True, run_test=True, delete=True):

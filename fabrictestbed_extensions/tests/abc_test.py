@@ -27,11 +27,8 @@ import traceback
 import time
 
 from abc import ABC, abstractmethod
-from typing import List
 
-from fabric_cf.orchestrator.orchestrator_proxy import SliceState
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 from ipaddress import ip_address, IPv4Address
 
 
@@ -89,7 +86,6 @@ class AbcTest(ABC):
             raise Exception("Slice not found name: {}, slice_id: {}".format(str(slice_name),str(slice_id)))
 
         return slice
-
 
     def wait_for_slice(self,slice,timeout=360,interval=10,progress=False):
         self.slice = slice
