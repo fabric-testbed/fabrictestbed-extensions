@@ -4,10 +4,18 @@
 
 .. automodule:: fablib
 
-``FABlib``
+``FablibManager``
 ----------------------
 
-.. autoclass:: fablib.fablib
+.. autoclass:: fablib.FablibManager
+
+   .. automethod:: set_log_level
+
+   .. automethod:: get_log_level
+
+   .. automethod:: get_log_file
+
+   .. automethod:: get_log_file
 
    .. automethod:: get_image_names
 
@@ -69,9 +77,6 @@
 
    .. automethod:: get_log_level
 
-   .. automethod:: set_log_level
-
-
 .. automodule:: slice
 
 ``Slice``
@@ -80,6 +85,10 @@
 .. autoclass:: slice.Slice
 
   .. automethod:: __str__
+
+  .. automethod:: save
+
+  .. automethod:: load
 
   .. automethod:: list_nodes
 
@@ -142,6 +151,8 @@
   .. automethod:: get_l3networks
 
   .. automethod:: get_l3network
+
+  .. automethod:: add_facility_port
 
   .. automethod:: delete
 
@@ -225,13 +236,23 @@
 
  .. automethod:: execute
 
+ .. automethod:: execute_thread
+
  .. automethod:: upload_file
+
+ .. automethod:: upload_file_thread
 
  .. automethod:: upload_directory
 
+ .. automethod:: upload_directory_thread
+
  .. automethod:: download_file
 
+ .. automethod:: download_file_thread
+
  .. automethod:: download_directory
+
+ .. automethod:: download_directory_thread
 
  .. automethod:: test_ssh
 
