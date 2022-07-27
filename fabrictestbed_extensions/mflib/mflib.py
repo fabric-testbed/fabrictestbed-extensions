@@ -326,7 +326,7 @@ class mflib():
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
-                        node. execute_thread("sudo useradd -G root -m mfuser")
+                        node.execute_thread("sudo useradd -G root -m mfuser")
                     except Exception as e:
                         print(f"Failed to add user: {e}")
                         mfusers_install_success = False
@@ -336,7 +336,7 @@ class mflib():
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
-                        node. execute_thread("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")
+                        node.execute_thread("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")
                     except Exception as e:
                         print(f"Fail to setup ssh directory: {e}")
                         mfusers_install_success = False
@@ -346,7 +346,7 @@ class mflib():
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        node. execute_thread("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")
+                        node.execute_thread("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")
                     except Exception as e:
                         print(f"Fail to add to sudoers: {e}")
                         mfusers_install_success = False
@@ -366,7 +366,7 @@ class mflib():
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        node. execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
+                        node.execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
                         #node. execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
                     except Exception as e:
                         print(f"Fail to set key permissions: {e}")
@@ -377,7 +377,7 @@ class mflib():
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        node. execute_thread("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")
+                        node.execute_thread("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")
                     except Exception as e:
                         print(f"Failed to create authorized_keys: {e}")
                         mfusers_install_success = False
@@ -603,10 +603,16 @@ class mflib():
         """
         try:
             cmd = f"sudo cp {self.mfuser_public_key_filename} /home/mfuser/.ssh/{self.mfuser_public_key_filename}; sudo chown mfuser:mfuser /home/mfuser/.ssh/{self.mfuser_public_key_filename}; sudo chmod 644 /home/mfuser/.ssh/{self.mfuser_public_key_filename}"
-            self.meas_node.execute(cmd)
+            stdout, stderr = self.meas_node.execute(cmd)
         
+            print(stdout)
+            print(stderr)
+
             cmd = f"sudo cp {self.mfuser_private_key_filename} /home/mfuser/.ssh/{self.mfuser_private_key_filename}; sudo chown mfuser:mfuser /home/mfuser/.ssh/{self.mfuser_private_key_filename}; sudo chmod 600 /home/mfuser/.ssh/{self.mfuser_private_key_filename}"
-            self.meas_node.execute(cmd)
+            stdout, stderr = elf.meas_node.execute(cmd)
+
+            print(stdout)
+            print(stderr)
         except Exception as e:
             print(f"Failed mfuser key user key copy: {e}")
             return False 
