@@ -39,7 +39,7 @@ import paramiko
 
 class mflib():
 
-    sanity_version = "1.0.9"
+    sanity_version = "1.0.10"
     # measurement_node_name = "_meas_node"
     # repo_branch = "main"
     
@@ -92,6 +92,40 @@ class mflib():
     def local_mfuser_public_key_filename(self):
         return os.path.join(self.local_slice_directory, "mfuser_pubic_key")    
 
+    @property
+    def meas_node(self):
+        if self._meas_node:
+            return self._meas_node 
+        else:
+            self.find_meas_node()
+            return self._meas_node 
+            
+    @property
+    def meas_node_ip(self):
+        if self.meas_node:
+            return self._meas_node.get_management_ip() 
+        else:
+            return ""
+
+    @property
+    def slice_username(self):
+        if self.meas_node:
+            return self._meas_node.get_username() 
+        else:
+            return ""
+
+# maybe redoo as jump?
+
+    # @property
+    # def grafana_tunnel(self):
+    #     ssh -L 10010:localhost:443 -F <fabric-ssh-config-file> -i <your portal_slice_id_rsa-file> <slice-username>@<meas_node-ip>
+    #     return "ssh -L 10010:localhost:443 -F "
+    #     return 'ssh -i {} -J {}@{} {}@{}'.format(self.get_private_key_file(),
+    #                                        fablib.get_bastion_username(),
+    #                                        fablib.get_bastion_public_addr(),
+    #                                        self.get_username(),
+    #                                        self.get_management_ip())
+
     # @property 
     # def (self):
     #     return os.path.join(self.local_slice_directory, "")    
@@ -138,7 +172,7 @@ class mflib():
         # The slice object
         self.slice = None
         # The meas_node object
-        self.meas_node = None 
+        self._meas_node = None 
 
         # The following are normally constant values
         # Name given to the meas node
@@ -195,11 +229,11 @@ class mflib():
         #######################
         
         # Does Measurement Node exist in topology?
-        if not self.find_meas_node():
+        if not self.meas_node:
             print("Failed to find meas node. Need to addMeasureNode first.")
             return False
         
-        print(f"Found meas node as {self.meas_node.get_name()}")
+        print(f"Found meas node as {self.meas_node.get_name()} at {self.meas_node.get_management_ip()}")
         
         bss = self.get_bootstrap_status()
         if bss:
@@ -286,6 +320,7 @@ class mflib():
             #if True:  
                 #Install mflib user/environment
                 print("Installing mfusers...")
+                mfusers_install_success = True
    
                 #Add user
                 threads = []
@@ -293,7 +328,8 @@ class mflib():
                     try:
                         threads.append([node,node.execute_thread_start("sudo useradd -G root -m mfuser")])
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Failed to add user: {e}")
+                        mfusers_install_success = False
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
                         
@@ -303,7 +339,8 @@ class mflib():
                     try:
                         threads.append([node,node.execute_thread_start("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")])
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Fail to setup ssh directory: {e}")
+                        mfusers_install_success = False
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
@@ -313,7 +350,8 @@ class mflib():
                     try:
                         threads.append([node,node.execute_thread_start("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")])
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Fail to add to sudoers: {e}")
+                        mfusers_install_success = False
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
@@ -324,7 +362,8 @@ class mflib():
                         #node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
                         node.upload_file(self.local_mfuser_public_key_filename ,"ansible.pub")
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Failed to upload keys: {e}")
+                        mfusers_install_success = False
                         
                 #Edit commands
                 threads=[]
@@ -333,7 +372,8 @@ class mflib():
                         threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
                         #threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Fail to set key permissions: {e}")
+                        mfusers_install_success = False
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
@@ -343,7 +383,8 @@ class mflib():
                     try:
                         threads.append([node,node.execute_thread_start("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")])
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Failed to create authorized_keys: {e}")
+                        mfusers_install_success = False
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
@@ -353,13 +394,21 @@ class mflib():
                     try:
                         threads.append([node,node.execute_thread_start("sudo chmod 644 /home/mfuser/.ssh/authorized_keys; sudo chown mfuser:mfuser /home/mfuser/.ssh/authorized_keys")])
                     except Exception as e:
-                        print(f"Fail: {e}")
+                        print(f"Failed to set authorized_keys permissions: {e}")
+                        mfusers_install_success = False
                 for thread in threads:
                        thread[0].execute_thread_join(thread[1])
 
-                self._copy_mfuser_keys_to_mfuser_on_meas_node()
-                self._update_bootstrap("mfusers", "ok")
-                print("mfuser installations Done.")
+                if not self._copy_mfuser_keys_to_mfuser_on_meas_node():
+                    mfusers_install_success = False
+
+
+                if mfusers_install_success:
+                    self._update_bootstrap("mfusers", "ok")
+                    print("mfuser installations Done.")
+                else:
+                    print("mfuser installations Failed")
+                    return 
             
 
             #######################
@@ -566,6 +615,8 @@ class mflib():
             self.meas_node.execute(cmd)
         except Exception as e:
             print(f"Failed mfuser key user key copy: {e}")
+            return False 
+        return True
 
 
     def _download_mfuser_keys(self, private_filename=None, public_filename=None):
@@ -601,11 +652,11 @@ class mflib():
             #slice = fablib.get_slice(self.slicename)
             for node in self.slice.get_nodes():
                 if node.get_name() == self.measurement_node_name:
-                    self.meas_node = node 
+                    self._meas_node = node 
                     return True 
         except Exception as e:
             print(f"Find Measure Node Failed: {e}")
-        self.meas_node = None
+        self._meas_node = None
         return False
 
 
@@ -1052,3 +1103,5 @@ class mflib():
             print("Service log download has failed.")
             print(f"Downloading service log file has Failed. It may not exist: {e}")
             return "",""
+
+    
