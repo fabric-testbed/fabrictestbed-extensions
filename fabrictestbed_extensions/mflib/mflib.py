@@ -39,7 +39,7 @@ import paramiko
 
 class mflib():
 
-    sanity_version = "1.0.10"
+    sanity_version = "1.0.11"
     # measurement_node_name = "_meas_node"
     # repo_branch = "main"
     
@@ -326,34 +326,31 @@ class mflib():
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
-                        threads.append([node,node.execute_thread_start("sudo useradd -G root -m mfuser")])
+                        node. execute_thread("sudo useradd -G root -m mfuser")
                     except Exception as e:
                         print(f"Failed to add user: {e}")
                         mfusers_install_success = False
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
+                 
                         
                 #Setup ssh directory
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
-                        threads.append([node,node.execute_thread_start("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")])
+                        node. execute_thread("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")
                     except Exception as e:
                         print(f"Fail to setup ssh directory: {e}")
                         mfusers_install_success = False
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
+                 
 
                 #Add mfuser to sudoers
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        threads.append([node,node.execute_thread_start("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")])
+                        node. execute_thread("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")
                     except Exception as e:
                         print(f"Fail to add to sudoers: {e}")
                         mfusers_install_success = False
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
+                 
 
                 #Upload keys
                 # Ansible.pub is nolonger a good name here
@@ -369,35 +366,32 @@ class mflib():
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
-                        #threads.append([node,node.execute_thread_start("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")])
+                        node. execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
+                        #node. execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
                     except Exception as e:
                         print(f"Fail to set key permissions: {e}")
                         mfusers_install_success = False
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
+                 
 
                 #Raise Key
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        threads.append([node,node.execute_thread_start("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")])
+                        node. execute_thread("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")
                     except Exception as e:
                         print(f"Failed to create authorized_keys: {e}")
                         mfusers_install_success = False
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
+                 
 
                 #Authorize key
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        threads.append([node,node.execute_thread_start("sudo chmod 644 /home/mfuser/.ssh/authorized_keys; sudo chown mfuser:mfuser /home/mfuser/.ssh/authorized_keys")])
+                        node. execute_thread("sudo chmod 644 /home/mfuser/.ssh/authorized_keys; sudo chown mfuser:mfuser /home/mfuser/.ssh/authorized_keys")
                     except Exception as e:
                         print(f"Failed to set authorized_keys permissions: {e}")
                         mfusers_install_success = False
-                for thread in threads:
-                       thread[0].execute_thread_join(thread[1])
+                 
 
                 if not self._copy_mfuser_keys_to_mfuser_on_meas_node():
                     mfusers_install_success = False
