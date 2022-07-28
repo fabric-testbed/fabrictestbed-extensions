@@ -70,8 +70,8 @@ class mflib():
         try:
             os.makedirs(self.local_slice_directory)
             os.makedirs(self.log_directory)
-            log_file_path = os.path.join(self.log_directory, "mflib")
-            logging.basicConfig(filename=log_file_path, format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level="INFO")
+            log_file_path = os.path.join(self.log_directory, "mflib.log")
+            #logging.basicConfig(filename=log_file_path, format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level="INFO", force=True)
             logging.info(f"-----Set slice name {value}.-----")
         except FileExistsError:
             pass 
@@ -124,7 +124,7 @@ class mflib():
         else:
             return ""
 
-# maybe redoo as jump?
+# maybe redo as jump?
 
     # @property
     # def grafana_tunnel(self):
@@ -136,32 +136,6 @@ class mflib():
     #                                        self.get_username(),
     #                                        self.get_management_ip())
 
-    # @property 
-    # def (self):
-    #     return os.path.join(self.local_slice_directory, "")    
-    
-
-    # Place to keep common hosts.ini file
-    #common_hosts_file = "" #os.path.join(local_storage_directory, "hosts.ini")
-    
-       
-    # mfuser keys
-    # base keyfile names
-    # mfuser_private_key_filename = "mfuser_private_key"
-    # mfuser_public_key_filename = "mfuser_public_key"
-
-    # # Local copy filenames
-    # local_mfuser_private_key_filename = "" #os.path.join(local_storage_directory, "mfuser_private_key")
-    # local_mfuser_public_key_filename = "" #os.path.join(local_storage_directory, "mfuser_public_key")
-
-    # The slice's meas node 
-    #meas_node = None
-      
-    # Keep a copy of the bootstrap status
-    #bootstrap_status_file = "" #os.path.join(local_storage_directory, "bootstrap_status.json")
-
-    # # Services directory on meas node
-    # services_directory = os.path.join("/", "home", "mfuser", "services")
 
     # Many methods use the followig parameter set
     # service - unique service name
@@ -174,6 +148,7 @@ class mflib():
         """
         super().__init__()
 
+        logging.info("Creating mflib object.")
         
         self.repo_branch = "dev"
 
@@ -201,13 +176,18 @@ class mflib():
             pass
         
     def instrumentize(self):
+        logging.info(f"Instrumentizing {self.slice_name}")
+        logging.info("Setting up Prometheus.")
         print("Setting up Prometheus...")
         prom_data = self.create("prometheus")
         print(prom_data)
+        logging.info("Setting up ELK.")
         print("Setting up ELK...")
         elk_data = self.create("elk")
         print(elk_data)
+
         # Install the default grafana dashboards.
+        logging.info("Setting up grafana_manager & dashboards.")
         grafana_manager_data = self.create("grafana_manager")
         print("Instrumentize Done.")
 
@@ -225,7 +205,7 @@ class mflib():
         self.slicename = slicename
 
 
-        logging.info("f'Inititializing slice "{slicename}" for MeasurementFramework.'")
+        logging.info(f'Inititializing slice "{slicename}" for MeasurementFramework.')
         self.slice = fablib.get_slice(name=slicename)
         
 
@@ -334,6 +314,7 @@ class mflib():
             else:
             #if True:  
                 #Install mflib user/environment
+                logging.info("Installing mfusers...")
                 print("Installing mfusers...")
                 mfusers_install_success = True
    
@@ -341,93 +322,114 @@ class mflib():
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
-                        stdout, stderr = node.execute_thread("sudo useradd -G root -m mfuser")
-                        logging.info(stdout)
-                        logging.error(stderr)
-
+                        threads.append( node.execute_thread("sudo useradd -G root -m mfuser") )
+                    
                     except Exception as e:
                         print(f"Failed to add user: {e}")
+                        logging.error(f"Failed to add user: {e}")
                         mfusers_install_success = False
-                 
+                logging.info("Adding mfuser results:")
+                for thread in threads:
+                    stdout, stderr = thread.result()
+                    logging.info(stdout)
+                    logging.error(stderr)
+
                         
                 #Setup ssh directory
                 threads = []
                 for node in self.slice.get_nodes():
                     try:
-                        stdout, stderr = node.execute_thread("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh")
-                        logging.info(stdout)
-                        logging.error(stderr)
+                        threads.append( node.execute_thread("sudo mkdir /home/mfuser/.ssh; sudo chmod 700 /home/mfuser/.ssh; sudo chown -R mfuser:mfuser /home/mfuser/.ssh"))
                         
                     except Exception as e:
                         print(f"Fail to setup ssh directory: {e}")
+                        logging.error(f"Fail to setup ssh directory: {e}")
                         mfusers_install_success = False
-                 
+                logging.info("Adding SSH dir results:")
+                for thread in threads:
+                    stdout, stderr = thread.result()
+                    logging.info(stdout)
+                    logging.error(stderr)
 
                 #Add mfuser to sudoers
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        stdout, stderr = node.execute_thread("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users")
-                        logging.info(stdout)
-                        logging.error(stderr)
+                        threads.append( node.execute_thread("echo 'mfuser ALL=(ALL:ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/90-cloud-init-users"))
                         
                     except Exception as e:
                         print(f"Fail to add to sudoers: {e}")
+                        logging.error(f"Fail to add to sudoers: {e}")
                         mfusers_install_success = False
-                 
+                logging.info("Add to sudoers results:")
+                for thread in threads:
+                    stdout, stderr = thread.result()
+                    logging.info(stdout)
+                    logging.error(stderr)
+ 
 
                 #Upload keys
                 # Ansible.pub is nolonger a good name here
                 for node in self.slice.get_nodes():
                     try:
                         #node.upload_file("/tmp/mflib/mfuser.pub","ansible.pub")
-                        stdout, stderr = node.upload_file(self.local_mfuser_public_key_filename ,"ansible.pub")
-                        logging.info(stdout)
-                        logging.error(stderr)
+                        threads.append( node.upload_file(self.local_mfuser_public_key_filename ,"ansible.pub"))
                         
                     except Exception as e:
                         print(f"Failed to upload keys: {e}")
+                        logging.error(f"Failed to upload keys: {e}")
                         mfusers_install_success = False
-                        
+                
                 #Edit commands
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        stdout, stderr = node.execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
-                        logging.info(stdout)
-                        logging.error(stderr)
+                        threads.append( node.execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;"))
                         
                         #node. execute_thread("sudo mv ansible.pub /home/mfuser/.ssh/ansible.pub; sudo chown mfuser:mfuser /home/mfuser/.ssh/ansible.pub;")
                     except Exception as e:
                         print(f"Fail to set key permissions: {e}")
+                        logging.error(f"Fail to set key permissions: {e}")
                         mfusers_install_success = False
-                 
+                logging.info("Moved keys on node results:")
+                for thread in threads:
+                    stdout, stderr = thread.result()
+
+                    logging.info(stdout)
+                    logging.error(stderr)
 
                 #Raise Key
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        stdout, stderr = node.execute_thread("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;")
-                        logging.info(stdout)
-                        logging.error(stderr)
+                        threads.append( node.execute_thread("sudo cat /home/mfuser/.ssh/ansible.pub | sudo tee -a /home/mfuser/.ssh/authorized_keys;"))
                         
                     except Exception as e:
                         print(f"Failed to create authorized_keys: {e}")
+                        logging.error(f"Failed to create authorized_keys: {e}")
                         mfusers_install_success = False
-                 
+                logging.info("Set key permission results:")
+                for thread in threads:
+                    stdout, stderr = thread.result()
+                    logging.info(stdout)
+                    logging.error(stderr)
+ 
 
                 #Authorize key
                 threads=[]
                 for node in self.slice.get_nodes():
                     try:
-                        stdout, stderr = node. execute_thread("sudo chmod 644 /home/mfuser/.ssh/authorized_keys; sudo chown mfuser:mfuser /home/mfuser/.ssh/authorized_keys")
-                        logging.info(stdout)
-                        logging.error(stderr)
+                        threads.append( node.execute_thread("sudo chmod 644 /home/mfuser/.ssh/authorized_keys; sudo chown mfuser:mfuser /home/mfuser/.ssh/authorized_keys"))
                         
                     except Exception as e:
                         print(f"Failed to set authorized_keys permissions: {e}")
+                        logging.error(f"Failed to set authorized_keys permissions: {e}")
                         mfusers_install_success = False
-                 
+                logging.info("Set authorized keys results:")
+                for thread in threads:
+                    stdout, stderr = thread.result()
+                    logging.info(stdout)
+                    logging.error(stderr)
 
                 if not self._copy_mfuser_keys_to_mfuser_on_meas_node():
                     mfusers_install_success = False
@@ -436,8 +438,10 @@ class mflib():
                 if mfusers_install_success:
                     self._update_bootstrap("mfusers", "ok")
                     print("mfuser installations Done.")
+                    logging.info("Mfuser installs done.")
                 else:
                     print("mfuser installations Failed")
+                     logging.info("Mfuser installs Failed.")
                     return 
             
 
@@ -938,8 +942,9 @@ class mflib():
         """
         cmd = f"sudo -u mfuser git clone -b {self.repo_branch} https://github.com/fabric-testbed/MeasurementFramework.git /home/mfuser/mf_git"
         stdout, stderr = self.meas_node.execute(cmd)
-        #print(stdout)
-        #print(stderr)
+        logging.info(f"Cloned {self.repo_branch} to measure node.")
+        logging.info(stdout)
+        logging.info(stderr)
         
     def _run_bootstrap_script(self):
         """
