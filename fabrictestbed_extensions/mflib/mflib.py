@@ -41,7 +41,7 @@ import logging
 
 class mflib():
 
-    sanity_version = "1.0.11"
+    sanity_version = "1.0.12"
     # measurement_node_name = "_meas_node"
     # repo_branch = "main"
     
