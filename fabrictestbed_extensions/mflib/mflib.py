@@ -176,7 +176,7 @@ class mflib():
             pass
         
     def instrumentize(self):
-        logging.info(f"Instrumentizing {self.slice_name}")
+        logging.info(f"Instrumentizing {self.slicename}")
         logging.info("Setting up Prometheus.")
         print("Setting up Prometheus...")
         prom_data = self.create("prometheus")
