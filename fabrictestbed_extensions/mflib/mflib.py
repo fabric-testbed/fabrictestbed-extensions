@@ -441,7 +441,7 @@ class mflib():
                     logging.info("Mfuser installs done.")
                 else:
                     print("mfuser installations Failed")
-                     logging.info("Mfuser installs Failed.")
+                    logging.info("Mfuser installs Failed.")
                     return 
             
 
