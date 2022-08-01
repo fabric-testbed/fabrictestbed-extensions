@@ -24,8 +24,12 @@
 
 import json
 import traceback
-from fabrictestbed_extensions.fablib.fablib import fablib
 import os
+
+from fabrictestbed_extensions.fablib.fablib import fablib
+# For getting vars to make tunnel
+from fabrictestbed_extensions.fablib.fablib import FablibManager
+
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
@@ -125,6 +129,45 @@ class mflib():
             return ""
 
 # maybe redo as jump?
+
+    # Tunnels are needed to access the meas node via the bastion host
+    # In the future these may be combinded into one port with diff nginx paths mappings.
+    # alt copy is a selection added to the fabric_rc file for setting a alertnate location for the files 
+    #   such as on a laptop. This makes it easy to create a tunnel on a users laptop where they will need access
+    #   to the web uis. 
+
+    @property
+    def grafana_tunnel(self):
+        return _meas_node_ssh_tunnel(local_port="10010", remote_port="443", alt=True)
+
+
+    @property
+    def kibana_tunnel(self):
+        return _meas_node_ssh_tunnel(local_port="10020", remote_port="80", alt=True)
+
+
+    def _meas_node_ssh_tunnel(self, ui, local_port, remote_port, alt):
+        """
+        Returns the SSH tunnel command for accessing the meas node via bastion host.
+        """
+        extra_fm = FablibManager()
+
+        slice_username = self.slice_username
+        meas_node_ip = self.meas_node_ip
+        
+        if alt:
+            extra_fm_vars = extra_fm.read_fabric_rc(extra_fm.default_fabric_rc)
+
+            ssh_config = extra_fm_vars["FABRIC_ALT_COPY_SSH_CONFIG"]
+            private_key_file = extra_fm_vars["FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE"]
+            #slice_username = self.slice_username
+            #meas_node_ip = self.meas_node_ip
+        else: 
+            ssh_config = extra_fm.get_default_slice_public_key()
+            private_key_fiel = extra_fm.get_default_slice_public_key_file()
+        #return f'ssh -L 10010:localhost:443 -F {extra_fm_vars["FABRIC_ALT_SSH_CONFIG"]} -i {extra_fm_vars["FABRIC_ALT_SLICE_PRIVATE_KEY_FILE"]} {self.slice_username}@{self.meas_node_ip}'
+        tunnel_cmd = f'ssh -L {local_port}:localhost:{remote_port} -F {ssh_config} -i {private_key_file} {slice_username}@{meas_node_ip}'
+        return tunnel_cmd 
 
     # @property
     # def grafana_tunnel(self):
