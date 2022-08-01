@@ -146,7 +146,7 @@ class mflib():
         return _meas_node_ssh_tunnel(local_port="10020", remote_port="80", alt)
 
 
-    def _meas_node_ssh_tunnel(self, ui, local_port, remote_port, alt):
+    def _meas_node_ssh_tunnel(self, local_port, remote_port, alt):
         """
         Returns the SSH tunnel command for accessing the meas node via bastion host.
         """
