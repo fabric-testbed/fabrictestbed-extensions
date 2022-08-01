@@ -137,13 +137,13 @@ class mflib():
     #   to the web uis. 
 
     @property
-    def grafana_tunnel(self):
-        return _meas_node_ssh_tunnel(local_port="10010", remote_port="443", alt=True)
+    def grafana_tunnel(self, alt=True):
+        return _meas_node_ssh_tunnel(local_port="10010", remote_port="443", alt)
 
 
     @property
-    def kibana_tunnel(self):
-        return _meas_node_ssh_tunnel(local_port="10020", remote_port="80", alt=True)
+    def kibana_tunnel(self, alt=True):
+        return _meas_node_ssh_tunnel(local_port="10020", remote_port="80", alt)
 
 
     def _meas_node_ssh_tunnel(self, ui, local_port, remote_port, alt):
