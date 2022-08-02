@@ -181,7 +181,7 @@ class mflib():
         else: 
             bastion_username = fablib.get_bastion_username()
             bastion_addr = fablib.get_bastion_public_addr()
-            private_key_file = self.meas_node.get_user_private_key_file()
+            private_key_file = fablib.get_default_slice_private_key_file()
 
             tunnel_cmd = f'ssh -L {local_port}:localhost:{remote_port} -i {private_key_file} -J {bastion_username}@{bastion_addr} {slice_username}@{meas_node_ip}'
 
