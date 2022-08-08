@@ -370,13 +370,13 @@ class mflib():
             # Add mfusers
             ##############################
             if "mfuser_accounts" in bss and bss["mfuser_accounts"] =="ok":
-                print("mfusers already setup.")
-                # logging.info("mfusers already setup.")
+                print("mfuser accounts are already setup.")
+                # logging.info("mfuser already setup.")
             else:
             #if True:  
                 #Install mflib user/environment
                 # logging.info("Installing mfusers...")
-                print("Installing mfusers...")
+                print("Installing mfuser accounts...")
                 mfusers_install_success = True
    
                 #Add user
