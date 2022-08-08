@@ -369,7 +369,7 @@ class mflib():
             ###############################
             # Add mfusers
             ##############################
-            if "mfusers" in bss and bss["mfusers"] =="ok":
+            if "mfuser_accounts" in bss and bss["mfuser_accounts"] =="ok":
                 print("mfusers already setup.")
                 # logging.info("mfusers already setup.")
             else:
