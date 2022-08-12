@@ -103,8 +103,6 @@ class mfvis():
                 for v in d["vars"]:
                     if "default" in v:
                         ret_val += f'&var-{v["name"]}={v["default"]}'
-        ret_val += "&var-node=Node1"
-        
         return ret_val
         
     
