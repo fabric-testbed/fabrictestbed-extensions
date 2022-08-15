@@ -409,6 +409,10 @@ class mfvis():
 
     def add_node_name(self, url, node_name):
         return f"{url}&var-node={node_name}"
+
+    def add_var(self, url, var_name, var_value):
+        return f"{url}&var-{var_name}={var_value}"
+    
     
     def convert_to_iframe(self, url):
         """
