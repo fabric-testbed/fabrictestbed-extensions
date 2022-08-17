@@ -2,11 +2,13 @@ import json
 import traceback
 import os
 import time
+import requests
 import configparser
 from ipywidgets import VBox, HTML, Output, interactive
 import ipywidgets as widgets
 from IPython.display import display
 from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manager
 #from fabrictestbed_extensions.mflib.mflib import mflib
 # For testing
 from mflib import mflib
@@ -26,11 +28,14 @@ class mfvis():
         self._grafana_tunnel_host = "localhost:10010"
         self._mf = mf_obj
         self.dashboard_info = {'dashboards':[]}
+        self.slice_node_info={}
+        self.get_node_and_interface_names()
         
         self.dashboard_info["time_filters"] = []
-        self.dashboard_info["time_filters"].append({'name': '5 minutes', 'value': "5m", "refresh":"30s"})
+        self.dashboard_info["time_filters"].append({'name': 'Last 5 minutes', 'value': "5m", "refresh":"30s"})
         self.dashboard_info["time_filters"].append({'name': 'Last 15 minutes', 'value': 900000})
         self.dashboard_info["time_filters"].append({'name': 'Last 1 hour', 'value': 3600000})
+        
 
 
         node_dashboard = { 'uid': 'rYdddlPWk', 'name': 'node-exporter-full', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'diskdevices', 'default':'%5Ba-z%5D%2B%7Cnvme%5B0-9%5D%2Bn%5B0-9%5D%2B'}, {'name':'node'}] }
@@ -43,11 +48,14 @@ class mfvis():
         traffic_panels = [{'name': 'Network Traffic by Packets', 'id': 8}, {'name': 'TCP In / Out', 'id': 13}, {'name': 'TCP Errors', 'id': 14}, {'name': 'UDP In / Out', 'id': 16}, {'name': 'UDP Errors', 'id': 17}, {'name': 'Network Traffic Received Errors', 'id': 10}, {'name': 'Network Traffic Send Errors', 'id': 11}]
         self.add_panel("network-traffic-dashboard", traffic_panels)
 
-        ping_dashboard = {"name":"Ping", "uid":"hqj_G5R4k", "vars":[],"panels":[{"name":"Ping", "id":2 }] }
-        self.add_dashboard(ping_dashboard)
+        self.dashboard_widget = None
+        self.graph_widget = None
+        self.time_widget = None
+        self.node_widget = None
+        self.device_widget = None
         
-       
-
+        
+        
     @property
     def grafana_tunnel_host(self):
         """
@@ -101,6 +109,7 @@ class mfvis():
                     if p["name"] == panel_name:
                         ret_val = f'{ret_val}&panelId={p["id"]}'
                 # add vars
+
                 if "vars" in d:
                     for v in d["vars"]:
                         if "default" in v:
@@ -143,6 +152,15 @@ class mfvis():
                 for p in d["panels"]:
                     panels.append(p["name"])
         return panels
+    
+    def get_interface_names(self, node_name):
+        """
+        Returns list of interface names for the given node
+        """
+        interfaces = []
+        if (node_name in self.slice_node_info.keys()):
+            return self.slice_node_info[node_name]
+            
 
     def get_dashboard_names(self):
         names = []
@@ -165,8 +183,37 @@ class mfvis():
         Sets the mflib object.
         """
         self._mf = value 
+        
+        
+    def get_node_and_interface_names(self):
+        """
+        Uses fablib to get all the interface names of all the experiment nodes 
+        """
+        fablib = fablib_manager()
+        #fablib.show_config()
+        mfo = self._mf
+        slice_name= mfo._slicename 
+        try:
+            slice = fablib.get_slice(name=slice_name)
+            for node in slice.get_nodes():
+                if node.get_name() != "_meas_node":
+                    self.slice_node_info[node.get_name()]=[]
+                    os_interface = []
+                    interface_matching = {}
+                    for interface in node.get_interfaces():
+                        os_interface.append(interface.get_os_interface())
+                        interface_matching[interface.get_os_interface()]=interface.get_name()
+                    self.slice_node_info[node.get_name()].append(os_interface)
+                    self.slice_node_info[node.get_name()].append(interface_matching)
+            for key, value in self.slice_node_info.items():
+                print (f"{key}:{value[1]}")
+            #print (self.slice_node_info")
+            #return (self.slice_node_info)
+        except Exception as e:
+            print(f"Fail: {e}")
+             
 
-    
+#
 #     def init(self,slicename):
 #         """
 #         Sets up the mfvis object to visualize prometheus graphs in grafana 
@@ -176,8 +223,8 @@ class mfvis():
 #         self.meas_net_info = self.get_meas_net_info(slicename=slicename)
 #         self.dashboard_info = self.set_dashboard_info()
 #         self.prometheus_url = self.get_prometheus_url()
-        
-    
+
+
 #     def read_prometheus_ini_file(self, slicename):
 #         """
 #         Check the existence of prometheus hosts ini file 
@@ -222,8 +269,8 @@ class mfvis():
 #             return (exp_node_info)            
 #         else:
 #             return []
-            
-            
+
+
 #     def get_meas_net_info(self, slicename):
 #         """
 #         Gets the info of the meas_net including the _meas_node IP, experiment node names and connected interface IPs 
@@ -240,8 +287,8 @@ class mfvis():
 #         except Exception as e:
 #             print(f"Fail: {e}")
 #             traceback.print_exc()
-         
-        
+
+
 #     def set_dashboard_info(self):
 #         """
 #         Sets the grafana prometheus dashboard info
@@ -258,8 +305,8 @@ class mfvis():
 #         dashboard_info['graph_panels'] = [first_graph, second_graph]
 #         dashboard_info['time_filters'] = [first_time_filter, second_time_filter]
 #         return (dashboard_info)
-    
-    
+
+
     def get_available_time_filter_names(self):
         """
         Returns the names of the available time filters in the dropdown menu
@@ -283,18 +330,23 @@ class mfvis():
     
     
     
-    def get_available_node_name(self):
+    def get_available_node_names(self):
         """
         Returns the available node names in dropdown menus excluding the meas_node 
         :rtype: List
         """
-        return ["Node1", "Node2"]
-        available_nodes = []
-        for node in self.meas_net_info['node_info']:
-            available_nodes.append(node['node_name'])
-        return available_nodes
-    
-    
+        
+        return (list(self.slice_node_info.keys()))
+        #return ['Node1', 'Node2']
+        #node_names = list(self.slice_node_info.keys())
+        #print (node_names)
+        #return node_names
+        #available_nodes = []
+        #for node in self.meas_net_info['node_info']:
+            #available_nodes.append(node['node_name'])
+        #return available_nodes
+
+
 #     def get_available_graph_name(self):
 #         """
 #         Returns the available graph names to be displayed in the dropdown menu
@@ -304,8 +356,8 @@ class mfvis():
 #         for graph in self.dashboard_info['graph_panels']:
 #             available_graphs.append(graph['name'])
 #         return available_graphs
-     
-        
+
+
 #     def get_prometheus_url(self):
 #         """
 #         Builds the basic url of the prometheus graphs in grafana
@@ -326,8 +378,8 @@ class mfvis():
 #         url_second_sec = "?orgId=1&refresh=1m&var-DS_PROMETHEUS=Prometheus&var-job=node&"
 #         url = url_first_sec+url_second_sec
 #         return (url)
-    
-    
+
+
     def get_system_time(self):
         """
         Gets OS time in the millisec format
@@ -347,8 +399,8 @@ class mfvis():
             #print(timefilter)
             if (timefilter['name'] == time):
                 return (timefilter['value'])
-     
-    
+
+
 #     def get_graph_panelid(self, graphname):
 #         """
 #         Helper function to map graph name to panel id
@@ -358,8 +410,8 @@ class mfvis():
 #         for graph in self.dashboard_info['graph_panels']:
 #             if (graph['name']== graphname):
 #                 return (graph['panel_id'])
-    
-    
+
+
 #     def add_filter(self, url, time, graphname):
 #         """
 #         Creates time and graph filters and appends the values to the url
@@ -384,8 +436,8 @@ class mfvis():
             time_string = f'from={current_epoch-tf["value"]}&to={str(current_epoch)}'
             #time_string = "from="+str(current_epoch-self.get_time_filter_value(time=time_filter))+"&to="+str(current_epoch)
         return f"{url}&{time_string}"
-    
-    
+
+
 #     def find_node_IP(self, nodename):
 #         """
 #         Helper function to get the IP address based on the node name 
@@ -395,8 +447,8 @@ class mfvis():
 #         for node in self.meas_net_info['node_info']:
 #             if (node['node_name']== nodename):
 #                 return (node['node_ip'])
-    
-    
+
+
 #     def add_node_and_disk(self, url, nodename):
 #         """
 #         Converts node name to the corresponding IP used in meas_net
@@ -411,10 +463,12 @@ class mfvis():
 
     def add_node_name(self, url, node_name):
         return f"{url}&var-node={node_name}"
+    
+    def add_interface_name(self, url, interface_name):
+        return f"{url}&var-device={interface_name}"
 
     def add_var(self, url, var_name, var_value):
-        return f"{url}&var-{var_name}={var_value}"
-    
+        return f"{url}&var-{var_name}={var_value}"        
     
     def convert_to_iframe(self, url):
         """
@@ -425,26 +479,54 @@ class mfvis():
         return '<iframe src="'+ url + '" width="900" height="500" frameborder="0"></iframe>'
     
     
+    def determine_dropdown_values(self, dashboard_name):
+        """
+        Sets the available panel names in the dropdown based on the dashboard name
+        Controls the visibility of the interface name dropdown and only shows it for network traffic dashboard  
+        :param dashboard_name: the selected dashboard name in the dropdown
+        :rtype: String
+        """
+        if (dashboard_name == '------'):
+            self.graph_widget.options = ['------']
+            self.device_widget.layout.visibility= 'hidden'
+        else:
+            self.graph_widget.options = self.get_panel_names(dashboard_name)
+            if dashboard_name =='network-traffic-dashboard':
+                self.device_widget.layout.visibility = 'visible'
+            else:
+                self.device_widget.layout.visibility= 'hidden'
+    
+    def determine_interface_names_dropdown(self, node_name):
+        """
+        Calculates the available interface names in the dropdown based on the selection of node name
+        """
+        self.device_widget.options = self.get_interface_names(node_name)[0]
+            
     
     
-    def imageViewer(self, dashboard_name, panel_name, time_filter, node_name):
+    def imageViewer(self, dashboard_name, panel_name, time_filter, node_name, interface_name):
         """
         Generates the url of the prometheus graphs based on user's selection in the dropdown menu
         displays the url in the HTML format
         """
         #print(time_filter)
-        url = self.grafana_panel_url(dashboard_name, panel_name)
-        #print(url)
-        url = self.add_time_filter(url, time_filter)
-        #print(url)
-        url = self.add_node_name(url, node_name)
-        #print(url)
-        #iframe = self.convert_to_iframe(url)
-        print(url)
-        finalHTML = HTML(self.convert_to_iframe(url))
-        display(finalHTML)
-     
-    
+        if (dashboard_name=='------' or panel_name=='------' or time_filter=='------' or node_name=='------' or interface_name=='------'):
+            display(HTML())
+        else:     
+            url = self.grafana_panel_url(dashboard_name, panel_name)
+            #print(url)
+            url = self.add_time_filter(url, time_filter)
+            #print(url)
+            url = self.add_node_name(url, node_name)
+            #print(url)
+            #iframe = self.convert_to_iframe(url)
+            if (interface_name!='------' and self.device_widget.layout.visibility == 'visible'):
+                url = self.add_interface_name(url, interface_name)
+            print(url)
+            finalHTML = HTML(self.convert_to_iframe(url))
+            display(finalHTML)
+
+
 #     def imageViewer(self, graphType, timeFilter, nodeName):
 #         """
 #         Generates the url of the prometheus graphs based on user's selection in the dropdown menu
@@ -463,30 +545,113 @@ class mfvis():
 #             display(finalHTML)
 #         else:
 #             display(HTML())
-     
-    
-    def visualize_prometheus(self):
+
+
+    def visualize_live_prometheus(self):
         """
         Creates the UI 
         """
         tab = widgets.Tab()
         tab.set_title(0, 'graph viewer')
-        #graphList = ['------']+self.get_available_graph_name()
-        graphList = ['------']+self.get_panel_names("node-exporter-full")
-        graph_widget = widgets.Dropdown(options=graphList)
-        timeFilterList = self.get_available_time_filter_names()
-        nodeNameList = self.get_available_node_name()
-        node_widget = widgets.Dropdown(options=nodeNameList)
-        time_widget = widgets.Dropdown(options=timeFilterList)
-        dashboardList = self.get_dashboard_names()
-        dashboard_widget = widgets.Dropdown(options=dashboardList)
-        #dashboard_widget = widgets.Dropdown(options=timeFilterList)
-        function = interactive(self.imageViewer,dashboard_name=dashboard_widget, panel_name=graph_widget, time_filter = time_widget, node_name = node_widget)
-        tab.children = [VBox(list(function.children))]
-        display(tab)
-    
-    
-    
-    
         
+        self.dashboard_widget = widgets.Dropdown(options=(['------']+self.get_dashboard_names()))
+        self.graph_widget = widgets.Dropdown(description='panel_name', options=['------'])
+        self.time_widget = widgets.Dropdown(options=['------']+self.get_available_time_filter_names())
+        self.node_widget = widgets.Dropdown(options=['------']+list(self.slice_node_info.keys()))
+        self.device_widget = widgets.Dropdown(description='interface_name', options=['------'])
+        self.device_widget.layout.visibility= 'hidden'
+        
+        i = interactive(self.determine_dropdown_values, dashboard_name = self.dashboard_widget)
+        j = interactive(self.determine_interface_names_dropdown, node_name = self.node_widget)
+        k = interactive(self.imageViewer,dashboard_name=self.dashboard_widget, panel_name=self.graph_widget, time_filter=self.time_widget, node_name=self.node_widget, interface_name = self.device_widget)
+        tab.children = [VBox(list(k.children))]
+        display(tab)
+        
+        
+    def get_available_panel_names(self):
+        """
+        Returns a list of available panel names for all dashboards
+        :rtype:List
+        """
+        panel_list=[]
+        for d in self.get_dashboard_names():
+            panel_list+=self.get_panel_names(dashboard_name=d)
+        panel_list.sort()
+        return (panel_list)
+    
+    def check_parameters(self, panel_name, interface_name):
+        """
+        Checks the input parameters for the download_prometheus_graph call
+        if panel_name belongs to network-traffic-dashboard, then interface_name cannot be none
+        """
+        if (panel_name in self.get_panel_names(dashboard_name='network-traffic-dashboard') and interface_name is None):
+            return (f"Please specify interface_name in the call. Run mfv.get_interface_names(node_name) ")
+        elif (panel_name in self.get_panel_names(dashboard_name='node-exporter-full') and interface_name is not None):
+            return (f"This panel does not require interface_name. Please remove interface_name from the call")
+        
+    def check_time_filters(self, time_filter):
+        """
+        Checks whether the input time filter is supported by the library
+        """
+        if (time_filter not in self.get_available_time_filter_names()):
+            return (f"The input time filter is not supported. See supported ones using: mfv.get_available_time_filter_names()")
+        
+    def check_node_names(self, node_name):
+        """
+        Checks whether the input node name is monitored by the measurement framework
+        """
+        if (node_name not in self.get_available_node_names()):
+            return (f"This node name is not supported. See supported ones using: mfv.get_available_node_names()")
+    
+    
+    def grafana_solo_dashboard_url_download(self, dashboard_name):
+        """
+        The base url to get just a panel.
+        """
+        ret_val = ""
+        for d in self.dashboard_info["dashboards"]:
+            if d["name"] == dashboard_name:
+                ret_val = f'{self.grafana_base_url}/d/{d["uid"]}/{d["name"]}?orgId=1' 
+        return ret_val
+    
+    def grafana_panel_url_download(self, dashboard_name, panel_name):
+        ret_val = self.grafana_solo_dashboard_url_download(dashboard_name)
+        for d in self.dashboard_info["dashboards"]:
+            if d["name"] == dashboard_name:
+                #print(d["panels"])
+                for p in d["panels"]:
+                    if p["name"] == panel_name:
+                        ret_val = f'{ret_val}&viewPanel={p["id"]}'
+                # add vars
+                for v in d["vars"]:
+                    if "default" in v:
+                        ret_val += f'&var-{v["name"]}={v["default"]}'
+        return ret_val
+    
+    
+    
+    
+    
+    def download_prometheus_graph(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None):
+        """
+        Methods that allows the users to download prometheus graphs in .png format
+        """
+        #self.check_time_filters(time_filter=time_filter)
+        #self.check_node_names(node_name=node_name)
+        #self.check_parameters(self, panel_name, interface_name)
+        url = self.grafana_panel_url_download(dashboard_name, panel_name)
+        url = self.add_time_filter(url, time_filter)
+        url = self.add_node_name(url, node_name)
+        if (interface_name is not None):
+            url = self.add_interface_name(url, interface_name)
+        print (url)
+            
+        
+            
+            
+
+    
+
+    
+
     
