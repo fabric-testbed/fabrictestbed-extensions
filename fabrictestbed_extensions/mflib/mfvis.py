@@ -43,7 +43,8 @@ class mfvis():
         traffic_panels = [{'name': 'Network Traffic by Packets', 'id': 8}, {'name': 'TCP In / Out', 'id': 13}, {'name': 'TCP Errors', 'id': 14}, {'name': 'UDP In / Out', 'id': 16}, {'name': 'UDP Errors', 'id': 17}, {'name': 'Network Traffic Received Errors', 'id': 10}, {'name': 'Network Traffic Send Errors', 'id': 11}]
         self.add_panel("network-traffic-dashboard", traffic_panels)
 
-
+        ping_dashboard = {"name":"Ping", "uid":"hqj_G5R4k", "vars":[],"panels":[{"name":"Ping", "id":2 }] }
+        self.add_dashboard(ping_dashboard)
         
        
 
@@ -100,9 +101,10 @@ class mfvis():
                     if p["name"] == panel_name:
                         ret_val = f'{ret_val}&panelId={p["id"]}'
                 # add vars
-                for v in d["vars"]:
-                    if "default" in v:
-                        ret_val += f'&var-{v["name"]}={v["default"]}'
+                if "vars" in d:
+                    for v in d["vars"]:
+                        if "default" in v:
+                            ret_val += f'&var-{v["name"]}={v["default"]}'
         return ret_val
         
     
