@@ -252,6 +252,14 @@ class mflib():
         grafana_manager_data = self.create("grafana_manager")
         print("Instrumentize Done.")
 
+        all_data = {}
+        all_data["elk"] = elk_data
+        all_data["prometheues"] = prom_data 
+        all_data["grafana_manager"] = grafana_manager_data
+        
+        return all_data
+
+
     def init(self,slicename):
         """
         Sets up the mflib object to ensure slice can be monitored.
