@@ -205,8 +205,8 @@ class mfvis():
                         interface_matching[interface.get_os_interface()]=interface.get_name()
                     self.slice_node_info[node.get_name()].append(os_interface)
                     self.slice_node_info[node.get_name()].append(interface_matching)
-            for key, value in self.slice_node_info.items():
-                print (f"{key}:{value[1]}")
+            # for key, value in self.slice_node_info.items():
+            #     print (f"{key}:{value[1]}")
             #print (self.slice_node_info")
             #return (self.slice_node_info)
         except Exception as e:
