@@ -18,7 +18,7 @@ class mfvis():
     meas_net_info = {}
     prometheus_url = None
     
-    def __init__(self, mf_obj=None):
+    def __init__(self, mf_obj=None, slice_name=None):
         """
         Constructor. Builds Manager for mfvis object.
         """
@@ -26,7 +26,13 @@ class mfvis():
         #self._grafana_tunnel_host = ""
         # for current testing should be removed in future
         self._grafana_tunnel_host = "localhost:10010"
-        self._mf = mf_obj
+        
+        if mf_obj:
+            self._mf = mf_obj
+        elif slice_name:
+            self._mf = mflib()
+            self._mf.init(slice_name)
+        
         self.dashboard_info = {'dashboards':[]}
         self.slice_node_info={}
         self.get_node_and_interface_names()
