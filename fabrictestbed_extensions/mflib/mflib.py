@@ -163,19 +163,29 @@ class mflib():
         slice_username = self.slice_username
         meas_node_ip = self.meas_node_ip
         
+ 
+
         if use_ssh_config:
             # User has setup an ssh config file
             extra_fm = FablibManager()
 
+            ssh_config = ""
+            private_key_file = ""
+
             if alt:
                 extra_fm_vars = extra_fm.read_fabric_rc(extra_fm.default_fabric_rc)
-
-                ssh_config = extra_fm_vars["FABRIC_ALT_COPY_SSH_CONFIG"]
-                private_key_file = extra_fm_vars["FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE"]
+                if "FABRIC_ALT_COPY_SSH_CONFIG" in extra_fm_vars:
+                    ssh_config = extra_fm_vars["FABRIC_ALT_COPY_SSH_CONFIG"]
+                if "FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE" in extra_fm_vars:
+                    private_key_file = extra_fm_vars["FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE"]
  
-            else: 
+            #else:
+            # Did no use alt, or alt was not found
+            if not ssh_config: 
                 ssh_config = extra_fm.get_default_slice_public_key()
+            if not private_key_file:
                 private_key_file = extra_fm.get_default_slice_public_key_file()
+
             #return f'ssh -L 10010:localhost:443 -F {extra_fm_vars["FABRIC_ALT_SSH_CONFIG"]} -i {extra_fm_vars["FABRIC_ALT_SLICE_PRIVATE_KEY_FILE"]} {self.slice_username}@{self.meas_node_ip}'
             tunnel_cmd = f'ssh -L {local_port}:localhost:{remote_port} -F {ssh_config} -i {private_key_file} {slice_username}@{meas_node_ip}'
         else: 
