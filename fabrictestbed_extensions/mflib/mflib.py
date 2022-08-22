@@ -1041,7 +1041,7 @@ class mflib():
         """
         Run the initial bootstrap ansible scripts in the meas node mf repo.
         """
-        cmd = f'sudo -u mfuser python3 /home/mfuser/mf_git/instrumentize/experiment_bootstrap/bootstrap_docker.py'
+        cmd = f'sudo -u mfuser python3 /home/mfuser/mf_git/instrumentize/experiment_bootstrap/bootstrap_playbooks.py'
         stdout, stderr = self.meas_node.execute(cmd)
         # logging.info(stdout)
         # logging.info(stderr)
