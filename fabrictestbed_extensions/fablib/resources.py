@@ -164,7 +164,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).components[component_model_name].capacities.unit
         except Exception as e:
-            logging.warning(f"Failed to get {component_model_name} capacity {site_name}")
+            logging.debug(f"Failed to get {component_model_name} capacity {site_name}")
             return 0
 
     def get_component_allocated(self, site_name: str, component_model_name: str) -> int:
@@ -182,7 +182,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).components[component_model_name].capacity_allocations.unit
         except Exception as e:
-            logging.warning(f"Failed to get {component_model_name} alloacted {site_name}")
+            logging.debug(f"Failed to get {component_model_name} alloacted {site_name}")
             return 0
 
     def get_component_available(self, site_name: str, component_model_name: str) -> int:
@@ -200,7 +200,7 @@ class Resources:
         try:
             return self.get_component_capacity(site_name, component_model_name) - self.get_component_allocated(site_name, component_model_name)
         except Exception as e:
-            logging.warning(f"Failed to get {component_model_name} available {site_name}")
+            logging.debug(f"Failed to get {component_model_name} available {site_name}")
             return self.get_component_capacity(site_name, component_model_name)
 
     def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
@@ -231,7 +231,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).location.postal
         except Exception as e:
-            logging.warning(f"Failed to get location postal {site_name}")
+            logging.debug(f"Failed to get location postal {site_name}")
             return ""
 
     def get_host_capacity(self, site_name: str) -> int:
@@ -246,7 +246,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.unit
         except Exception as e:
-            logging.warning(f"Failed to get host count {site_name}")
+            logging.debug(f"Failed to get host count {site_name}")
             return 0
 
     def get_cpu_capacity(self, site_name: str) -> int:
@@ -261,7 +261,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.cpu
         except Exception as e:
-            logging.warning(f"Failed to get cpu capacity {site_name}")
+            logging.debug(f"Failed to get cpu capacity {site_name}")
             return 0
 
     def get_core_capacity(self, site_name: str) -> int:
@@ -276,7 +276,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.core
         except Exception as e:
-            logging.warning(f"Failed to get core capacity {site_name}")
+            logging.debug(f"Failed to get core capacity {site_name}")
             return 0
 
     def get_core_allocated(self, site_name: str) -> int:
@@ -291,7 +291,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacity_allocations.core
         except Exception as e:
-            logging.warning(f"Failed to get cores alloacted {site_name}")
+            logging.debug(f"Failed to get cores alloacted {site_name}")
             return 0
 
     def get_core_available(self, site_name: str) -> int:
@@ -306,7 +306,7 @@ class Resources:
         try:
             return self.get_core_capacity(site_name) - self.get_core_allocated(site_name)
         except Exception as e:
-            logging.warning(f"Failed to get cores available {site_name}")
+            logging.debug(f"Failed to get cores available {site_name}")
             return self.get_core_capacity(site_name)
 
     def get_ram_capacity(self, site_name: str) -> int:
@@ -321,7 +321,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.ram
         except Exception as e:
-            logging.warning(f"Failed to get ram capacity {site_name}")
+            logging.debug(f"Failed to get ram capacity {site_name}")
             return 0
 
     def get_ram_allocated(self, site_name: str) -> int:
@@ -336,7 +336,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacity_allocations.ram
         except Exception as e:
-            logging.warning(f"Failed to get ram alloacted {site_name}")
+            logging.debug(f"Failed to get ram alloacted {site_name}")
             return 0
 
     def get_ram_available(self, site_name: str) -> int:
@@ -351,7 +351,7 @@ class Resources:
         try:
             return self.get_ram_capacity(site_name) - self.get_ram_allocated(site_name)
         except Exception as e:
-            logging.warning(f"Failed to get ram available {site_name}")
+            logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site_name)
 
     def get_disk_capacity(self, site_name: str) -> int:
@@ -366,7 +366,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.disk
         except Exception as e:
-            logging.warning(f"Failed to get disk capacity {site_name}")
+            logging.debug(f"Failed to get disk capacity {site_name}")
             return 0
 
     def get_disk_allocated(self, site_name: str) -> int:
@@ -381,7 +381,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacity_allocations.disk
         except Exception as e:
-            logging.warning(f"Failed to get disk alloacted {site_name}")
+            logging.debug(f"Failed to get disk alloacted {site_name}")
             return 0
 
     def get_disk_available(self, site_name: str) -> int:
@@ -396,7 +396,7 @@ class Resources:
         try:
             return self.get_disk_capacity(site_name) - self.get_disk_allocated(site_name)
         except Exception as e:
-            logging.warning(f"Failed to get disk available {site_name}")
+            logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site_name)
 
     def get_fablib_manager(self):

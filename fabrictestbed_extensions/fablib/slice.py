@@ -95,9 +95,28 @@ class Slice:
         return tabulate(table)
 
     def save(self, filename):
+        """
+        Saves the slice topology to a file. The file can be loaded to create
+        a new slice with the same topology.
+
+        The slice topology can be saved before the original request has been submitted
+        or after. If the slice is saved after it is instantiated, only the topology is
+        save.  Any configuration of nodes is not included.
+
+        :param filename: path to the file to save the slice.
+        :type filename: String
+        """
+
         self.get_fim_topology().serialize(filename)
 
     def load(self, filename):
+        """
+         Loads a slice request topology from file. The file can be loaded to create
+         a new slice with the same topology as a previously saved slice.
+
+         :param filename: path to the file to save the slice.
+         :type filename: String
+         """
         self.network_iface_map = None
         self.sm_slice = None
         self.slice_id = None
@@ -275,8 +294,7 @@ class Slice:
         """
         Not recommended for most users.  See Slice.update() method.
 
-
-        Updates the fabric slice topology with the slice manager slice's topolofy
+        Updates the fabric slice topology with the slice manager slice's topology
 
         :raises Exception: if topology could not be gotten from slice manager
         """
@@ -541,8 +559,6 @@ class Slice:
     def add_facility_port(self, name: str = None, site: str = None, vlan: str = None) -> NetworkService:
         """
                 Adds a new L2 facility port to this slice
-
-                TODO: add more description
 
                 :param name: name of the facility port
                 :type name: String
@@ -944,7 +960,7 @@ class Slice:
         :type interval: int
         :param progress: indicator for whether to print wait progress
         :type progress: bool
-        :raises Exception: if the slice state is undesireable, or waiting times out
+        :raises Exception: if the slice state is undesirable, or waiting times out
         :return: the stable slice on the slice manager
         :rtype: SMSlice
         """
@@ -1032,7 +1048,7 @@ class Slice:
         """
         Tests all nodes in the slices are accessible via ssh.
 
-        :return: indicator for whether or not all nodes were ssh-able
+        :return: result of testing if all VMs in the slice are accessible via ssh
         :rtype: bool
         """
         for node in self.get_nodes():
@@ -1187,7 +1203,7 @@ class Slice:
 
         Blocking calls can, optionally,configure timeouts and intervals.
 
-        Blocking calls can, optionally, print progess info.
+        Blocking calls can, optionally, print progress info.
 
 
         :param wait: indicator for whether to wait for the slice's resources to be active
@@ -1198,8 +1214,8 @@ class Slice:
         :type wait_interval: int
         :param progress: indicator for whether to show progress while waiting
         :type progress: bool
-        :param wait_jupyter: Sepecial wait for jupyter notebooks.
-        :type wait_jupyter: Sring
+        :param wait_jupyter: Special wait for jupyter notebooks.
+        :type wait_jupyter: String
         :return: slice_id
         :rtype: String
         """
@@ -1224,7 +1240,7 @@ class Slice:
         time.sleep(1)
         self.update()
 
-        if progress and wait_jupyter == 'text' and self.fablib_manager.isJupyterNotebook():
+        if progress and wait_jupyter == 'text' and self.fablib_manager.is_jupyter_notebook():
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 

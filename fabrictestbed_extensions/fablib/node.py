@@ -24,13 +24,14 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 import json
+import threading
 import time
 import paramiko
 import logging
 
 from tabulate import tabulate
 
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -600,7 +601,20 @@ class Node:
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
     def execute_thread(self, command: str, retry: int = 3, retry_interval: int = 10, username: str = None,
-                       private_key_file: str = None, private_key_passphrase: str = None):
+                       private_key_file: str = None, private_key_passphrase: str = None) -> threading.Thread:
+        """
+        Creates a thread that calls node.execute().  Results (i.e. stdout, stderr) from the thread can be
+        retrieved with by calling thread.result()
+        :param command: the command to run
+        :param retry: the number of times to retry SSH upon failure
+        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+        :param username: username
+        :param private_key_file: private key file
+        :param private_key_passphrase: pass phrase
+        :return: a thread that called node.execute()
+        :raise Exception: if management IP is invalid
+        """
+
         return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.execute,
                                                                                command,
                                                                                retry=retry,
@@ -610,7 +624,7 @@ class Node:
                                                                                private_key_passphrase=private_key_passphrase)
 
     def execute(self, command: str, retry: int = 3, retry_interval: int = 10, username: str = None,
-                private_key_file:str = None, private_key_passphrase:str = None):
+                private_key_file:str = None, private_key_passphrase:str = None) -> Tuple[str, str]:
         """
         Runs a command on the FABRIC node.
         :param command: the command to run
@@ -622,6 +636,8 @@ class Node:
         :param username
         :param private_key_file
         :param private_key_passphrase
+        :return: a tuple of  (stdout[Sting],stderr[String])
+        :rtype: Tuple
         :raise Exception: if management IP is invalid
         """
         import logging
@@ -722,6 +738,21 @@ class Node:
         raise Exception("ssh failed: Should not get here")
 
     def upload_file_thread(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
+        """
+        Creates a thread that calls node.upload_file().  Results from the thread can be
+        retrieved with by calling thread.result()
+        :param local_file_path: the path to the file to upload
+        :type local_file_path: str
+        :param remote_file_path: the destination path of the file on the node
+        :type remote_file_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP on failure
+        :type retry_interval: int
+        :return: a thread that called node.execute()
+        :rtype: Thread
+        :raise Exception: if management IP is invalid
+        """
         return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.upload_file,
                                                                                local_file_path,
                                                                                remote_file_path,
@@ -814,6 +845,21 @@ class Node:
         raise Exception("scp upload failed")
 
     def download_file_thread(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
+        """"
+        Creates a thread that calls node.download_file().  Results from the thread can be
+        retrieved with by calling thread.result()
+        :param local_file_path: the destination path for the remote file
+        :type local_file_path: str
+        :param remote_file_path: the path to the remote file to download
+        :type remote_file_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP upon failure
+        :type retry_interval: int
+        :return: a thread that called node.download_file()
+        :rtype: Thread
+        :raise Exception: if management IP is invalid
+        """
         return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.download_file,
                                                                                local_file_path,
                                                                                remote_file_path,
@@ -831,8 +877,6 @@ class Node:
         :type retry: int
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
-        :param verbose: indicator for verbose outpu
-        :type verbose: bool
         """
         logging.debug(f"download node: {self.get_name()}, remote_file_path: {remote_file_path}")
 
@@ -909,6 +953,21 @@ class Node:
 
     def upload_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
                                 retry_interval: int = 10):
+        """"
+        Creates a thread that calls node.upload_directory. Results from the thread can be
+        retrieved with by calling thread.result()
+        :param local_directory_path: the path to the directory to upload
+        :type local_directory_path: str
+        :param remote_directory_path: the destination path of the directory on the node
+        :type remote_directory_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP on failure
+        :type retry_interval: int
+        :return: a thread that called node.download_file()
+        :rtype: Thread
+        :raise Exception: if management IP is invalid
+        """
         return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.upload_directory,
                                                                                local_directory_path,
                                                                                remote_directory_path,
@@ -953,7 +1012,19 @@ class Node:
 
     def download_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
                                   retry_interval: int = 10):
-
+        """"
+        Creates a thread that calls node.download_directory. Results from the thread can be
+        retrieved with by calling thread.result()
+        :param local_directory_path: the path to the directory to upload
+        :type local_directory_path: str
+        :param remote_directory_path: the destination path of the directory on the node
+        :type remote_directory_path: str
+        :param retry: how many times to retry SCP upon failure
+        :type retry: int
+        :param retry_interval: how often to retry SCP on failure
+        :type retry_interval: int
+        :raise Exception: if management IP is invalid
+        """
         return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.download_directory,
                                                                                local_directory_path,
                                                                                remote_directory_path,
