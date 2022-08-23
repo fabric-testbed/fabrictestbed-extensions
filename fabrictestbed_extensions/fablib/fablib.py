@@ -1207,10 +1207,7 @@ class FablibManager:
             # if getting by name then only consider active slices
             slices = self.get_slices(excludes=[SliceState.Dead, SliceState.Closing], slice_name=name)
 
-            if len(slices) == 1:
-                return slices[0]
-            else:
-                raise Exception(f"More than 1 slice found with name: {name}")
+            return slices[0]
         else:
             raise Exception("get_slice requires slice name (name) or slice id (slice_id)")
 

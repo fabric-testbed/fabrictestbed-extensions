@@ -293,8 +293,6 @@ class AbcTopologyEditor(ABC):
             print("slice_manager.slices: Status: {}, Error: {}".format(status,existing_slices))
             existing_slices = []
 
-
-
         # Create new list of slices
         #new_experiments_list = []
         for slice in existing_slices:

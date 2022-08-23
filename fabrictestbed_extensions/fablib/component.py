@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 from tabulate import tabulate
 from typing import List
 
-from fabrictestbed.slice_editor import ComponentModelType
+from fabrictestbed.slice_editor import ComponentModelType, Labels, Flags
 from fabrictestbed.slice_editor import Component as FimComponent
 
 
@@ -121,7 +121,25 @@ class Component:
 
         return Component(node=node, fim_component=node.fim_node.add_component(
             model_type=Component.component_model_map[model], name=name))
-        # return Component(node = node, model=model, name=name)
+
+    @staticmethod
+    def new_storage(node: Node, name: str, auto_mount: bool = False):
+        """
+        Not intended for API use
+
+        Creates a new FIM component on the fablib node inputted.
+
+        :param node: the fablib node to build the component on
+        :param name: the name of the new component
+        :param auto_mount: True - mount the storage; False - do not mount
+        :return: the new fablib compoent
+        :rtype: Component
+        """
+        # Hack to make it possile to find interfaces
+
+        fim_component = node.fim_node.add_component(name=name, labels=Labels(local_name=name),
+                                                    flags=Flags(auto_mount=auto_mount))
+        return Component(node=node, fim_component=fim_component)
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
         """
