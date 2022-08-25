@@ -518,15 +518,6 @@ class Node:
         """
         return Component.new_component(node=self, model=model, name=name)
 
-    def add_storage(self, name: str, auto_mount: bool = False) -> Component:
-        """
-        Creates a new FABRIC Storage component and attaches it to the Node
-        :param name: Name of the Storage volume created for the project outside the scope of the Slice
-        :param auto_mount: Mount the storage volume
-        :rtype: Component
-        """
-        return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
-
     def get_components(self) -> List[Component]:
         """
         Gets a list of components associated with this node.
