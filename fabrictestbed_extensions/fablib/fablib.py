@@ -22,52 +22,44 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
+from __future__ import annotations
 import os
-import traceback
-import re
-
-import functools
-import time
 import logging
 import random
-
-from IPython import get_ipython
-from tabulate import tabulate
-
-import importlib.resources as pkg_resources
-from typing import List
-
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, \
-    ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-
-from fabrictestbed.util.constants import Constants
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from concurrent.futures import ThreadPoolExecutor
 
-# from .abc_fablib import AbcFabLIB
-#from fabrictestbed_extensions.fablib.fablib_manager import FablibManager
+from IPython import get_ipython
+
+from typing import List, Dict
+
+from typing import TYPE_CHECKING
+
+from fabrictestbed.util.constants import Constants
+from tabulate import tabulate
+
+if TYPE_CHECKING:
+    from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
+
+from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fim.user import Node as FimNode
+
+from fabrictestbed_extensions.fablib.resources import Resources
+from fabrictestbed_extensions.fablib.slice import Slice
 
 
-# from .. import images
+class fablib:
 
-
-class fablib():
     default_fablib_manager = None
 
     @staticmethod
     def get_default_fablib_manager():
-        if fablib.default_fablib_manager == None:
+        if fablib.default_fablib_manager is None:
             fablib.default_fablib_manager = FablibManager()
 
         return fablib.default_fablib_manager
 
     @staticmethod
-    def get_image_names() -> list[str]:
+    def get_image_names() -> List[str]:
         """
         Gets a list of available image names.
 
@@ -77,7 +69,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_image_names()
 
     @staticmethod
-    def get_site_names() -> list[str]:
+    def get_site_names() -> List[str]:
         """
         Gets a list of all available site names.
 
@@ -97,7 +89,7 @@ class fablib():
         return fablib.get_default_fablib_manager().list_sites()
 
     @staticmethod
-    def show_site(site_name):
+    def show_site(site_name: str):
         """
         Get a string used to print tabular info about a site
 
@@ -109,7 +101,7 @@ class fablib():
         return fablib.get_default_fablib_manager().show_site(site_name)
 
     @staticmethod
-    def get_resources():
+    def get_resources() -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -120,7 +112,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_resources()
 
     @staticmethod
-    def get_random_site(avoid: list[str] = []) -> str:
+    def get_random_site(avoid: List[str] = []) -> str:
         """
         Get a random site.
 
@@ -132,7 +124,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_random_site(avoid=avoid)
 
     @staticmethod
-    def get_random_sites(count: int = 1, avoid: list[str] = []) -> list[str]:
+    def get_random_sites(count: int = 1, avoid: List[str] = []) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -155,7 +147,7 @@ class fablib():
         return fablib.get_default_fablib_manager().init_fablib()
 
     @staticmethod
-    def get_default_slice_key():
+    def get_default_slice_key() -> Dict[str, str]:
         """
         Gets the current default_slice_keys as a dictionary containg the
         public and private slice keys.
@@ -173,7 +165,7 @@ class fablib():
         return fablib.get_default_fablib_manager().show_config()
 
     @staticmethod
-    def get_config():
+    def get_config() -> Dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
         variable values values.
@@ -184,7 +176,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_config()
 
     @staticmethod
-    def get_default_slice_public_key():
+    def get_default_slice_public_key() -> str:
         """
         Gets the default slice public key.
 
@@ -197,7 +189,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_default_slice_public_key()
 
     @staticmethod
-    def get_default_slice_public_key_file():
+    def get_default_slice_public_key_file() -> str:
         """
         Gets the path to the default slice public key file.
 
@@ -210,7 +202,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_default_slice_public_key_file()
 
     @staticmethod
-    def get_default_slice_private_key_file():
+    def get_default_slice_private_key_file() -> str:
         """
         Gets the path to the default slice private key file.
 
@@ -223,7 +215,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_default_slice_private_key_file()
 
     @staticmethod
-    def get_default_slice_private_key_passphrase():
+    def get_default_slice_private_key_passphrase() -> str:
         """
         Gets the passphrase to the default slice private key.
 
@@ -236,7 +228,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
 
     @staticmethod
-    def get_credmgr_host():
+    def get_credmgr_host() -> str:
         """
         Gets the credential manager host site value.
 
@@ -246,7 +238,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_credmgr_host()
 
     @staticmethod
-    def get_orchestrator_host():
+    def get_orchestrator_host() -> str:
         """
         Gets the orchestrator host site value.
 
@@ -256,7 +248,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_orchestrator_host()
 
     @staticmethod
-    def get_fabric_token():
+    def get_fabric_token() -> str:
         """
         Gets the FABRIC token location.
 
@@ -266,7 +258,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_fabric_token()
 
     @staticmethod
-    def get_bastion_username():
+    def get_bastion_username() -> str:
         """
         Gets the FABRIC Bastion username.
 
@@ -276,7 +268,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_bastion_username()
 
     @staticmethod
-    def get_bastion_key_filename():
+    def get_bastion_key_filename() -> str:
         """
         Gets the FABRIC Bastion key filename.
 
@@ -286,7 +278,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_bastion_key_filename()
 
     @staticmethod
-    def get_bastion_public_addr():
+    def get_bastion_public_addr() -> str:
         """
         Gets the FABRIC Bastion host address.
 
@@ -296,7 +288,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_bastion_public_addr()
 
     @staticmethod
-    def get_bastion_private_ipv4_addr():
+    def get_bastion_private_ipv4_addr() -> str:
         """
         Gets the FABRIC Bastion private IPv4 host address. This is the
         internally faceing IPv4 address needed to use paramiko
@@ -307,7 +299,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_bastion_private_ipv4_addr()
 
     @staticmethod
-    def get_bastion_private_ipv6_addr():
+    def get_bastion_private_ipv6_addr() -> str:
         """
         Gets the FABRIC Bastion private IPv6 host address. This is the
         internally faceing IPv4 address needed to use paramiko
@@ -318,7 +310,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_bastion_private_ipv6_addr()
 
     @staticmethod
-    def get_slice_manager():
+    def get_slice_manager() -> SliceManager:
         """
         Not intended as API call
 
@@ -331,7 +323,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_slice_manager()
 
     @staticmethod
-    def new_slice(name):
+    def new_slice(name: str) -> Slice:
         """
         Creates a new slice with the given name.
 
@@ -343,7 +335,7 @@ class fablib():
         return fablib.get_default_fablib_manager().new_slice(name)
 
     @staticmethod
-    def get_site_advertisment(site):
+    def get_site_advertisment(site: str) -> FimNode:
         """
         Not intended for API use.
 
@@ -357,7 +349,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_site_advertisment(site)
 
     @staticmethod
-    def get_available_resources(update=False):
+    def get_available_resources(update: bool = False) -> Resources:
         """
         Get the available resources.
 
@@ -372,7 +364,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_available_resources(update=update)
 
     @staticmethod
-    def get_fim_slice(excludes=[SliceState.Dead, SliceState.Closing]):
+    def get_fim_slice(excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing]) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
 
@@ -390,7 +382,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_fim_slice(excludes=excludes)
 
     @staticmethod
-    def get_slices(excludes=[SliceState.Dead, SliceState.Closing]):
+    def get_slices(excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing]) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -406,7 +398,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_slices(excludes=excludes)
 
     @staticmethod
-    def get_slice(name=None, slice_id=None):
+    def get_slice(name: str = None, slice_id: str = None) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -426,7 +418,7 @@ class fablib():
         return fablib.get_default_fablib_manager().get_slice(name=name, slice_id=slice_id)
 
     @staticmethod
-    def delete_slice(slice_name=None):
+    def delete_slice(slice_name: str = None):
         """
         Deletes a slice by name.
 
@@ -436,7 +428,7 @@ class fablib():
         return fablib.get_default_fablib_manager().delete_slice(slice_name=slice_name)
 
     @staticmethod
-    def delete_all(progress=True):
+    def delete_all(progress: bool = True):
         """
         Deletes all slices on the slice manager.
 
@@ -469,11 +461,11 @@ class fablib():
         return fablib.get_default_fablib_manager().set_log_level(log_level)
 
     @staticmethod
-    def isJupyterNotebook():
-        return fablib.get_default_fablib_manager().isJupyterNotebook()
+    def is_jupyter_notebook() -> bool:
+        return fablib.get_default_fablib_manager().is_jupyter_notebook()
 
 
-class FablibManager():
+class FablibManager:
     FABRIC_BASTION_USERNAME = "FABRIC_BASTION_USERNAME"
     FABRIC_BASTION_KEY_LOCATION = "FABRIC_BASTION_KEY_LOCATION"
     FABRIC_BASTION_HOST = "FABRIC_BASTION_HOST"
@@ -503,11 +495,10 @@ class FablibManager():
 
     ssh_thread_pool_executor = None
 
-
-    def read_fabric_rc(self, file_path):
+    def read_fabric_rc(self, file_path: str):
         vars = {}
 
-        # file_path = os.environ[‘HOME’]+”/work/fabric_config/fabric_rc”
+        # file_path = os.environ['HOME']+ "/work/fabric_config/fabric_rc"
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 for line in f:
@@ -518,16 +509,16 @@ class FablibManager():
         return vars
 
     def __init__(self,
-                 fabric_rc=None,
-                 credmgr_host=None,
-                 orchestrator_host=None,
-                 fabric_token=None,
-                 project_id=None,
-                 bastion_username=None,
-                 bastion_key_filename=None,
+                 fabric_rc: str = None,
+                 credmgr_host: str = None,
+                 orchestrator_host: str = None,
+                 fabric_token: str = None,
+                 project_id: str = None,
+                 bastion_username: str = None,
+                 bastion_key_filename: str = None,
                  log_level=None,
-                 log_file=None,
-                 data_dir=None):
+                 log_file: str = None,
+                 data_dir: str = None):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -537,9 +528,6 @@ class FablibManager():
          - defaults (if needed and possible)
 
         """
-        super().__init__()
-
-        #initialized thread pool for ssh connections
         self.ssh_thread_pool_executor = ThreadPoolExecutor(10)
 
         # init attributes
@@ -547,9 +535,7 @@ class FablibManager():
         self.log_file = self.default_log_file
         self.log_level = self.default_log_level
         self.set_log_level(self.log_level)
-
-        #self.set_log_file(log_file)
-        self.data_dir = data_dir
+        self.data_dir = None
 
         # Setup slice key dict
         # self.slice_keys = {}
@@ -594,7 +580,7 @@ class FablibManager():
                 self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
 
         # Set config values from fabric_rc file
-        if fabric_rc == None:
+        if fabric_rc is None:
             fabric_rc = self.default_fabric_rc
 
         fabric_rc_dict = self.read_fabric_rc(fabric_rc)
@@ -640,41 +626,45 @@ class FablibManager():
             self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL])
 
         # Set config values from constructor arguments
-        if credmgr_host != None:
+        if credmgr_host is not None:
             self.credmgr_host = credmgr_host
-        if orchestrator_host != None:
+        if orchestrator_host is not None:
             self.orchestrator_host = orchestrator_host
-        if fabric_token != None:
+        if fabric_token is not None:
             self.fabric_token = fabric_token
-        if project_id != None:
+        if project_id is not None:
             self.project_id = project_id
-        if bastion_username != None:
+        if bastion_username is not None:
             self.bastion_username = bastion_username
-        if bastion_key_filename != None:
+        if bastion_key_filename is not None:
             self.bastion_key_filename = bastion_key_filename
-        if log_level != None:
+        if log_level is not None:
             self.set_log_level(log_level)
-        if log_file != None:
-            self.set_log_file(log_file)
-        if data_dir != None:
+        if log_file is not None:
+            self.log_level = log_file
+        if data_dir is not None:
             self.data_dir = data_dir
 
+        self.set_log_file(log_file=self.log_file)
+        self.set_data_dir(data_dir=self.data_dir)
 
+        if self.log_file is not None and self.log_level is not None:
+            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                                datefmt='%H:%M:%S')
 
-
-        # self.bastion_private_ipv4_addr = '0.0.0.0'
-        # self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
+        self.bastion_private_ipv4_addr = '0.0.0.0'
+        self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
 
         # Create slice manager
         self.slice_manager = None
         self.resources = None
         self.build_slice_manager()
 
-
-    def get_ssh_thread_pool_executor(self):
+    def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
 
-    def set_data_dir(self, data_dir):
+    def set_data_dir(self, data_dir: str):
         """
         Sets the directory for fablib to store temporary data
 
@@ -705,6 +695,13 @@ class FablibManager():
 
         self.log_level = log_level
 
+    def get_log_file(self) -> str:
+        """
+        Gets the current log file for logging
+
+        :return log_file: new log level
+        :rtype log_file: string
+        """
         try:
             if not os.path.isdir(os.path.dirname(self.log_file)):
                 os.makedirs(os.path.dirname(self.log_file))
@@ -714,17 +711,9 @@ class FablibManager():
         logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                             format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                             datefmt='%H:%M:%S')
-
-    def get_log_file(self):
-        """
-        Gets the current log file for logging
-
-        :return log_file: new log level
-        :rtype log_file: string
-        """
         return self.log_file
 
-    def set_log_file(self, log_file):
+    def set_log_file(self, log_file: str):
         """
         Sets the current log file for logging
 
@@ -743,7 +732,7 @@ class FablibManager():
                             format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                             datefmt='%H:%M:%S')
 
-    def build_slice_manager(self):
+    def build_slice_manager(self) -> SliceManager:
         """
         Not a user facing API call.
 
@@ -769,7 +758,7 @@ class FablibManager():
 
         return self.slice_manager
 
-    def get_image_names(self) -> list[str]:
+    def get_image_names(self) -> List[str]:
         """
         Gets a list of available image names.
 
@@ -791,7 +780,7 @@ class FablibManager():
                 'default_ubuntu_21',
                 'default_ubuntu_22']
 
-    def get_site_names(self) -> list[str]:
+    def get_site_names(self) -> List[str]:
         """
         Gets a list of all available site names.
 
@@ -809,7 +798,7 @@ class FablibManager():
         """
         return str(self.get_resources())
 
-    def show_site(self, site_name):
+    def show_site(self, site_name: str):
         """
         Get a string used to print tabular info about a site
 
@@ -820,7 +809,7 @@ class FablibManager():
         """
         return str(self.get_resources().show_site(site_name))
 
-    def get_resources(self):
+    def get_resources(self) -> Resources:
         """
         Get a reference to the resources object. The resouces obeject
         is used to query for available resources and capacities.
@@ -833,7 +822,7 @@ class FablibManager():
 
         return self.resources
 
-    def get_random_site(self, avoid: list[str] = []) -> str:
+    def get_random_site(self, avoid: List[str] = []) -> str:
         """
         Get a random site.
 
@@ -844,7 +833,7 @@ class FablibManager():
         """
         return self.get_random_sites(count=1, avoid=avoid)[0]
 
-    def get_random_sites(self, count: int = 1, avoid: list[str] = []) -> list[str]:
+    def get_random_sites(self, count: int = 1, avoid: List[str] = []) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -874,7 +863,7 @@ class FablibManager():
             rtn_sites.append(rand_site)
         return rtn_sites
 
-    def get_default_slice_key(self):
+    def get_default_slice_key(self) -> Dict[str, str]:
         """
         Gets the current default_slice_keys as a dictionary containg the
         public and private slice keys.
@@ -896,7 +885,7 @@ class FablibManager():
 
         return
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
         variable values values.
@@ -922,7 +911,7 @@ class FablibManager():
 
                 }
 
-    def get_default_slice_public_key(self):
+    def get_default_slice_public_key(self) -> str:
         """
         Gets the default slice public key.
 
@@ -937,7 +926,7 @@ class FablibManager():
         else:
             return None
 
-    def get_default_slice_public_key_file(self):
+    def get_default_slice_public_key_file(self) -> str:
         """
         Gets the path to the default slice public key file.
 
@@ -952,7 +941,7 @@ class FablibManager():
         else:
             return None
 
-    def get_default_slice_private_key_file(self):
+    def get_default_slice_private_key_file(self) -> str:
         """
         Gets the path to the default slice private key file.
 
@@ -967,7 +956,7 @@ class FablibManager():
         else:
             return None
 
-    def get_default_slice_private_key_passphrase(self):
+    def get_default_slice_private_key_passphrase(self) -> str:
         """
         Gets the passphrase to the default slice private key.
 
@@ -982,7 +971,7 @@ class FablibManager():
         else:
             return None
 
-    def get_credmgr_host(self):
+    def get_credmgr_host(self) -> str:
         """
         Gets the credential manager host site value.
 
@@ -991,7 +980,7 @@ class FablibManager():
         """
         return self.credmgr_host
 
-    def get_orchestrator_host(self):
+    def get_orchestrator_host(self) -> str:
         """
         Gets the orchestrator host site value.
 
@@ -1000,7 +989,7 @@ class FablibManager():
         """
         return self.orchestrator_host
 
-    def get_fabric_token(self):
+    def get_fabric_token(self) -> str:
         """
         Gets the FABRIC token location.
 
@@ -1009,7 +998,7 @@ class FablibManager():
         """
         return self.fabric_token
 
-    def get_bastion_username(self):
+    def get_bastion_username(self) -> str:
         """
         Gets the FABRIC Bastion username.
 
@@ -1018,7 +1007,7 @@ class FablibManager():
         """
         return self.bastion_username
 
-    def get_bastion_key_filename(self):
+    def get_bastion_key_filename(self) -> str:
         """
         Gets the FABRIC Bastion key filename.
 
@@ -1027,7 +1016,7 @@ class FablibManager():
         """
         return self.bastion_key_filename
 
-    def get_bastion_public_addr(self):
+    def get_bastion_public_addr(self) -> str:
         """
         Gets the FABRIC Bastion host address.
 
@@ -1036,7 +1025,7 @@ class FablibManager():
         """
         return self.bastion_public_addr
 
-    def get_bastion_private_ipv4_addr(self):
+    def get_bastion_private_ipv4_addr(self) -> str:
         """
         Gets the FABRIC Bastion private IPv4 host address. This is the
         internally faceing IPv4 address needed to use paramiko
@@ -1046,7 +1035,7 @@ class FablibManager():
         """
         return self.bastion_private_ipv4_addr
 
-    def get_bastion_private_ipv6_addr(self):
+    def get_bastion_private_ipv6_addr(self) -> str:
         """
         Gets the FABRIC Bastion private IPv6 host address. This is the
         internally faceing IPv4 address needed to use paramiko
@@ -1056,7 +1045,7 @@ class FablibManager():
         """
         return self.bastion_private_ipv6_addr
 
-    def set_slice_manager(self, slice_manager):
+    def set_slice_manager(self, slice_manager: SliceManager):
         """
         Not intended as API call
 
@@ -1067,7 +1056,7 @@ class FablibManager():
         """
         self.slice_manager = slice_manager
 
-    def get_slice_manager(self):
+    def get_slice_manager(self) -> SliceManager:
         """
         Not intended as API call
 
@@ -1079,7 +1068,7 @@ class FablibManager():
         """
         return self.slice_manager
 
-    def new_slice(self, name):
+    def new_slice(self, name: str) -> Slice:
         """
         Creates a new slice with the given name.
 
@@ -1089,10 +1078,9 @@ class FablibManager():
         :rtype: Slice
         """
         # fabric = fablib()
-        from fabrictestbed_extensions.fablib.slice import Slice
         return Slice.new_slice(self, name=name)
 
-    def get_site_advertisment(self, site):
+    def get_site_advertisment(self, site: str) -> FimNode:
         """
         Not intended for API use.
 
@@ -1109,21 +1097,19 @@ class FablibManager():
 
         return topology.sites[site]
 
-    def get_available_resources(self, update=False):
+    def get_available_resources(self, update: bool = False) -> Resources:
         """
         Get the available resources.
 
         Optionally update the availalbe resources by querying the FABRIC
         services. Otherwise, this method returns the exisitng information.
 
-        :param site: update
-        :type site: Bool
+        :param update:
         :return: Availalbe Resources object
-        :rtype: Resources
         """
         from fabrictestbed_extensions.fablib.resources import Resources
 
-        if self.resources == None:
+        if self.resources is None:
             self.resources = Resources(self)
 
         if update:
@@ -1131,7 +1117,7 @@ class FablibManager():
 
         return self.resources
 
-    def get_fim_slice(self, excludes=[SliceState.Dead, SliceState.Closing]):
+    def get_fim_slice(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing]) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
 
@@ -1156,7 +1142,8 @@ class FablibManager():
             raise Exception(f"Failed to get slice list: {slices}")
         return return_slices
 
-    def get_slices(self, excludes=[SliceState.Dead, SliceState.Closing]):
+    def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
+                   slice_name: str = None, slice_id: str = None) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -1166,16 +1153,17 @@ class FablibManager():
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
+        :param slice_name
+        :param slice_id
         :return: a list of slices
         :rtype: List[Slice]
         """
-        from fabrictestbed_extensions.fablib.slice import Slice
         import time
 
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes)
+        return_status, slices = self.get_slice_manager().slices(excludes=excludes, name=slice_name, slice_id=slice_id)
 
         if self.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -1184,12 +1172,12 @@ class FablibManager():
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(Slice.get_slice(self, sm_slice=slice, load_config=False))
+                return_slices.append(Slice.get_slice(self, sm_slice=slice))
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices
 
-    def get_slice(self, name=None, slice_id=None):
+    def get_slice(self, name: str = None, slice_id: str = None) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1206,25 +1194,24 @@ class FablibManager():
         :return: the slice, if found
         :rtype: Slice
         """
-        # Get the appropriat slices list
+        # Get the appropriate slices list
         if slice_id:
             # if getting by slice_id consider all slices
-            slices = self.get_slices(excludes=[])
+            slices = self.get_slices(excludes=[], slice_id=slice_id)
 
-            for slice in slices:
-                if slice_id != None and slice.get_slice_id() == slice_id:
-                    return slice
+            if len(slices) == 1:
+                return slices[0]
+            else:
+                raise Exception(f"More than 1 slice found with slice_id: {slice_id}")
         elif name:
             # if getting by name then only consider active slices
-            slices = self.get_slices(excludes=[SliceState.Dead, SliceState.Closing])
+            slices = self.get_slices(excludes=[SliceState.Dead, SliceState.Closing], slice_name=name)
 
-            for slice in slices:
-                if name != None and slice.get_name() == name:
-                    return slice
+            return slices[0]
         else:
             raise Exception("get_slice requires slice name (name) or slice id (slice_id)")
 
-    def delete_slice(self, slice_name=None):
+    def delete_slice(self, slice_name: str = None):
         """
         Deletes a slice by name.
 
@@ -1234,7 +1221,7 @@ class FablibManager():
         slice = self.get_slice(slice_name)
         slice.delete()
 
-    def delete_all(self, progress=True):
+    def delete_all(self, progress: bool = True):
         """
         Deletes all slices on the slice manager.
 
@@ -1257,7 +1244,7 @@ class FablibManager():
         """
         return self.log_level
 
-    def isJupyterNotebook(self):
+    def is_jupyter_notebook(self) -> bool:
         try:
             shell = get_ipython().__class__.__name__
             if shell == 'ZMQInteractiveShell':
@@ -1268,22 +1255,3 @@ class FablibManager():
                 return False  # Other type (?)
         except NameError:
             return False
-
-
-# fablib.set_log_level(logging.DEBUG)
-# try:
-#    os.makedirs("/tmp/fablib")
-# except:
-#    pass
-# try:
-#    os.makedirs("/tmp/fablib/fabric_data")
-# except:
-#   pass
-
-# logging.basicConfig(filename='/tmp/fablib/fablib.log',
-#                    level=fablib.get_log_level(),
-#                    format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-#                    datefmt='%H:%M:%S')
-
-# init fablib object
-#fablib.default_fablib_manager = FablibManager()

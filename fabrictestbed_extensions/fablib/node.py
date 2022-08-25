@@ -22,45 +22,40 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
-import os
-import traceback
-import re
+from __future__ import annotations
 import json
-
-import functools
+import threading
 import time
 import paramiko
 import logging
 
-from fim.slivers.network_service import NSLayer
 from tabulate import tabulate
 
+from typing import List, Union, Tuple
 
-import importlib.resources as pkg_resources
-from typing import List
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from fabrictestbed_extensions.fablib.slice import Slice
+    from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fim.slivers.network_service import NSLayer
 
+from fabrictestbed.slice_editor import Labels, CapacityHints, ServiceType
+from fabrictestbed.slice_editor import Capacities
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
-from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.component import Component
+from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed.slice_editor import Node as FimNode
 
 
-
-class Node():
+class Node:
     default_cores = 2
     default_ram = 8
     default_disk = 10
     default_image = 'default_rocky_8'
 
-
-    def __init__(self, slice, node):
+    def __init__(self, slice: Slice, node: FimNode):
         """
         Constructor. Sets the fablib slice and FIM node based on arguments.
         :param slice: the fablib slice to have this node on
@@ -71,8 +66,10 @@ class Node():
         super().__init__()
         self.fim_node = node
         self.slice = slice
+        self.host = None
+        self.ip_addr_list_json = None
 
-        #Try to set the username.
+        # Try to set the username.
         try:
             self.set_username()
         except:
@@ -82,7 +79,6 @@ class Node():
             self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
         except:
             self.sliver = None
-
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
@@ -113,7 +109,7 @@ class Node():
 
         return tabulate(table) #, headers=["Property", "Value"])
 
-    def get_sliver(self):
+    def get_sliver(self) -> OrchestratorSliver:
         """
         Not intended as API call
         Gets the node SM sliver
@@ -123,7 +119,7 @@ class Node():
         return self.sliver
 
     @staticmethod
-    def new_node(slice=None, name=None, site=None, avoid=[]):
+    def new_node(slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []):
         """
         Not intended for API call. See: Slice.add_node()
         Creates a new FABRIC node and returns a fablib node with the new node.
@@ -133,13 +129,13 @@ class Node():
         :type name: str
         :param site: the name of the site to build the node on
         :type site: str
+        :param avoid: a list of node names to avoid
+        :type avoid: List[str]
         :return: a new fablib node
         :rtype: Node
         """
-        from fabrictestbed_extensions.fablib.node import Node
-
-        if site==None:
-            [site] = fablib.get_random_sites(avoid=avoid)
+        if site is None:
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))
@@ -149,7 +145,7 @@ class Node():
         return node
 
     @staticmethod
-    def get_node(slice=None, node=None):
+    def get_node(slice: Slice = None, node=None):
         """
         Not intended for API call.
         Returns a new fablib node using existing FABRIC resources.
@@ -160,10 +156,9 @@ class Node():
         :return: a new fablib node storing resources
         :rtype: Node
         """
-        from fabrictestbed_extensions.fablib.node import Node
         return Node(slice, node)
 
-    def get_fim_node(self):
+    def get_fim_node(self) -> FimNode:
         """
         Not intended for API call.
         Gets the FABRIC node associated with this fablib node.
@@ -172,7 +167,7 @@ class Node():
         """
         return self.fim_node
 
-    def set_capacities(self, cores=2, ram=2, disk=10):
+    def set_capacities(self, cores: int = 2, ram: int = 2, disk: int = 10):
         """
         Sets the capacities of the FABRIC node.
         :param cores: the number of cores to set on this node
@@ -182,14 +177,14 @@ class Node():
         :param disk: the amount of disk space to set on this node
         :type disk: int
         """
-        cores=int(cores)
-        ram=int(ram)
-        disk=int(disk)
+        cores = int(cores)
+        ram = int(ram)
+        disk = int(disk)
 
         cap = Capacities(core=cores, ram=ram, disk=disk)
         self.get_fim_node().set_properties(capacities=cap)
 
-    def set_instance_type(self, instance_type):
+    def set_instance_type(self, instance_type: str):
         """
         Sets the instance type of this fablib node on the FABRIC node.
         :param instance_type: the name of the instance type to set
@@ -197,16 +192,15 @@ class Node():
         """
         self.get_fim_node().set_properties(capacity_hints=CapacityHints(instance_type=instance_type))
 
-    def set_username(self, username=None):
+    def set_username(self, username: str = None):
         """
         Not intended as an API call.
         Sets this fablib node's username
         Optional username parameter. The username likely should be picked
         to match the image type.
-        :param instance_type: (optional) the name of the instance type to set
-        :type instance_type: String
+        :param username: username
         """
-        if username != None:
+        if username is not None:
             self.username = username
         elif 'centos' in self.get_image():
             self.username = 'centos'
@@ -227,7 +221,7 @@ class Node():
         else:
             self.username = None
 
-    def set_image(self, image, username=None, image_type='qcow2'):
+    def set_image(self, image: str, username: str = None, image_type: str = 'qcow2'):
         """
         Sets the image information of this fablib node on the FABRIC node.
         :param image: the image reference to set
@@ -240,7 +234,7 @@ class Node():
         self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
 
-    def set_host(self, host_name=None):
+    def set_host(self, host_name: str = None):
         """
         Sets the hostname of this fablib node on the FABRIC node.
         :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
@@ -251,7 +245,7 @@ class Node():
         labels.instance_parent = host_name
         self.get_fim_node().set_properties(labels=labels)
 
-        #set an attribute used to get host before Submit
+        # set an attribute used to get host before Submit
         self.host = host_name
 
     def set_site(self, site):
@@ -263,7 +257,7 @@ class Node():
         # example: host_name='renc-w2.fabric-testbed.net'
         self.get_fim_node().site = site
 
-    def get_slice(self):
+    def get_slice(self) -> Slice:
         """
         Gets the fablib slice associated with this node.
         :return: the fablib slice on this node
@@ -271,7 +265,7 @@ class Node():
         """
         return self.slice
 
-    def get_name(self):
+    def get_name(self) -> str or None:
         """
         Gets the name of the FABRIC node.
         :return: the name of the node
@@ -282,7 +276,7 @@ class Node():
         except:
             return None
 
-    def get_cores(self):
+    def get_cores(self) -> int or None:
         """
         Gets the number of cores on the FABRIC node.
         :return: the number of cores on the node
@@ -293,7 +287,7 @@ class Node():
         except:
             return None
 
-    def get_ram(self):
+    def get_ram(self) -> int or None:
         """
         Gets the amount of RAM on the FABRIC node.
         :return: the amount of RAM on the node
@@ -304,7 +298,7 @@ class Node():
         except:
             return None
 
-    def get_disk(self):
+    def get_disk(self) -> int or None:
         """
         Gets the amount of disk space on the FABRIC node.
         :return: the amount of disk space on the node
@@ -315,7 +309,7 @@ class Node():
         except:
             return None
 
-    def get_image(self):
+    def get_image(self) -> str or None:
         """
         Gets the image reference on the FABRIC node.
         :return: the image reference on the node
@@ -326,7 +320,7 @@ class Node():
         except:
             return None
 
-    def get_image_type(self):
+    def get_image_type(self) -> str or None:
         """
         Gets the image type on the FABRIC node.
         :return: the image type on the node
@@ -337,23 +331,20 @@ class Node():
         except:
             return None
 
-    def get_host(self):
+    def get_host(self) -> str or None:
         """
         Gets the hostname on the FABRIC node.
         :return: the hostname on the node
         :rtype: String
         """
         try:
-            try:
-                #If we set the host but have not yet submitted
+            if self.host is not None:
                 return self.host
-            except:
-                pass
             return self.get_fim_node().get_property(pname='label_allocations').instance_parent
         except:
             return None
 
-    def get_site(self):
+    def get_site(self) -> str or None:
         """
         Gets the sitename on the FABRIC node.
         :return: the sitename on the node
@@ -364,7 +355,7 @@ class Node():
         except:
             return None
 
-    def get_management_ip(self):
+    def get_management_ip(self) -> str or None:
         """
         Gets the management IP on the FABRIC node.
         :return: management IP
@@ -375,7 +366,7 @@ class Node():
         except:
             return None
 
-    def get_reservation_id(self):
+    def get_reservation_id(self) -> str or None:
         """
         Gets the reservation ID on the FABRIC node.
         :return: reservation ID on the node
@@ -386,7 +377,7 @@ class Node():
         except:
             return None
 
-    def get_reservation_state(self):
+    def get_reservation_state(self) -> str or None:
         """
         Gets the reservation state on the FABRIC node.
         :return: the reservation state on the node
@@ -397,7 +388,7 @@ class Node():
         except:
             return None
 
-    def get_error_message(self):
+    def get_error_message(self) -> str or None:
         """
         Gets the error message on the FABRIC node.
         :return: the error message on the node
@@ -408,7 +399,7 @@ class Node():
         except:
             return ""
 
-    def get_interfaces(self):
+    def get_interfaces(self) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
         :return: a list of interfaces on the node
@@ -421,7 +412,7 @@ class Node():
 
         return interfaces
 
-    def get_interface(self, name=None, network_name=None):
+    def get_interface(self, name: str = None, network_name: str = None) -> Interface or None:
         """
         Gets a particular interface associated with a FABRIC node.
         Accepts either the interface name or a network_name. If a network name
@@ -444,12 +435,13 @@ class Node():
                         return interface
         elif network_name is not None:
             for interface in self.get_interfaces():
-                if interface != None and interface.get_network() != None and interface.get_network().get_name() == network_name:
+                if interface is not None and interface.get_network() is not None and \
+                        interface.get_network().get_name() == network_name:
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
 
-    def get_username(self):
+    def get_username(self) -> str:
         """
         Gets the username on this fablib node.
         :return: the username on this node
@@ -457,7 +449,7 @@ class Node():
         """
         return self.username
 
-    def get_public_key(self):
+    def get_public_key(self) -> str:
         """
         Gets the public key on fablib node.
         Important! Slice key management is underdevelopment and this
@@ -467,7 +459,7 @@ class Node():
         """
         return self.get_slice().get_slice_public_key()
 
-    def get_public_key_file(self):
+    def get_public_key_file(self) -> str:
         """
         Gets the public key file path on the fablib node.
         Important! Slice key management is underdevelopment and this
@@ -477,7 +469,7 @@ class Node():
         """
         return self.get_slice().get_slice_public_key_file()
 
-    def get_private_key(self):
+    def get_private_key(self) -> str:
         """
         Gets the private key on the fablib node.
         Important! Slice key management is underdevelopment and this
@@ -487,7 +479,7 @@ class Node():
         """
         return self.get_slice().get_slice_private_key()
 
-    def get_private_key_file(self):
+    def get_private_key_file(self) -> str:
         """
         Gets the private key file path on the fablib slice.
         Important! Slice key management is underdevelopment and this
@@ -497,7 +489,7 @@ class Node():
         """
         return self.get_slice().get_slice_private_key_file()
 
-    def get_private_key_passphrase(self):
+    def get_private_key_passphrase(self) -> str:
         """
         Gets the private key passphrase on the FABLIB slice.
         Important! Slice key management is underdevelopment and this
@@ -507,7 +499,7 @@ class Node():
         """
         return self.get_slice().get_private_key_passphrase()
 
-    def add_component(self, model=None, name=None):
+    def add_component(self, model: str = None, name: str = None) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
         Example model include:
@@ -524,23 +516,21 @@ class Node():
         :return: the new component
         :rtype: Component
         """
-        from fabrictestbed_extensions.fablib.component import Component
         return Component.new_component(node=self, model=model, name=name)
 
-    def get_components(self):
+    def get_components(self) -> List[Component]:
         """
         Gets a list of components associated with this node.
         :return: a list of components on this node
         :rtype: List[Component]
         """
-        from fabrictestbed_extensions.fablib.component import Component
         return_components = []
         for component_name, component in self.get_fim_node().components.items():
-            return_components.append(Component(self,component))
+            return_components.append(Component(self, component))
 
         return return_components
 
-    def get_component(self, name):
+    def get_component(self, name: str) -> Component:
         """
         Gets a particular component associated with this node.
         :param name: the name of the component to search for
@@ -549,16 +539,14 @@ class Node():
         :return: the component on the FABRIC node
         :rtype: Component
         """
-        from fabrictestbed_extensions.fablib.component import Component
         try:
             name = Component.calculate_name(node=self, name=name)
-            return Component(self,self.get_fim_node().components[name])
+            return Component(self, self.get_fim_node().components[name])
         except Exception as e:
             logging.error(e, exc_info=True)
             raise Exception(f"Component not found: {name}")
 
-
-    def get_ssh_command(self):
+    def get_ssh_command(self) -> str:
         """
         Gets a SSH command used to access this node node from a terminal.
         :return: the SSH command to access this node
@@ -569,9 +557,6 @@ class Node():
                                            self.get_fablib_manager().get_bastion_public_addr(),
                                            self.get_username(),
                                            self.get_management_ip())
-
-
-
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -586,17 +571,19 @@ class Node():
         except ValueError:
             return "Invalid"
 
-    def __get_paramiko_key(self, private_key_file=None, get_private_key_passphrase=None):
+    def __get_paramiko_key(self, private_key_file: str = None, get_private_key_passphrase: str = None) -> paramiko.PKey:
         #TODO: This is a bit of a hack and should probably test he keys for their types
         # rather than relying on execptions
         if get_private_key_passphrase:
             try:
-                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),
+                                                             password=self.get_private_key_passphrase())
             except:
                 pass
 
             try:
-                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file(),  password=self.get_private_key_passphrase())
+                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file(),
+                                                                        password=self.get_private_key_passphrase())
             except:
                 pass
         else:
@@ -612,32 +599,31 @@ class Node():
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
-
-    def execute_thread(self, command, retry=3, retry_interval=10, username=None, private_key_file=None, private_key_passphrase=None):
+    def execute_thread(self, command: str, retry: int = 3, retry_interval: int = 10, username: str = None,
+                       private_key_file: str = None, private_key_passphrase: str = None) -> threading.Thread:
         """
-        Creates a thread that calles node.execute().  Results (i.e. stdout, stderr) from the thread can be
+        Creates a thread that calls node.execute().  Results (i.e. stdout, stderr) from the thread can be
         retrieved with by calling thread.result()
         :param command: the command to run
-        :type command: str
         :param retry: the number of times to retry SSH upon failure
-        :type retry: int
         :param retry_interval: the number of seconds to wait before retrying SSH upon failure
-        :type retry_interval: int
+        :param username: username
+        :param private_key_file: private key file
+        :param private_key_passphrase: pass phrase
         :return: a thread that called node.execute()
-        :rtype: Thread
         :raise Exception: if management IP is invalid
         """
 
         return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.execute,
-                                                                                 command,
-                                                                                 retry=retry,
-                                                                                 retry_interval=retry_interval,
-                                                                                 username=username,
-                                                                                 private_key_file=private_key_file,
-                                                                                 private_key_passphrase=private_key_passphrase)
+                                                                               command,
+                                                                               retry=retry,
+                                                                               retry_interval=retry_interval,
+                                                                               username=username,
+                                                                               private_key_file=private_key_file,
+                                                                               private_key_passphrase=private_key_passphrase)
 
-
-    def execute(self, command, retry=3, retry_interval=10, username=None, private_key_file=None, private_key_passphrase=None):
+    def execute(self, command: str, retry: int = 3, retry_interval: int = 10, username: str = None,
+                private_key_file:str = None, private_key_passphrase:str = None) -> Tuple[str, str]:
         """
         Runs a command on the FABRIC node.
         :param command: the command to run
@@ -646,6 +632,9 @@ class Node():
         :type retry: int
         :param retry_interval: the number of seconds to wait before retrying SSH upon failure
         :type retry_interval: int
+        :param username
+        :param private_key_file
+        :param private_key_passphrase
         :return: a tuple of  (stdout[Sting],stderr[String])
         :rtype: Tuple
         :raise Exception: if management IP is invalid
@@ -657,61 +646,55 @@ class Node():
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        #Get and test src and management_ips
+        # Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            #src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
-            src_addr = ('0.0.0.0',22)
+            src_addr = ('0.0.0.0', 22)
 
         elif self.validIPAddress(management_ip) == 'IPv6':
-            #src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
-            src_addr = ('0:0:0:0:0:0:0:0',22)
+            src_addr = ('0:0:0:0:0:0:0:0', 22)
         else:
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
+        bastion_username = self.get_fablib_manager().get_bastion_username()
+        bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
 
-
-        bastion_username=self.get_fablib_manager().get_bastion_username()
-        bastion_key_file=self.get_fablib_manager().get_bastion_key_filename()
-
-        if username != None:
+        if username is not None:
             node_username = username
         else:
-            node_username=self.username
+            node_username = self.username
 
-        if private_key_file != None:
+        if private_key_file is not None:
             node_key_file = private_key_file
         else:
-            node_key_file=self.get_private_key_file()
+            node_key_file = self.get_private_key_file()
 
-        if private_key_passphrase != None:
+        if private_key_passphrase is not None:
             node_key_passphrase = private_key_passphrase
         else:
-            node_key_passphrase=self.get_private_key_file()
+            node_key_passphrase=self.get_private_key_passphrase()
 
         for attempt in range(retry):
             try:
-                key = self.__get_paramiko_key(private_key_file=node_key_file, get_private_key_passphrase=node_key_passphrase)
+                key = self.__get_paramiko_key(private_key_file=node_key_file,
+                                              get_private_key_passphrase=node_key_passphrase)
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=bastion_username, key_filename=bastion_key_file)
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=bastion_username,
+                                key_filename=bastion_key_file)
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
 
                 client = paramiko.SSHClient()
-                #client.load_system_host_keys()
-                #client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
                 client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
 
-                #stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
                 stdin, stdout, stderr = client.exec_command(command)
                 rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                 rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-
 
                 client.close()
                 bastion_channel.close()
@@ -744,7 +727,8 @@ class Node():
 
                 #Fail, try again
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-                    logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
+                    logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, "
+                                  f"Node: {self.get_name()}, trying again")
                     logging.debug(e, exc_info=True)
 
                 time.sleep(retry_interval)
@@ -752,7 +736,7 @@ class Node():
 
         raise Exception("ssh failed: Should not get here")
 
-    def upload_file_thread(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def upload_file_thread(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
         """
         Creates a thread that calls node.upload_file().  Results from the thread can be
         retrieved with by calling thread.result()
@@ -774,7 +758,7 @@ class Node():
                                                                                retry=retry,
                                                                                retry_interval=retry_interval)
 
-    def upload_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def upload_file(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
         """
         Upload a local file to a remote location on the node.
         :param local_file_path: the path to the file to upload
@@ -787,21 +771,16 @@ class Node():
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import paramiko
-        import time
-
         logging.debug(f"upload node: {self.get_name()}, local_file_path: {local_file_path}")
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        #Get and test src and management_ips
+        # Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
             src_addr = ('0.0.0.0', 22)
         elif self.validIPAddress(management_ip) == 'IPv6':
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
             src_addr = ('0:0:0:0:0:0:0:0', 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
@@ -809,15 +788,17 @@ class Node():
 
         for attempt in range(retry):
             try:
-                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
+                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(),
+                                              get_private_key_passphrase=self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=self.get_fablib_manager().get_bastion_username(), key_filename=self.get_fablib_manager().get_bastion_key_filename())
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(),
+                                username=self.get_fablib_manager().get_bastion_username(),
+                                key_filename=self.get_fablib_manager().get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
-
 
                 client = paramiko.SSHClient()
                 client.load_system_host_keys()
@@ -834,11 +815,10 @@ class Node():
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
-                    logging.debug(f"Running node.upload_file(): file: {local_file_path}, elapsed time: {end - start} seconds")
+                    logging.debug(f"Running node.upload_file(): file: {local_file_path}, "
+                                  f"elapsed time: {end - start} seconds")
 
                 return file_attributes
-                #success, skip other tries
-                break
             except Exception as e:
                 try:
                     client.close()
@@ -863,7 +843,7 @@ class Node():
 
         raise Exception("scp upload failed")
 
-    def download_file_thread(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def download_file_thread(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
         """"
         Creates a thread that calls node.download_file().  Results from the thread can be
         retrieved with by calling thread.result()
@@ -885,8 +865,7 @@ class Node():
                                                                                retry=retry,
                                                                                retry_interval=retry_interval)
 
-
-    def download_file(self, local_file_path, remote_file_path, retry=3, retry_interval=10):
+    def download_file(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
         """
         Download a remote file from the node to a local destination.
         :param local_file_path: the destination path for the remote file
@@ -898,23 +877,17 @@ class Node():
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
         """
-        import paramiko
-        import time
-
         logging.debug(f"download node: {self.get_name()}, remote_file_path: {remote_file_path}")
-
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        #Get and test src and management_ips
+        # Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
         if self.validIPAddress(management_ip) == 'IPv4':
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
             src_addr = ('0.0.0.0', 22)
 
         elif self.validIPAddress(management_ip) == 'IPv6':
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
             src_addr = ('0:0:0:0:0:0:0:0', 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
@@ -922,11 +895,14 @@ class Node():
 
         for attempt in range(retry):
             try:
-                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(), get_private_key_passphrase=self.get_private_key_file())
+                key = self.__get_paramiko_key(private_key_file=self.get_private_key_file(),
+                                              get_private_key_passphrase=self.get_private_key_file())
 
                 bastion=paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=self.get_fablib_manager().get_bastion_username(), key_filename=self.get_fablib_manager().get_bastion_key_filename())
+                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(),
+                                username=self.get_fablib_manager().get_bastion_username(),
+                                key_filename=self.get_fablib_manager().get_bastion_key_filename())
 
                 bastion_transport = bastion.get_transport()
                 bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
@@ -938,8 +914,7 @@ class Node():
 
                 client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
 
-
-                ftp_client=client.open_sftp()
+                ftp_client = client.open_sftp()
                 file_attributes = ftp_client.get(remote_file_path, local_file_path)
                 ftp_client.close()
 
@@ -947,11 +922,10 @@ class Node():
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
-                    logging.debug(f"Running node.download(): file: {remote_file_path}, elapsed time: {end - start} seconds")
+                    logging.debug(f"Running node.download(): file: {remote_file_path}, "
+                                  f"elapsed time: {end - start} seconds")
 
                 return file_attributes
-                #success, skip other tries
-                break
             except Exception as e:
                 try:
                     client.close()
@@ -976,7 +950,8 @@ class Node():
 
         raise Exception("scp download failed")
 
-    def upload_directory_thread(self, local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+    def upload_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
+                                retry_interval: int = 10):
         """"
         Creates a thread that calls node.upload_directory. Results from the thread can be
         retrieved with by calling thread.result()
@@ -998,7 +973,8 @@ class Node():
                                                                                retry=retry,
                                                                                retry_interval=retry_interval)
 
-    def upload_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+    def upload_directory(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
+                         retry_interval: int = 10):
         """
         Upload a directory to remote location on the node.
         Makes a gzipped tarball of a directory and uploades it to a node. Then
@@ -1029,10 +1005,12 @@ class Node():
 
         self.upload_file(temp_file, temp_file, retry, retry_interval)
         os.remove(temp_file)
-        self.execute("mkdir -p "+remote_directory_path + "; tar -xf " + temp_file + " -C " + remote_directory_path + "; rm " + temp_file, retry, retry_interval)
+        self.execute("mkdir -p "+remote_directory_path + "; tar -xf " + temp_file + " -C " +
+                     remote_directory_path + "; rm " + temp_file, retry, retry_interval)
         return "success"
 
-    def download_directory_thread(self, local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+    def download_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
+                                  retry_interval: int = 10):
         """"
         Creates a thread that calls node.download_directory. Results from the thread can be
         retrieved with by calling thread.result()
@@ -1052,7 +1030,8 @@ class Node():
                                                                                retry=retry,
                                                                                retry_interval=retry_interval)
 
-    def download_directory(self,local_directory_path, remote_directory_path, retry=3, retry_interval=10):
+    def download_directory(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
+                           retry_interval: int = 10):
         """
         Downloads a directory from remote location on the node.
         Makes a gzipped tarball of a directory and downloads it from a node. Then
@@ -1082,7 +1061,7 @@ class Node():
         os.remove(temp_file)
         return "success"
 
-    def test_ssh(self):
+    def test_ssh(self) -> bool:
         """
         Test whether SSH is functional on the node.
         :return: true if SSH is working, false otherwise
@@ -1091,7 +1070,7 @@ class Node():
         logging.debug(f"test_ssh: node {self.get_name()}")
 
         try:
-            if self.get_management_ip() == None:
+            if self.get_management_ip() is None:
                 logging.debug(f"Node: {self.get_name()} failed test_ssh because management_ip == None" )
 
             self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
@@ -1101,7 +1080,7 @@ class Node():
             return False
         return True
 
-    def get_management_os_interface(self):
+    def get_management_os_interface(self) -> str or None:
         """
         Gets the name of the management interface used by the node's operating
         system.
@@ -1109,7 +1088,7 @@ class Node():
         :rtype: String
         """
         # TODO: Add docstring after doc networking classes
-        #Assumes that the default route uses the management network
+        # Assumes that the default route uses the management network
         logging.debug(f"{self.get_name()}->get_management_os_interface")
         stdout, stderr = self.execute("sudo ip -j route list")
         stdout_json = json.loads(stdout)
@@ -1118,9 +1097,10 @@ class Node():
         for i in stdout_json:
             if i['dst'] == 'default':
                 logging.debug(f"{self.get_name()}->get_management_os_interface: management_os_interface {i['dev']}")
-                return  i['dev']
+                return i['dev']
+        return None
 
-    def get_dataplane_os_interfaces(self):
+    def get_dataplane_os_interfaces(self) -> List[dict]:
         """
         Gets a list of all the dataplane interface names used by the node's
         operating system.
@@ -1145,7 +1125,7 @@ class Node():
         for iface in self.get_dataplane_os_interfaces():
             self.flush_os_interface(iface['ifname'])
 
-    def flush_os_interface(self, os_iface):
+    def flush_os_interface(self, os_iface: str):
         """
         Flush the configuration of an interface in the node
         :param os_iface: the name of the interface to flush
@@ -1154,18 +1134,10 @@ class Node():
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
         stdout, stderr = self.execute(f"sudo ip -6 addr flush dev {os_iface}")
 
-
-
-    def validIPAddress(self, IP: str) -> str:
-        try:
-            return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
-        except ValueError:
-            return "Invalid"
-
     def ip_addr_list(self, output='json', update=False):
 
         try:
-            if hasattr(self, 'ip_addr_list_json') and update == False:
+            if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
             else:
                 if output == 'json':
@@ -1179,7 +1151,7 @@ class Node():
             logging.warning(f"Failed to get ip addr list: {e}")
             raise e
 
-    def ip_route_add(self, subnet, gateway):
+    def ip_route_add(self, subnet: Union[IPv4Network, IPv6Network], gateway: Union[IPv4Address, IPv6Address]):
         """
         Add a route on the node.
         :param subnet: The destination subnet
@@ -1187,6 +1159,7 @@ class Node():
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
         """
+        ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1217,7 +1190,8 @@ class Node():
             #             logging.info(f"No conn for device. conn: '{conn}'")
 
             stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager")
-            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop "
+                         f"NetworkManager': stdout: {stdout}\nstderr: {stderr}")
 
             #for iface in self.get_interfaces():
             #    try:
@@ -1229,9 +1203,6 @@ class Node():
             #        iface.ip_link_up()
             #    except Exception as e:
             #        logging.info(f"Attempt to bring up dev failed")
-
-
-
         except Exception as e:
             logging.warning(f"Failed to stop network manager: {e}")
             raise e
@@ -1244,7 +1215,7 @@ class Node():
             logging.warning(f"Failed to start network manager: {e}")
             raise e
 
-    def ip_route_del(self, subnet, gateway):
+    def ip_route_del(self, subnet: Union[IPv4Network, IPv6Network], gateway: Union[IPv4Address, IPv6Address]):
         """
         Delete a route on the node.
         :param subnet: The destination subnet
@@ -1252,6 +1223,7 @@ class Node():
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
         """
+        ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1263,7 +1235,8 @@ class Node():
             logging.warning(f"Failed to del route: {e}")
             raise e
 
-    def ip_addr_add(self, addr, subnet, interface):
+    def ip_addr_add(self, addr: Union[IPv4Address, IPv6Address], subnet: Union[IPv4Network, IPv6Network],
+                    interface: Interface):
         """
         Add an IP to an interface on the node.
         :param addr: IP address
@@ -1273,23 +1246,20 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
             ip_command = "sudo ip"
 
         try:
-            self.ip_link_down(subnet, interface)
-            self.ip_link_up(subnet, interface)
-
             self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
-
-
         except Exception as e:
             logging.warning(f"Failed to add addr: {e}")
             raise e
 
-    def ip_addr_del(self, addr, subnet, interface):
+    def ip_addr_del(self, addr: Union[IPv4Address, IPv6Address], subnet: Union[IPv4Network, IPv6Network],
+                    interface: Interface):
         """
         Delete an IP to an interface on the node.
         :param addr: IP address
@@ -1299,6 +1269,7 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
         elif type(subnet) == IPv4Network:
@@ -1310,7 +1281,7 @@ class Node():
             logging.warning(f"Failed to del addr: {e}")
             raise e
 
-    def ip_link_up(self, subnet, interface):
+    def ip_link_up(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
         """
         Bring up a link on an interface on the node.
         :param subnet: subnet.
@@ -1318,7 +1289,6 @@ class Node():
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-
         try:
             if interface.get_network().get_layer() == NSLayer.L3:
                 if interface.get_network().get_type() == ServiceType.FABNetv6:
@@ -1343,7 +1313,7 @@ class Node():
             logging.warning(f"Failed to up link: {e}")
             raise e
 
-    def ip_link_down(self, subnet, interface):
+    def ip_link_down(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
         """
         Bring down a link on an interface on the node.
         :param subnet: subnet.
@@ -1369,15 +1339,16 @@ class Node():
             logging.warning(f"Failed to down link: {e}")
             raise e
 
-
-
-    def set_ip_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None):
+    def set_ip_os_interface(self, os_iface: str = None, vlan: str = None, ip: str = None, cidr: str = None,
+                            mtu: str = None):
         """
         Depricated
         """
         # TODO: Add docstring after doc networking classes
-        if cidr: cidr=str(cidr)
-        if mtu: mtu=str(mtu)
+        if cidr:
+            cidr = str(cidr)
+        if mtu:
+            mtu = str(mtu)
 
         if self.validIPAddress(ip) == "IPv4":
             ip_command = "sudo ip"
@@ -1386,28 +1357,28 @@ class Node():
         else:
             raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
 
-        #Bring up base iface
+        # Bring up base iface
         logging.debug(f"{self.get_name()}->set_ip_os_interface: os_iface {os_iface}, vlan {vlan}, ip {ip}, cidr {cidr}, mtu {mtu}")
         command = f'{ip_command} link set dev {os_iface} up'
 
-        if mtu != None:
+        if mtu is not None:
             command += f" mtu {mtu}"
         stdout, stderr = self.execute(command)
 
-        #config vlan iface
-        if vlan != None:
-            #create vlan iface
+        # config vlan iface
+        if vlan is not None:
+            # create vlan iface
             command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
             stdout, stderr = self.execute(command)
 
-            #bring up vlan iface
+            # bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
             command = f'{ip_command} link set dev {os_iface} up'
             if mtu != None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command)
 
-        if ip != None and cidr != None:
+        if ip is not None and cidr is not None:
             #Set ip
             command = f"{ip_command} addr add {ip}/{cidr} dev {os_iface}"
             stdout, stderr = self.execute(command)
@@ -1421,7 +1392,6 @@ class Node():
         # TODO: Add docstring after doc networking classes
         self.remove_all_vlan_os_interfaces()
         self.flush_all_os_interfaces()
-
 
     def remove_all_vlan_os_interfaces(self):
         """
@@ -1438,12 +1408,12 @@ class Node():
                 stdout_json.remove(i)
                 continue
 
-            #If iface is vlan linked to base iface
+            # If iface is vlan linked to base iface
             if 'link' in i.keys():
                 self.remove_vlan_os_interface(os_iface=i['ifname'])
 
 
-    def remove_vlan_os_interface(self, os_iface=None):
+    def remove_vlan_os_interface(self, os_iface: str = None):
         """
         Remove one VLAN OS interface
         """
@@ -1456,13 +1426,13 @@ class Node():
             print(f"os_iface: {os_iface}, stdout: {stdout}, stderr: {stderr}")
             raise e
 
-
         link = stdout_json['link']
 
         command = f"sudo ip link del link {link} name {os_iface}"
         stdout, stderr = self.execute(command)
 
-    def add_vlan_os_interface(self, os_iface=None, vlan=None, ip=None, cidr=None, mtu=None, interface=None):
+    def add_vlan_os_interface(self, os_iface: str = None, vlan: str = None, ip: str = None, cidr: str = None,
+                              mtu: str = None, interface: str = None):
         """
         Depricated
         """
@@ -1497,7 +1467,7 @@ class Node():
         if ip != None and cidr != None:
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
 
-    def ping_test(self, dst_ip):
+    def ping_test(self, dst_ip: str) -> bool:
         """
         Test a ping from the node to a destination IP
         :param dst_ip: destination IP String.

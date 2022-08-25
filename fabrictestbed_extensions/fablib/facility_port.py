@@ -22,42 +22,24 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
-import os
-import traceback
-import re
-import json
-
-import functools
-import time
-import paramiko
-import logging
-
-from fim.slivers.network_service import NSLayer
+from __future__ import annotations
 from tabulate import tabulate
 
+from fabrictestbed.slice_editor import Labels, Capacities
+from fabrictestbed_extensions.fablib.interface import Interface
 
-import importlib.resources as pkg_resources
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
-from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
-
-from fabrictestbed_extensions.fablib.fablib import fablib
+if TYPE_CHECKING:
+    from fabrictestbed_extensions.fablib.slice import Slice
+    from fim.user.interface import Interface as FimInterface
 
 
-
-class FacilityPort():
+class FacilityPort:
     fim_interface = None
     slice = None
 
-    def __init__(self, slice, fim_interface):
+    def __init__(self, slice: Slice, fim_interface: FimInterface):
         """
         Constructor. Sets the fablib slice and FIM node based on arguments.
         :param slice: the fablib slice to have this node on
@@ -76,17 +58,17 @@ class FacilityPort():
         :return: Tabulated string of node information
         :rtype: String
         """
-        table = [ ["name", self.get_name()] ]
+        table = [["name", self.get_name()]]
 
-        return tabulate(table) #, headers=["Property", "Value"])
+        return tabulate(table)
 
-    def get_fim_interface(self):
+    def get_fim_interface(self) -> FimInterface:
         return self.fim_interface
 
-    def get_model(self):
+    def get_model(self) -> str:
         return "Facility_Port"
 
-    def get_name(self):
+    def get_name(self) -> str:
         """
         Gets the name of the FABRIC node.
         :return: the name of the node
@@ -94,33 +76,29 @@ class FacilityPort():
         """
         return self.get_fim_interface().name
 
-    def get_site(self):
+    def get_site(self) -> str:
         return self.fim_interface.site
 
     @staticmethod
-    def new_facility_port(slice=None, name=None, site=None, vlan=None, bandwidth=10):
+    def new_facility_port(slice: Slice = None, name: str = None, site: str = None, vlan: str = None,
+                          bandwidth: int = 10):
 
         fim_facility_port = slice.get_fim_topology().add_facility(name=name, site=site,
-                                                                 capacities=Capacities(bw=bandwidth),
-                                                                 labels=Labels(vlan=vlan))
+                                                                  capacities=Capacities(bw=bandwidth),
+                                                                  labels=Labels(vlan=vlan))
         return FacilityPort(slice, fim_facility_port)
 
     @staticmethod
-    def get_facility_port(slice=None, facility_port=None):
+    def get_facility_port(slice: Slice = None, facility_port: FimInterface = None):
         """
-        Not intended for API call.
-        Returns a new fablib node using existing FABRIC resources.
-        :param slice: the fablib slice storing the existing node
-        :type slice: Slice
-        :param node: the FIM node stored in this fablib node
-        :type node: Node
-        :return: a new fablib node storing resources
-        :rtype: Node
+
+        :param slice:
+        :param facility_port:
+        :return:
         """
-        from fabrictestbed_extensions.fablib.facility_port import FacilityPort
         return FacilityPort(slice, facility_port)
 
-    def get_slice(self):
+    def get_slice(self) -> Slice:
         """
         Gets the fablib slice associated with this node.
         :return: the fablib slice on this node
@@ -128,15 +106,7 @@ class FacilityPort():
         """
         return self.slice
 
-    def get_name(self):
-
-        try:
-            return self.get_fim_node().name
-        except:
-            return None
-
-
-    def get_interfaces(self):
+    def get_interfaces(self) -> List[Interface]:
         """
         Gets a particular interface associated with a FABRIC node.
         Accepts either the interface name or a network_name. If a network name
@@ -152,15 +122,8 @@ class FacilityPort():
         :return: an interface on the node
         :rtype: Interface
         """
-
-        from fabrictestbed_extensions.fablib.interface import Interface
-
         ifaces = []
         for fim_interface in self.get_fim_interface().interface_list:
             ifaces.append(Interface(component=self, fim_interface=fim_interface))
 
         return ifaces
-
-
-
-

@@ -22,67 +22,37 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-
-import os
-import traceback
-import re
-
-import functools
-import time
-import logging
-
-from fim.user import Flags
+from __future__ import annotations
+from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
+from ipaddress import IPv4Address
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from fabrictestbed_extensions.fablib.slice import Slice
+    from fabrictestbed_extensions.fablib.node import Node
+    from fabrictestbed_extensions.fablib.network_service import NetworkService
+    from fabrictestbed_extensions.fablib.component import Component
+
+from fim.user.interface import Interface as FimInterface
 
 
-import importlib.resources as pkg_resources
-from typing import List
+class Interface:
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, CapacityHints, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
-#from fabrictestbed_extensions.fabricx.fabricx import FabricX
-#from fabrictestbed_extensions.fabricx.slicex import SliceX
-#from fabrictestbed_extensions.fabricx.nodex import NodeX
-#from .slicex import SliceX
-#from .nodex import NodeX
-#from .fabricx import FabricX
-
-
-from ipaddress import ip_address, IPv4Address
-
-
-#from fim.user import node
-
-
-#from .abc_fablib import AbcFabLIB
-#from .slice Slice
-#from .component import Component
-#from .node import Node
-#from .network_service import NetworkService
-#from .. import images
-
-
-#class Interface(AbcFabLIB):
-class Interface():
-
-    def __init__(self, component=None, fim_interface=None):
+    def __init__(self, component: Component = None, fim_interface: FimInterface = None):
         """
         Constructor. Sets keyword arguments as instance fields.
 
         :param component: the component to set on this interface
         :type component: Component
         :param fim_interface: the FABRIC information model interface to set on this fablib interface
-        :type fim_interface: Interface
+        :type fim_interface: FimInterface
         """
         super().__init__()
-        self.fim_interface  = fim_interface
+        self.fim_interface = fim_interface
         self.component = component
-
+        self.network = None
 
     def __str__(self):
         """
@@ -109,7 +79,6 @@ class Interface():
 
         return tabulate(table)
 
-
     def set_auto_config(self):
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=True)
@@ -127,7 +96,7 @@ class Interface():
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
-    def get_os_interface(self):
+    def get_os_interface(self) -> str:
         """
         Gets a name of the interface the operating system uses for this
         FABLib interface.
@@ -150,7 +119,7 @@ class Interface():
 
         return os_iface
 
-    def get_mac(self):
+    def get_mac(self) -> str:
         """
         Gets the MAC addrress of the interface.
 
@@ -169,21 +138,16 @@ class Interface():
     def get_os_dev(self):
         """
         Gets json output of 'ip addr list' for the interface.
-s
+
         :return: device description
         :rtype: Dict
         """
 
         ip_addr_list_json = self.get_node().ip_addr_list(output='json')
 
-        # print(f"{node.ip_addr_list()}")
         mac = self.get_mac()
-        #print(f"{mac}")
         for dev in ip_addr_list_json:
-            #print(f"dev['address']: {dev['address']}")
             if str(dev['address'].upper()) == str(mac.upper()):
-                #print(f"{dev}")
-                #print(f"device name: {dev['ifname']}")
                 return dev
 
         return None
@@ -204,7 +168,7 @@ s
         except:
             return None
 
-    def get_physical_os_interface_name(self):
+    def get_physical_os_interface_name(self) -> str:
         """
         Gets a name of the physical interface the operating system uses for this
         FABLib interface.
@@ -212,7 +176,7 @@ s
         If the interface requires a FABRIC VLAN tag, the base interface name
         will be returned (i.e. not the VLAN tagged interface)
 
-        :return: physicl OS interface name
+        :return: physical OS interface name
         :rtype: String
         """
         try:
@@ -224,7 +188,7 @@ s
         """
         Not intended for API use
         """
-        if self.get_vlan() != None:
+        if self.get_vlan() is not None:
             self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
                                                   vlan=self.get_vlan(), interface=self)
 
@@ -239,7 +203,6 @@ s
                                             vlan=self.get_vlan(),
                                             ip=ip, cidr=cidr, mtu=mtu)
 
-
     def ip_addr_add(self, addr, subnet):
         """
         Add an IP address to the interface in the node.
@@ -250,7 +213,6 @@ s
         :type subnet: IPv4Network or IPv4Network
         """
         self.get_node().ip_addr_add(addr, subnet, self)
-
 
     def ip_addr_del(self, addr, subnet):
         """
@@ -276,7 +238,6 @@ s
 
         """
         self.get_node().ip_link_down(None, self)
-        #self.execute(f"sudo sysctl net.ipv6.conf.{self.get_physical_os_interface_name()}.disable_ipv6=1")
 
     def ip_link_toggle(self):
         """
@@ -286,29 +247,27 @@ s
         self.get_node().ip_link_down(None, self)
         self.get_node().ip_link_up(None, self)
 
-
-
-
-    def set_vlan(self, vlan=None):
+    def set_vlan(self, vlan: Any = None):
         """
         Set the VLAN on the FABRIC request.
 
         :param addr: vlan
         :type addr: String or int
         """
-        if vlan: vlan=str(vlan)
+        if vlan:
+            vlan = str(vlan)
 
         if_labels = self.get_fim_interface().get_property(pname="labels")
         if_labels.vlan = str(vlan)
         self.get_fim_interface().set_properties(labels=if_labels)
 
-    def get_fim_interface(self):
+    def get_fim_interface(self) -> FimInterface:
         """
         Not intended for API use
         """
         return self.fim_interface
 
-    def get_bandwidth(self):
+    def get_bandwidth(self) -> str:
         """
         Gets the bandwidth of an interface. Basic NICs claim 0 bandwidth but
         are 100 Gbps shared by all Basic NICs on the host.
@@ -318,7 +277,7 @@ s
         """
         return self.get_fim_interface().capacities.bw
 
-    def get_vlan(self):
+    def get_vlan(self) -> str:
         """
         Gets the FABRIC VLAN of an interface.
 
@@ -331,7 +290,7 @@ s
             vlan = None
         return vlan
 
-    def get_reservation_id(self):
+    def get_reservation_id(self) -> str or None:
         try:
             #TODO THIS DOESNT WORK.
             #print(f"{self.get_fim_interface()}")
@@ -339,7 +298,7 @@ s
         except:
             return None
 
-    def get_reservation_state(self):
+    def get_reservation_state(self) -> str or None:
         """
         Gets the reservation state
 
@@ -351,7 +310,7 @@ s
         except:
             return None
 
-    def get_error_message(self):
+    def get_error_message(self) -> str:
         """
         Gets the error messages
 
@@ -363,8 +322,7 @@ s
         except:
             return ""
 
-
-    def get_name(self):
+    def get_name(self) -> str:
         """
         Gets the name of this interface.
 
@@ -373,7 +331,7 @@ s
         """
         return self.get_fim_interface().name
 
-    def get_component(self):
+    def get_component(self) -> Component:
         """
         Gets the component attached to this interface.
 
@@ -382,7 +340,7 @@ s
         """
         return self.component
 
-    def get_model(self):
+    def get_model(self) -> str:
         """
         Gets the component model type on this interface's component.
 
@@ -391,7 +349,7 @@ s
         """
         return self.get_component().get_model()
 
-    def get_site(self):
+    def get_site(self) -> str:
         """
         Gets the site this interface's component is on.
 
@@ -400,7 +358,7 @@ s
         """
         return self.get_component().get_site()
 
-    def get_slice(self):
+    def get_slice(self) -> Slice:
         """
         Gets the FABLIB slice this interface's node is attached to.
 
@@ -409,7 +367,7 @@ s
         """
         return self.get_node().get_slice()
 
-    def get_node(self):
+    def get_node(self) -> Node:
         """
         Gets the node this interface's component is on.
 
@@ -418,14 +376,14 @@ s
         """
         return self.get_component().get_node()
 
-    def get_network(self):
+    def get_network(self) -> NetworkService:
         """
         Gets the network this interface is on.
 
         :return: the network service this interface is on
         :rtype: NetworkService
         """
-        if hasattr(self, 'network'):
+        if self.network is not None:
             #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
             return self.network
         else:
