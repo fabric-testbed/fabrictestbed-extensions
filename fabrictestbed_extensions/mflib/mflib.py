@@ -204,12 +204,10 @@ class core():
         except FileExistsError:
             pass
         
-    
-
                 
     # This is a temporary method needed untill modify slice ability is avaialble. 
     @staticmethod 
-    def addMeasNode(self,slice, cores=None, ram=None, disk=None):
+    def addMeasNode(slice, cores=None, ram=None, disk=None):
         """
         Adds measurement components to an unsubmitted slice object
         :param slice: Unsubmitted Slice Object
