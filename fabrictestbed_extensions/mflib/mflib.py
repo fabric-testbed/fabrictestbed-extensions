@@ -170,11 +170,7 @@ class core():
 
         return tunnel_cmd 
 
-    # Many methods use the followig parameter set
-    # service - unique service name
-    # command - command to run in services directory on meas node
-    # data - JSON serializable object
-    # files - list of files to upload
+  
     def __init__(self, local_storage_directory="/tmp/mflib"):
         """
         Constructor.
@@ -213,9 +209,9 @@ class core():
                 
     # This is a temporary method needed untill modify slice ability is avaialble. 
     @staticmethod 
-    def addMeasNode(self,slice):
+    def addMeasNode(self,slice, cores=None, ram=None, disk=None):
         """
-        Adds measurement components to an unsubmitted slice, then submits.
+        Adds measurement components to an unsubmitted slice object
         :param slice: Unsubmitted Slice Object
         :rtype: Slice
         """
@@ -231,16 +227,20 @@ class core():
         site = max(set(sites), key = sites.count)
         
         meas = slice.add_node(name="_meas_node", site=site)
-        #meas.set_capacities(cores="4", ram="16", disk="50")
-        #meas.set_capacities(cores="2", ram="8", disk="10")
-        meas.set_capacities(cores=meas.default_cores, ram=meas.default_cores, disk=32)
-        # meas.set_capacities(cores=meas.default_cores, ram=meas.default_cores, disk=meas.default_disk)
+
+        if not cores: 
+            cores = meas.default_cores 
+
+        if not ram: 
+            ram = meas.default_ram 
+
+        if not disk: 
+            disk = 32 #meas.default_disk
+
+        meas.set_capacities(cores=cores, ram=ram, disk=32)
         meas.set_image("default_ubuntu_20")
         interfaces.append(meas.add_component(model='NIC_Basic', name="Meas_Nic").get_interfaces()[0])
         meas_net = slice.add_l2network(name="_meas_net", interfaces=interfaces)
-        
-        #slice.submit()
-        #return
     
 
 # User Methods 
