@@ -760,11 +760,14 @@ class core():
 
 class mflib(core):
 
-    def __init__(self, local_storage_directory="/tmp/mflib"):
+    def __init__(self, slice_name="",local_storage_directory="/tmp/mflib"):
         """
         Constructor.
         """
         super().__init__(local_storage_directory=local_storage_directory)
+
+        if slice_name:
+            self.init(slice_name)
 
 
     def init(self,slice_name):
