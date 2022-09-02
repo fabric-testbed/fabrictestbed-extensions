@@ -1,9 +1,11 @@
 import json
 import traceback
 import os
+import sys
 import time
 import requests
 import configparser
+import urllib.parse
 from ipywidgets import VBox, HTML, Output, interactive
 import ipywidgets as widgets
 from IPython.display import display
@@ -12,6 +14,9 @@ from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manag
 #from fabrictestbed_extensions.mflib.mflib import mflib
 # For testing
 from mflib import mflib
+
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class mfvis():
     sanity_version = "2.01"
@@ -53,6 +58,8 @@ class mfvis():
         self.add_dashboard(network_traffic_dashboard)
         traffic_panels = [{'name': 'Network Traffic by Packets', 'id': 8}, {'name': 'TCP In / Out', 'id': 13}, {'name': 'TCP Errors', 'id': 14}, {'name': 'UDP In / Out', 'id': 16}, {'name': 'UDP Errors', 'id': 17}, {'name': 'Network Traffic Received Errors', 'id': 10}, {'name': 'Network Traffic Send Errors', 'id': 11}]
         self.add_panel("network-traffic-dashboard", traffic_panels)
+        ping_dashboard = {"name":"ping-status", "uid":"hqj_G5R4k", "vars":[],"panels":[{"name":"Ping", "id":2 }]}
+        self.add_dashboard(ping_dashboard)
 
         self.dashboard_widget = None
         self.graph_widget = None
@@ -114,6 +121,7 @@ class mfvis():
                 for p in d["panels"]:
                     if p["name"] == panel_name:
                         ret_val = f'{ret_val}&panelId={p["id"]}'
+                        
                 # add vars
 
                 if "vars" in d:
@@ -558,8 +566,6 @@ class mfvis():
         Creates the UI 
         """
         tab = widgets.Tab()
-        tab.set_title(0, 'graph viewer')
-        
         self.dashboard_widget = widgets.Dropdown(options=(['------']+self.get_dashboard_names()))
         self.graph_widget = widgets.Dropdown(description='panel_name', options=['------'])
         self.time_widget = widgets.Dropdown(options=['------']+self.get_available_time_filter_names())
@@ -571,6 +577,9 @@ class mfvis():
         j = interactive(self.determine_interface_names_dropdown, node_name = self.node_widget)
         k = interactive(self.imageViewer,dashboard_name=self.dashboard_widget, panel_name=self.graph_widget, time_filter=self.time_widget, node_name=self.node_widget, interface_name = self.device_widget)
         tab.children = [VBox(list(k.children))]
+        # deprecated version of set title
+        #tab.set_title(0, "graph viewer")
+        tab.titles=['Graph Viewer'] 
         display(tab)
         
         
@@ -585,29 +594,36 @@ class mfvis():
         panel_list.sort()
         return (panel_list)
     
-    def check_parameters(self, panel_name, interface_name):
+    def check_parameters(self, dashboard_name, panel_name, node_name, interface_name):
         """
-        Checks the input parameters for the download_prometheus_graph call
+        Checks the input parameters
         if panel_name belongs to network-traffic-dashboard, then interface_name cannot be none
         """
-        if (panel_name in self.get_panel_names(dashboard_name='network-traffic-dashboard') and interface_name is None):
-            return (f"Please specify interface_name in the call. Run mfv.get_interface_names(node_name) ")
-        elif (panel_name in self.get_panel_names(dashboard_name='node-exporter-full') and interface_name is not None):
-            return (f"This panel does not require interface_name. Please remove interface_name from the call")
+        if (dashboard_name not in self.get_dashboard_names()):
+            raise Exception(f"{dashboard_name} is not supported. See supported ones using: print(mfv.get_dashboard_names())")
+        if (panel_name not in self.get_panel_names(dashboard_name)):
+            raise Exception(f"{dashboard_name} does not have panel called {panel_name}. See available panels using: print(mfv.get_panel_names('{dashboard_name}'))")
+        if (panel_name in self.get_panel_names(dashboard_name='network-traffic-dashboard') and (dashboard_name=='network-traffic-dashboard') and interface_name is None):
+            raise Exception(f"Please specify interface_name=interface name in the call argument. To get interface names, run print(mfv.get_interface_names('{node_name}'))")
+        if ((dashboard_name=='node-exporter-full') and interface_name is not None):
+            raise Exception(f"This panel does not require interface_name. Please remove interface_name from the call")
         
     def check_time_filters(self, time_filter):
         """
         Checks whether the input time filter is supported by the library
         """
         if (time_filter not in self.get_available_time_filter_names()):
-            return (f"The input time filter is not supported. See supported ones using: mfv.get_available_time_filter_names()")
+            raise Exception(f"The input time filter is not supported. See supported ones using: print(mfv.get_available_time_filter_names())")
         
-    def check_node_names(self, node_name):
+    def check_node_names(self, node_name, interface_name):
         """
         Checks whether the input node name is monitored by the measurement framework
         """
         if (node_name not in self.get_available_node_names()):
-            return (f"This node name is not supported. See supported ones using: mfv.get_available_node_names()")
+            raise Exception(f"This node name is not in the slice. See supported ones using: print(mfv.get_available_node_names())")
+        if (interface_name is not None and interface_name not in self.get_interface_names(node_name)[0]):
+            raise Exception(f"{node_name} does not have interface {interface_name}. See available interfaces using: print(mfv.get_interface_names('{node_name}')[0])")
+            
     
     
     def grafana_solo_dashboard_url_download(self, dashboard_name):
@@ -617,7 +633,7 @@ class mfvis():
         ret_val = ""
         for d in self.dashboard_info["dashboards"]:
             if d["name"] == dashboard_name:
-                ret_val = f'{self.grafana_base_url}/d/{d["uid"]}/{d["name"]}?orgId=1' 
+                ret_val = f'{self.grafana_base_url}/render/d-solo/{d["uid"]}/{d["name"]}?orgId=1' 
         return ret_val
     
     def grafana_panel_url_download(self, dashboard_name, panel_name):
@@ -627,37 +643,49 @@ class mfvis():
                 #print(d["panels"])
                 for p in d["panels"]:
                     if p["name"] == panel_name:
-                        ret_val = f'{ret_val}&viewPanel={p["id"]}'
+                        ret_val = f'{ret_val}&panelId={p["id"]}'
                 # add vars
                 for v in d["vars"]:
                     if "default" in v:
                         ret_val += f'&var-{v["name"]}={v["default"]}'
         return ret_val
     
-    
-    
-    
-    
-    def download_prometheus_graph(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None):
+    def generate_download_url(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None):
         """
-        Methods that allows the users to download prometheus graphs in .png format
+        Method that calculates the download url of the graph
         """
-        #self.check_time_filters(time_filter=time_filter)
-        #self.check_node_names(node_name=node_name)
-        #self.check_parameters(self, panel_name, interface_name)
+        self.check_node_names(node_name, interface_name)
+        self.check_parameters(dashboard_name, panel_name, node_name, interface_name)
+        self.check_time_filters(time_filter=time_filter)
         url = self.grafana_panel_url_download(dashboard_name, panel_name)
         url = self.add_time_filter(url, time_filter)
         url = self.add_node_name(url, node_name)
-        if (interface_name is not None):
+        if interface_name:
             url = self.add_interface_name(url, interface_name)
-        print (url)
-            
+        return url
+    
+    def add_timezone_to_url(self, url, timezone):
+        encoded_tz= urllib.parse.quote(timezone, safe='')
+        return (f'{url}&tz={encoded_tz}')
         
-            
-            
-
-    
-
-    
-
+    def download_graph(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, file_name=None, time_zone=None):
+        if file_name:
+            file = file_name
+        else:
+            name = panel_name.replace(" ", "-")
+            file = f'/home/fabric/work/{name}.png'
+        if interface_name:
+            url = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name=interface_name)
+        else:
+            url = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name)
+        if time_zone:
+            final_url = self.add_timezone_to_url(url, time_zone)
+        else:
+            final_url=url
+        print (final_url)
+        r = requests.get(final_url, verify=False)
+        print (r.status_code)
+        if r.status_code == 200:
+            with open(file, 'wb') as f:
+                f.write(r.content)
     
