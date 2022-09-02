@@ -18,26 +18,57 @@ from mflib import mflib
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-class mfvis():
+class mfvis(mflib):
     sanity_version = "2.01"
     meas_net_info = {}
     prometheus_url = None
     
-    def __init__(self, mf_obj=None, slice_name=None):
+    def __init__(self, slice_name=""):
         """
         Constructor. Builds Manager for mfvis object.
         """
-        super().__init__()
+        super().__init__(slice_name)
         #self._grafana_tunnel_host = ""
         # for current testing should be removed in future
         self._grafana_tunnel_host = "localhost:10010"
+        self.init_default_dashboard_info()
         
-        if mf_obj:
-            self._mf = mf_obj
-        elif slice_name:
-            self._mf = mflib()
-            self._mf.init(slice_name)
+        # if mf_obj:
+        #     self._mf = mf_obj
+        # elif slice_name:
+        #     self._mf = mflib()
+        #     self._mf.init(slice_name)
         
+        # self.dashboard_info = {'dashboards':[]}
+        # self.slice_node_info={}
+        # self.get_node_and_interface_names()
+        
+        # self.dashboard_info["time_filters"] = []
+        # self.dashboard_info["time_filters"].append({'name': 'Last 5 minutes', 'value': "5m", "refresh":"30s"})
+        # self.dashboard_info["time_filters"].append({'name': 'Last 15 minutes', 'value': 900000})
+        # self.dashboard_info["time_filters"].append({'name': 'Last 1 hour', 'value': 3600000})
+        
+
+
+        # node_dashboard = { 'uid': 'rYdddlPWk', 'name': 'node-exporter-full', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'diskdevices', 'default':'%5Ba-z%5D%2B%7Cnvme%5B0-9%5D%2Bn%5B0-9%5D%2B'}, {'name':'node'}] }
+        # self.add_dashboard(node_dashboard)
+        # node_panels = [{'name': 'CPU Busy', 'id': 20}, {'name': 'Sys Load (5m avg)', 'id': 155}, {'name': 'Sys Load (15m avg)', 'id': 19}, {'name': 'RAM Used', 'id': 16}, {'name': 'SWAP Used', 'id': 21}, {'name': 'Root FS Used', 'id': 154}, {'name': 'CPU Cores', 'id': 14}, {'name': 'Uptime', 'id': 15}, {'name': 'RootFS Total', 'id': 23}, {'name': 'RAM Total', 'id': 75}, {'name': 'SWAP Total', 'id': 18}, {'name': 'CPU Basic', 'id': 77}, {'name': 'Memory Basic', 'id': 78}, {'name': 'Network Traffic Basic', 'id': 74}, {'name': 'Disk Space Used Basic', 'id': 152}, {'name': 'CPU', 'id': 3}, {'name': 'Memory Stack', 'id': 24}, {'name': 'Network Traffic', 'id': 84}, {'name': 'Disk Space Used', 'id': 156}, {'name': 'Disk IOps', 'id': 229}, {'name': 'I/O Usage Read / Write', 'id': 42}, {'name': 'I/O Utilization', 'id': 127}, {'name': 'Memory Active / Inactive', 'id': 136}, {'name': 'Memory Commited', 'id': 135}, {'name': 'Memory Active / Inactive Detail', 'id': 191}, {'name': 'Memory Writeback and Dirty', 'id': 130}, {'name': 'Memory Shared and Mapped', 'id': 138}, {'name': 'Memory Slab', 'id': 131}, {'name': 'Memory Vmalloc', 'id': 70}, {'name': 'Memory Bounce', 'id': 159}, {'name': 'Memory Anonymous', 'id': 129}, {'name': 'Memory Kernel / CPU', 'id': 160}, {'name': 'Memory HugePages Counter', 'id': 140}, {'name': 'Memory HugePages Size', 'id': 71}, {'name': 'Memory DirectMap', 'id': 128}, {'name': 'Memory Unevictable and MLocked', 'id': 137}, {'name': 'Memory NFS', 'id': 132}, {'name': 'Memory Pages In / Out', 'id': 176}, {'name': 'Memory Pages Swap In / Out', 'id': 22}, {'name': 'Memory Page Faults', 'id': 175}, {'name': 'OOM Killer', 'id': 307}, {'name': 'Time Syncronized Drift', 'id': 260}, {'name': 'Time PLL Adjust', 'id': 291}, {'name': 'Time Syncronized Status', 'id': 168}, {'name': 'Time Misc', 'id': 294}, {'name': 'Processes Status', 'id': 62}, {'name': 'Processes State', 'id': 315}, {'name': 'Processes  Forks', 'id': 148}, {'name': 'Processes Memory', 'id': 149}, {'name': 'PIDs Number and Limit', 'id': 313}, {'name': 'Process schedule stats Running / Waiting', 'id': 305}, {'name': 'Threads Number and Limit', 'id': 314}, {'name': 'Context Switches / Interrupts', 'id': 8}, {'name': 'System Load', 'id': 7}, {'name': 'Interrupts Detail', 'id': 259}, {'name': 'Schedule timeslices executed by each cpu', 'id': 306}, {'name': 'Entropy', 'id': 151}, {'name': 'CPU time spent in user and system contexts', 'id': 308}, {'name': 'File Descriptors', 'id': 64}, {'name': 'Hardware temperature monitor', 'id': 158}, {'name': 'Throttle cooling device', 'id': 300}, {'name': 'Power supply', 'id': 302}, {'name': 'Systemd Sockets', 'id': 297}, {'name': 'Systemd Units State', 'id': 298}, {'name': 'Disk IOps Completed', 'id': 9}, {'name': 'Disk R/W Data', 'id': 33}, {'name': 'Disk Average Wait Time', 'id': 37}, {'name': 'Average Queue Size', 'id': 35}, {'name': 'Disk R/W Merged', 'id': 133}, {'name': 'Time Spent Doing I/Os', 'id': 36}, {'name': 'Instantaneous Queue Size', 'id': 34}, {'name': 'Disk IOps Discards completed / merged', 'id': 301}, {'name': 'Filesystem space available', 'id': 43}, {'name': 'File Nodes Free', 'id': 41}, {'name': 'File Descriptor', 'id': 28}, {'name': 'File Nodes Size', 'id': 219}, {'name': 'Filesystem in ReadOnly / Error', 'id': 44}, {'name': 'Network Traffic by Packets', 'id': 60}, {'name': 'Network Traffic Errors', 'id': 142}, {'name': 'Network Traffic Drop', 'id': 143}, {'name': 'Network Traffic Compressed', 'id': 141}, {'name': 'Network Traffic Multicast', 'id': 146}, {'name': 'Network Traffic Fifo', 'id': 144}, {'name': 'Network Traffic Frame', 'id': 145}, {'name': 'Network Traffic Carrier', 'id': 231}, {'name': 'Network Traffic Colls', 'id': 232}, {'name': 'NF Contrack', 'id': 61}, {'name': 'ARP Entries', 'id': 230}, {'name': 'MTU', 'id': 288}, {'name': 'Speed', 'id': 280}, {'name': 'Queue Length', 'id': 289}, {'name': 'Softnet Packets', 'id': 290}, {'name': 'Softnet Out of Quota', 'id': 310}, {'name': 'Network Operational Status', 'id': 309}, {'name': 'Sockstat TCP', 'id': 63}, {'name': 'Sockstat UDP', 'id': 124}, {'name': 'Sockstat FRAG / RAW', 'id': 125}, {'name': 'Sockstat Memory Size', 'id': 220}, {'name': 'Sockstat Used', 'id': 126}, {'name': 'Netstat IP In / Out Octets', 'id': 221}, {'name': 'Netstat IP Forwarding', 'id': 81}, {'name': 'ICMP In / Out', 'id': 115}, {'name': 'ICMP Errors', 'id': 50}, {'name': 'UDP In / Out', 'id': 55}, {'name': 'UDP Errors', 'id': 109}, {'name': 'TCP In / Out', 'id': 299}, {'name': 'TCP Errors', 'id': 104}, {'name': 'TCP Connections', 'id': 85}, {'name': 'TCP SynCookie', 'id': 91}, {'name': 'TCP Direct Transition', 'id': 82}, {'name': 'Node Exporter Scrape Time', 'id': 40}, {'name': 'Node Exporter Scrape', 'id': 157}]
+        # self.add_panel('node-exporter-full', node_panels)
+
+        # network_traffic_dashboard = { 'uid': 'dHEquNzGz', 'name': 'network-traffic-dashboard', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'device'}, {'name':'node'}] }
+        # self.add_dashboard(network_traffic_dashboard)
+        # traffic_panels = [{'name': 'Network Traffic by Packets', 'id': 8}, {'name': 'TCP In / Out', 'id': 13}, {'name': 'TCP Errors', 'id': 14}, {'name': 'UDP In / Out', 'id': 16}, {'name': 'UDP Errors', 'id': 17}, {'name': 'Network Traffic Received Errors', 'id': 10}, {'name': 'Network Traffic Send Errors', 'id': 11}]
+        # self.add_panel("network-traffic-dashboard", traffic_panels)
+        # ping_dashboard = {"name":"ping-status", "uid":"hqj_G5R4k", "vars":[],"panels":[{"name":"Ping", "id":2 }]}
+        # self.add_dashboard(ping_dashboard)
+
+        # self.dashboard_widget = None
+        # self.graph_widget = None
+        # self.time_widget = None
+        # self.node_widget = None
+        # self.device_widget = None
+        
+    def init_default_dashboard_info():
         self.dashboard_info = {'dashboards':[]}
         self.slice_node_info={}
         self.get_node_and_interface_names()
@@ -66,9 +97,7 @@ class mfvis():
         self.time_widget = None
         self.node_widget = None
         self.device_widget = None
-        
-        
-        
+
     @property
     def grafana_tunnel_host(self):
         """
@@ -91,7 +120,7 @@ class mfvis():
         if self._grafana_tunnel_host:
             return f"https://{self._grafana_tunnel_host}/grafana"
         
-        return f"https://{self.mf.meas_node_ip}/grafana"
+        return f"https://{self.meas_node_ip}/grafana"
 
     def grafana_dashboard_url(self, dashboard_name):
         """
@@ -184,31 +213,32 @@ class mfvis():
     
 
 
-    @property
-    def mf(self):
-        """
-        Gets the mflib object.
-        """
-        return self._mf
+    # @property
+    # def mf(self):
+    #     """
+    #     Gets the mflib object.
+    #     """
+    #     return self._mf
 
-    @mf.setter
-    def mf(self, value):
-        """
-        Sets the mflib object.
-        """
-        self._mf = value 
+    # @mf.setter
+    # def mf(self, value):
+    #     """
+    #     Sets the mflib object.
+    #     """
+    #     self._mf = value 
         
         
     def get_node_and_interface_names(self):
         """
         Uses fablib to get all the interface names of all the experiment nodes 
         """
-        fablib = fablib_manager()
-        #fablib.show_config()
-        mfo = self._mf
-        slice_name= mfo._slicename 
+        # fablib = fablib_manager()
+        # #fablib.show_config()
+        # mfo = self._mf
+        # slice_name= mfo._slicename 
         try:
-            slice = fablib.get_slice(name=slice_name)
+            #slice = fablib.get_slice(name=slice_name)
+            slice = self.slice
             for node in slice.get_nodes():
                 if node.get_name() != "_meas_node":
                     self.slice_node_info[node.get_name()]=[]
@@ -226,100 +256,6 @@ class mfvis():
         except Exception as e:
             print(f"Fail: {e}")
              
-
-#
-#     def init(self,slicename):
-#         """
-#         Sets up the mfvis object to visualize prometheus graphs in grafana 
-#         :param slicename: The name of the slice.
-#         """
-#         print(f"Initing slice {slicename} for visualization")
-#         self.meas_net_info = self.get_meas_net_info(slicename=slicename)
-#         self.dashboard_info = self.set_dashboard_info()
-#         self.prometheus_url = self.get_prometheus_url()
-
-
-#     def read_prometheus_ini_file(self, slicename):
-#         """
-#         Check the existence of prometheus hosts ini file 
-#         Reads the node name and IP address from the file
-#         """
-#         local_storage_directory = "/tmp/mflib/"
-#         local_slice_directory = os.path.join(local_storage_directory, slicename)
-#         promhosts_file = os.path.join(local_slice_directory, "hosts.ini")
-#         exp_node_lines=[]
-#         exp_node_info = []
-#         if not os.path.exists(promhosts_file):
-#             try:
-#                 mf=mflib()
-#                 mf.init(slicename)
-#                 print (f"File {promhosts_file} does not exist. Proceed to downlaod the file.")
-#                 filename, filecontents = mf.download_common_hosts()
-#             except Exception as e:
-#                 print(f"Download fails: {e}")
-#                 return []
-#                 traceback.print_exc()
-#         if os.path.exists(promhosts_file):
-#             try:
-#                 print (f"Found host file at {promhosts_file}")
-#                 with open(promhosts_file) as pif:
-#                     lines = pif.readlines()
-#                     for line in lines:
-#                         if "[Experiment_Nodes]" in line:
-#                             index=lines.index(line)
-#                             exp_nodes=lines[index+1:]
-#             except Exception as e:
-#                     print(f"Fail to read promhosts.ini")
-#                     print(f"Fail: {e}")
-#                     return []
-#             for node in exp_nodes:
-#                 node=node.strip()
-#                 info={}
-#                 node_name=node.split()[0]
-#                 node_ip=node.split("=")[-1]
-#                 info['node_name']=node_name
-#                 info['node_ip']=node_ip
-#                 exp_node_info.append(info)
-#             return (exp_node_info)            
-#         else:
-#             return []
-
-
-#     def get_meas_net_info(self, slicename):
-#         """
-#         Gets the info of the meas_net including the _meas_node IP, experiment node names and connected interface IPs 
-#         :param slicename: The name of the slice.
-#         :rtype: Dict
-#         """
-#         try:
-#             slice = fablib.get_slice(name=slicename)
-#             meas_node = slice.get_node(name="_meas_node")
-#             meas_net_info = {}
-#             meas_net_info['meas_node_ip'] = str(meas_node.get_management_ip())
-#             meas_net_info['node_info']=self.read_prometheus_ini_file(slicename=slicename)
-#             return (meas_net_info)
-#         except Exception as e:
-#             print(f"Fail: {e}")
-#             traceback.print_exc()
-
-
-#     def set_dashboard_info(self):
-#         """
-#         Sets the grafana prometheus dashboard info
-#         and the graphs (panel_id) available to be displayed
-#         Works for grafana dashboard 1860
-#         :rtype: Dict
-#         """
-#         dashboard_info = {}
-#         first_graph = {'name': 'prometheus network traffic', 'panel_id':'74'}
-#         second_graph = {'name': 'prometheus cpu', 'panel_id':'77'}
-#         first_time_filter = {'name': 'Last 15 minutes', 'value': 900000}
-#         second_time_filter = {'name': 'Last 1 hour', 'value': 3600000}
-#         dashboard_info['dashboard_info']= {'dashboard_uid': 'rYdddlPWk', 'dashboard_name': 'node-exporter-full'}
-#         dashboard_info['graph_panels'] = [first_graph, second_graph]
-#         dashboard_info['time_filters'] = [first_time_filter, second_time_filter]
-#         return (dashboard_info)
-
 
     def get_available_time_filter_names(self):
         """
