@@ -163,14 +163,14 @@ class core():
     #   to the web uis. 
 
     @property
-    def grafana_tunnel(self, alt=True):
+    def grafana_tunnel(self):
         return self._meas_node_ssh_tunnel(local_port = self.grafana_tunnel_local_port, remote_port="443")
 
     @property
-    def kibana_tunnel(self, alt=True):
+    def kibana_tunnel(self):
         return self._meas_node_ssh_tunnel(local_port = self.kibana_tunnel_local_port, remote_port="80")
 
-    def _meas_node_ssh_tunnel(self, local_port, remote_port, alt, use_ssh_config):
+    def _meas_node_ssh_tunnel(self, local_port, remote_port):
         """
         Returns the SSH tunnel command for accessing the meas node via bastion host.
         """
