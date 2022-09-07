@@ -164,11 +164,11 @@ class core():
 
     @property
     def grafana_tunnel(self, alt=True):
-        return self._meas_node_ssh_tunnel(local_port = self.grafana_tunnel_local_port, remote_port="443", alt=alt, use_ssh_config=True)
+        return self._meas_node_ssh_tunnel(local_port = self.grafana_tunnel_local_port, remote_port="443")
 
     @property
     def kibana_tunnel(self, alt=True):
-        return self._meas_node_ssh_tunnel(local_port = self.kibana_tunnel_local_port, remote_port="80", alt=alt, use_ssh_config=True)
+        return self._meas_node_ssh_tunnel(local_port = self.kibana_tunnel_local_port, remote_port="80")
 
     def _meas_node_ssh_tunnel(self, local_port, remote_port, alt, use_ssh_config):
         """
@@ -177,38 +177,31 @@ class core():
 
         slice_username = self.slice_username
         meas_node_ip = self.meas_node_ip
+        
+        # User has setup an ssh config file
+        extra_fm = FablibManager()
+        errmsg = ""
+        ssh_config = ""
+        private_key_file = ""
+    
+        extra_fm_vars = extra_fm.read_fabric_rc(extra_fm.default_fabric_rc)
+        if extra_fm_vars:
+            if "FABRIC_ALT_COPY_SSH_CONFIG" in extra_fm_vars:
+                ssh_config = extra_fm_vars["FABRIC_ALT_COPY_SSH_CONFIG"]
+            else:
+                errmsg += "FABRIC_ALT_COPY_SSH_CONFIG not found in fabric_rc file. "
 
-        if use_ssh_config:
-            # User has setup an ssh config file
-            extra_fm = FablibManager()
-
-            ssh_config = ""
-            private_key_file = ""
-
-            if alt:
-                extra_fm_vars = extra_fm.read_fabric_rc(extra_fm.default_fabric_rc)
-                if "FABRIC_ALT_COPY_SSH_CONFIG" in extra_fm_vars:
-                    ssh_config = extra_fm_vars["FABRIC_ALT_COPY_SSH_CONFIG"]
-                if "FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE" in extra_fm_vars:
-                    private_key_file = extra_fm_vars["FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE"]
- 
-            #else:
-            # Did no use alt, or alt was not found
-            if not ssh_config: 
-                ssh_config = extra_fm.get_default_slice_public_key()
-            if not private_key_file:
-                private_key_file = extra_fm.get_default_slice_public_key_file()
-
+            if "FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE" in extra_fm_vars:
+                private_key_file = extra_fm_vars["FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE"]
+            else:
+                errmsg += "FABRIC_ALT_COPY_SLICE_PRIVATE_KEY_FILE not found in fabric_rc file. "
+            
+        if errmsg:
+            return "It appears you have not added alternate ssh config or slice key file locations to the fabric_rc file. " + errmsg
+        else:
             #return f'ssh -L 10010:localhost:443 -F {extra_fm_vars["FABRIC_ALT_SSH_CONFIG"]} -i {extra_fm_vars["FABRIC_ALT_SLICE_PRIVATE_KEY_FILE"]} {self.slice_username}@{self.meas_node_ip}'
             tunnel_cmd = f'ssh -L {local_port}:localhost:{remote_port} -F {ssh_config} -i {private_key_file} {slice_username}@{meas_node_ip}'
-        else: 
-            bastion_username = fablib.get_bastion_username()
-            bastion_addr = fablib.get_bastion_public_addr()
-            private_key_file = fablib.get_default_slice_private_key_file()
-
-            tunnel_cmd = f'ssh -L {local_port}:localhost:{remote_port} -i {private_key_file} -J {bastion_username}@{bastion_addr} {slice_username}@{meas_node_ip}'
-
-        return tunnel_cmd 
+            return tunnel_cmd 
 
 
     # Repo branch made class varible so it can be set before creating object
