@@ -196,6 +196,10 @@ class core():
 
         return tunnel_cmd 
 
+
+    # Repo branch made class varible so it can be set before creating object
+    mf_repo_branch = "dev"
+    
   
     def __init__(self, local_storage_directory="/tmp/mflib"):
         """
@@ -205,7 +209,7 @@ class core():
 
         # logging.info("Creating mflib object.")
         
-        self.mf_repo_branch = "dev"
+        #self.mf_repo_branch = "dev"
         self._tunnel_host = "localhost"
         self._grafana_tunnel_local_port = "10010"
         self._kibana_tunnel_local_port = "10020"
@@ -239,7 +243,7 @@ class core():
 # note: should set bootstrap status file when making these 2 calls, status should be set, restored, not needed.
     def set_DNS_all_nodes(self):
         # Check if we need to
-        if(self.meas_node.validIPAddress(node.get_management_ip())=="IPv6"):
+        if(self.meas_node.validIPAddress(self.meas_node.get_management_ip())=="IPv6"):
             for node in self.slice.get_nodes():
                 self.set_DNS(node)
             return "set"
@@ -248,7 +252,7 @@ class core():
 
     def restore_DNS_all_nodes(self):
         # Check if we need to
-        if(self.meas_node.validIPAddress(node.get_management_ip())=="IPv6"):
+        if(self.meas_node.validIPAddress(self.meas_node.get_management_ip())=="IPv6"):
             for node in self.slice.get_nodes():
                 self.restore_DNS(node)
             return "restored"
@@ -1121,7 +1125,7 @@ class mflib(core):
             else:
             #if True:
                 nat_set_results = self.set_DNS_all_nodes()
-                self._update_bootstrap("ipv6_4_nat", "nat_set_results")
+                self._update_bootstrap("ipv6_4_nat", nat_set_results)
 
 
             #######################
