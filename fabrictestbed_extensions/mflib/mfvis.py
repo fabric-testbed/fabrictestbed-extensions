@@ -2,7 +2,7 @@ import json
 import traceback
 import os
 import sys
-import times
+import time
 import requests
 import configparser
 import urllib.parse
