@@ -114,6 +114,35 @@ class core():
             return ""
 
 
+
+    @property
+    def tunnel_host(self):
+        """
+        If a tunnel is used, this value must be set for the localhost, Otherwise it is set to empty string."""
+        return self._tunnel_host
+        
+    @tunnel_host.setter
+    def tunnel_host(self, value):
+        """ 
+        Set to "localhost" if using tunnnel.
+        """
+        self._tunnel_host = value
+        
+
+    @property
+    def grafana_tunnel_local_port(self):
+        """
+        If a tunnel is used, this value must be set for the port"""
+        return self._grafana_tunnel_local_port
+        
+    @grafana_tunnel_host.setter
+    def grafana_tunnel_local_port(self, value):
+        """ 
+        Set to port_number if using tunnnel.
+        """
+        self._grafana_tunnel_local_port = value
+        
+
     # Tunnels are needed to access the meas node via the bastion host
     # In the future these may be combinded into one port with diff nginx paths mappings.
     # alt copy is a selection added to the fabric_rc file for setting a alertnate location for the files 
@@ -122,13 +151,11 @@ class core():
 
     @property
     def grafana_tunnel(self, alt=True):
-        return self._meas_node_ssh_tunnel(local_port="10010", remote_port="443", alt=alt, use_ssh_config=True)
-
+        return self._meas_node_ssh_tunnel(local_port = self.grafana_tunnel_local_port, remote_port="443", alt=alt, use_ssh_config=True)
 
     @property
     def kibana_tunnel(self, alt=True):
-        return self._meas_node_ssh_tunnel(local_port="10020", remote_port="80", alt=alt, use_ssh_config=True)
-
+        return self._meas_node_ssh_tunnel(local_port = self.kibana_tunnel_local_port, remote_port="80", alt=alt, use_ssh_config=True)
 
     def _meas_node_ssh_tunnel(self, local_port, remote_port, alt, use_ssh_config):
         """
@@ -180,6 +207,10 @@ class core():
         # logging.info("Creating mflib object.")
         
         self.mf_repo_branch = "dev"
+        self._tunnel_host = "localhost"
+        self._grafana_tunnel_local_port = "10010"
+        self._kibana_tunnel_local_port = "10020"
+
 
         # The slice_name
         self._slice_name = ""
@@ -204,43 +235,7 @@ class core():
         except FileExistsError:
             pass
         
-                
-    # This is a temporary method needed untill modify slice ability is avaialble. 
-    @staticmethod 
-    def addMeasNode(slice, cores=None, ram=None, disk=None):
-        """
-        Adds measurement components to an unsubmitted slice object
-        :param slice: Unsubmitted Slice Object
-        :rtype: Slice
-        """
-        
-        interfaces = []
-        sites = []
-        num = 1
-        
-        for node in slice.get_nodes():
-            interfaces.append(node.add_component(model='NIC_Basic', name=("Meas_Nic"+str(num))).get_interfaces()[0])
-            sites.append(node.get_site())
-            num += 1
-        site = max(set(sites), key = sites.count)
-        
-        meas = slice.add_node(name="_meas_node", site=site)
-
-        if not cores: 
-            cores = meas.default_cores 
-
-        if not ram: 
-            ram = meas.default_ram 
-
-        if not disk: 
-            disk = 32 #meas.default_disk
-
-        meas.set_capacities(cores=cores, ram=ram, disk=32)
-        meas.set_image("default_ubuntu_20")
-        interfaces.append(meas.add_component(model='NIC_Basic', name="Meas_Nic").get_interfaces()[0])
-        meas_net = slice.add_l2network(name="_meas_net", interfaces=interfaces)
-    
-
+          
 # User Methods 
     def create(self, service, data=None, files=[]):
         """
@@ -759,6 +754,45 @@ class core():
     
 
 class mflib(core):
+
+
+          
+    # This is a temporary method needed untill modify slice ability is avaialble. 
+    @staticmethod 
+    def addMeasNode(slice, cores=None, ram=None, disk=None):
+        """
+        Adds measurement components to an unsubmitted slice object
+        :param slice: Unsubmitted Slice Object
+        :rtype: Slice
+        """
+        
+        interfaces = []
+        sites = []
+        num = 1
+        
+        for node in slice.get_nodes():
+            interfaces.append(node.add_component(model='NIC_Basic', name=("Meas_Nic"+str(num))).get_interfaces()[0])
+            sites.append(node.get_site())
+            num += 1
+        site = max(set(sites), key = sites.count)
+        
+        meas = slice.add_node(name="_meas_node", site=site)
+
+        if not cores: 
+            cores = meas.default_cores 
+
+        if not ram: 
+            ram = meas.default_ram 
+
+        if not disk: 
+            disk = 32 #meas.default_disk
+
+        meas.set_capacities(cores=cores, ram=ram, disk=32)
+        meas.set_image("default_ubuntu_20")
+        interfaces.append(meas.add_component(model='NIC_Basic', name="Meas_Nic").get_interfaces()[0])
+        meas_net = slice.add_l2network(name="_meas_net", interfaces=interfaces)
+    
+
 
     def __init__(self, slice_name="",local_storage_directory="/tmp/mflib"):
         """

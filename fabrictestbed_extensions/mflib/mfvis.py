@@ -2,7 +2,7 @@ import json
 import traceback
 import os
 import sys
-import time
+import times
 import requests
 import configparser
 import urllib.parse
@@ -21,95 +21,64 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 class mfvis(mflib):
     sanity_version = "2.01"
     meas_net_info = {}
-    prometheus_url = None
     
-    def __init__(self, slice_name=""):
+    def __init__(self, slice_name="", local_storage_directory="/tmp/mflib"):
         """
         Constructor. Builds Manager for mfvis object.
         """
-        super().__init__(slice_name)
+        super().__init__(slice_name, local_storage_directory)
         #self._grafana_tunnel_host = ""
         # for current testing should be removed in future
-        self._grafana_tunnel_host = "localhost:10010"
+        #self._grafana_tunnel_host = "localhost:10010"
         self.init_default_dashboard_info()
         
-        # if mf_obj:
-        #     self._mf = mf_obj
-        # elif slice_name:
-        #     self._mf = mflib()
-        #     self._mf.init(slice_name)
         
-        # self.dashboard_info = {'dashboards':[]}
-        # self.slice_node_info={}
-        # self.get_node_and_interface_names()
-        
-        # self.dashboard_info["time_filters"] = []
-        # self.dashboard_info["time_filters"].append({'name': 'Last 5 minutes', 'value': "5m", "refresh":"30s"})
-        # self.dashboard_info["time_filters"].append({'name': 'Last 15 minutes', 'value': 900000})
-        # self.dashboard_info["time_filters"].append({'name': 'Last 1 hour', 'value': 3600000})
-        
-
-
-        # node_dashboard = { 'uid': 'rYdddlPWk', 'name': 'node-exporter-full', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'diskdevices', 'default':'%5Ba-z%5D%2B%7Cnvme%5B0-9%5D%2Bn%5B0-9%5D%2B'}, {'name':'node'}] }
-        # self.add_dashboard(node_dashboard)
-        # node_panels = [{'name': 'CPU Busy', 'id': 20}, {'name': 'Sys Load (5m avg)', 'id': 155}, {'name': 'Sys Load (15m avg)', 'id': 19}, {'name': 'RAM Used', 'id': 16}, {'name': 'SWAP Used', 'id': 21}, {'name': 'Root FS Used', 'id': 154}, {'name': 'CPU Cores', 'id': 14}, {'name': 'Uptime', 'id': 15}, {'name': 'RootFS Total', 'id': 23}, {'name': 'RAM Total', 'id': 75}, {'name': 'SWAP Total', 'id': 18}, {'name': 'CPU Basic', 'id': 77}, {'name': 'Memory Basic', 'id': 78}, {'name': 'Network Traffic Basic', 'id': 74}, {'name': 'Disk Space Used Basic', 'id': 152}, {'name': 'CPU', 'id': 3}, {'name': 'Memory Stack', 'id': 24}, {'name': 'Network Traffic', 'id': 84}, {'name': 'Disk Space Used', 'id': 156}, {'name': 'Disk IOps', 'id': 229}, {'name': 'I/O Usage Read / Write', 'id': 42}, {'name': 'I/O Utilization', 'id': 127}, {'name': 'Memory Active / Inactive', 'id': 136}, {'name': 'Memory Commited', 'id': 135}, {'name': 'Memory Active / Inactive Detail', 'id': 191}, {'name': 'Memory Writeback and Dirty', 'id': 130}, {'name': 'Memory Shared and Mapped', 'id': 138}, {'name': 'Memory Slab', 'id': 131}, {'name': 'Memory Vmalloc', 'id': 70}, {'name': 'Memory Bounce', 'id': 159}, {'name': 'Memory Anonymous', 'id': 129}, {'name': 'Memory Kernel / CPU', 'id': 160}, {'name': 'Memory HugePages Counter', 'id': 140}, {'name': 'Memory HugePages Size', 'id': 71}, {'name': 'Memory DirectMap', 'id': 128}, {'name': 'Memory Unevictable and MLocked', 'id': 137}, {'name': 'Memory NFS', 'id': 132}, {'name': 'Memory Pages In / Out', 'id': 176}, {'name': 'Memory Pages Swap In / Out', 'id': 22}, {'name': 'Memory Page Faults', 'id': 175}, {'name': 'OOM Killer', 'id': 307}, {'name': 'Time Syncronized Drift', 'id': 260}, {'name': 'Time PLL Adjust', 'id': 291}, {'name': 'Time Syncronized Status', 'id': 168}, {'name': 'Time Misc', 'id': 294}, {'name': 'Processes Status', 'id': 62}, {'name': 'Processes State', 'id': 315}, {'name': 'Processes  Forks', 'id': 148}, {'name': 'Processes Memory', 'id': 149}, {'name': 'PIDs Number and Limit', 'id': 313}, {'name': 'Process schedule stats Running / Waiting', 'id': 305}, {'name': 'Threads Number and Limit', 'id': 314}, {'name': 'Context Switches / Interrupts', 'id': 8}, {'name': 'System Load', 'id': 7}, {'name': 'Interrupts Detail', 'id': 259}, {'name': 'Schedule timeslices executed by each cpu', 'id': 306}, {'name': 'Entropy', 'id': 151}, {'name': 'CPU time spent in user and system contexts', 'id': 308}, {'name': 'File Descriptors', 'id': 64}, {'name': 'Hardware temperature monitor', 'id': 158}, {'name': 'Throttle cooling device', 'id': 300}, {'name': 'Power supply', 'id': 302}, {'name': 'Systemd Sockets', 'id': 297}, {'name': 'Systemd Units State', 'id': 298}, {'name': 'Disk IOps Completed', 'id': 9}, {'name': 'Disk R/W Data', 'id': 33}, {'name': 'Disk Average Wait Time', 'id': 37}, {'name': 'Average Queue Size', 'id': 35}, {'name': 'Disk R/W Merged', 'id': 133}, {'name': 'Time Spent Doing I/Os', 'id': 36}, {'name': 'Instantaneous Queue Size', 'id': 34}, {'name': 'Disk IOps Discards completed / merged', 'id': 301}, {'name': 'Filesystem space available', 'id': 43}, {'name': 'File Nodes Free', 'id': 41}, {'name': 'File Descriptor', 'id': 28}, {'name': 'File Nodes Size', 'id': 219}, {'name': 'Filesystem in ReadOnly / Error', 'id': 44}, {'name': 'Network Traffic by Packets', 'id': 60}, {'name': 'Network Traffic Errors', 'id': 142}, {'name': 'Network Traffic Drop', 'id': 143}, {'name': 'Network Traffic Compressed', 'id': 141}, {'name': 'Network Traffic Multicast', 'id': 146}, {'name': 'Network Traffic Fifo', 'id': 144}, {'name': 'Network Traffic Frame', 'id': 145}, {'name': 'Network Traffic Carrier', 'id': 231}, {'name': 'Network Traffic Colls', 'id': 232}, {'name': 'NF Contrack', 'id': 61}, {'name': 'ARP Entries', 'id': 230}, {'name': 'MTU', 'id': 288}, {'name': 'Speed', 'id': 280}, {'name': 'Queue Length', 'id': 289}, {'name': 'Softnet Packets', 'id': 290}, {'name': 'Softnet Out of Quota', 'id': 310}, {'name': 'Network Operational Status', 'id': 309}, {'name': 'Sockstat TCP', 'id': 63}, {'name': 'Sockstat UDP', 'id': 124}, {'name': 'Sockstat FRAG / RAW', 'id': 125}, {'name': 'Sockstat Memory Size', 'id': 220}, {'name': 'Sockstat Used', 'id': 126}, {'name': 'Netstat IP In / Out Octets', 'id': 221}, {'name': 'Netstat IP Forwarding', 'id': 81}, {'name': 'ICMP In / Out', 'id': 115}, {'name': 'ICMP Errors', 'id': 50}, {'name': 'UDP In / Out', 'id': 55}, {'name': 'UDP Errors', 'id': 109}, {'name': 'TCP In / Out', 'id': 299}, {'name': 'TCP Errors', 'id': 104}, {'name': 'TCP Connections', 'id': 85}, {'name': 'TCP SynCookie', 'id': 91}, {'name': 'TCP Direct Transition', 'id': 82}, {'name': 'Node Exporter Scrape Time', 'id': 40}, {'name': 'Node Exporter Scrape', 'id': 157}]
-        # self.add_panel('node-exporter-full', node_panels)
-
-        # network_traffic_dashboard = { 'uid': 'dHEquNzGz', 'name': 'network-traffic-dashboard', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'device'}, {'name':'node'}] }
-        # self.add_dashboard(network_traffic_dashboard)
-        # traffic_panels = [{'name': 'Network Traffic by Packets', 'id': 8}, {'name': 'TCP In / Out', 'id': 13}, {'name': 'TCP Errors', 'id': 14}, {'name': 'UDP In / Out', 'id': 16}, {'name': 'UDP Errors', 'id': 17}, {'name': 'Network Traffic Received Errors', 'id': 10}, {'name': 'Network Traffic Send Errors', 'id': 11}]
-        # self.add_panel("network-traffic-dashboard", traffic_panels)
-        # ping_dashboard = {"name":"ping-status", "uid":"hqj_G5R4k", "vars":[],"panels":[{"name":"Ping", "id":2 }]}
-        # self.add_dashboard(ping_dashboard)
-
-        # self.dashboard_widget = None
-        # self.graph_widget = None
-        # self.time_widget = None
-        # self.node_widget = None
-        # self.device_widget = None
-        
-    def init_default_dashboard_info():
+    def init_default_dashboard_info(self):
         self.dashboard_info = {'dashboards':[]}
         self.slice_node_info={}
         self.get_node_and_interface_names()
         
+        # TIME FILTERS
         self.dashboard_info["time_filters"] = []
         self.dashboard_info["time_filters"].append({'name': 'Last 5 minutes', 'value': "5m", "refresh":"30s"})
         self.dashboard_info["time_filters"].append({'name': 'Last 15 minutes', 'value': 900000})
         self.dashboard_info["time_filters"].append({'name': 'Last 1 hour', 'value': 3600000})
         
-
-
+        # NODE 
         node_dashboard = { 'uid': 'rYdddlPWk', 'name': 'node-exporter-full', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'diskdevices', 'default':'%5Ba-z%5D%2B%7Cnvme%5B0-9%5D%2Bn%5B0-9%5D%2B'}, {'name':'node'}] }
         self.add_dashboard(node_dashboard)
         node_panels = [{'name': 'CPU Busy', 'id': 20}, {'name': 'Sys Load (5m avg)', 'id': 155}, {'name': 'Sys Load (15m avg)', 'id': 19}, {'name': 'RAM Used', 'id': 16}, {'name': 'SWAP Used', 'id': 21}, {'name': 'Root FS Used', 'id': 154}, {'name': 'CPU Cores', 'id': 14}, {'name': 'Uptime', 'id': 15}, {'name': 'RootFS Total', 'id': 23}, {'name': 'RAM Total', 'id': 75}, {'name': 'SWAP Total', 'id': 18}, {'name': 'CPU Basic', 'id': 77}, {'name': 'Memory Basic', 'id': 78}, {'name': 'Network Traffic Basic', 'id': 74}, {'name': 'Disk Space Used Basic', 'id': 152}, {'name': 'CPU', 'id': 3}, {'name': 'Memory Stack', 'id': 24}, {'name': 'Network Traffic', 'id': 84}, {'name': 'Disk Space Used', 'id': 156}, {'name': 'Disk IOps', 'id': 229}, {'name': 'I/O Usage Read / Write', 'id': 42}, {'name': 'I/O Utilization', 'id': 127}, {'name': 'Memory Active / Inactive', 'id': 136}, {'name': 'Memory Commited', 'id': 135}, {'name': 'Memory Active / Inactive Detail', 'id': 191}, {'name': 'Memory Writeback and Dirty', 'id': 130}, {'name': 'Memory Shared and Mapped', 'id': 138}, {'name': 'Memory Slab', 'id': 131}, {'name': 'Memory Vmalloc', 'id': 70}, {'name': 'Memory Bounce', 'id': 159}, {'name': 'Memory Anonymous', 'id': 129}, {'name': 'Memory Kernel / CPU', 'id': 160}, {'name': 'Memory HugePages Counter', 'id': 140}, {'name': 'Memory HugePages Size', 'id': 71}, {'name': 'Memory DirectMap', 'id': 128}, {'name': 'Memory Unevictable and MLocked', 'id': 137}, {'name': 'Memory NFS', 'id': 132}, {'name': 'Memory Pages In / Out', 'id': 176}, {'name': 'Memory Pages Swap In / Out', 'id': 22}, {'name': 'Memory Page Faults', 'id': 175}, {'name': 'OOM Killer', 'id': 307}, {'name': 'Time Syncronized Drift', 'id': 260}, {'name': 'Time PLL Adjust', 'id': 291}, {'name': 'Time Syncronized Status', 'id': 168}, {'name': 'Time Misc', 'id': 294}, {'name': 'Processes Status', 'id': 62}, {'name': 'Processes State', 'id': 315}, {'name': 'Processes  Forks', 'id': 148}, {'name': 'Processes Memory', 'id': 149}, {'name': 'PIDs Number and Limit', 'id': 313}, {'name': 'Process schedule stats Running / Waiting', 'id': 305}, {'name': 'Threads Number and Limit', 'id': 314}, {'name': 'Context Switches / Interrupts', 'id': 8}, {'name': 'System Load', 'id': 7}, {'name': 'Interrupts Detail', 'id': 259}, {'name': 'Schedule timeslices executed by each cpu', 'id': 306}, {'name': 'Entropy', 'id': 151}, {'name': 'CPU time spent in user and system contexts', 'id': 308}, {'name': 'File Descriptors', 'id': 64}, {'name': 'Hardware temperature monitor', 'id': 158}, {'name': 'Throttle cooling device', 'id': 300}, {'name': 'Power supply', 'id': 302}, {'name': 'Systemd Sockets', 'id': 297}, {'name': 'Systemd Units State', 'id': 298}, {'name': 'Disk IOps Completed', 'id': 9}, {'name': 'Disk R/W Data', 'id': 33}, {'name': 'Disk Average Wait Time', 'id': 37}, {'name': 'Average Queue Size', 'id': 35}, {'name': 'Disk R/W Merged', 'id': 133}, {'name': 'Time Spent Doing I/Os', 'id': 36}, {'name': 'Instantaneous Queue Size', 'id': 34}, {'name': 'Disk IOps Discards completed / merged', 'id': 301}, {'name': 'Filesystem space available', 'id': 43}, {'name': 'File Nodes Free', 'id': 41}, {'name': 'File Descriptor', 'id': 28}, {'name': 'File Nodes Size', 'id': 219}, {'name': 'Filesystem in ReadOnly / Error', 'id': 44}, {'name': 'Network Traffic by Packets', 'id': 60}, {'name': 'Network Traffic Errors', 'id': 142}, {'name': 'Network Traffic Drop', 'id': 143}, {'name': 'Network Traffic Compressed', 'id': 141}, {'name': 'Network Traffic Multicast', 'id': 146}, {'name': 'Network Traffic Fifo', 'id': 144}, {'name': 'Network Traffic Frame', 'id': 145}, {'name': 'Network Traffic Carrier', 'id': 231}, {'name': 'Network Traffic Colls', 'id': 232}, {'name': 'NF Contrack', 'id': 61}, {'name': 'ARP Entries', 'id': 230}, {'name': 'MTU', 'id': 288}, {'name': 'Speed', 'id': 280}, {'name': 'Queue Length', 'id': 289}, {'name': 'Softnet Packets', 'id': 290}, {'name': 'Softnet Out of Quota', 'id': 310}, {'name': 'Network Operational Status', 'id': 309}, {'name': 'Sockstat TCP', 'id': 63}, {'name': 'Sockstat UDP', 'id': 124}, {'name': 'Sockstat FRAG / RAW', 'id': 125}, {'name': 'Sockstat Memory Size', 'id': 220}, {'name': 'Sockstat Used', 'id': 126}, {'name': 'Netstat IP In / Out Octets', 'id': 221}, {'name': 'Netstat IP Forwarding', 'id': 81}, {'name': 'ICMP In / Out', 'id': 115}, {'name': 'ICMP Errors', 'id': 50}, {'name': 'UDP In / Out', 'id': 55}, {'name': 'UDP Errors', 'id': 109}, {'name': 'TCP In / Out', 'id': 299}, {'name': 'TCP Errors', 'id': 104}, {'name': 'TCP Connections', 'id': 85}, {'name': 'TCP SynCookie', 'id': 91}, {'name': 'TCP Direct Transition', 'id': 82}, {'name': 'Node Exporter Scrape Time', 'id': 40}, {'name': 'Node Exporter Scrape', 'id': 157}]
         self.add_panel('node-exporter-full', node_panels)
 
+        # NETWORK TRAFFIC DASHBOARD
         network_traffic_dashboard = { 'uid': 'dHEquNzGz', 'name': 'network-traffic-dashboard', 'vars':[{'name':'job', 'default':'node'} , {'name':'DS_PROMETHEUS', 'default':'default'}, {'name':'device'}, {'name':'node'}] }
         self.add_dashboard(network_traffic_dashboard)
         traffic_panels = [{'name': 'Network Traffic by Packets', 'id': 8}, {'name': 'TCP In / Out', 'id': 13}, {'name': 'TCP Errors', 'id': 14}, {'name': 'UDP In / Out', 'id': 16}, {'name': 'UDP Errors', 'id': 17}, {'name': 'Network Traffic Received Errors', 'id': 10}, {'name': 'Network Traffic Send Errors', 'id': 11}]
         self.add_panel("network-traffic-dashboard", traffic_panels)
+
+        # PING DASHBOARD
         ping_dashboard = {"name":"ping-status", "uid":"hqj_G5R4k", "vars":[],"panels":[{"name":"Ping", "id":2 }]}
         self.add_dashboard(ping_dashboard)
 
+        # WIDGETS
         self.dashboard_widget = None
         self.graph_widget = None
         self.time_widget = None
         self.node_widget = None
         self.device_widget = None
 
-    @property
-    def grafana_tunnel_host(self):
-        """
-        If a tunnel is used, this value must be set for the localhost:port"""
-        return self._grafana_tunnel_host
+    # @property
+    # def grafana_tunnel_host(self):
+    #     """
+    #     If a tunnel is used, this value must be set for the localhost:port"""
+    #     return self._grafana_tunnel_host
         
-    @grafana_tunnel_host.setter
-    def grafana_tunnel_host(self, value):
-        """ 
-        Set to localhost:port_number if using tunnnel.
-        """
-        self._grafana_tunnel_host = value
+    # @grafana_tunnel_host.setter
+    # def grafana_tunnel_host(self, value):
+    #     """ 
+    #     Set to localhost:port_number if using tunnnel.
+    #     """
+    #     self._grafana_tunnel_host = value
         
     @property
     def grafana_base_url(self):
@@ -117,8 +86,8 @@ class mfvis(mflib):
         Gets the base url for grafana. If _grafana_tunnel_host is set then that value is used for the ip.
         Otherwise the meas_node_ip is used.
         """
-        if self._grafana_tunnel_host:
-            return f"https://{self._grafana_tunnel_host}/grafana"
+        if self.tunnel_host:
+            return f"https://{self.tunnel_host}:{self.grafana_tunnel_local_port}/grafana"
         
         return f"https://{self.meas_node_ip}/grafana"
 
@@ -210,34 +179,13 @@ class mfvis(mflib):
         for d in self.dashboard_info["dashboards"]:
             names.append( d["name"])
         return names
-    
-
-
-    # @property
-    # def mf(self):
-    #     """
-    #     Gets the mflib object.
-    #     """
-    #     return self._mf
-
-    # @mf.setter
-    # def mf(self, value):
-    #     """
-    #     Sets the mflib object.
-    #     """
-    #     self._mf = value 
         
         
     def get_node_and_interface_names(self):
         """
         Uses fablib to get all the interface names of all the experiment nodes 
         """
-        # fablib = fablib_manager()
-        # #fablib.show_config()
-        # mfo = self._mf
-        # slice_name= mfo._slicename 
         try:
-            #slice = fablib.get_slice(name=slice_name)
             slice = self.slice
             for node in slice.get_nodes():
                 if node.get_name() != "_meas_node":
@@ -249,10 +197,6 @@ class mfvis(mflib):
                         interface_matching[interface.get_os_interface()]=interface.get_name()
                     self.slice_node_info[node.get_name()].append(os_interface)
                     self.slice_node_info[node.get_name()].append(interface_matching)
-            # for key, value in self.slice_node_info.items():
-            #     print (f"{key}:{value[1]}")
-            #print (self.slice_node_info")
-            #return (self.slice_node_info)
         except Exception as e:
             print(f"Fail: {e}")
              
@@ -287,48 +231,6 @@ class mfvis(mflib):
         """
         
         return (list(self.slice_node_info.keys()))
-        #return ['Node1', 'Node2']
-        #node_names = list(self.slice_node_info.keys())
-        #print (node_names)
-        #return node_names
-        #available_nodes = []
-        #for node in self.meas_net_info['node_info']:
-            #available_nodes.append(node['node_name'])
-        #return available_nodes
-
-
-#     def get_available_graph_name(self):
-#         """
-#         Returns the available graph names to be displayed in the dropdown menu
-#         :rtype: List
-#         """
-#         available_graphs = []
-#         for graph in self.dashboard_info['graph_panels']:
-#             available_graphs.append(graph['name'])
-#         return available_graphs
-
-
-#     def get_prometheus_url(self):
-#         """
-#         Builds the basic url of the prometheus graphs in grafana
-#         currently the url uses localhost:10010 for visualization and 
-#         will be changed to the management IP of the meas_node in the future
-#         :rtype: String
-#         """
-#         ###To be changed
-#         #meas_node_ip = self.meas_net_info['meas_node_ip']
-#         ###
-#         meas_node_ip = "localhost:10010"
-#         dashboard_uid = self.dashboard_info['dashboard_info']['dashboard_uid']
-#         dashboard_name = self.dashboard_info['dashboard_info']['dashboard_name']
-#         #url_sec1 = "https://"+meas_node_ip+"/grafana/d-solo/"
-#         #url_sec2 = "?orgId=1&refresh=1m&var-DS_PROMETHEUS=Prometheus&var-job=node&"
-#         #url = url_sec1+dashboard_uid+"/"+dashboard_name+url_sec2
-#         url_first_sec = "https://{ip}/grafana/d-solo/{duid}/{dname}".format(ip=meas_node_ip, duid=dashboard_uid, dname=dashboard_name)
-#         url_second_sec = "?orgId=1&refresh=1m&var-DS_PROMETHEUS=Prometheus&var-job=node&"
-#         url = url_first_sec+url_second_sec
-#         return (url)
-
 
     def get_system_time(self):
         """
@@ -350,32 +252,6 @@ class mfvis(mflib):
             if (timefilter['name'] == time):
                 return (timefilter['value'])
 
-
-#     def get_graph_panelid(self, graphname):
-#         """
-#         Helper function to map graph name to panel id
-#         :param graphname: name of the graph to be displayed  
-#         :rtype: String
-#         """
-#         for graph in self.dashboard_info['graph_panels']:
-#             if (graph['name']== graphname):
-#                 return (graph['panel_id'])
-
-
-#     def add_filter(self, url, time, graphname):
-#         """
-#         Creates time and graph filters and appends the values to the url
-#         :param url: formed url of the prometheus graphs
-#         :param time: time filter
-#         :param graphname: name of the graph to be displayed
-#         :rtype: String
-#         """
-#         currentEpoch = self.get_system_time()
-#         timeString = "from="+str(currentEpoch-self.get_time_filter_value(time=time))+"&to="+str(currentEpoch)
-#         graphString = "&panelId="+self.get_graph_panelid(graphname=graphname)
-#         finalUrl = url + timeString + graphString
-#         return (finalUrl)
-
     def add_time_filter(self, url, filter_name):
         
         tf = self.get_available_time_filter_info(filter_name)
@@ -386,30 +262,6 @@ class mfvis(mflib):
             time_string = f'from={current_epoch-tf["value"]}&to={str(current_epoch)}'
             #time_string = "from="+str(current_epoch-self.get_time_filter_value(time=time_filter))+"&to="+str(current_epoch)
         return f"{url}&{time_string}"
-
-
-#     def find_node_IP(self, nodename):
-#         """
-#         Helper function to get the IP address based on the node name 
-#         :param nodename: name of the node
-#         :rtype: String
-#         """
-#         for node in self.meas_net_info['node_info']:
-#             if (node['node_name']== nodename):
-#                 return (node['node_ip'])
-
-
-#     def add_node_and_disk(self, url, nodename):
-#         """
-#         Converts node name to the corresponding IP used in meas_net
-#         appends the disk name and node IP to the url
-#         :param url: formed url of the prometheus graphsdisplay
-#         :param nodename: name of the node
-#         :rtype: String
-#         """
-#         diskdevice = "&var-diskdevices=%5Ba-z%5D%2B%7Cnvme%5B0-9%5D%2Bn%5B0-9%5D%2B%7Cmmcblk%5B0-9%5D%2B&"
-#         finalurl = url+"var-node="+self.find_node_IP(nodename=nodename)+"%3A9100&"+diskdevice
-#         return (finalurl)
 
     def add_node_name(self, url, node_name):
         return f"{url}&var-node={node_name}"
@@ -475,26 +327,6 @@ class mfvis(mflib):
             print(url)
             finalHTML = HTML(self.convert_to_iframe(url))
             display(finalHTML)
-
-
-#     def imageViewer(self, graphType, timeFilter, nodeName):
-#         """
-#         Generates the url of the prometheus graphs based on user's selection in the dropdown menu
-#         displays the url in the HTML format
-#         """
-#         url = self.prometheus_url
-#         available_graph = []
-#         for p in self.get_panel_names("node-exporter-full"):
-#             available_graph.append(p)
-#         # for graph in self.dashboard_info['graph_panels']:
-#         #     available_graph.append(graph['name'])
-#         if (graphType in available_graph):
-#             intermediateurl = self.add_node_and_disk(url=url, nodename=nodeName)
-#             finalUrl = self.add_filter(url=intermediateurl, time=timeFilter, graphname=graphType)
-#             finalHTML = HTML(self.convert_to_iframe(finalUrl))
-#             display(finalHTML)
-#         else:
-#             display(HTML())
 
 
     def visualize_live_prometheus(self):
