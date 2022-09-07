@@ -142,6 +142,20 @@ class core():
         self._grafana_tunnel_local_port = value
         
 
+    @property
+    def kibana_tunnel_local_port(self):
+        """
+        If a tunnel is used, this value must be set for the port"""
+        return self._kibana_tunnel_local_port
+        
+    @kibana_tunnel_local_port.setter
+    def kibana_tunnel_local_port(self, value):
+        """ 
+        Set to port_number if using tunnnel.
+        """
+        self._kibana_tunnel_local_port = value
+                
+
     # Tunnels are needed to access the meas node via the bastion host
     # In the future these may be combinded into one port with diff nginx paths mappings.
     # alt copy is a selection added to the fabric_rc file for setting a alertnate location for the files 
@@ -210,9 +224,9 @@ class core():
         # logging.info("Creating mflib object.")
         
         #self.mf_repo_branch = "dev"
-        self._tunnel_host = "localhost"
-        self._grafana_tunnel_local_port = "10010"
-        self._kibana_tunnel_local_port = "10020"
+        self.tunnel_host = "localhost"
+        self.grafana_tunnel_local_port = "10010"
+        self.kibana_tunnel_local_port = "10020"
 
 
         # The slice_name
