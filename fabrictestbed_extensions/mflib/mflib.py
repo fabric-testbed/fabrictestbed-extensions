@@ -233,7 +233,62 @@ class core():
             os.makedirs(self.local_storage_directory)
         except FileExistsError:
             pass
-        
+
+
+# IPV6 to IPV4 only sites fix
+# note: should set bootstrap status file when making these 2 calls, status should be set, restored, not needed.
+    def set_DNS_all_nodes(self):
+        # Check if we need to
+        if(self.meas_node.validIPAddress(node.get_management_ip())=="IPv6"):
+            for node in self.slice.get_nodes():
+                self.set_DNS(node)
+            return "set"
+        else:
+            return "not needed"
+
+    def restore_DNS_all_nodes(self):
+        # Check if we need to
+        if(self.meas_node.validIPAddress(node.get_management_ip())=="IPv6"):
+            for node in self.slice.get_nodes():
+                self.restore_DNS(node)
+            return "restored"
+        else:
+            return "not needed"
+
+    def set_DNS(self,node):
+        if(node.validIPAddress(node.get_management_ip())=="IPv6"):
+            node.execute("""
+            printf 'nameserver 2a00:1098:2c::1\nnameserver 2a01:4f8:c2c:123f::1\nnameserver 2a01:4f9:c010:3f02::1' > resolv.new;
+            sudo mv /etc/resolv.conf /etc/resolv.old;
+            sudo mv resolv.new /etc/resolv.conf;
+            """)
+            #Needed for fedora
+            node.execute("""
+                sudo resolvectl dns eth0 2a00:1098:2c::1;
+                sudo resolvectl dns eth0 2a01:4f8:c2c:123f::1;
+                sudo
+                resolvectl dns eth0 2a01:4f9:c010:3f02::1;
+            """)
+            # TODO add error checking
+
+
+    def restore_DNS(self,node):
+        if(node.validIPAddress(node.get_management_ip())=="IPv6"):
+            node.execute("""
+                sudo mv /etc/resolv.old /etc/resolv.conf;
+            """)
+
+            node.execute("""
+                resolvectl revert eth0;
+            """)
+
+
+
+
+
+
+
+
           
 # User Methods 
     def create(self, service, data=None, files=[]):
@@ -1056,6 +1111,18 @@ class mflib(core):
                     # logging.info("Mfuser installs Failed.")
                     return 
             
+
+
+            #######################
+            # Set ipv6 to ipv4 DNS 
+            #######################
+            if "ipv6_4_nat" in bss and (bss["ipv6_4_nat"] == "set" or bss["ipv6_4_nat"] == "not_needed"):
+                print("ipv6 to 4 DNS nat already set or is not needed.")
+            else:
+            #if True:
+                nat_set_results = self.set_DNS_all_nodes()
+                self._update_bootstrap("ipv6_4_nat", "nat_set_results")
+
 
             #######################
             # Clone mf repo 
