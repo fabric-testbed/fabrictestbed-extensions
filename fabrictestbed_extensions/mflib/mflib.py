@@ -196,6 +196,10 @@ class core():
 
         return tunnel_cmd 
 
+
+    # Repo branch made class varible so it can be set before creating object
+    mf_repo_branch = "dev"
+    
   
     def __init__(self, local_storage_directory="/tmp/mflib"):
         """
@@ -205,7 +209,7 @@ class core():
 
         # logging.info("Creating mflib object.")
         
-        self.mf_repo_branch = "dev"
+        #self.mf_repo_branch = "dev"
         self._tunnel_host = "localhost"
         self._grafana_tunnel_local_port = "10010"
         self._kibana_tunnel_local_port = "10020"
