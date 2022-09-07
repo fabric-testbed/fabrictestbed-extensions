@@ -114,7 +114,6 @@ class core():
             return ""
 
 
-
     @property
     def tunnel_host(self):
         """
@@ -135,7 +134,7 @@ class core():
         If a tunnel is used, this value must be set for the port"""
         return self._grafana_tunnel_local_port
         
-    @grafana_tunnel_host.setter
+    @grafana_tunnel_local_port.setter
     def grafana_tunnel_local_port(self, value):
         """ 
         Set to port_number if using tunnnel.
