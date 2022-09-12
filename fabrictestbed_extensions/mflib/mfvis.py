@@ -432,33 +432,9 @@ class mfvis(mflib):
             url = self.add_interface_name(url, interface_name)
         return url
 
-    def download_panel_png( self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, save_as_filename=""):
-        url_path = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name)
-        #remove the base url from the path
-        url_path = url_path.replace(self.grafana_base_url, "")
-        data = {"render":{"url_path":url_path}}
-        info_results = self.info("grafana_manager", data )
-       
-        if info_results["success"]:
-            if "render" in info_results:
-                if info_results["render"]["success"]:
-                    if "filename" in info_results["render"]:
-                            # download file
-                            self._download_service_file("grafana_manager", os.path.join("rendered", info_results["render"]["filename"]), save_as_filename )
-                            return save_as_filename
-        return f"Download panel png failed. {info_results['msg']}"
 
 
-    def add_timezone_to_url(self, url, timezone):
-        encoded_tz= urllib.parse.quote(timezone, safe='')
-        return (f'{url}&tz={encoded_tz}')
-        
-    def download_graph(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, file_name=None, time_zone=None):
-        if file_name:
-            file = file_name
-        else:
-            name = panel_name.replace(" ", "-")
-            file = f'/home/fabric/work/{name}.png'
+    def render_graph_url(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, time_zone=None):
         if interface_name:
             url = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name=interface_name)
         else:
@@ -467,10 +443,67 @@ class mfvis(mflib):
             final_url = self.add_timezone_to_url(url, time_zone)
         else:
             final_url=url
-        print (final_url)
-        r = requests.get(final_url, verify=False)
-        print (r.status_code)
-        if r.status_code == 200:
-            with open(file, 'wb') as f:
-                f.write(r.content)
+        return final_url
+    
+    def download_graph( self, dashboard_name, panel_name, time_filter, node_name, save_as_filename="", interface_name=None, time_zone=None):
+        
+        url = self.render_graph_url(dashboard_name, panel_name, time_filter, node_name, interface_name=interface_name, time_zone=time_zone)
+        
+        #url_path = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name)
+        #remove the base url from the path
+        url_path = url.replace(self.grafana_base_url, "")
+        data = {"render":{"url_path":url_path}}
+        info_results = self.info("grafana_manager", data )
+        
+        if info_results["success"]:
+            if "render" in info_results:
+                if info_results["render"]["success"]:
+                    if "filename" in info_results["render"]:
+                            # download file
+                            download_results = self._download_service_file("grafana_manager", os.path.join("rendered", info_results["render"]["filename"]), save_as_filename )
+                            return download_results["filename"]
+        return f"Download panel png failed. {info_results['msg']}"
+
+
+    # def download_panel_png( self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, save_as_filename=""):
+    #     url_path = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name)
+    #     #remove the base url from the path
+    #     url_path = url_path.replace(self.grafana_base_url, "")
+    #     data = {"render":{"url_path":url_path}}
+    #     info_results = self.info("grafana_manager", data )
+       
+    #     if info_results["success"]:
+    #         if "render" in info_results:
+    #             if info_results["render"]["success"]:
+    #                 if "filename" in info_results["render"]:
+    #                         # download file
+    #                         self._download_service_file("grafana_manager", os.path.join("rendered", info_results["render"]["filename"]), save_as_filename )
+    #                         return save_as_filename
+    #     return f"Download panel png failed. {info_results['msg']}"
+
+
+    def add_timezone_to_url(self, url, timezone):
+        encoded_tz= urllib.parse.quote(timezone, safe='')
+        return (f'{url}&tz={encoded_tz}')
+        
+    # def download_graph(self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, file_name=None, time_zone=None):
+    #     if file_name:
+    #         file = file_name
+    #     else:
+    #         name = panel_name.replace(" ", "-")
+    #         file = f'/home/fabric/work/{name}.png'
+    #     if interface_name:
+    #         url = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name=interface_name)
+    #     else:
+    #         url = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name)
+    #     if time_zone:
+    #         final_url = self.add_timezone_to_url(url, time_zone)
+    #     else:
+    #         final_url=url
+    #     print (final_url)
+    #     r = requests.get(final_url, verify=False)
+    #     print (r.status_code)
+    #     if r.status_code == 200:
+    #         with open(file, 'wb') as f:
+    #             f.write(r.content)
     
