@@ -612,26 +612,34 @@ class core():
         return {} #(stdout, stderr)
 
 
-    def _download_service_file(self, service, filename):
+    def _download_service_file(self, service, filename, local_file_path=""):
         """
         Downloads service files from the meas node and places them in the local storage directory.
         :param service: Service name
         :type service: String
         :param filename: The filename to download from the meas node.
+        :param local_file_path: Optional filename for local saved file. If not given, file will be in default slice directory.# Fri Sep 09 2022 14:30
+        :type local_file_path: String
         """
+
+        if not local_file_path:
+            local_file_path = os.path.join(self.local_slice_directory, service, filename)
+            # ensure local directory exists
+            local_dir_path = os.path.dirname(local_file_path) 
+            if not os.path.exists(local_dir_path):
+                os.makedirs(local_dir_path)
 
         # 
         #  Download a file from a service directory
         # Probably most useful for grabbing output from a command run.
         # TODO figure out how to name/where to put file locally
         try:
-            local_file_path = os.path.join(self.local_slice_directory, service, filename)
+            #local_file_path = os.path.join(self.local_slice_directory, service, filename)
             remote_file_path = os.path.join(self.services_directory, service, filename)
-            stdout, stderr = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+            file_attributes = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
         except Exception as e:
-            print(f"Fail: {e}")
+            print(f"Download service file Fail: {e}")
         
-         
         
     def _clone_mf_repo(self):
         """

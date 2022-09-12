@@ -431,6 +431,23 @@ class mfvis(mflib):
         if interface_name:
             url = self.add_interface_name(url, interface_name)
         return url
+
+    def download_panel_png( self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, save_as_filename=""):
+        url_path = self.generate_download_url(self, dashboard_name, panel_name, time_filter, node_name, interface_name)
+        #remove the base url from the path
+        url_path = url_path.replace(self.grafana_base_url, "")
+        data = {"render":{"url_path":url_path}}
+        info = self.info("grafana_manger", data )
+
+        if info["success"] == "OK":
+            if "filename" in info:
+                print(filename)
+                # download file
+                self._download_service_file("grafana_manager", info["filename"], save_as_filename )
+        else:
+            return f"Download panel png failed. {info['msg']}"
+        #TODO add error checking
+            
     
     def add_timezone_to_url(self, url, timezone):
         encoded_tz= urllib.parse.quote(timezone, safe='')
