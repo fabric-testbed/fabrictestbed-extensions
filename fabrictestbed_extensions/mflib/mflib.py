@@ -489,6 +489,9 @@ class core():
         # upload resources 
         if data:
             self._upload_service_data(service, data)
+        else:
+            # Ensure old stale data is remove on meas node
+            self._upload_service_data(service, {})
         if files:
             self._upload_service_files(service, files)
 
@@ -606,7 +609,9 @@ class core():
             # TODO add stderr to return value?
         except Exception as e:
             print("Unable to convert returned comand json.")
+            print("STDOUT: ")
             print(stdout)
+            print("STDERR: ")
             print(stderr)
             print(f"Fail: {e}")
         return {} #(stdout, stderr)
