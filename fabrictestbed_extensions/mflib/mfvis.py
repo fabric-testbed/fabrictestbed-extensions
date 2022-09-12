@@ -433,22 +433,22 @@ class mfvis(mflib):
         return url
 
     def download_panel_png( self, dashboard_name, panel_name, time_filter, node_name, interface_name=None, save_as_filename=""):
-        url_path = self.generate_download_url(self, dashboard_name, panel_name, time_filter, node_name, interface_name)
+        url_path = self.generate_download_url(dashboard_name, panel_name, time_filter, node_name, interface_name)
         #remove the base url from the path
         url_path = url_path.replace(self.grafana_base_url, "")
         data = {"render":{"url_path":url_path}}
-        info = self.info("grafana_manger", data )
+        info_results = self.info("grafana_manager", data )
+       
+        if info_results["success"]:
+            if "render" in info_results:
+                if info_results["render"]["success"]:
+                    if "filename" in info_results["render"]:
+                            # download file
+                            self._download_service_file("grafana_manager", os.path.join("rendered", info_results["render"]["filename"]), save_as_filename )
+                            return save_as_filename
+        return f"Download panel png failed. {info_results['msg']}"
 
-        if info["success"] == "OK":
-            if "filename" in info:
-                print(filename)
-                # download file
-                self._download_service_file("grafana_manager", info["filename"], save_as_filename )
-        else:
-            return f"Download panel png failed. {info['msg']}"
-        #TODO add error checking
-            
-    
+
     def add_timezone_to_url(self, url, timezone):
         encoded_tz= urllib.parse.quote(timezone, safe='')
         return (f'{url}&tz={encoded_tz}')
