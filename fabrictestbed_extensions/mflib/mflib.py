@@ -642,8 +642,10 @@ class core():
             #local_file_path = os.path.join(self.local_slice_directory, service, filename)
             remote_file_path = os.path.join(self.services_directory, service, filename)
             file_attributes = self.meas_node.download_file(local_file_path, remote_file_path) #, retry=3, retry_interval=10):
+            return {"success":True, "filename":local_file_path}
         except Exception as e:
             print(f"Download service file Fail: {e}")
+            return {"success":False}
         
         
     def _clone_mf_repo(self):
