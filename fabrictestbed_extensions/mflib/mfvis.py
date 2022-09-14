@@ -15,8 +15,8 @@ from fabrictestbed_extensions.mflib.mflib import mflib
 # For testing
 #from mflib import mflib
 
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# import urllib3
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class mfvis(mflib):
     sanity_version = "2.01"
