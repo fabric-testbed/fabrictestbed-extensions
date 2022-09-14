@@ -11,9 +11,9 @@ import ipywidgets as widgets
 from IPython.display import display
 from fabrictestbed_extensions.fablib.fablib import fablib
 from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manager
-#from fabrictestbed_extensions.mflib.mflib import mflib
+from fabrictestbed_extensions.mflib.mflib import mflib
 # For testing
-from mflib import mflib
+#from mflib import mflib
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
