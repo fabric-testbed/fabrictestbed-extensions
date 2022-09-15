@@ -19,7 +19,7 @@ from fabrictestbed_extensions.mflib.mflib import mflib
 # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class mfvis(mflib):
-    sanity_version = "2.01"
+    mfvis_sanity_version = "2.02"
     meas_net_info = {}
     
     def __init__(self, slice_name="", local_storage_directory="/tmp/mflib"):

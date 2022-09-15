@@ -44,7 +44,7 @@ import paramiko
 
 class core():
 
-    sanity_version = "1.0.20"
+    core_sanity_version = "1.0.21"
 
     @property
     def slice_name(self):
@@ -835,7 +835,7 @@ class core():
 
 class mflib(core):
 
-
+    mflib_sanity_version = "1.0.21"
           
     # This is a temporary method needed untill modify slice ability is avaialble. 
     @staticmethod 
