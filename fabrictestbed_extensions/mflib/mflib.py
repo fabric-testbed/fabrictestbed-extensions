@@ -205,7 +205,7 @@ class core():
 
 
     # Repo branch made class varible so it can be set before creating object
-    mf_repo_branch = "dev"
+    mf_repo_branch = "main"
     
   
     def __init__(self, local_storage_directory="/tmp/mflib"):
