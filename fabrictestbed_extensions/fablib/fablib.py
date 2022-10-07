@@ -527,7 +527,7 @@ class FablibManager:
                  log_level=None,
                  log_file: str = None,
                  data_dir: str = None,
-                 output_type = None):
+                 output = None):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -539,9 +539,9 @@ class FablibManager:
         """
         
         if(self.is_jupyter_notebook()):
-            self.output_type = 'jupyter'
+            self.output = 'jupyter'
         else:
-            self.output_type = 'text'
+            self.output = 'text'
 
         
         self.ssh_thread_pool_executor = ThreadPoolExecutor(64)
