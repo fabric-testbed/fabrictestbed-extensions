@@ -142,9 +142,9 @@ class Slice:
                           node.get_ram(),
                           node.get_disk(),
                           node.get_image(),
-                          node.get_management_ip(),
+                          str(node.get_management_ip()),
                           node.get_reservation_state(),
-                          node.get_error_message(),
+                          str(node.get_error_message()),
                         ])
 
         return tabulate(table, headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image",
@@ -253,6 +253,20 @@ class Slice:
             logging.error(e, exc_info=True)
 
         return slice
+    
+    def show(self):
+        table = [["Slice Name", self.sm_slice.name],
+                 ["Slice ID", self.sm_slice.slice_id],
+                 ["Slice State", self.sm_slice.state],
+                 ["Project ID", self.sm_slice.project_id],
+                 ["Lease Start (UTC)", self.sm_slice.lease_start_time],
+                 ["Lease End (UTC)", self.sm_slice.lease_end_time],
+                ]
+
+        self.get_fablib_manager().print_show_table(table, 
+                                                   title='Slice Information', 
+                                                   properties={'text-align': 'left', 'border': '1px black solid !important'}, 
+                                                   hide_header=True)
 
     def get_fim_topology(self) -> ExperimentTopology:
         """
@@ -1255,3 +1269,37 @@ class Slice:
             print("Done!")
 
         return self.slice_id
+    
+    def list_nodes(self, output=None):
+        """
+        Creates a tabulated string describing all nodes in the slice.
+
+        Intended for printing a list of all slices.
+
+        :return: Tabulated srting of all slices information
+        :rtype: String
+        """
+        table = []
+        for node in self.get_nodes():
+
+            table.append( [     node.get_reservation_id(),
+                                node.get_name(),
+                                node.get_site(),
+                                node.get_host(),
+                                node.get_cores(),
+                                node.get_ram(),
+                                node.get_disk(),
+                                node.get_image(),
+                                node.get_management_ip(),
+                                node.get_reservation_state(),
+                                node.get_error_message()
+                                ] )
+        headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image", "Management IP", "State", "Error"]
+        self.get_fablib_manager().print_list_table(table,
+                                                   headers=headers,
+                                                   title='Node Information', 
+                                                   properties={'text-align': 'left', 
+                                                               'border': '1px black solid !important'}, 
+                                                   index='Name',
+                                                   hide_header=False,
+                                                   output=output)

@@ -181,7 +181,7 @@ class Node:
             ["SSH Command ", self.get_ssh_command()],
             ]
 
-        self.get_fablib_manager().print_table(table, title='Node Information', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True)
+        self.get_fablib_manager().print_show_table(table, title='Node Information', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True)
 
     def get_fim_node(self) -> FimNode:
         """
