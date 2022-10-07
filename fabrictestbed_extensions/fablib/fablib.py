@@ -35,7 +35,15 @@ from typing import List, Dict
 from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
+import pandas as pd
 from tabulate import tabulate
+
+from fabrictestbed.slice_editor import (
+    ExperimentTopology,
+    Capacities
+)
+
+
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
@@ -518,7 +526,8 @@ class FablibManager:
                  bastion_key_filename: str = None,
                  log_level=None,
                  log_file: str = None,
-                 data_dir: str = None):
+                 data_dir: str = None,
+                 output_type = None):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -528,6 +537,13 @@ class FablibManager:
          - defaults (if needed and possible)
 
         """
+        
+        if(self.is_jupyter_notebook()):
+            self.output_type = 'jupyter'
+        else:
+            self.output_type = 'text'
+
+        
         self.ssh_thread_pool_executor = ThreadPoolExecutor(64)
 
         # init attributes
@@ -876,13 +892,13 @@ class FablibManager:
         """
         return self.default_slice_key
 
-    def show_config(self):
-        table = []
-        for var, val in self.get_config().items():
-            table.append([str(var), str(val)])
-
-        print(f"{tabulate(table)}")
-
+    #def show_config(self):
+    #    table = []
+    #    for var, val in self.get_config().items():
+    #        table.append([str(var), str(val)])
+    #
+    #    print(f"{tabulate(table)}")
+    #
         return
 
     def get_config(self) -> Dict[str, str]:
@@ -1303,3 +1319,59 @@ class FablibManager:
                 return False  # Other type (?)
         except NameError:
             return False
+
+        
+    def print_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output_type=None):
+        
+        if output_type == None:
+            output_type = self.output_type.lower()
+        
+        if(output_type == 'text'):
+            print(f"\n{self.create_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output_type=output_type)}")
+
+        elif(output_type == 'jupyter'):
+            display(self.create_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output_type=output_type))
+
+
+    def create_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output_type=None):
+        if output_type == None:
+            output_type = self.output_type.lower()
+        
+        if(output_type == 'text'):
+            if headers is not None:
+                slice_string = tabulate(table, headers=headers)
+            else:
+                slice_string = tabulate(table)
+            return slice_string
+
+        elif(output_type == 'jupyter'):
+            if headers is not None:
+                df = pd.DataFrame(table, columns=headers)
+            else:
+                df = pd.DataFrame(table)
+
+            if index is not None:
+                df.set_index(index, inplace=True, drop=True)
+                df.columns.name = df.index.name
+                df.index.name = None
+
+            if hide_header:
+                style = df.style.set_caption(title).set_properties(**properties).hide(axis='index').hide(axis='columns').set_table_styles([{
+                    'selector': 'caption',
+                    'props': f'caption-side: top; font-size:{title_font_size};'
+                }], overwrite=False)
+            else:
+                style = df.style.set_caption(title).set_properties(**properties).set_table_styles([{
+                        'selector': 'caption',
+                        'props': f'caption-side: top; font-size:{title_font_size};'
+                    }], overwrite=False)
+
+            slice_string = style
+            return slice_string
+
+    def show_config(self, output_type=None):
+        table = []
+        for var, val in self.get_config().items():
+            table.append([str(var), str(val)])
+
+        self.print_table(table, title='User Configuration for FABlib Manager', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True, output_type=output_type)
