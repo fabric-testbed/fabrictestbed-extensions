@@ -528,7 +528,7 @@ class FablibManager:
          - defaults (if needed and possible)
 
         """
-        self.ssh_thread_pool_executor = ThreadPoolExecutor(10)
+        self.ssh_thread_pool_executor = ThreadPoolExecutor(64)
 
         # init attributes
         self.bastion_passphrase = None
@@ -1141,6 +1141,54 @@ class FablibManager:
         else:
             raise Exception(f"Failed to get slice list: {slices}")
         return return_slices
+    
+    def tabulate_slices(self,slices):
+        table = []
+        for slice in slices:
+            table.append([slice.get_slice_id(),
+                          slice.get_name(),
+                          slice.get_lease_end(),
+                          slice.get_state(),
+                        ])
+
+        return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
+    
+    
+    
+    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output="text"):
+        """
+        Creates a tabulated string describing all slices.
+
+
+        :return: Tabulated string of all slices information
+        :rtype: String
+        """
+        
+        if output == "text":
+            printStr = self.tabulate_slices(self.get_slices(excludes=excludes))
+            print(f"{printStr}")
+        else:
+            raise Exception(f"Unkown output type: {output}")
+          
+
+    def show_slice(self, name: str = None, id: str = None, output="text"):
+        """
+        Shows a slice's info.
+
+
+        :return: Tabulated srting of all slices information
+        :rtype: String
+        """
+        
+        slice = self.get_slice(name=name, slice_id=id)
+        
+        if output == "text":
+            print(f"{slice}")
+        #elif output == "json":
+        #    print(f"{slice.toJson()}")
+        else:
+            raise Exception(f"Unkown output type: {output}")
+
 
     def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
                    slice_name: str = None, slice_id: str = None) -> List[Slice]:

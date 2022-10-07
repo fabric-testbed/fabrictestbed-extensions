@@ -1002,7 +1002,7 @@ class Slice:
         # time.sleep(interval)
         self.update()
 
-    def wait_ssh(self, timeout: int = 360, interval: int = 10, progress: bool = False):
+    def wait_ssh(self, timeout: int = 1200, interval: int = 20, progress: bool = False):
         """
         Waits for all nodes to be accesible via ssh.
 
@@ -1027,18 +1027,23 @@ class Slice:
         if progress:
             print("Waiting for ssh in slice .", end='')
         while time.time() < timeout_start + timeout:
-            if self.test_ssh():
-                if progress:
-                    print(" ssh successful")
-                return True
+            try:
+                if self.test_ssh():
+                    if progress:
+                        print(" ssh successful")
+                    return True
 
-            if progress: print(".", end = '')
+                if progress: print(".", end = '')
 
-            if time.time() >= timeout_start + timeout:
-                if progress:
-                    print(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
-                raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
-
+                if time.time() >= timeout_start + timeout:
+                    if progress:
+                        print(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
+                    raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
+            except Exception as e:
+                if not time.time() < timeout_start + timeout:
+                    raise e
+                logging.warning(f'wait ssh retrying: {e}')
+                    
             time.sleep(interval)
             self.update()
 
@@ -1099,7 +1104,7 @@ class Slice:
         if self.is_dead_or_closing():
             print(f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config")
             return
-        executor = ThreadPoolExecutor(10)
+        executor = ThreadPoolExecutor(64)
 
         logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
 
@@ -1130,6 +1135,7 @@ class Slice:
 
         for iface_thread in iface_threads:
             iface_thread.result()
+        
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -1141,6 +1147,17 @@ class Slice:
         except ValueError:
             return "Invalid"
 
+    def isReady(self):
+        if not self.isStable():
+            return False
+        
+        for node in self.get_nodes():
+            if node.get_management_ip() == None:
+                logging.warning(f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}")              
+                return False
+        
+        return True
+        
     def wait_jupyter(self, timeout: int = 600, interval: int = 10):
         from IPython.display import clear_output
         import time
@@ -1148,7 +1165,8 @@ class Slice:
         start = time.time()
 
         count = 0
-        while not self.isStable():
+        #while not self.isStable():
+        while not self.isReady():
             if time.time() > start + timeout:
                 raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
 
@@ -1180,7 +1198,7 @@ class Slice:
             print(f"\n{self.list_interfaces()}")
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
-    def submit(self, wait: bool = True, wait_timeout: int = 600, wait_interval: int = 10, progress: bool = True,
+    def submit(self, wait: bool = True, wait_timeout: int = 2400, wait_interval: int = 20, progress: bool = True,
                wait_jupyter: str = "text") -> str:
         """
         Submits a slice request to FABRIC.

@@ -230,6 +230,9 @@ class Interface:
         Bring up the link on the interface.
 
         """
+        if self.get_network() == None:
+            return
+        
         self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):

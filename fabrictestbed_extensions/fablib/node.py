@@ -1289,9 +1289,16 @@ class Node:
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        
+        if interface == None:
+            return
+        
         try:
-            if interface.get_network().get_layer() == NSLayer.L3:
-                if interface.get_network().get_type() == ServiceType.FABNetv6:
+            network = interface.get_network()
+            if network == None:
+                return
+            elif network.get_layer() == NSLayer.L3:
+                if network.get_type() == ServiceType.FABNetv6:
                     ip_command = "sudo ip -6"
                 elif interface.get_network().get_type() == ServiceType.FABNetv4:
                     ip_command = "sudo ip"
