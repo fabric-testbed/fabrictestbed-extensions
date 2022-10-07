@@ -1321,30 +1321,30 @@ class FablibManager:
             return False
 
         
-    def print_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output_type=None):
+    def print_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output=None):
         
-        if output_type == None:
-            output_type = self.output_type.lower()
+        if output == None:
+            output = self.output.lower()
         
-        if(output_type == 'text'):
-            print(f"\n{self.create_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output_type=output_type)}")
+        if(output == 'text'):
+            print(f"\n{self.create_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output=output)}")
 
-        elif(output_type == 'jupyter'):
-            display(self.create_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output_type=output_type))
+        elif(output == 'jupyter'):
+            display(self.create_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output=output))
 
 
-    def create_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output_type=None):
-        if output_type == None:
-            output_type = self.output_type.lower()
+    def create_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output=None):
+        if output == None:
+            output = self.output.lower()
         
-        if(output_type == 'text'):
+        if(output == 'text'):
             if headers is not None:
                 slice_string = tabulate(table, headers=headers)
             else:
                 slice_string = tabulate(table)
             return slice_string
 
-        elif(output_type == 'jupyter'):
+        elif(output == 'jupyter'):
             if headers is not None:
                 df = pd.DataFrame(table, columns=headers)
             else:
@@ -1369,9 +1369,9 @@ class FablibManager:
             slice_string = style
             return slice_string
 
-    def show_config(self, output_type=None):
+    def show_config(self, output=None):
         table = []
         for var, val in self.get_config().items():
             table.append([str(var), str(val)])
 
-        self.print_table(table, title='User Configuration for FABlib Manager', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True, output_type=output_type)
+        self.print_table(table, title='User Configuration for FABlib Manager', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True, output=output)

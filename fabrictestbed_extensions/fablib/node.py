@@ -28,7 +28,6 @@ import threading
 import time
 import paramiko
 import logging
-import select
 
 from tabulate import tabulate
 
@@ -649,7 +648,7 @@ class Node:
                       private_key_file=None, 
                       private_key_passphrase=None, 
                       chunking=False, 
-                      live_output=False, 
+                      output='batch', 
                       read_timeout=10, 
                       timeout=None):
         """
@@ -662,8 +661,8 @@ class Node:
         :type retry_interval: int
         :param chunking: enable reading stdout and stderr in real-time with chunks
         :type chunking: bool
-        :param live_output: print stdout and stderr to the screen
-        :type live_output: bool
+        :param output: print stdout and stderr to the screen
+        :type output: bool
         :param read_timeout: the number of seconds to wait before retrying to
         read from stdout and stderr
         :type read_timeout: int
@@ -679,7 +678,7 @@ class Node:
 
         logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
-        if live_output:
+        if output == 'live':
             chunking = True
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
@@ -752,7 +751,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                     rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-                    if live_output:
+                    if output == 'live':
                         print(rtn_stdout, rtn_stderr)
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
@@ -766,14 +765,14 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if live_output:
+                                if output == 'live':
                                     print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
                                 stdout_chunks.append(stdoutbytes)
                                 got_chunk = True
                             if c.recv_stderr_ready(): 
                                 # make sure to read stderr to prevent stall
                                 stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
-                                if live_output:
+                                if output == 'live':
                                     print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
                                 stderr_chunks.append(stderrbytes)
                                 got_chunk = True
