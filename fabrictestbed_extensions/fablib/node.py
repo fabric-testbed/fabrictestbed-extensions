@@ -30,6 +30,12 @@ import paramiko
 import logging
 
 from tabulate import tabulate
+import select
+
+from fabrictestbed.slice_editor import (
+    ExperimentTopology,
+    Capacities
+)
 
 
 from typing import List, Union, Tuple
