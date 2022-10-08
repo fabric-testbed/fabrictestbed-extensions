@@ -123,33 +123,6 @@ class Slice:
 
         self.get_fim_topology().load(file_name=filename)
 
-    def list_nodes(self):
-        """
-        Creates a tabulated string describing all nodes in the slice.
-
-        Intended for printing a list of all slices.
-
-        :return: Tabulated srting of all slices information
-        :rtype: String
-        """
-        table = []
-        for node in self.get_nodes():
-            table.append([node.get_reservation_id(),
-                          node.get_name(),
-                          node.get_site(),
-                          node.get_host(),
-                          node.get_cores(),
-                          node.get_ram(),
-                          node.get_disk(),
-                          node.get_image(),
-                          str(node.get_management_ip()),
-                          node.get_reservation_state(),
-                          str(node.get_error_message()),
-                        ])
-
-        return tabulate(table, headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image",
-                                        "Management IP", "State", "Error"])
-
     def list_interfaces(self):
         """
         Creates a tabulated string describing all interfaces in the slice.
@@ -263,7 +236,7 @@ class Slice:
                  ["Lease End (UTC)", self.sm_slice.lease_end_time],
                 ]
 
-        self.get_fablib_manager().print_show_table(table, 
+        self.get_fablib_manager().show_table(table, 
                                                    title='Slice Information', 
                                                    properties={'text-align': 'left', 'border': '1px black solid !important'}, 
                                                    hide_header=True)
@@ -1270,7 +1243,7 @@ class Slice:
 
         return self.slice_id
     
-    def list_nodes(self, output=None):
+    def list_nodes(self, output=None, fields=None):
         """
         Creates a tabulated string describing all nodes in the slice.
 
@@ -1295,11 +1268,11 @@ class Slice:
                                 node.get_error_message()
                                 ] )
         headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image", "Management IP", "State", "Error"]
-        self.get_fablib_manager().print_list_table(table,
+        self.get_fablib_manager().list_table(table,
                                                    headers=headers,
                                                    title='Node Information', 
-                                                   properties={'text-align': 'left', 
-                                                               'border': '1px black solid !important'}, 
                                                    index='Name',
                                                    hide_header=False,
+                                                   colors=True,
+                                                   fields=fields,
                                                    output=output)

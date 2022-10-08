@@ -892,15 +892,6 @@ class FablibManager:
         """
         return self.default_slice_key
 
-    #def show_config(self):
-    #    table = []
-    #    for var, val in self.get_config().items():
-    #        table.append([str(var), str(val)])
-    #
-    #    print(f"{tabulate(table)}")
-    #
-        return
-
     def get_config(self) -> Dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
@@ -1169,9 +1160,8 @@ class FablibManager:
 
         return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
     
-    
-    
-    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None):
+            
+    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None, fields=None):
         """
         Creates a tabulated string describing all slices.
 
@@ -1179,33 +1169,20 @@ class FablibManager:
         :return: Tabulated string of all slices information
         :rtype: String
         """
-        
-        #if output == "text":
-        #    printStr = self.tabulate_slices(self.get_slices(excludes=excludes))
-        #    print(f"{printStr}")
-        #else:
-        #    raise Exception(f"Unkown output type: {output}")
-          
-        
         table = []
         for slice in self.get_slices(excludes=excludes):
-            table.append([slice.get_slice_id(),
-                          slice.get_name(),
-                          slice.get_lease_end(),
-                          slice.get_state(),
-                        ])
+            table.append({ "ID": slice.get_slice_id(),
+                          "Name": slice.get_name(),
+                          "Lease Expiration (UTC)": slice.get_lease_end(),
+                          "State": slice.get_state(),
+                         })
 
-        headers=["ID", "Name",  "Lease Expiration (UTC)",  "State"]
-        self.print_list_table(table,
-                               headers=headers,
-                               title='Slices', 
-                               properties={'text-align': 'left', 
-                                           'border': '1px black solid !important'}, 
-                               index='ID',
-                               hide_header=False,
-                               output=output)
-        
-        
+        if fields == None:
+            fields=["ID", "Name",  "Lease Expiration (UTC)",  "State"]
+        self.list_table(table,
+                        fields=fields,
+                        title='Slices',
+                        output=output)
 
     def show_slice(self, name: str = None, id: str = None, output="text"):
         """
@@ -1327,7 +1304,19 @@ class FablibManager:
         Gets the current log level for logging
         """
         return self.log_level
+        
+    def show_config(self, output=None, fields=None):
+        table = []
+        #for var, val in self.get_config().items():
+        #    table.append([str(var), str(val)])
 
+        self.show_table(self.get_config(), 
+                        fields=fields,
+                        title='User Configuration for FABlib Manager', 
+                        hide_header=True, 
+                        output=output)
+        
+    
     def is_jupyter_notebook(self) -> bool:
         try:
             shell = get_ipython().__class__.__name__
@@ -1341,174 +1330,165 @@ class FablibManager:
             return False
 
         
-    def print_show_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output=None):
+    def show_table_text(self, table):
+        printable_table = tabulate(table)
+        print(f"\n{printable_table}")
         
-        if output == None:
-            output = self.output.lower()
+    def show_table_jupyter(self, 
+                                 table, 
+                                 headers=None, 
+                                 title='', 
+                                 title_font_size='1.25em'):
+    
+        printable_table = pd.DataFrame(table)
         
-        if(output == 'text'):
-            print(f"\n{self.create_show_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output=output)}")
-
-        elif(output == 'jupyter'):
-            display(self.create_show_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output=output))
-
-
-    def create_show_table(self, table, headers=None, title='', properties={}, hide_header=False, title_font_size='1.25em', index=None, output=None):
-        if output == None:
-            output = self.output.lower()
+        properties = {'text-align': 'left', 'border': '1px black solid !important'}
         
-        if(output == 'text'):
-            if headers is not None:
-                slice_string = tabulate(table, headers=headers)
-            else:
-                slice_string = tabulate(table)
-            return slice_string
+        printable_table = printable_table.style.set_caption(title)
+        printable_table = printable_table.set_properties(**properties, overwrite=False)
+        printable_table = printable_table.hide(axis='index')
+        printable_table = printable_table.hide(axis='columns')
+        printable_table = printable_table.set_table_styles([{
+            'selector': 'caption',
+            'props': f'caption-side: top; font-size:{title_font_size};'
+        }], overwrite=False)
 
-        elif(output == 'jupyter'):
-            if headers is not None:
-                df = pd.DataFrame(table, columns=headers)
-            else:
-                df = pd.DataFrame(table)
-
-            if index is not None:
-                df.set_index(index, inplace=True, drop=True)
-                df.columns.name = df.index.name
-                df.index.name = None
-
-            if hide_header:
-                style = df.style.set_caption(title).set_properties(**properties).hide(axis='index').hide(axis='columns').set_table_styles([{
-                    'selector': 'caption',
-                    'props': f'caption-side: top; font-size:{title_font_size};'
-                }], overwrite=False)
-            else:
-                style = df.style.set_caption(title).set_properties(**properties).set_table_styles([{
-                        'selector': 'caption',
-                        'props': f'caption-side: top; font-size:{title_font_size};'
-                    }], overwrite=False)
-
-            slice_string = style
-            return slice_string
-
-    def show_config(self, output=None):
-        table = []
-        for var, val in self.get_config().items():
-            table.append([str(var), str(val)])
-
-        self.print_show_table(table, 
-                              title='User Configuration for FABlib Manager', 
-                              properties={'text-align': 'left', 'border': '1px black solid !important'}, 
-                              hide_header=True, 
-                              output=output)
+        display(printable_table)
         
-    def print_list_table(self, 
-                         table, 
-                         headers=None, 
+    def show_table(self, 
+                         data, 
+                         fields=None, 
                          title='', 
-                         properties={}, 
+                         hide_header=False, 
+                         title_font_size='1.25em', 
+                         index=None, output=None):
+        
+        if output == None:
+            output = self.output.lower()
+            
+            
+        table = self.create_show_table(data, fields=fields)
+            
+        if(output == 'text'):
+            self.show_table_text(table)
+        elif(output == 'jupyter'):
+            self.show_table_jupyter(table, 
+                                         headers=fields, 
+                                         title=title, 
+                                         title_font_size=title_font_size)
+        else:
+            logging.error(f"Unknown output type: {output}")
+
+
+    
+    def list_table_text(self, table, headers=None):
+        if headers is not None:
+            printable_table = tabulate(table, headers=headers)
+        else:
+            printable_table = tabulate(table)
+         
+        print(f"\n{printable_table}")
+
+    def list_table_jupyter(self, 
+                           table, 
+                           headers=None, 
+                           title='', 
+                           title_font_size='2em', 
+                           colors=False,
+                           output=None):
+        def highlight(x):
+            if x.State == 'Ticketed':
+                return ['background-color: yellow']*(len(headers))
+            elif x.State == 'None':
+                return ['opacity: 50%']*(len(headers))
+            else:
+                return ['background-color: ']*(len(headers))
+
+        def green_active(val):
+            if val == 'Active':
+                color = 'green'
+            else:
+                color = 'black'
+            return 'color: %s' % color
+        
+        if headers is not None:
+            printable_table = pd.DataFrame(table, columns=headers)
+        else:
+            printable_table = pd.DataFrame(table)    
+
+
+        
+        # Table config (maybe some of this is unnecessary?
+        properties = {'text-align': 'left', 'border': '1px black solid !important'}
+
+        printable_table = printable_table.style.set_caption(title)
+        printable_table = printable_table.hide(axis="index")
+        #printable_table = printable_table.set_properties(**{'text-align': 'left'}, overwrite=False)
+        printable_table = printable_table.set_properties(**properties, overwrite=False)
+        printable_table = printable_table.set_table_styles([dict(selector='th', 
+                                                                 props=[('text-align', 'left')])], 
+                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles([dict(selector='caption', 
+                                                                 props=[('caption-side', 'top'),
+                                                                        ('font-size', title_font_size)])],
+                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles([dict(selector='.level0', 
+                                                                 props=[('border', '1px black solid !important')])],
+                                                           overwrite=False)
+
+        if colors:
+            printable_table = printable_table.apply(highlight, axis=1)
+            printable_table = printable_table.applymap(green_active, subset=pd.IndexSlice[:, ['State']])
+
+        display(printable_table)
+        
+    def list_table(self, 
+                         data, 
+                         fields=None, 
+                         title='', 
                          hide_header=False, 
                          title_font_size='2em', 
                          index=None, 
+                         colors=False,
                          output=None):
-        index=None
         
-        if output == None:
-            output = self.output.lower()
+        table = self.create_list_table(data, fields=fields)
         
+            
+
         if(output == 'text'):
-            print(f"\n{self.create_list_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size,index=index, output=output)}")
-
-        elif(output == 'jupyter'):
-            printable_table = self.create_list_table(table, headers=headers, title=title, properties=properties, hide_header=hide_header, title_font_size=title_font_size, index=index, output=output)
+            self.list_table_text(table,  headers=fields)                            
+        elif(output == 'jupyter'): 
+            self.list_table_jupyter(table, 
+                                    headers=fields, 
+                                    title=title, 
+                                    title_font_size=title_font_size,
+                                    colors=colors,
+                                    output=output)
+        else:
+            logging.error(f"Unknown output type: {output}")
             
-            
-            def highlight(x):
-                if index == None:
-                    offset=0
-                else:
-                    offset=1
-                if x.State == 'Ticketed':
-                    return ['background-color: yellow']*(len(headers)-offset)
-                elif x.State == 'None':
-                    return ['opacity: 50%']*(len(headers)-offset)
-                else:
-                    return ['background-color: ']*(len(headers)-offset)
 
-            def green_active(val):
-                if val == 'Active':
-                    color = 'green'
-                else:
-                    color = 'black'
-                return 'color: %s' % color
-            
-            def not_bold(val):
-                return 'color: %s' % color
-
-            printable_table = printable_table.apply(highlight, axis=1).applymap(green_active, subset=pd.IndexSlice[:, ['State']]).set_properties(**{'text-align': 'left'})
-
-            display(printable_table)
-
-
-    def create_list_table(self, 
-                          table, 
-                          headers=None, 
-                          title='', 
-                          properties={}, 
-                          hide_header=False, 
-                          title_font_size='2em', 
-                          index=None, 
-                          output=None):
-    
-        
-        if output == None:
-            output = self.output.lower()
-        
-        if(output == 'text'):
-            if headers is not None:
-                slice_string = tabulate(table, headers=headers)
-            else:
-                slice_string = tabulate(table)
-            return slice_string
-
-        elif(output == 'jupyter'):
-            if headers is not None:
-                df = pd.DataFrame(table, columns=headers)
-            else:
-                df = pd.DataFrame(table)
-
-            #if index is not None:
-            #    df.set_index(index, inplace=True, drop=True)
-            #    df.columns.name = df.index.name
-            #    df.index.name = None
-            
-            #Styler.hide(axis="index")
-            #df.style.hide_index()
-                
-            #dfStyler = df.style.set_properties(**{'text-align': 'left'})
-            #dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
-            
-            #pd.set_option('colheader_justify', 'center')
-            #df = df.style.set_properties(**{'text-align': 'center'})
-
-            #if hide_header:
-            #    style = df.style.set_caption(title).set_properties(**properties).hide(axis='index').hide(axis='columns').set_table_styles([{
-            #        'selector': 'caption',
-            #        'props': f'caption-side: top; font-size:{title_font_size};'
-            #    }], overwrite=False)
-            #else:
-            style = df.style.set_caption(title).hide(axis="index").set_properties(**properties).set_table_styles([dict(selector='th', props=[('text-align', 'left')])], overwrite=False).set_table_styles([{
-                    'selector': 'caption',
-                    'props': f'caption-side: top; font-size:{title_font_size};'
-                }], overwrite=False).set_table_styles([dict(selector='.level0', props=[('border', '1px black solid !important')])], overwrite=False)
-
-           
-            return style
-           
-            #slice_string = style
-            #return slice_string
-
-    def show_config(self, output=None):
+    def create_list_table(self, data, fields=None):
         table = []
-        for var, val in self.get_config().items():
-            table.append([str(var), str(val)])
+        for entry in data:
+            row = []
+            for field in fields:
+                row.append(entry[field])
 
-        self.print_show_table(table, title='User Configuration for FABlib Manager', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True, output=output)
+            table.append(row)
+        return table
+    
+    def create_show_table(self, data, fields=None):
+        table = []
+        if fields == None:
+            for key,value in data.items():
+                table.append([key,value])
+        else:
+            for field in fields:
+                table.append([field,data[field]])
+        return table
+    
+    
+       
+   
