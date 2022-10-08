@@ -57,6 +57,8 @@ from fabrictestbed_extensions.fablib.slice import Slice
 
 class fablib:
 
+    
+    
     default_fablib_manager = None
 
     @staticmethod
@@ -485,6 +487,21 @@ class FablibManager:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
+    
+    
+    FABRIC_PRIMARY = '#27aae1'
+    FABRIC_PRIMARY_LIGHT = '#cde4ef'
+    FABRIC_PRIMARY_DARK = '#078ac1'
+    FABRIC_SECONDARY = '#f26522'
+    FABRIC_SECONDARY_LIGHT = '#ff8542'
+    FABRIC_SECONDARY_DARK = '#d24502'
+    FABRIC_BLACK = '#231f20'
+    FABRIC_DARK = '#433f40'
+    FABRIC_GREY = '#666677'
+    FABRIC_LIGHT = '#f3f3f9'
+    FABRIC_WHITE = '#ffffff'
+    FABRIC_LOGO = "fabric_logo.png"
+
 
     LOG_LEVELS = {
         'DEBUG': logging.DEBUG,

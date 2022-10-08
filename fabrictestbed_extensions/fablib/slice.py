@@ -230,7 +230,7 @@ class Slice:
 
         return slice
     
-    def show(self, fields=None, output=None, display_table=True):
+    def show(self, fields=None, output=None, display_table=True, colors=False):
         data = { "ID": self.get_slice_id(),
                           "Name": self.get_name(),
                           "Lease Expiration (UTC)": self.get_lease_end(),
@@ -239,12 +239,30 @@ class Slice:
                           "State": self.get_state(),
                  }
         
-        return self.get_fablib_manager().show_table(data, 
+        def state_color(val):
+            if val == 'StableOK':
+                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+            elif val == 'Configuring':
+                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+            else:
+                color = ''
+            #return 'color: %s' % color
+            return 'background-color: %s' % color
+
+        
+        slice_table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Slice', 
                         output=output, 
                         display_table=display_table)
-
+        #if colors:
+            #slice_table = slice_table.apply(highlight, axis=1)
+            #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+            
+            
+        return slice_table
+            
+        
     def get_fim_topology(self) -> ExperimentTopology:
         """
         Not recommended for most users.
@@ -1182,7 +1200,7 @@ class Slice:
             time.sleep(interval)
             self.update()
 
-            slice_show_table = self.show(display_table=False)
+            slice_show_table = self.show(colors=True, display_table=False)
             node_table = self.list_nodes(colors=True, display_table=False)
             network_table = self.list_networks(colors=True, display_table=False)  
     
@@ -1284,12 +1302,15 @@ class Slice:
             else:
                 return ['background-color: ']*(len(fields))
 
-        def green_active(val):
+        def state_color(val):
             if val == 'Active':
-                color = 'green'
+                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+            elif val == 'Ticketed':
+                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
             else:
-                color = 'black'
-            return 'color: %s' % color
+                color = ''
+            #return 'color: %s' % color
+            return 'background-color: %s' % color
         
         table = []
         for network in self.get_networks():
@@ -1318,8 +1339,8 @@ class Slice:
                         display_table=False)
         
         if colors:
-            table = table.apply(highlight, axis=1)
-            table = table.applymap(green_active, subset=pd.IndexSlice[:, ['State']])                 
+            #table = table.apply(highlight, axis=1)
+            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
         if display_table:
             display(table)
 
@@ -1338,18 +1359,21 @@ class Slice:
         
         def highlight(x):
             if x.State == 'Ticketed':
-                return ['background-color: yellow']*(len(fields))
+                return [f'background-color: {self.get_fablib_manager().FABRIC_SECONDARY}']*(len(fields))
             elif x.State == 'None':
                 return ['opacity: 50%']*(len(fields))
             else:
                 return ['background-color: ']*(len(fields))
 
-        def green_active(val):
+        def state_color(val):
             if val == 'Active':
-                color = 'green'
+                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+            elif val == 'Ticketed':
+                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
             else:
-                color = 'black'
-            return 'color: %s' % color
+                color = ''
+            #return 'color: %s' % color
+            return 'background-color: %s' % color
         
         table = []
         for node in self.get_nodes():
@@ -1380,8 +1404,8 @@ class Slice:
                         display_table=False)
         
         if colors:
-            table = table.apply(highlight, axis=1)
-            table = table.applymap(green_active, subset=pd.IndexSlice[:, ['State']])                 
+            #table = table.apply(highlight, axis=1)
+            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
         if display_table:
             display(table)
 
