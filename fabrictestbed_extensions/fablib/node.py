@@ -577,9 +577,7 @@ class Node:
         :return: the SSH command to access this node
         :rtype: str
         """
-        return 'ssh -i {} -J {}@{} {}@{}'.format(self.get_private_key_file(),
-                                           self.get_fablib_manager().get_bastion_username(),
-                                           self.get_fablib_manager().get_bastion_public_addr(),
+        return 'ssh -i {} -F <path to ssh config file> {}@{}'.format(self.get_private_key_file(),
                                            self.get_username(),
                                            self.get_management_ip())
 

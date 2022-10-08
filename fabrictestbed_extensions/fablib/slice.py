@@ -230,7 +230,7 @@ class Slice:
 
         return slice
     
-    def show(self, fields=None, output=None, display_table=None):
+    def show(self, fields=None, output=None, display_table=True):
         data = { "ID": self.get_slice_id(),
                           "Name": self.get_name(),
                           "Lease Expiration (UTC)": self.get_lease_end(),
@@ -1267,7 +1267,7 @@ class Slice:
 
         return self.slice_id
     
-    def list_networks(self, output=None, fields=None, colors=False, display_table=None):
+    def list_networks(self, output=None, fields=None, colors=False, display_table=True):
         """
         Creates a tabulated string describing all networks in the slice.
 
@@ -1326,7 +1326,7 @@ class Slice:
         
         return table
     
-    def list_nodes(self, output=None, fields=None, colors=False, display_table=None):
+    def list_nodes(self, output=None, fields=None, colors=False, display_table=True):
         """
         Creates a tabulated string describing all nodes in the slice.
 
