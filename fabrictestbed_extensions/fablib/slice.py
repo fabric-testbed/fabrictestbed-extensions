@@ -29,6 +29,9 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
+import pandas as pd
+
+
 from typing import TYPE_CHECKING
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
@@ -227,19 +230,20 @@ class Slice:
 
         return slice
     
-    def show(self):
-        table = [["Slice Name", self.sm_slice.name],
-                 ["Slice ID", self.sm_slice.slice_id],
-                 ["Slice State", self.sm_slice.state],
-                 ["Project ID", self.sm_slice.project_id],
-                 ["Lease Start (UTC)", self.sm_slice.lease_start_time],
-                 ["Lease End (UTC)", self.sm_slice.lease_end_time],
-                ]
-
-        self.get_fablib_manager().show_table(table, 
-                                                   title='Slice Information', 
-                                                   properties={'text-align': 'left', 'border': '1px black solid !important'}, 
-                                                   hide_header=True)
+    def show(self, fields=None, output=None, display_table=None):
+        data = { "ID": self.get_slice_id(),
+                          "Name": self.get_name(),
+                          "Lease Expiration (UTC)": self.get_lease_end(),
+                          "Lease Start (UTC)": self.get_lease_start(),
+                          "Project ID": self.get_project_id(),
+                          "State": self.get_state(),
+                 }
+        
+        return self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Slice', 
+                        output=output, 
+                        display_table=display_table)
 
     def get_fim_topology(self) -> ExperimentTopology:
         """
@@ -463,6 +467,24 @@ class Slice:
         :rtype: String
         """
         return self.sm_slice.lease_end_time
+    
+    def get_lease_start(self) -> str:
+        """
+        Gets the timestamp at which the slice lease starts.
+
+        :return: timestamp when lease starts
+        :rtype: String
+        """
+        return self.sm_slice.lease_start_time
+
+    def get_project_id(self) -> str:
+        """
+        Gets the project id of the slice.
+
+        :return: project id
+        :rtype: String
+        """
+        return self.sm_slice.project_id
 
     def add_l2network(self, name: str = None, interfaces: List[Interface] = [], type: str = None) -> NetworkService:
         """
@@ -1160,18 +1182,20 @@ class Slice:
             time.sleep(interval)
             self.update()
 
-            #pre-get the strings for quicker screen update
-            slice_string = str(self)
-            list_nodes_string = self.list_nodes()
+            slice_show_table = self.show(display_table=False)
+            node_table = self.list_nodes(colors=True, display_table=False)
+            network_table = self.list_networks(colors=True, display_table=False)  
+    
             time_string = f"{time.time() - start:.0f} sec"
-
+            
             # Clear screen
             clear_output(wait=True)
-
-            #Print statuses
-            print(f"\n{slice_string}")
+            
             print(f"\nRetry: {count}, Time: {time_string}")
-            print(f"\n{list_nodes_string}")
+
+            display(slice_show_table)
+            display(node_table)
+            display(network_table)
 
             count += 1
 
@@ -1243,7 +1267,66 @@ class Slice:
 
         return self.slice_id
     
-    def list_nodes(self, output=None, fields=None):
+    def list_networks(self, output=None, fields=None, colors=False, display_table=None):
+        """
+        Creates a tabulated string describing all networks in the slice.
+
+        Intended for printing a list of all networks.
+
+        :return: Tabulated srting of all networks information
+        :rtype: String
+        """
+        def highlight(x):
+            if x.State == 'Ticketed':
+                return ['background-color: yellow']*(len(fields))
+            elif x.State == 'None':
+                return ['opacity: 50%']*(len(fields))
+            else:
+                return ['background-color: ']*(len(fields))
+
+        def green_active(val):
+            if val == 'Active':
+                color = 'green'
+            else:
+                color = 'black'
+            return 'color: %s' % color
+        
+        table = []
+        for network in self.get_networks():
+            table.append({ "ID": network.get_reservation_id(),
+                          "Name": network.get_name(),
+                          "Layer": network.get_layer(),
+                          "Type": network.get_type(),
+                          "Site": network.get_site(),
+                          "Gateway": network.get_gateway(),
+                          "L3 Subnet": network.get_subnet(),
+                          "State": network.get_reservation_state(),
+                          "Error": network.get_error_message(),
+                        })
+    
+        if fields == None:
+            fields=["ID", "Name",  "Layer",  "Type", 
+                    "Site", "Gateway", "L3 Subnet", "State", 
+                    "Error"]
+            
+            
+        
+        table =  self.get_fablib_manager().list_table(table,
+                        fields=fields,
+                        title='Networks',
+                        output=output,
+                        display_table=False)
+        
+        if colors:
+            table = table.apply(highlight, axis=1)
+            table = table.applymap(green_active, subset=pd.IndexSlice[:, ['State']])                 
+        if display_table:
+            display(table)
+
+        
+        return table
+    
+    def list_nodes(self, output=None, fields=None, colors=False, display_table=None):
         """
         Creates a tabulated string describing all nodes in the slice.
 
@@ -1252,27 +1335,55 @@ class Slice:
         :return: Tabulated srting of all slices information
         :rtype: String
         """
+        
+        def highlight(x):
+            if x.State == 'Ticketed':
+                return ['background-color: yellow']*(len(fields))
+            elif x.State == 'None':
+                return ['opacity: 50%']*(len(fields))
+            else:
+                return ['background-color: ']*(len(fields))
+
+        def green_active(val):
+            if val == 'Active':
+                color = 'green'
+            else:
+                color = 'black'
+            return 'color: %s' % color
+        
         table = []
         for node in self.get_nodes():
+            table.append({ "ID": node.get_reservation_id(),
+                          "Name": node.get_name(),
+                          "Site": node.get_site(),
+                          "Host": node.get_host(),
+                          "Cores": node.get_cores(),
+                          "RAM": node.get_ram(),
+                          "Disk": node.get_disk(),
+                          "Image": node.get_image(),
+                          "Management IP": node.get_management_ip(),
+                          "State": node.get_reservation_state(),
+                          "Error": node.get_error_message(),                                                               "SSH Command ": node.get_ssh_command()
+                         })
+    
+        if fields == None:
+            fields=["ID", "Name",  "Site",  "Host", 
+                    "Cores", "RAM", "Disk", "Image", 
+                    "Management IP", "State", "Error"]
+            
+            
+        
+        table =  self.get_fablib_manager().list_table(table,
+                        fields=fields,
+                        title='Nodes',
+                        output=output,
+                        display_table=False)
+        
+        if colors:
+            table = table.apply(highlight, axis=1)
+            table = table.applymap(green_active, subset=pd.IndexSlice[:, ['State']])                 
+        if display_table:
+            display(table)
 
-            table.append( [     node.get_reservation_id(),
-                                node.get_name(),
-                                node.get_site(),
-                                node.get_host(),
-                                node.get_cores(),
-                                node.get_ram(),
-                                node.get_disk(),
-                                node.get_image(),
-                                node.get_management_ip(),
-                                node.get_reservation_state(),
-                                node.get_error_message()
-                                ] )
-        headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image", "Management IP", "State", "Error"]
-        self.get_fablib_manager().list_table(table,
-                                                   headers=headers,
-                                                   title='Node Information', 
-                                                   index='Name',
-                                                   hide_header=False,
-                                                   colors=True,
-                                                   fields=fields,
-                                                   output=output)
+        
+        return table

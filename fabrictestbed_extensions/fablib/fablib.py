@@ -814,6 +814,12 @@ class FablibManager:
         """
         return str(self.get_resources())
 
+    def show_config(self, output=None, fields=None, title='FABlib Config'):
+        self.show_table(self.get_config(), 
+                        fields=fields,
+                        title=title, 
+                        output=output)
+    
     def show_site(self, site_name: str):
         """
         Get a string used to print tabular info about a site
@@ -1161,7 +1167,7 @@ class FablibManager:
         return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
     
             
-    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None, fields=None):
+    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None, fields=None, display_table=True):
         """
         Creates a tabulated string describing all slices.
 
@@ -1174,17 +1180,20 @@ class FablibManager:
             table.append({ "ID": slice.get_slice_id(),
                           "Name": slice.get_name(),
                           "Lease Expiration (UTC)": slice.get_lease_end(),
+                          "Lease Start (UTC)": slice.get_lease_start(),
+                          "Project ID": slice.get_project_id(),
                           "State": slice.get_state(),
                          })
 
         if fields == None:
-            fields=["ID", "Name",  "Lease Expiration (UTC)",  "State"]
-        self.list_table(table,
+            fields=["ID", "Name",  "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
+        return self.list_table(table,
                         fields=fields,
                         title='Slices',
-                        output=output)
+                        output=output,
+                        display_table=display_table)
 
-    def show_slice(self, name: str = None, id: str = None, output="text"):
+    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, display_table=True):
         """
         Shows a slice's info.
 
@@ -1195,12 +1204,7 @@ class FablibManager:
         
         slice = self.get_slice(name=name, slice_id=id)
         
-        if output == "text":
-            print(f"{slice}")
-        #elif output == "json":
-        #    print(f"{slice.toJson()}")
-        else:
-            raise Exception(f"Unkown output type: {output}")
+        return slice.show(output=output, fields=fields, display_table=display_table)
 
 
     def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
@@ -1305,18 +1309,8 @@ class FablibManager:
         """
         return self.log_level
         
-    def show_config(self, output=None, fields=None):
-        table = []
-        #for var, val in self.get_config().items():
-        #    table.append([str(var), str(val)])
 
-        self.show_table(self.get_config(), 
-                        fields=fields,
-                        title='User Configuration for FABlib Manager', 
-                        hide_header=True, 
-                        output=output)
         
-    
     def is_jupyter_notebook(self) -> bool:
         try:
             shell = get_ipython().__class__.__name__
@@ -1330,15 +1324,20 @@ class FablibManager:
             return False
 
         
-    def show_table_text(self, table):
+    def show_table_text(self, table, display_table=True):
         printable_table = tabulate(table)
-        print(f"\n{printable_table}")
+        
+        if display_table:
+            print(f"\n{printable_table}")
+            
+        return printable_table
         
     def show_table_jupyter(self, 
                                  table, 
                                  headers=None, 
                                  title='', 
-                                 title_font_size='1.25em'):
+                                 title_font_size='1.25em', 
+                                 display_table=True):
     
         printable_table = pd.DataFrame(table)
         
@@ -1353,15 +1352,20 @@ class FablibManager:
             'props': f'caption-side: top; font-size:{title_font_size};'
         }], overwrite=False)
 
-        display(printable_table)
+        if display_table:
+            display(printable_table)
+            
+        return printable_table
         
     def show_table(self, 
-                         data, 
-                         fields=None, 
-                         title='', 
-                         hide_header=False, 
-                         title_font_size='1.25em', 
-                         index=None, output=None):
+                   data, 
+                   fields=None, 
+                   title='', 
+                   hide_header=False, 
+                   title_font_size='1.25em', 
+                   index=None, 
+                   output=None,
+                   display_table=True):
         
         if output == None:
             output = self.output.lower()
@@ -1370,46 +1374,37 @@ class FablibManager:
         table = self.create_show_table(data, fields=fields)
             
         if(output == 'text'):
-            self.show_table_text(table)
+            return self.show_table_text(table, display_table=display_table)
         elif(output == 'jupyter'):
-            self.show_table_jupyter(table, 
+            return self.show_table_jupyter(table, 
                                          headers=fields, 
                                          title=title, 
-                                         title_font_size=title_font_size)
+                                         title_font_size=title_font_size,
+                                         display_table=display_table)
         else:
             logging.error(f"Unknown output type: {output}")
 
 
     
-    def list_table_text(self, table, headers=None):
+    def list_table_text(self, table, headers=None, display_table=True):
         if headers is not None:
             printable_table = tabulate(table, headers=headers)
         else:
             printable_table = tabulate(table)
-         
-        print(f"\n{printable_table}")
+        
+        if display_table:
+            print(f"\n{printable_table}")
+            
+        return printable_table
+        
 
     def list_table_jupyter(self, 
                            table, 
                            headers=None, 
                            title='', 
-                           title_font_size='2em', 
-                           colors=False,
-                           output=None):
-        def highlight(x):
-            if x.State == 'Ticketed':
-                return ['background-color: yellow']*(len(headers))
-            elif x.State == 'None':
-                return ['opacity: 50%']*(len(headers))
-            else:
-                return ['background-color: ']*(len(headers))
-
-        def green_active(val):
-            if val == 'Active':
-                color = 'green'
-            else:
-                color = 'black'
-            return 'color: %s' % color
+                           title_font_size='1.25em', 
+                           output=None,
+                           display_table=True):
         
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
@@ -1436,35 +1431,38 @@ class FablibManager:
                                                                  props=[('border', '1px black solid !important')])],
                                                            overwrite=False)
 
-        if colors:
-            printable_table = printable_table.apply(highlight, axis=1)
-            printable_table = printable_table.applymap(green_active, subset=pd.IndexSlice[:, ['State']])
 
-        display(printable_table)
+        if display_table:
+            display(printable_table)
+        
+        return printable_table
         
     def list_table(self, 
                          data, 
                          fields=None, 
                          title='', 
                          hide_header=False, 
-                         title_font_size='2em', 
+                         title_font_size='1.25em', 
                          index=None, 
-                         colors=False,
-                         output=None):
+                         output=None, 
+                         display_table=True):
+        
+        if output == None:
+            output = self.output.lower()
         
         table = self.create_list_table(data, fields=fields)
         
             
 
         if(output == 'text'):
-            self.list_table_text(table,  headers=fields)                            
+            return self.list_table_text(table,  headers=fields, display_table=display_table)                            
         elif(output == 'jupyter'): 
-            self.list_table_jupyter(table, 
+            return self.list_table_jupyter(table, 
                                     headers=fields, 
                                     title=title, 
                                     title_font_size=title_font_size,
-                                    colors=colors,
-                                    output=output)
+                                    output=output,
+                                    display_table=display_table)
         else:
             logging.error(f"Unknown output type: {output}")
             
@@ -1489,6 +1487,7 @@ class FablibManager:
                 table.append([field,data[field]])
         return table
     
+  
     
        
    
