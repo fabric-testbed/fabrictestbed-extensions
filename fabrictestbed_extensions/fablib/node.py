@@ -165,23 +165,33 @@ class Node:
         """
         return Node(slice, node)
     
-    def show(self):
-        table = [ ["ID", self.get_reservation_id()],
-            ["Name", self.get_name()],
-            ["Cores", self.get_cores()],
-            ["RAM", self.get_ram()],
-            ["Disk", self.get_disk()],
-            ["Image", self.get_image()],
-            ["Image Type", self.get_image_type()],
-            ["Host", self.get_host()],
-            ["Site", self.get_site()],
-            ["Management IP", self.get_management_ip()],
-            ["Reservation State", self.get_reservation_state()],
-            ["Error Message", self.get_error_message()],
-            ["SSH Command ", self.get_ssh_command()],
-            ]
-
-        self.get_fablib_manager().print_show_table(table, title='Node Information', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True)
+    def show(self, fields=None, output=None, quite=False, colors=False):
+        data ={ "ID":  self.get_reservation_id(),
+                "Name": self.get_name(),
+                "Cores": self.get_cores(),
+                "RAM": self.get_ram(),
+                "Disk": self.get_disk(),
+                "Image": self.get_image(),
+                "Image Type": self.get_image_type(),
+                "Host": self.get_host(),
+                "Site": self.get_site(),
+                "Management IP": self.get_management_ip(),
+                "Reservation State": self.get_reservation_state(),
+                "Error Message": self.get_error_message(),
+                "SSH Command ": self.get_ssh_command()
+                }
+        
+        fields = ["ID", "Name", "Cores", "RAM", "Disk",
+                "Image", "Image Type","Host", "Site",
+                "Management IP", "Reservation State", 
+                "Error Message","SSH Command "
+                 ]
+        
+        node_table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Node', 
+                        output=output, 
+                        quite=quite)
 
     def get_fim_node(self) -> FimNode:
         """
@@ -652,7 +662,7 @@ class Node:
                       private_key_file=None, 
                       private_key_passphrase=None, 
                       chunking=False, 
-                      output='batch', 
+                      quite=True, 
                       read_timeout=10, 
                       timeout=None):
         """
@@ -682,7 +692,7 @@ class Node:
 
         logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
-        if output == 'live':
+        if not quite:
             chunking = True
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
@@ -755,7 +765,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                     rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-                    if output == 'live':
+                    if not quite:
                         print(rtn_stdout, rtn_stderr)
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
@@ -769,14 +779,14 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if output == 'live':
+                                if not quite: 
                                     print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
                                 stdout_chunks.append(stdoutbytes)
                                 got_chunk = True
                             if c.recv_stderr_ready(): 
                                 # make sure to read stderr to prevent stall
                                 stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
-                                if output == 'live':
+                                if not quite: 
                                     print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
                                 stderr_chunks.append(stderrbytes)
                                 got_chunk = True

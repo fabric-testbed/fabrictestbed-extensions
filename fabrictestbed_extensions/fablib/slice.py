@@ -126,7 +126,7 @@ class Slice:
 
         self.get_fim_topology().load(file_name=filename)
 
-    def list_interfaces(self):
+    def list_interfaces(self, output=None, fields=None, colors=False, quite=False):
         """
         Creates a tabulated string describing all interfaces in the slice.
 
@@ -156,6 +156,37 @@ class Slice:
             logging.info(f"Starting get get_os_interface_threads for iface {iface.get_name()} ")
             os_interface_threads[iface.get_name()] = executor.submit(iface.get_os_interface)
 
+        #table = []
+        #for iface in self.get_interfaces():
+        #
+        #    if iface.get_network():
+        #        #network_name = iface.get_network().get_name()
+        #        logging.info(f"Getting results from get network name thread for iface {iface.get_name()} ")
+        #        network_name = net_name_threads[iface.get_name()].result()
+        #    else:
+        #        network_name = None
+        #
+        #    if iface.get_node():
+        #        #node_name = iface.get_node().get_name()
+        #        logging.info(f"Getting results from get node name thread for iface {iface.get_name()} ")
+        #        node_name = node_name_threads[iface.get_name()].result()
+        #
+        #    else:
+        #        node_name = None
+        #
+        #    table.append([iface.get_name(),
+        #                  node_name,
+        #                  network_name,
+        #                  iface.get_bandwidth(),
+        #                  iface.get_vlan(),
+        #                  iface.get_mac(),
+        #                  physical_os_interface_name_threads[iface.get_name()].result(),
+        #                  os_interface_threads[iface.get_name()].result(),
+        #                ])
+        #
+        #return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC",
+        #                                "Physical OS Interface", "OS Interface"])
+
         table = []
         for iface in self.get_interfaces():
 
@@ -173,19 +204,33 @@ class Slice:
 
             else:
                 node_name = None
-
-            table.append([iface.get_name(),
-                          node_name,
-                          network_name,
-                          iface.get_bandwidth(),
-                          iface.get_vlan(),
-                          iface.get_mac(),
-                          physical_os_interface_name_threads[iface.get_name()].result(),
-                          os_interface_threads[iface.get_name()].result(),
-                        ])
-
-        return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC",
-                                        "Physical OS Interface", "OS Interface"])
+                
+            table.append({"Name": iface.get_name(),
+                          "Node": node_name,
+                          "Network": network_name,
+                          "Bandwidth": iface.get_bandwidth(),
+                          "VLAN": iface.get_vlan(),
+                          "MAC": iface.get_mac(),
+                          "Physical Device": physical_os_interface_name_threads[iface.get_name()].result(),
+                          "Device": os_interface_threads[iface.get_name()].result(),
+                         })
+    
+        if fields == None:
+            fields=["Name",  "Node",  "Network", 
+                    "Bandwidth", "VLAN", "MAC", 
+                    "Device"]
+            
+            
+        
+        table =  self.get_fablib_manager().list_table(table,
+                        fields=fields,
+                        title='Interfaces',
+                        output=output,
+                        quite=quite)
+        
+        return table
+        
+        
 
     @staticmethod
     def new_slice(fablib_manager: FablibManager, name: str = None):
@@ -230,7 +275,7 @@ class Slice:
 
         return slice
     
-    def show(self, fields=None, output=None, display_table=True, colors=False):
+    def show(self, fields=None, output=None, quite=False, colors=False):
         data = { "ID": self.get_slice_id(),
                           "Name": self.get_name(),
                           "Lease Expiration (UTC)": self.get_lease_end(),
@@ -254,7 +299,7 @@ class Slice:
                         fields=fields,
                         title='Slice', 
                         output=output, 
-                        display_table=display_table)
+                        quite=quite)
         #if colors:
             #slice_table = slice_table.apply(highlight, axis=1)
             #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
@@ -1200,9 +1245,9 @@ class Slice:
             time.sleep(interval)
             self.update()
 
-            slice_show_table = self.show(colors=True, display_table=False)
-            node_table = self.list_nodes(colors=True, display_table=False)
-            network_table = self.list_networks(colors=True, display_table=False)  
+            slice_show_table = self.show(colors=True, quite=True)
+            node_table = self.list_nodes(colors=True, quite=True)
+            network_table = self.list_networks(colors=True, quite=True)  
     
             time_string = f"{time.time() - start:.0f} sec"
             
@@ -1224,7 +1269,7 @@ class Slice:
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
         if len(self.get_interfaces()) > 0:
-            print(f"\n{self.list_interfaces()}")
+            self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
     def submit(self, wait: bool = True, wait_timeout: int = 2400, wait_interval: int = 20, progress: bool = True,
@@ -1285,7 +1330,7 @@ class Slice:
 
         return self.slice_id
     
-    def list_networks(self, output=None, fields=None, colors=False, display_table=True):
+    def list_networks(self, output=None, fields=None, colors=False, quite=False):
         """
         Creates a tabulated string describing all networks in the slice.
 
@@ -1336,18 +1381,18 @@ class Slice:
                         fields=fields,
                         title='Networks',
                         output=output,
-                        display_table=False)
+                        quite=True)
         
         if colors:
             #table = table.apply(highlight, axis=1)
             table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
-        if display_table:
+        if not quite:
             display(table)
 
         
         return table
     
-    def list_nodes(self, output=None, fields=None, colors=False, display_table=True):
+    def list_nodes(self, output=None, fields=None, colors=False, quite=False):
         """
         Creates a tabulated string describing all nodes in the slice.
 
@@ -1387,7 +1432,8 @@ class Slice:
                           "Image": node.get_image(),
                           "Management IP": node.get_management_ip(),
                           "State": node.get_reservation_state(),
-                          "Error": node.get_error_message(),                                                               "SSH Command ": node.get_ssh_command()
+                          "Error": node.get_error_message(),
+                          "SSH Command ": node.get_ssh_command()
                          })
     
         if fields == None:
@@ -1401,12 +1447,12 @@ class Slice:
                         fields=fields,
                         title='Nodes',
                         output=output,
-                        display_table=False)
+                        quite=True)
         
         if colors:
             #table = table.apply(highlight, axis=1)
             table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
-        if display_table:
+        if not quite:
             display(table)
 
         

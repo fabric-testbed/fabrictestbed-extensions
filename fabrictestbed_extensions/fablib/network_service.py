@@ -426,19 +426,28 @@ class NetworkService:
 
         return tabulate(table) #, headers=["Property", "Value"])
     
-    def show(self):
-        table = [ ["ID", self.get_reservation_id()],
-            ["Name", self.get_name()],
-            ["Layer", self.get_layer()],
-            ["Type", self.get_type()],
-            ["Site", self.get_site()],
-            ["Gateway", self.get_gateway()],
-            ["L3 Subnet", self.get_subnet()],
-            ["Reservation State", self.get_reservation_state()],
-            ["Error Message", self.get_error_message()],
-            ]
-
-        self.get_fablib_manager().print_table(table, title='Network Information', properties={'text-align': 'left', 'border': '1px black solid !important'}, hide_header=True)
+    def show(self, fields=None, output=None, quite=False, colors=False):
+        data = { "ID": self.get_reservation_id(),
+            "Name": self.get_name(),
+            "Layer": self.get_layer(),
+            "Type": self.get_type(),
+            "Site": self.get_site(),
+            "Gateway": self.get_gateway(),
+            "Subnet": self.get_subnet(),
+            "State": self.get_reservation_state(),
+            "Error": self.get_error_message(),
+                }
+        
+        fields = ["ID", "Name", "Layer", "Type", "Site",
+                "Gateway", "Subnet","State", "Error",
+                 ]
+        
+        node_table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Network', 
+                        output=output, 
+                        quite=quite)       
+    
 
     def get_slice(self) -> Slice:
         """
@@ -448,6 +457,9 @@ class NetworkService:
         :rtype: Slice
         """
         return self.slice
+    
+    def get_fablib_manager(self):
+        return self.get_slice().get_fablib_manager()
 
     def get_site(self) -> str or None:
         try:

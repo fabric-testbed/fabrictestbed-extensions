@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING
 from fabrictestbed.util.constants import Constants
 import pandas as pd
 from tabulate import tabulate
+import json 
 
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
@@ -832,7 +833,7 @@ class FablibManager:
         return str(self.get_resources())
 
     def show_config(self, output=None, fields=None, title='FABlib Config'):
-        self.show_table(self.get_config(), 
+        return self.show_table(self.get_config(), 
                         fields=fields,
                         title=title, 
                         output=output)
@@ -1184,7 +1185,7 @@ class FablibManager:
         return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
     
             
-    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None, fields=None, display_table=True):
+    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None, fields=None, quite=False):
         """
         Creates a tabulated string describing all slices.
 
@@ -1208,9 +1209,9 @@ class FablibManager:
                         fields=fields,
                         title='Slices',
                         output=output,
-                        display_table=display_table)
+                        quite=quite)
 
-    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, display_table=True):
+    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quite=False):
         """
         Shows a slice's info.
 
@@ -1221,7 +1222,7 @@ class FablibManager:
         
         slice = self.get_slice(name=name, slice_id=id)
         
-        return slice.show(output=output, fields=fields, display_table=display_table)
+        return slice.show(output=output, fields=fields, quite=quite)
 
 
     def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
@@ -1341,10 +1342,10 @@ class FablibManager:
             return False
 
         
-    def show_table_text(self, table, display_table=True):
+    def show_table_text(self, table, quite=False):
         printable_table = tabulate(table)
         
-        if display_table:
+        if not quite:
             print(f"\n{printable_table}")
             
         return printable_table
@@ -1354,7 +1355,7 @@ class FablibManager:
                                  headers=None, 
                                  title='', 
                                  title_font_size='1.25em', 
-                                 display_table=True):
+                                 quite=False):
     
         printable_table = pd.DataFrame(table)
         
@@ -1369,10 +1370,18 @@ class FablibManager:
             'props': f'caption-side: top; font-size:{title_font_size};'
         }], overwrite=False)
 
-        if display_table:
+        if not quite:
             display(printable_table)
             
         return printable_table
+    
+    def show_table_json(self, data, quite=False):
+        json_str = json.dumps(data, indent = 4)
+        
+        if not quite:
+            print(f"{json_str}")
+            
+        return json_str
         
     def show_table(self, 
                    data, 
@@ -1382,7 +1391,7 @@ class FablibManager:
                    title_font_size='1.25em', 
                    index=None, 
                    output=None,
-                   display_table=True):
+                   quite=False):
         
         if output == None:
             output = self.output.lower()
@@ -1391,25 +1400,27 @@ class FablibManager:
         table = self.create_show_table(data, fields=fields)
             
         if(output == 'text'):
-            return self.show_table_text(table, display_table=display_table)
+            return self.show_table_text(table, quite=quite)
+        elif(output == 'json'):
+            return self.show_table_json(data, quite=quite)
         elif(output == 'jupyter'):
             return self.show_table_jupyter(table, 
                                          headers=fields, 
                                          title=title, 
                                          title_font_size=title_font_size,
-                                         display_table=display_table)
+                                         quite=quite)
         else:
             logging.error(f"Unknown output type: {output}")
 
 
     
-    def list_table_text(self, table, headers=None, display_table=True):
+    def list_table_text(self, table, headers=None, quite=False):
         if headers is not None:
             printable_table = tabulate(table, headers=headers)
         else:
             printable_table = tabulate(table)
         
-        if display_table:
+        if not quite:
             print(f"\n{printable_table}")
             
         return printable_table
@@ -1421,7 +1432,7 @@ class FablibManager:
                            title='', 
                            title_font_size='1.25em', 
                            output=None,
-                           display_table=True):
+                           quite=False):
         
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
@@ -1449,10 +1460,18 @@ class FablibManager:
                                                            overwrite=False)
 
 
-        if display_table:
+        if not quite:
             display(printable_table)
         
         return printable_table
+    
+    def list_table_json(self, data, quite=False):
+        json_str = json.dumps(data, indent = 4)
+        
+        if not quite:
+            print(f"{json_str}")
+            
+        return json_str
         
     def list_table(self, 
                          data, 
@@ -1462,24 +1481,24 @@ class FablibManager:
                          title_font_size='1.25em', 
                          index=None, 
                          output=None, 
-                         display_table=True):
+                         quite=False):
         
         if output == None:
             output = self.output.lower()
         
         table = self.create_list_table(data, fields=fields)
         
-            
-
         if(output == 'text'):
-            return self.list_table_text(table,  headers=fields, display_table=display_table)                            
+            return self.list_table_text(table,  headers=fields, quite=quite)         
+        elif(output == 'json'):
+            return self.list_table_json(data, quite=quite)
         elif(output == 'jupyter'): 
             return self.list_table_jupyter(table, 
                                     headers=fields, 
                                     title=title, 
                                     title_font_size=title_font_size,
                                     output=output,
-                                    display_table=display_table)
+                                    quite=quite)
         else:
             logging.error(f"Unknown output type: {output}")
             
