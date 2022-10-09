@@ -823,14 +823,15 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self) -> str:
+    def list_sites(self,output=None, fields=None, quite=False) -> str:
         """
         Get a string used to print a tabular list of sites with state
 
         :return: tabulated string of site state
         :rtype: str
         """
-        return str(self.get_resources())
+        
+        return self.get_resources().list_sites(output=output, fields=fields, quite=quite)
 
     def show_config(self, output=None, fields=None, title='FABlib Config'):
         return self.show_table(self.get_config(), 
