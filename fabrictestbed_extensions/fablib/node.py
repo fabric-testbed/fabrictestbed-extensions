@@ -195,7 +195,35 @@ class Node:
                         title='Node', 
                         output=output, 
                         quite=quite)
-
+        
+    def list_components(self, fields=None, output=None, quite=False, list_filter=None):
+        list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
+        
+        return self.get_slice().list_components(fields=fields, 
+                                                output=output, 
+                                                quite=quite, 
+                                                list_filter=list_filter)
+        
+    
+    def list_interfaces(self, fields=None, output=None, quite=False, list_filter=[]):
+        
+        list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
+        
+        return self.get_slice().list_interfaces(fields=fields, 
+                                                output=output, 
+                                                quite=quite, 
+                                                list_filter=list_filter)
+        
+    
+    def list_networks(self, fields=None, output=None, quite=False, list_filter=None):
+        
+        list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
+        
+        return self.get_slice().list_networks(fields=fields, 
+                                                output=output, 
+                                                quite=quite, 
+                                                list_filter=list_filter)
+        
     def get_fim_node(self) -> FimNode:
         """
         Not intended for API call.

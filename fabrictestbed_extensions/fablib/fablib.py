@@ -513,7 +513,7 @@ class FablibManager:
     }
 
     default_fabric_rc = os.environ['HOME'] + '/work/fabric_config/fabric_rc'
-    default_log_level = 'INFO'
+    default_log_level = 'DEBUG'
     default_log_file = '/tmp/fablib/fablib.log'
     default_data_dir = '/tmp/fablib'
 
@@ -682,6 +682,7 @@ class FablibManager:
         self.set_log_file(log_file=self.log_file)
         self.set_data_dir(data_dir=self.data_dir)
 
+        
         if self.log_file is not None and self.log_level is not None:
             logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                                 format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
@@ -823,7 +824,7 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self,output=None, fields=None, quite=False) -> str:
+    def list_sites(self,output=None, fields=None, quite=False, list_filter=None) -> str:
         """
         Get a string used to print a tabular list of sites with state
 
@@ -831,7 +832,7 @@ class FablibManager:
         :rtype: str
         """
         
-        return self.get_resources().list_sites(output=output, fields=fields, quite=quite)
+        return self.get_resources().list_sites(output=output, fields=fields, quite=quite, list_filter=list_filter)
 
     def show_config(self, output=None, fields=None, title='FABlib Config'):
         return self.show_table(self.get_config(), 
@@ -1186,7 +1187,12 @@ class FablibManager:
         return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
     
             
-    def list_slices(self, excludes = [SliceState.Dead,SliceState.Closing], output=None, fields=None, quite=False):
+    def list_slices(self, 
+                    excludes = [SliceState.Dead,SliceState.Closing], 
+                    output=None, 
+                    fields=None, 
+                    quite=False,
+                    list_filter=None):
         """
         Creates a tabulated string describing all slices.
 
@@ -1202,7 +1208,8 @@ class FablibManager:
                           "Lease Start (UTC)": slice.get_lease_start(),
                           "Project ID": slice.get_project_id(),
                           "State": slice.get_state(),
-                         })
+                         })  
+        
 
         if fields == None:
             fields=["ID", "Name",  "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
@@ -1210,7 +1217,10 @@ class FablibManager:
                         fields=fields,
                         title='Slices',
                         output=output,
-                        quite=quite)
+                        quite=quite, 
+                        list_filter=list_filter 
+                        )
+
 
     def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quite=False):
         """
@@ -1219,7 +1229,7 @@ class FablibManager:
 
         :return: Tabulated srting of all slices information
         :rtype: String
-        """
+        """    
         
         slice = self.get_slice(name=name, slice_id=id)
         
@@ -1482,7 +1492,32 @@ class FablibManager:
                          title_font_size='1.25em', 
                          index=None, 
                          output=None, 
-                         quite=False):
+                         quite=False,
+                         list_filter=None):
+        
+        def filter_function(slice):
+            for column,value,operator in list_filter:
+                if operator == '==':
+                    if slice[column] != value:
+                        return False
+                elif operator == '<=':
+                    if slice[column] > value:
+                        return False
+                elif operator == '<':
+                    if slice[column] >= value:
+                        return False
+                elif operator == '>=':
+                    if slice[column] < value:
+                        return False
+                elif operator == '>':
+                    if slice[column] <= value:
+                        return False
+            return True
+        
+        
+        if list_filter:
+            data = list(filter(filter_function, data))    
+ 
         
         if output == None:
             output = self.output.lower()

@@ -451,6 +451,7 @@ class NetworkService:
                         output=output, 
                         quite=quite)       
     
+        return node_table
 
     def get_slice(self) -> Slice:
         """
@@ -629,8 +630,10 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
+        
         interfaces = []
         for interface in self.get_fim_network_service().interface_list:
+            logging.debug(f"interface: {interface}")
             interfaces.append(self.get_slice().get_interface(name=interface.name))
 
         return interfaces

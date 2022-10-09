@@ -126,7 +126,12 @@ class Slice:
 
         self.get_fim_topology().load(file_name=filename)
 
-    def list_interfaces(self, output=None, fields=None, colors=False, quite=False):
+    def list_interfaces(self, 
+                        output=None, 
+                        fields=None, 
+                        colors=False, 
+                        quite=False, 
+                        list_filter=None):
         """
         Creates a tabulated string describing all interfaces in the slice.
 
@@ -195,7 +200,7 @@ class Slice:
                         fields=fields,
                         title='Interfaces',
                         output=output,
-                        quite=quite)
+                        quite=quite, list_filter=list_filter)
         
         return table
         
@@ -1302,7 +1307,12 @@ class Slice:
 
         return self.slice_id
     
-    def list_networks(self, output=None, fields=None, colors=False, quite=False):
+    def list_networks(self, 
+                      output=None, 
+                      fields=None, 
+                      colors=False, 
+                      quite=False, 
+                      list_filter=None):
         """
         Creates a tabulated string describing all networks in the slice.
 
@@ -1353,7 +1363,7 @@ class Slice:
                         fields=fields,
                         title='Networks',
                         output=output,
-                        quite=True)
+                        quite=True, list_filter=list_filter)
         
         if colors:
             #table = table.apply(highlight, axis=1)
@@ -1364,7 +1374,7 @@ class Slice:
         
         return table
     
-    def list_nodes(self, output=None, fields=None, colors=False, quite=False):
+    def list_nodes(self, output=None, fields=None, colors=False, quite=False, list_filter=None):
         """
         Creates a tabulated string describing all nodes in the slice.
 
@@ -1395,19 +1405,6 @@ class Slice:
         table = []
         for node in self.get_nodes():
             table.append(node.toJson())
-            #table.append({ "ID": node.get_reservation_id(),
-            #              "Name": node.get_name(),
-            #              "Site": node.get_site(),
-            #              "Host": node.get_host(),
-            #              "Cores": node.get_cores(),
-            #              "RAM": node.get_ram(),
-            #              "Disk": node.get_disk(),
-            #              "Image": node.get_image(),
-            #              "Management IP": node.get_management_ip(),
-            #              "State": node.get_reservation_state(),
-            #              "Error": node.get_error_message(),
-            #              "SSH Command ": node.get_ssh_command()
-            #             })
     
         if fields == None:
             fields=["ID", "Name",  "Site",  "Host", 
@@ -1420,7 +1417,7 @@ class Slice:
                         fields=fields,
                         title='Nodes',
                         output=output,
-                        quite=True)
+                        quite=True, list_filter=list_filter)
         
         if colors:
             #table = table.apply(highlight, axis=1)

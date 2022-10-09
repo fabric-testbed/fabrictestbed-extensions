@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 from tabulate import tabulate
 from typing import List
 
+import logging
+
 from fabrictestbed.slice_editor import ComponentModelType, Labels, Flags
 from fabrictestbed.slice_editor import Component as FimComponent
 
@@ -65,6 +67,9 @@ class Component:
                     ]
 
         return tabulate(table)
+
+    def get_fablib_manager(self):
+        return self.get_slice().get_fablib_manager()
     
     def toJson(self):
         return {     "Name": self.get_name(),
@@ -75,6 +80,22 @@ class Component:
                      "Model": self.get_model(),
                      "Type": self.get_type()
                 }
+    
+    def show(self, fields=None, output=None, quite=False, colors=False):
+        data = self.toJson()
+    
+        fields = ["Name", "Details", "Disk (G)", "Units", "PCI Address",
+                "Model", "Type"
+                 ]
+    
+        table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Component', 
+                        output=output, 
+                        quite=quite)
+            
+            
+        return table
 
     def list_interfaces(self) -> List[str]:
         """

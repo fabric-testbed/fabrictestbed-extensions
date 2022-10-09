@@ -27,6 +27,9 @@ from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
 
+import logging
+
+
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -53,6 +56,9 @@ class Interface:
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
+        
+    def get_fablib_manager(self):
+        return self.get_slice().get_fablib_manager()
 
     def __str__(self):
         """
@@ -73,21 +79,21 @@ class Interface:
                     [ "Bandwidth", self.get_bandwidth() ],
                     [ "VLAN", self.get_vlan() ],
                     [ "MAC", self.get_mac() ],
-                    [ "Physical OS Interface", self.get_physical_os_interface_name() ],
-                    [ "OS Interface", self.get_os_interface() ],
+                    [ "Physical Device", self.get_physical_os_interface_name() ],
+                    [ "Device", self.get_os_interface() ],
                     ]
 
         return tabulate(table)
     
     def toJson(self):
-        if iface.get_network():
-            logging.info(f"Getting results from get network name thread for iface {iface.get_name()} ")
+        if self.get_network():
+            logging.info(f"Getting results from get network name thread for iface {self.get_name()} ")
             network_name = self.get_network().get_name()
         else:
             network_name = None
 
-        if iface.get_node():
-            logging.info(f"Getting results from get node name thread for iface {iface.get_name()} ")
+        if self.get_node():
+            logging.info(f"Getting results from get node name thread for iface {self.get_name()} ")
             node_name = self.get_node().get_name()
         else:
             node_name = None
@@ -101,6 +107,21 @@ class Interface:
                   "Physical Device": self.get_physical_os_interface_name(),
                   "Device": self.get_os_interface(),
                  }
+    def show(self, fields=None, output=None, quite=False, colors=False):
+        data = self.toJson()
+    
+        fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
+                "MAC", "Device"
+                 ]
+    
+        table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Interface', 
+                        output=output, 
+                        quite=quite)
+            
+            
+        return table
 
     def set_auto_config(self):
         fim_iface = self.get_fim_interface()
