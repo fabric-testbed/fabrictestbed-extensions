@@ -618,7 +618,7 @@ class Node:
         :return: the SSH command to access this node
         :rtype: str
         """
-        return 'ssh -i {} -F <path to ssh config file> {}@{}'.format(self.get_private_key_file(),
+        return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
                                            self.get_username(),
                                            self.get_management_ip())
 
@@ -851,7 +851,7 @@ class Node:
                 #success, skip other tries
                 break
             except Exception as e:
-                print(e)
+                logging.warning(f"{e}")
                 try:
                     client.close()
                 except:
@@ -1094,8 +1094,7 @@ class Node:
                     raise e
 
                 #Fail, try again
-                print(f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
-                print(f"Fail: {e}")
+                logging.warning(f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}")
                 #traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
@@ -1201,8 +1200,7 @@ class Node:
                     raise e
 
                 #Fail, try again
-                print(f"SCP download fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
-                print(f"Fail: {e}")
+                logging.warning(f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}")
                 #traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
@@ -1479,7 +1477,7 @@ class Node:
             stdout, stderr = self.execute('ip -j route list')
             return json.loads(stdout)
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"Exception: {e}")
 
 
 
@@ -1492,7 +1490,7 @@ class Node:
 
             return addrs   
         except Exception as e:
-            print(f"Exception: {e}")
+            ogging.warning(f"Exception: {e}")
             
 
             
@@ -1711,7 +1709,7 @@ class Node:
         try:
             [stdout_json] = json.loads(stdout)
         except Exception as e:
-            print(f"os_iface: {os_iface}, stdout: {stdout}, stderr: {stderr}")
+            logging.warning(f"os_iface: {os_iface}, stdout: {stdout}, stderr: {stderr}")
             raise e
 
         link = stdout_json['link']
