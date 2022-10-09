@@ -61,6 +61,10 @@ class FacilityPort:
         table = [["name", self.get_name()]]
 
         return tabulate(table)
+    
+    def toJson(self):
+        return {     "Name": self.get_name()
+                }
 
     def get_fim_interface(self) -> FimInterface:
         return self.fim_interface

@@ -165,8 +165,8 @@ class Node:
         """
         return Node(slice, node)
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
-        data ={ "ID":  self.get_reservation_id(),
+    def toJson(self):
+        return { "ID":  self.get_reservation_id(),
                 "Name": self.get_name(),
                 "Cores": self.get_cores(),
                 "RAM": self.get_ram(),
@@ -176,15 +176,18 @@ class Node:
                 "Host": self.get_host(),
                 "Site": self.get_site(),
                 "Management IP": self.get_management_ip(),
-                "Reservation State": self.get_reservation_state(),
-                "Error Message": self.get_error_message(),
+                "State": self.get_reservation_state(),
+                "Error": self.get_error_message(),
                 "SSH Command ": self.get_ssh_command()
                 }
+    
+    def show(self, fields=None, output=None, quite=False, colors=False):
+        data = self.toJson()
         
         fields = ["ID", "Name", "Cores", "RAM", "Disk",
                 "Image", "Image Type","Host", "Site",
-                "Management IP", "Reservation State", 
-                "Error Message","SSH Command "
+                "Management IP", "State", 
+                "Error","SSH Command "
                  ]
         
         node_table = self.get_fablib_manager().show_table(data, 

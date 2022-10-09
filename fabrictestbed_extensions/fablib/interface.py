@@ -78,6 +78,29 @@ class Interface:
                     ]
 
         return tabulate(table)
+    
+    def toJson(self):
+        if iface.get_network():
+            logging.info(f"Getting results from get network name thread for iface {iface.get_name()} ")
+            network_name = self.get_network().get_name()
+        else:
+            network_name = None
+
+        if iface.get_node():
+            logging.info(f"Getting results from get node name thread for iface {iface.get_name()} ")
+            node_name = self.get_node().get_name()
+        else:
+            node_name = None
+
+        return {  "Name": self.get_name(),
+                  "Node": node_name,
+                  "Network": network_name,
+                  "Bandwidth": self.get_bandwidth(),
+                  "VLAN": self.get_vlan(),
+                  "MAC": self.get_mac(),
+                  "Physical Device": self.get_physical_os_interface_name(),
+                  "Device": self.get_os_interface(),
+                 }
 
     def set_auto_config(self):
         fim_iface = self.get_fim_interface()

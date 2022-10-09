@@ -419,24 +419,27 @@ class NetworkService:
             ["Type", self.get_type()],
             ["Site", self.get_site()],
             ["Gateway", self.get_gateway()],
-            ["L3 Subnet", self.get_subnet()],
-            ["Reservation State", self.get_reservation_state()],
-            ["Error Message", self.get_error_message()],
+            ["Subnet", self.get_subnet()],
+            ["State", self.get_reservation_state()],
+            ["Error", self.get_error_message()],
             ]
 
         return tabulate(table) #, headers=["Property", "Value"])
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
-        data = { "ID": self.get_reservation_id(),
-            "Name": self.get_name(),
-            "Layer": self.get_layer(),
-            "Type": self.get_type(),
-            "Site": self.get_site(),
-            "Gateway": self.get_gateway(),
-            "Subnet": self.get_subnet(),
-            "State": self.get_reservation_state(),
-            "Error": self.get_error_message(),
+    def toJson(self):
+        return {    "ID": self.get_reservation_id(),
+                    "Name": self.get_name(),
+                    "Layer": self.get_layer(),
+                    "Type": self.get_type(),
+                    "Site": self.get_site(),
+                    "Gateway": self.get_gateway(),
+                    "Subnet": self.get_subnet(),
+                    "State": self.get_reservation_state(),
+                    "Error": self.get_error_message(),
                 }
+    
+    def show(self, fields=None, output=None, quite=False, colors=False):
+        data = self.toJson()
         
         fields = ["ID", "Name", "Layer", "Type", "Site",
                 "Gateway", "Subnet","State", "Error",

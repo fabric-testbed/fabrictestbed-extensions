@@ -135,7 +135,7 @@ class Slice:
         :return: Tabulated string of all interfaces
         :rtype: String
         """
-        executor = ThreadPoolExecutor(10)
+        executor = ThreadPoolExecutor(64)
 
         net_name_threads = {}
         node_name_threads = {}
@@ -155,37 +155,6 @@ class Slice:
 
             logging.info(f"Starting get get_os_interface_threads for iface {iface.get_name()} ")
             os_interface_threads[iface.get_name()] = executor.submit(iface.get_os_interface)
-
-        #table = []
-        #for iface in self.get_interfaces():
-        #
-        #    if iface.get_network():
-        #        #network_name = iface.get_network().get_name()
-        #        logging.info(f"Getting results from get network name thread for iface {iface.get_name()} ")
-        #        network_name = net_name_threads[iface.get_name()].result()
-        #    else:
-        #        network_name = None
-        #
-        #    if iface.get_node():
-        #        #node_name = iface.get_node().get_name()
-        #        logging.info(f"Getting results from get node name thread for iface {iface.get_name()} ")
-        #        node_name = node_name_threads[iface.get_name()].result()
-        #
-        #    else:
-        #        node_name = None
-        #
-        #    table.append([iface.get_name(),
-        #                  node_name,
-        #                  network_name,
-        #                  iface.get_bandwidth(),
-        #                  iface.get_vlan(),
-        #                  iface.get_mac(),
-        #                  physical_os_interface_name_threads[iface.get_name()].result(),
-        #                  os_interface_threads[iface.get_name()].result(),
-        #                ])
-        #
-        #return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC",
-        #                                "Physical OS Interface", "OS Interface"])
 
         table = []
         for iface in self.get_interfaces():
@@ -275,14 +244,17 @@ class Slice:
 
         return slice
     
+    def toJson(self):
+        return {  "ID": self.get_slice_id(),
+                  "Name": self.get_name(),
+                  "Lease Expiration (UTC)": self.get_lease_end(),
+                  "Lease Start (UTC)": self.get_lease_start(),
+                  "Project ID": self.get_project_id(),
+                  "State": self.get_state(),
+                }
+    
     def show(self, fields=None, output=None, quite=False, colors=False):
-        data = { "ID": self.get_slice_id(),
-                          "Name": self.get_name(),
-                          "Lease Expiration (UTC)": self.get_lease_end(),
-                          "Lease Start (UTC)": self.get_lease_start(),
-                          "Project ID": self.get_project_id(),
-                          "State": self.get_state(),
-                 }
+        data = self.toJson()
         
         def state_color(val):
             if val == 'StableOK':
@@ -1422,19 +1394,20 @@ class Slice:
         
         table = []
         for node in self.get_nodes():
-            table.append({ "ID": node.get_reservation_id(),
-                          "Name": node.get_name(),
-                          "Site": node.get_site(),
-                          "Host": node.get_host(),
-                          "Cores": node.get_cores(),
-                          "RAM": node.get_ram(),
-                          "Disk": node.get_disk(),
-                          "Image": node.get_image(),
-                          "Management IP": node.get_management_ip(),
-                          "State": node.get_reservation_state(),
-                          "Error": node.get_error_message(),
-                          "SSH Command ": node.get_ssh_command()
-                         })
+            table.append(node.toJson())
+            #table.append({ "ID": node.get_reservation_id(),
+            #              "Name": node.get_name(),
+            #              "Site": node.get_site(),
+            #              "Host": node.get_host(),
+            #              "Cores": node.get_cores(),
+            #              "RAM": node.get_ram(),
+            #              "Disk": node.get_disk(),
+            #              "Image": node.get_image(),
+            #              "Management IP": node.get_management_ip(),
+            #              "State": node.get_reservation_state(),
+            #              "Error": node.get_error_message(),
+            #              "SSH Command ": node.get_ssh_command()
+            #             })
     
         if fields == None:
             fields=["ID", "Name",  "Site",  "Host", 

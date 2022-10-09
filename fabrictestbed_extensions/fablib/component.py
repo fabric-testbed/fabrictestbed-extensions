@@ -65,6 +65,16 @@ class Component:
                     ]
 
         return tabulate(table)
+    
+    def toJson(self):
+        return {     "Name": self.get_name(),
+                     "Details": self.get_details(),
+                     "Disk (G)": self.get_disk(),
+                     "Units": self.get_unit(),
+                     "PCI Address": self.get_pci_addr(),
+                     "Model": self.get_model(),
+                     "Type": self.get_type()
+                }
 
     def list_interfaces(self) -> List[str]:
         """
