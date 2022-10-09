@@ -1212,6 +1212,11 @@ class Slice:
         import time
 
         start = time.time()
+        
+        if len(self.get_interfaces()) > 0:
+            hasNetworks = True
+        else:
+            hasNetworks = False
 
         count = 0
         #while not self.isStable():
@@ -1224,7 +1229,8 @@ class Slice:
 
             slice_show_table = self.show(colors=True, quite=True)
             node_table = self.list_nodes(colors=True, quite=True)
-            network_table = self.list_networks(colors=True, quite=True)  
+            if hasNetworks:
+                network_table = self.list_networks(colors=True, quite=True)  
     
             time_string = f"{time.time() - start:.0f} sec"
             
@@ -1235,7 +1241,8 @@ class Slice:
 
             display(slice_show_table)
             display(node_table)
-            display(network_table)
+            if hasNetworks:
+                display(network_table)
 
             count += 1
 
@@ -1245,7 +1252,7 @@ class Slice:
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
-        if len(self.get_interfaces()) > 0:
+        if hasNetworks:
             self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
