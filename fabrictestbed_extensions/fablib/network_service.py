@@ -438,7 +438,7 @@ class NetworkService:
                     "Error": self.get_error_message(),
                 }
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toJson()
         
         fields = ["ID", "Name", "Layer", "Type", "Site",
@@ -449,7 +449,7 @@ class NetworkService:
                         fields=fields,
                         title='Network', 
                         output=output, 
-                        quite=quite)       
+                        quiet=quiet)       
     
         return node_table
 

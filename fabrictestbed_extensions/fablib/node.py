@@ -181,7 +181,7 @@ class Node:
                 "SSH Command ": self.get_ssh_command()
                 }
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toJson()
         
         fields = ["ID", "Name", "Cores", "RAM", "Disk",
@@ -194,34 +194,34 @@ class Node:
                         fields=fields,
                         title='Node', 
                         output=output, 
-                        quite=quite)
+                        quiet=quiet)
         
-    def list_components(self, fields=None, output=None, quite=False, list_filter=None):
+    def list_components(self, fields=None, output=None, quiet=False, list_filter=None):
         list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
         
         return self.get_slice().list_components(fields=fields, 
                                                 output=output, 
-                                                quite=quite, 
+                                                quiet=quiet, 
                                                 list_filter=list_filter)
         
     
-    def list_interfaces(self, fields=None, output=None, quite=False, list_filter=[]):
+    def list_interfaces(self, fields=None, output=None, quiet=False, list_filter=[]):
         
         list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
         
         return self.get_slice().list_interfaces(fields=fields, 
                                                 output=output, 
-                                                quite=quite, 
+                                                quiet=quiet, 
                                                 list_filter=list_filter)
         
     
-    def list_networks(self, fields=None, output=None, quite=False, list_filter=None):
+    def list_networks(self, fields=None, output=None, quiet=False, list_filter=None):
         
         list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
         
         return self.get_slice().list_networks(fields=fields, 
                                                 output=output, 
-                                                quite=quite, 
+                                                quiet=quiet, 
                                                 list_filter=list_filter)
         
     def get_fim_node(self) -> FimNode:
@@ -693,7 +693,7 @@ class Node:
                       private_key_file=None, 
                       private_key_passphrase=None, 
                       chunking=False, 
-                      quite=True, 
+                      quiet=True, 
                       read_timeout=10, 
                       timeout=None):
         """
@@ -723,7 +723,7 @@ class Node:
 
         logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
-        if not quite:
+        if not quiet:
             chunking = True
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
@@ -796,7 +796,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                     rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-                    if not quite:
+                    if not quiet:
                         print(rtn_stdout, rtn_stderr)
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
@@ -810,14 +810,14 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if not quite: 
+                                if not quiet: 
                                     print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
                                 stdout_chunks.append(stdoutbytes)
                                 got_chunk = True
                             if c.recv_stderr_ready(): 
                                 # make sure to read stderr to prevent stall
                                 stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
-                                if not quite: 
+                                if not quiet: 
                                     print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
                                 stderr_chunks.append(stderrbytes)
                                 got_chunk = True

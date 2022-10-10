@@ -130,7 +130,7 @@ class Slice:
                         output=None, 
                         fields=None, 
                         colors=False, 
-                        quite=False, 
+                        quiet=False, 
                         list_filter=None):
         """
         Creates a tabulated string describing all interfaces in the slice.
@@ -200,7 +200,7 @@ class Slice:
                         fields=fields,
                         title='Interfaces',
                         output=output,
-                        quite=quite, list_filter=list_filter)
+                        quiet=quiet, list_filter=list_filter)
         
         return table
         
@@ -258,7 +258,7 @@ class Slice:
                   "State": self.get_state(),
                 }
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toJson()
         
         def state_color(val):
@@ -276,7 +276,7 @@ class Slice:
                         fields=fields,
                         title='Slice', 
                         output=output, 
-                        quite=quite)
+                        quiet=quiet)
         #if colors:
             #slice_table = slice_table.apply(highlight, axis=1)
             #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
@@ -1227,10 +1227,10 @@ class Slice:
             time.sleep(interval)
             self.update()
 
-            slice_show_table = self.show(colors=True, quite=True)
-            node_table = self.list_nodes(colors=True, quite=True)
+            slice_show_table = self.show(colors=True, quiet=True)
+            node_table = self.list_nodes(colors=True, quiet=True)
             if hasNetworks:
-                network_table = self.list_networks(colors=True, quite=True)  
+                network_table = self.list_networks(colors=True, quiet=True)  
     
             time_string = f"{time.time() - start:.0f} sec"
             
@@ -1318,7 +1318,7 @@ class Slice:
                       output=None, 
                       fields=None, 
                       colors=False, 
-                      quite=False, 
+                      quiet=False, 
                       list_filter=None):
         """
         Creates a tabulated string describing all networks in the slice.
@@ -1370,18 +1370,18 @@ class Slice:
                         fields=fields,
                         title='Networks',
                         output=output,
-                        quite=True, list_filter=list_filter)
+                        quiet=True, list_filter=list_filter)
         
         if colors:
             #table = table.apply(highlight, axis=1)
             table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
-        if not quite:
+        if not quiet:
             display(table)
 
         
         return table
     
-    def list_nodes(self, output=None, fields=None, colors=False, quite=False, list_filter=None):
+    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, list_filter=None):
         """
         Creates a tabulated string describing all nodes in the slice.
 
@@ -1424,12 +1424,12 @@ class Slice:
                         fields=fields,
                         title='Nodes',
                         output=output,
-                        quite=True, list_filter=list_filter)
+                        quiet=True, list_filter=list_filter)
         
         if colors:
             #table = table.apply(highlight, axis=1)
             table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
-        if not quite:
+        if not quiet:
             display(table)
 
         

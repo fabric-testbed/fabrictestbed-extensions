@@ -508,7 +508,7 @@ class Resources:
                 }
     
     
-    def list_sites(self, output=None, fields=None, colors=False, quite=False, list_filter=None):
+    def list_sites(self, output=None, fields=None, colors=False, quiet=False, list_filter=None):
         table = []
         for site_name, site in self.topology.sites.items():
             table.append(self.site_to_json(site))
@@ -566,7 +566,7 @@ class Resources:
                         fields=fields,
                         title='Sites',
                         output=output,
-                        quite=quite, 
+                        quiet=quiet, 
                         list_filter=list_filter)
 
         return table

@@ -81,7 +81,7 @@ class Component:
                      "Type": self.get_type()
                 }
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toJson()
     
         fields = ["Name", "Details", "Disk (G)", "Units", "PCI Address",
@@ -92,7 +92,7 @@ class Component:
                         fields=fields,
                         title='Component', 
                         output=output, 
-                        quite=quite)
+                        quiet=quiet)
             
             
         return table

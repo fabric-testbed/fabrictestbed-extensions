@@ -107,7 +107,7 @@ class Interface:
                   "Physical Device": self.get_physical_os_interface_name(),
                   "Device": self.get_os_interface(),
                  }
-    def show(self, fields=None, output=None, quite=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toJson()
     
         fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
@@ -118,7 +118,7 @@ class Interface:
                         fields=fields,
                         title='Interface', 
                         output=output, 
-                        quite=quite)
+                        quiet=quiet)
             
             
         return table

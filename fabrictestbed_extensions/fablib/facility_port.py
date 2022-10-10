@@ -66,7 +66,7 @@ class FacilityPort:
         return {     "Name": self.get_name()
                 }
     
-    def show(self, fields=None, output=None, quite=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toJson()
     
         fields = ["Name",
@@ -76,7 +76,7 @@ class FacilityPort:
                         fields=fields,
                         title='Facility Port', 
                         output=output, 
-                        quite=quite)
+                        quiet=quiet)
             
             
         return table

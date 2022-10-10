@@ -824,7 +824,7 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self,output=None, fields=None, quite=False, list_filter=None) -> str:
+    def list_sites(self,output=None, fields=None, quiet=False, list_filter=None) -> str:
         """
         Get a string used to print a tabular list of sites with state
 
@@ -832,7 +832,7 @@ class FablibManager:
         :rtype: str
         """
         
-        return self.get_resources().list_sites(output=output, fields=fields, quite=quite, list_filter=list_filter)
+        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, list_filter=list_filter)
 
     def show_config(self, output=None, fields=None, title='FABlib Config'):
         return self.show_table(self.get_config(), 
@@ -1191,7 +1191,7 @@ class FablibManager:
                     excludes = [SliceState.Dead,SliceState.Closing], 
                     output=None, 
                     fields=None, 
-                    quite=False,
+                    quiet=False,
                     list_filter=None):
         """
         Creates a tabulated string describing all slices.
@@ -1217,12 +1217,12 @@ class FablibManager:
                         fields=fields,
                         title='Slices',
                         output=output,
-                        quite=quite, 
+                        quiet=quiet, 
                         list_filter=list_filter 
                         )
 
 
-    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quite=False):
+    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False):
         """
         Shows a slice's info.
 
@@ -1233,7 +1233,7 @@ class FablibManager:
         
         slice = self.get_slice(name=name, slice_id=id)
         
-        return slice.show(output=output, fields=fields, quite=quite)
+        return slice.show(output=output, fields=fields, quiet=quiet)
 
 
     def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
@@ -1353,10 +1353,10 @@ class FablibManager:
             return False
 
         
-    def show_table_text(self, table, quite=False):
+    def show_table_text(self, table, quiet=False):
         printable_table = tabulate(table)
         
-        if not quite:
+        if not quiet:
             print(f"\n{printable_table}")
             
         return printable_table
@@ -1366,7 +1366,7 @@ class FablibManager:
                                  headers=None, 
                                  title='', 
                                  title_font_size='1.25em', 
-                                 quite=False):
+                                 quiet=False):
     
         printable_table = pd.DataFrame(table)
         
@@ -1381,15 +1381,15 @@ class FablibManager:
             'props': f'caption-side: top; font-size:{title_font_size};'
         }], overwrite=False)
 
-        if not quite:
+        if not quiet:
             display(printable_table)
             
         return printable_table
     
-    def show_table_json(self, data, quite=False):
+    def show_table_json(self, data, quiet=False):
         json_str = json.dumps(data, indent = 4)
         
-        if not quite:
+        if not quiet:
             print(f"{json_str}")
             
         return json_str
@@ -1402,7 +1402,7 @@ class FablibManager:
                    title_font_size='1.25em', 
                    index=None, 
                    output=None,
-                   quite=False):
+                   quiet=False):
         
         if output == None:
             output = self.output.lower()
@@ -1411,27 +1411,27 @@ class FablibManager:
         table = self.create_show_table(data, fields=fields)
             
         if(output == 'text'):
-            return self.show_table_text(table, quite=quite)
+            return self.show_table_text(table, quiet=quiet)
         elif(output == 'json'):
-            return self.show_table_json(data, quite=quite)
+            return self.show_table_json(data, quiet=quiet)
         elif(output == 'jupyter'):
             return self.show_table_jupyter(table, 
                                          headers=fields, 
                                          title=title, 
                                          title_font_size=title_font_size,
-                                         quite=quite)
+                                         quiet=quiet)
         else:
             logging.error(f"Unknown output type: {output}")
 
 
     
-    def list_table_text(self, table, headers=None, quite=False):
+    def list_table_text(self, table, headers=None, quiet=False):
         if headers is not None:
             printable_table = tabulate(table, headers=headers)
         else:
             printable_table = tabulate(table)
         
-        if not quite:
+        if not quiet:
             print(f"\n{printable_table}")
             
         return printable_table
@@ -1443,7 +1443,7 @@ class FablibManager:
                            title='', 
                            title_font_size='1.25em', 
                            output=None,
-                           quite=False):
+                           quiet=False):
         
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
@@ -1471,15 +1471,15 @@ class FablibManager:
                                                            overwrite=False)
 
 
-        if not quite:
+        if not quiet:
             display(printable_table)
         
         return printable_table
     
-    def list_table_json(self, data, quite=False):
+    def list_table_json(self, data, quiet=False):
         json_str = json.dumps(data, indent = 4)
         
-        if not quite:
+        if not quiet:
             print(f"{json_str}")
             
         return json_str
@@ -1492,7 +1492,7 @@ class FablibManager:
                          title_font_size='1.25em', 
                          index=None, 
                          output=None, 
-                         quite=False,
+                         quiet=False,
                          list_filter=None):
         
         def filter_function(slice):
@@ -1525,16 +1525,16 @@ class FablibManager:
         table = self.create_list_table(data, fields=fields)
         
         if(output == 'text'):
-            return self.list_table_text(table,  headers=fields, quite=quite)         
+            return self.list_table_text(table,  headers=fields, quiet=quiet)         
         elif(output == 'json'):
-            return self.list_table_json(data, quite=quite)
+            return self.list_table_json(data, quiet=quiet)
         elif(output == 'jupyter'): 
             return self.list_table_jupyter(table, 
                                     headers=fields, 
                                     title=title, 
                                     title_font_size=title_font_size,
                                     output=output,
-                                    quite=quite)
+                                    quiet=quiet)
         else:
             logging.error(f"Unknown output type: {output}")
             
