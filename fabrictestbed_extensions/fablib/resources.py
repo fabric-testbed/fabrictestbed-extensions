@@ -513,49 +513,49 @@ class Resources:
         for site_name, site in self.topology.sites.items():
             table.append(self.site_to_json(site))
             
-        
-            
         if not fields:
             fields= [  "Name",
+                
+                     "Hosts",
                      "CPUs",
+                     #"Address",
+                     #"Location",
+                     
                      "Cores Available",
-                     "Cores Total",
-                     "Cores Allocated",
+                     #"Cores Total",
+                     #"Cores Allocated",
+                     
                      "RAM Available",
-                     "RAM Total",
-                     "RAM Allocated",
+                     #"RAM Total",
+                     #"RAM Allocated",
                      
                      "Disk Available",
-                     "Disk Total",
-                     "Disk Allocated",
+                     #"Disk Total",
+                     #"Disk Allocated",
 
-                     "Hosts",
-                     "Address",
-                     "Location",
-                 
                      "Basic NIC Available",
-                     "Basic NIC Total",
-                     "Basic NIC Allocated",
+                     #"Basic NIC Total",
+                     #"Basic NIC Allocated",
 
                      "ConnectX-6 Available",
-                     "ConnectX-6 Total",
-                     "ConnectX-6 Allocated",
+                     #"ConnectX-6 Total",
+                     #"ConnectX-6 Allocated",
 
                      "ConnectX-5 Available",
-                     "ConnectX-5 Total",
-                     "ConnectX-5 Allocated",
+                     #"ConnectX-5 Total",
+                     #"ConnectX-5 Allocated",
 
                      "NVMe Available",
-                     "NVMe Total",
-                     "NVMe Allocated",
+                     #"NVMe Total",
+                     #"NVMe Allocated",
 
                      "Tesla T4 Available",
-                     "Tesla T4 Total",
-                     "Tesla T4 Allocated",
+                     #"Tesla T4 Total",
+                     #"Tesla T4 Allocated",
 
                      "RTX6000 Available",
-                     "RTX6000 Total",
-                     "RTX6000 Allocated",
+                     #"RTX6000 Total",
+                     #"RTX6000 Allocated",
                     ]
             
             
