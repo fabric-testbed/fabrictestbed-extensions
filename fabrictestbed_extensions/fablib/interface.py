@@ -8,7 +8,7 @@
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
+# furnished to do so, subject to the following nditions:
 #
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
@@ -26,6 +26,9 @@ from __future__ import annotations
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
+
+import logging
+
 
 from typing import TYPE_CHECKING, Any
 
@@ -53,6 +56,9 @@ class Interface:
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
+        
+    def get_fablib_manager(self):
+        return self.get_slice().get_fablib_manager()
 
     def __str__(self):
         """
@@ -73,11 +79,49 @@ class Interface:
                     [ "Bandwidth", self.get_bandwidth() ],
                     [ "VLAN", self.get_vlan() ],
                     [ "MAC", self.get_mac() ],
-                    [ "Physical OS Interface", self.get_physical_os_interface_name() ],
-                    [ "OS Interface", self.get_os_interface() ],
+                    [ "Physical Device", self.get_physical_os_interface_name() ],
+                    [ "Device", self.get_os_interface() ],
                     ]
 
         return tabulate(table)
+    
+    def toJson(self):
+        if self.get_network():
+            logging.info(f"Getting results from get network name thread for iface {self.get_name()} ")
+            network_name = self.get_network().get_name()
+        else:
+            network_name = None
+
+        if self.get_node():
+            logging.info(f"Getting results from get node name thread for iface {self.get_name()} ")
+            node_name = self.get_node().get_name()
+        else:
+            node_name = None
+
+        return {  "Name": self.get_name(),
+                  "Node": node_name,
+                  "Network": network_name,
+                  "Bandwidth": self.get_bandwidth(),
+                  "VLAN": self.get_vlan(),
+                  "MAC": self.get_mac(),
+                  "Physical Device": self.get_physical_os_interface_name(),
+                  "Device": self.get_os_interface(),
+                 }
+    def show(self, fields=None, output=None, quiet=False, colors=False):
+        data = self.toJson()
+    
+        fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
+                "MAC", "Device"
+                 ]
+    
+        table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Interface', 
+                        output=output, 
+                        quiet=quiet)
+            
+            
+        return table
 
     def set_auto_config(self):
         fim_iface = self.get_fim_interface()
@@ -230,6 +274,9 @@ class Interface:
         Bring up the link on the interface.
 
         """
+        if self.get_network() == None:
+            return
+        
         self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):
@@ -395,3 +442,65 @@ class Interface:
 
         #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
         return None
+
+    
+    # fablib.Interface.get_ip_link()
+    def get_ip_link(self):
+        try:
+            stdout, stderr = self.get_node().execute('ip -j link list')
+
+            links = json.loads(stdout)
+
+            dev = self.get_os_interface()
+            if dev == None:
+                return links
+
+            for link in links:
+                if link['ifname'] == dev:
+                    return link
+            return None    
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    # fablib.Interface.get_ip_addr()
+    def get_ip_addr(self):
+        try:
+            stdout, stderr = self.get_node().execute('ip -j addr list')
+
+            addrs = json.loads(stdout)
+
+            dev = self.get_os_interface()
+            #print(f"dev: {dev}")            
+
+            if dev == None:
+                return addrs
+
+            for addr in addrs:
+                if addr['ifname'] == dev:
+                    return addr['addr_info'][0]['local']
+
+            return None    
+        except Exception as e:
+            print(f"Exception: {e}")
+
+
+    # fablib.Interface.get_ip_addr()
+    def get_ips(self, family=None):
+        return_ips = []
+        try:
+            dev = self.get_os_interface()
+
+            ip_addr = self.get_ip_addr()
+
+            #print(f"{ip_addr}")
+
+            for addr_info in ip_addr['addr_info']:
+                if family == None:
+                    return_ips.append(addr_info['local'])
+                else:
+                    if addr_info['family'] == family:
+                        return_ips.append(addr_info['local'])        
+        except Exception as e:
+            print(f"Exception: {e}")
+
+        return return_ips

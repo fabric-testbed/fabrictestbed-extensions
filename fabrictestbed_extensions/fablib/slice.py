@@ -29,6 +29,9 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
+import pandas as pd
+
+
 from typing import TYPE_CHECKING
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
@@ -123,34 +126,12 @@ class Slice:
 
         self.get_fim_topology().load(file_name=filename)
 
-    def list_nodes(self):
-        """
-        Creates a tabulated string describing all nodes in the slice.
-
-        Intended for printing a list of all slices.
-
-        :return: Tabulated srting of all slices information
-        :rtype: String
-        """
-        table = []
-        for node in self.get_nodes():
-            table.append([node.get_reservation_id(),
-                          node.get_name(),
-                          node.get_site(),
-                          node.get_host(),
-                          node.get_cores(),
-                          node.get_ram(),
-                          node.get_disk(),
-                          node.get_image(),
-                          node.get_management_ip(),
-                          node.get_reservation_state(),
-                          node.get_error_message(),
-                        ])
-
-        return tabulate(table, headers=["ID", "Name",  "Site",  "Host", "Cores", "RAM", "Disk", "Image",
-                                        "Management IP", "State", "Error"])
-
-    def list_interfaces(self):
+    def list_interfaces(self, 
+                        output=None, 
+                        fields=None, 
+                        colors=False, 
+                        quiet=False, 
+                        list_filter=None):
         """
         Creates a tabulated string describing all interfaces in the slice.
 
@@ -159,7 +140,7 @@ class Slice:
         :return: Tabulated string of all interfaces
         :rtype: String
         """
-        executor = ThreadPoolExecutor(10)
+        executor = ThreadPoolExecutor(64)
 
         net_name_threads = {}
         node_name_threads = {}
@@ -197,19 +178,33 @@ class Slice:
 
             else:
                 node_name = None
-
-            table.append([iface.get_name(),
-                          node_name,
-                          network_name,
-                          iface.get_bandwidth(),
-                          iface.get_vlan(),
-                          iface.get_mac(),
-                          physical_os_interface_name_threads[iface.get_name()].result(),
-                          os_interface_threads[iface.get_name()].result(),
-                        ])
-
-        return tabulate(table, headers=["Name", "Node", "Network", "Bandwidth", "VLAN", "MAC",
-                                        "Physical OS Interface", "OS Interface"])
+                
+            table.append({"Name": iface.get_name(),
+                          "Node": node_name,
+                          "Network": network_name,
+                          "Bandwidth": iface.get_bandwidth(),
+                          "VLAN": iface.get_vlan(),
+                          "MAC": iface.get_mac(),
+                          "Physical Device": physical_os_interface_name_threads[iface.get_name()].result(),
+                          "Device": os_interface_threads[iface.get_name()].result(),
+                         })
+    
+        if fields == None:
+            fields=["Name",  "Node",  "Network", 
+                    "Bandwidth", "VLAN", "MAC", 
+                    "Device"]
+            
+            
+        
+        table =  self.get_fablib_manager().list_table(table,
+                        fields=fields,
+                        title='Interfaces',
+                        output=output,
+                        quiet=quiet, list_filter=list_filter)
+        
+        return table
+        
+        
 
     @staticmethod
     def new_slice(fablib_manager: FablibManager, name: str = None):
@@ -253,7 +248,43 @@ class Slice:
             logging.error(e, exc_info=True)
 
         return slice
+    
+    def toJson(self):
+        return {  "ID": self.get_slice_id(),
+                  "Name": self.get_name(),
+                  "Lease Expiration (UTC)": self.get_lease_end(),
+                  "Lease Start (UTC)": self.get_lease_start(),
+                  "Project ID": self.get_project_id(),
+                  "State": self.get_state(),
+                }
+    
+    def show(self, fields=None, output=None, quiet=False, colors=False):
+        data = self.toJson()
+        
+        def state_color(val):
+            if val == 'StableOK':
+                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+            elif val == 'Configuring':
+                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+            else:
+                color = ''
+            #return 'color: %s' % color
+            return 'background-color: %s' % color
 
+        
+        slice_table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Slice', 
+                        output=output, 
+                        quiet=quiet)
+        #if colors:
+            #slice_table = slice_table.apply(highlight, axis=1)
+            #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+            
+            
+        return slice_table
+            
+        
     def get_fim_topology(self) -> ExperimentTopology:
         """
         Not recommended for most users.
@@ -476,6 +507,24 @@ class Slice:
         :rtype: String
         """
         return self.sm_slice.lease_end_time
+    
+    def get_lease_start(self) -> str:
+        """
+        Gets the timestamp at which the slice lease starts.
+
+        :return: timestamp when lease starts
+        :rtype: String
+        """
+        return self.sm_slice.lease_start_time
+
+    def get_project_id(self) -> str:
+        """
+        Gets the project id of the slice.
+
+        :return: project id
+        :rtype: String
+        """
+        return self.sm_slice.project_id
 
     def add_l2network(self, name: str = None, interfaces: List[Interface] = [], type: str = None) -> NetworkService:
         """
@@ -1002,7 +1051,7 @@ class Slice:
         # time.sleep(interval)
         self.update()
 
-    def wait_ssh(self, timeout: int = 360, interval: int = 10, progress: bool = False):
+    def wait_ssh(self, timeout: int = 1200, interval: int = 20, progress: bool = False):
         """
         Waits for all nodes to be accesible via ssh.
 
@@ -1027,18 +1076,23 @@ class Slice:
         if progress:
             print("Waiting for ssh in slice .", end='')
         while time.time() < timeout_start + timeout:
-            if self.test_ssh():
-                if progress:
-                    print(" ssh successful")
-                return True
+            try:
+                if self.test_ssh():
+                    if progress:
+                        print(" ssh successful")
+                    return True
 
-            if progress: print(".", end = '')
+                if progress: print(".", end = '')
 
-            if time.time() >= timeout_start + timeout:
-                if progress:
-                    print(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
-                raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
-
+                if time.time() >= timeout_start + timeout:
+                    if progress:
+                        print(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
+                    raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
+            except Exception as e:
+                if not time.time() < timeout_start + timeout:
+                    raise e
+                logging.warning(f'wait ssh retrying: {e}')
+                    
             time.sleep(interval)
             self.update()
 
@@ -1099,7 +1153,7 @@ class Slice:
         if self.is_dead_or_closing():
             print(f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config")
             return
-        executor = ThreadPoolExecutor(10)
+        executor = ThreadPoolExecutor(64)
 
         logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
 
@@ -1130,6 +1184,7 @@ class Slice:
 
         for iface_thread in iface_threads:
             iface_thread.result()
+        
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -1141,32 +1196,53 @@ class Slice:
         except ValueError:
             return "Invalid"
 
+    def isReady(self):
+        if not self.isStable():
+            return False
+        
+        for node in self.get_nodes():
+            if node.get_management_ip() == None:
+                logging.warning(f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}")              
+                return False
+        
+        return True
+        
     def wait_jupyter(self, timeout: int = 600, interval: int = 10):
         from IPython.display import clear_output
         import time
 
         start = time.time()
+        
+        if len(self.get_interfaces()) > 0:
+            hasNetworks = True
+        else:
+            hasNetworks = False
 
         count = 0
-        while not self.isStable():
+        #while not self.isStable():
+        while not self.isReady():
             if time.time() > start + timeout:
                 raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
 
             time.sleep(interval)
             self.update()
 
-            #pre-get the strings for quicker screen update
-            slice_string = str(self)
-            list_nodes_string = self.list_nodes()
+            slice_show_table = self.show(colors=True, quiet=True)
+            node_table = self.list_nodes(colors=True, quiet=True)
+            if hasNetworks:
+                network_table = self.list_networks(colors=True, quiet=True)  
+    
             time_string = f"{time.time() - start:.0f} sec"
-
+            
             # Clear screen
             clear_output(wait=True)
-
-            #Print statuses
-            print(f"\n{slice_string}")
+            
             print(f"\nRetry: {count}, Time: {time_string}")
-            print(f"\n{list_nodes_string}")
+
+            display(slice_show_table)
+            display(node_table)
+            if hasNetworks:
+                display(network_table)
 
             count += 1
 
@@ -1176,11 +1252,11 @@ class Slice:
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
-        if len(self.get_interfaces()) > 0:
-            print(f"\n{self.list_interfaces()}")
+        if hasNetworks:
+            self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
-    def submit(self, wait: bool = True, wait_timeout: int = 600, wait_interval: int = 10, progress: bool = True,
+    def submit(self, wait: bool = True, wait_timeout: int = 2400, wait_interval: int = 20, progress: bool = True,
                wait_jupyter: str = "text") -> str:
         """
         Submits a slice request to FABRIC.
@@ -1237,3 +1313,124 @@ class Slice:
             print("Done!")
 
         return self.slice_id
+    
+    def list_networks(self, 
+                      output=None, 
+                      fields=None, 
+                      colors=False, 
+                      quiet=False, 
+                      list_filter=None):
+        """
+        Creates a tabulated string describing all networks in the slice.
+
+        Intended for printing a list of all networks.
+
+        :return: Tabulated srting of all networks information
+        :rtype: String
+        """
+        def highlight(x):
+            if x.State == 'Ticketed':
+                return ['background-color: yellow']*(len(fields))
+            elif x.State == 'None':
+                return ['opacity: 50%']*(len(fields))
+            else:
+                return ['background-color: ']*(len(fields))
+
+        def state_color(val):
+            if val == 'Active':
+                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+            elif val == 'Ticketed':
+                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+            else:
+                color = ''
+            #return 'color: %s' % color
+            return 'background-color: %s' % color
+        
+        table = []
+        for network in self.get_networks():
+            table.append({ "ID": network.get_reservation_id(),
+                          "Name": network.get_name(),
+                          "Layer": network.get_layer(),
+                          "Type": network.get_type(),
+                          "Site": network.get_site(),
+                          "Gateway": network.get_gateway(),
+                          "L3 Subnet": network.get_subnet(),
+                          "State": network.get_reservation_state(),
+                          "Error": network.get_error_message(),
+                        })
+    
+        if fields == None:
+            fields=["ID", "Name",  "Layer",  "Type", 
+                    "Site", "Gateway", "L3 Subnet", "State", 
+                    "Error"]
+            
+            
+        
+        table =  self.get_fablib_manager().list_table(table,
+                        fields=fields,
+                        title='Networks',
+                        output=output,
+                        quiet=True, list_filter=list_filter)
+        
+        if colors:
+            #table = table.apply(highlight, axis=1)
+            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+        if not quiet:
+            display(table)
+
+        
+        return table
+    
+    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, list_filter=None):
+        """
+        Creates a tabulated string describing all nodes in the slice.
+
+        Intended for printing a list of all slices.
+
+        :return: Tabulated srting of all slices information
+        :rtype: String
+        """
+        
+        def highlight(x):
+            if x.State == 'Ticketed':
+                return [f'background-color: {self.get_fablib_manager().FABRIC_SECONDARY}']*(len(fields))
+            elif x.State == 'None':
+                return ['opacity: 50%']*(len(fields))
+            else:
+                return ['background-color: ']*(len(fields))
+
+        def state_color(val):
+            if val == 'Active':
+                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+            elif val == 'Ticketed':
+                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+            else:
+                color = ''
+            #return 'color: %s' % color
+            return 'background-color: %s' % color
+        
+        table = []
+        for node in self.get_nodes():
+            table.append(node.toJson())
+    
+        if fields == None:
+            fields=["ID", "Name",  "Site",  "Host", 
+                    "Cores", "RAM", "Disk", "Image", 
+                    "Management IP", "State", "Error"]
+            
+            
+        
+        table =  self.get_fablib_manager().list_table(table,
+                        fields=fields,
+                        title='Nodes',
+                        output=output,
+                        quiet=True, list_filter=list_filter)
+        
+        if colors:
+            #table = table.apply(highlight, axis=1)
+            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+        if not quiet:
+            display(table)
+
+        
+        return table

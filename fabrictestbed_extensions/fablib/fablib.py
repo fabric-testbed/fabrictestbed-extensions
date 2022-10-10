@@ -35,7 +35,16 @@ from typing import List, Dict
 from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
+import pandas as pd
 from tabulate import tabulate
+import json 
+
+from fabrictestbed.slice_editor import (
+    ExperimentTopology,
+    Capacities
+)
+
+
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
@@ -49,6 +58,8 @@ from fabrictestbed_extensions.fablib.slice import Slice
 
 class fablib:
 
+    
+    
     default_fablib_manager = None
 
     @staticmethod
@@ -477,6 +488,21 @@ class FablibManager:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
+    
+    
+    FABRIC_PRIMARY = '#27aae1'
+    FABRIC_PRIMARY_LIGHT = '#cde4ef'
+    FABRIC_PRIMARY_DARK = '#078ac1'
+    FABRIC_SECONDARY = '#f26522'
+    FABRIC_SECONDARY_LIGHT = '#ff8542'
+    FABRIC_SECONDARY_DARK = '#d24502'
+    FABRIC_BLACK = '#231f20'
+    FABRIC_DARK = '#433f40'
+    FABRIC_GREY = '#666677'
+    FABRIC_LIGHT = '#f3f3f9'
+    FABRIC_WHITE = '#ffffff'
+    FABRIC_LOGO = "fabric_logo.png"
+
 
     LOG_LEVELS = {
         'DEBUG': logging.DEBUG,
@@ -487,7 +513,7 @@ class FablibManager:
     }
 
     default_fabric_rc = os.environ['HOME'] + '/work/fabric_config/fabric_rc'
-    default_log_level = 'INFO'
+    default_log_level = 'DEBUG'
     default_log_file = '/tmp/fablib/fablib.log'
     default_data_dir = '/tmp/fablib'
 
@@ -518,7 +544,8 @@ class FablibManager:
                  bastion_key_filename: str = None,
                  log_level=None,
                  log_file: str = None,
-                 data_dir: str = None):
+                 data_dir: str = None,
+                 output = None):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -528,7 +555,14 @@ class FablibManager:
          - defaults (if needed and possible)
 
         """
-        self.ssh_thread_pool_executor = ThreadPoolExecutor(10)
+        
+        if(self.is_jupyter_notebook()):
+            self.output = 'jupyter'
+        else:
+            self.output = 'text'
+
+        
+        self.ssh_thread_pool_executor = ThreadPoolExecutor(64)
 
         # init attributes
         self.bastion_passphrase = None
@@ -648,6 +682,7 @@ class FablibManager:
         self.set_log_file(log_file=self.log_file)
         self.set_data_dir(data_dir=self.data_dir)
 
+        
         if self.log_file is not None and self.log_level is not None:
             logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                                 format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
@@ -789,15 +824,22 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self) -> str:
+    def list_sites(self,output=None, fields=None, quiet=False, list_filter=None) -> str:
         """
         Get a string used to print a tabular list of sites with state
 
         :return: tabulated string of site state
         :rtype: str
         """
-        return str(self.get_resources())
+        
+        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, list_filter=list_filter)
 
+    def show_config(self, output=None, fields=None, title='FABlib Config'):
+        return self.show_table(self.get_config(), 
+                        fields=fields,
+                        title=title, 
+                        output=output)
+    
     def show_site(self, site_name: str):
         """
         Get a string used to print tabular info about a site
@@ -875,15 +917,6 @@ class FablibManager:
         :rtype: Dict[String, String]
         """
         return self.default_slice_key
-
-    def show_config(self):
-        table = []
-        for var, val in self.get_config().items():
-            table.append([str(var), str(val)])
-
-        print(f"{tabulate(table)}")
-
-        return
 
     def get_config(self) -> Dict[str, str]:
         """
@@ -1141,6 +1174,67 @@ class FablibManager:
         else:
             raise Exception(f"Failed to get slice list: {slices}")
         return return_slices
+    
+    def tabulate_slices(self,slices):
+        table = []
+        for slice in slices:
+            table.append([slice.get_slice_id(),
+                          slice.get_name(),
+                          slice.get_lease_end(),
+                          slice.get_state(),
+                        ])
+
+        return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
+    
+            
+    def list_slices(self, 
+                    excludes = [SliceState.Dead,SliceState.Closing], 
+                    output=None, 
+                    fields=None, 
+                    quiet=False,
+                    list_filter=None):
+        """
+        Creates a tabulated string describing all slices.
+
+
+        :return: Tabulated string of all slices information
+        :rtype: String
+        """
+        table = []
+        for slice in self.get_slices(excludes=excludes):
+            table.append({ "ID": slice.get_slice_id(),
+                          "Name": slice.get_name(),
+                          "Lease Expiration (UTC)": slice.get_lease_end(),
+                          "Lease Start (UTC)": slice.get_lease_start(),
+                          "Project ID": slice.get_project_id(),
+                          "State": slice.get_state(),
+                         })  
+        
+
+        if fields == None:
+            fields=["ID", "Name",  "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
+        return self.list_table(table,
+                        fields=fields,
+                        title='Slices',
+                        output=output,
+                        quiet=quiet, 
+                        list_filter=list_filter 
+                        )
+
+
+    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False):
+        """
+        Shows a slice's info.
+
+
+        :return: Tabulated srting of all slices information
+        :rtype: String
+        """    
+        
+        slice = self.get_slice(name=name, slice_id=id)
+        
+        return slice.show(output=output, fields=fields, quiet=quiet)
+
 
     def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
                    slice_name: str = None, slice_id: str = None) -> List[Slice]:
@@ -1243,7 +1337,9 @@ class FablibManager:
         Gets the current log level for logging
         """
         return self.log_level
+        
 
+        
     def is_jupyter_notebook(self) -> bool:
         try:
             shell = get_ipython().__class__.__name__
@@ -1255,3 +1351,215 @@ class FablibManager:
                 return False  # Other type (?)
         except NameError:
             return False
+
+        
+    def show_table_text(self, table, quiet=False):
+        printable_table = tabulate(table)
+        
+        if not quiet:
+            print(f"\n{printable_table}")
+            
+        return printable_table
+        
+    def show_table_jupyter(self, 
+                                 table, 
+                                 headers=None, 
+                                 title='', 
+                                 title_font_size='1.25em', 
+                                 quiet=False):
+    
+        printable_table = pd.DataFrame(table)
+        
+        properties = {'text-align': 'left', 'border': '1px black solid !important'}
+        
+        printable_table = printable_table.style.set_caption(title)
+        printable_table = printable_table.set_properties(**properties, overwrite=False)
+        printable_table = printable_table.hide(axis='index')
+        printable_table = printable_table.hide(axis='columns')
+        printable_table = printable_table.set_table_styles([{
+            'selector': 'caption',
+            'props': f'caption-side: top; font-size:{title_font_size};'
+        }], overwrite=False)
+
+        if not quiet:
+            display(printable_table)
+            
+        return printable_table
+    
+    def show_table_json(self, data, quiet=False):
+        json_str = json.dumps(data, indent = 4)
+        
+        if not quiet:
+            print(f"{json_str}")
+            
+        return json_str
+        
+    def show_table(self, 
+                   data, 
+                   fields=None, 
+                   title='', 
+                   hide_header=False, 
+                   title_font_size='1.25em', 
+                   index=None, 
+                   output=None,
+                   quiet=False):
+        
+        if output == None:
+            output = self.output.lower()
+            
+            
+        table = self.create_show_table(data, fields=fields)
+            
+        if(output == 'text'):
+            return self.show_table_text(table, quiet=quiet)
+        elif(output == 'json'):
+            return self.show_table_json(data, quiet=quiet)
+        elif(output == 'jupyter'):
+            return self.show_table_jupyter(table, 
+                                         headers=fields, 
+                                         title=title, 
+                                         title_font_size=title_font_size,
+                                         quiet=quiet)
+        else:
+            logging.error(f"Unknown output type: {output}")
+
+
+    
+    def list_table_text(self, table, headers=None, quiet=False):
+        if headers is not None:
+            printable_table = tabulate(table, headers=headers)
+        else:
+            printable_table = tabulate(table)
+        
+        if not quiet:
+            print(f"\n{printable_table}")
+            
+        return printable_table
+        
+
+    def list_table_jupyter(self, 
+                           table, 
+                           headers=None, 
+                           title='', 
+                           title_font_size='1.25em', 
+                           output=None,
+                           quiet=False):
+        
+        if headers is not None:
+            printable_table = pd.DataFrame(table, columns=headers)
+        else:
+            printable_table = pd.DataFrame(table)    
+
+
+        
+        # Table config (maybe some of this is unnecessary?
+        properties = {'text-align': 'left', 'border': '1px black solid !important'}
+
+        printable_table = printable_table.style.set_caption(title)
+        printable_table = printable_table.hide(axis="index")
+        #printable_table = printable_table.set_properties(**{'text-align': 'left'}, overwrite=False)
+        printable_table = printable_table.set_properties(**properties, overwrite=False)
+        printable_table = printable_table.set_table_styles([dict(selector='th', 
+                                                                 props=[('text-align', 'left')])], 
+                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles([dict(selector='caption', 
+                                                                 props=[('caption-side', 'top'),
+                                                                        ('font-size', title_font_size)])],
+                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles([dict(selector='.level0', 
+                                                                 props=[('border', '1px black solid !important')])],
+                                                           overwrite=False)
+
+
+        if not quiet:
+            display(printable_table)
+        
+        return printable_table
+    
+    def list_table_json(self, data, quiet=False):
+        json_str = json.dumps(data, indent = 4)
+        
+        if not quiet:
+            print(f"{json_str}")
+            
+        return json_str
+        
+    def list_table(self, 
+                         data, 
+                         fields=None, 
+                         title='', 
+                         hide_header=False, 
+                         title_font_size='1.25em', 
+                         index=None, 
+                         output=None, 
+                         quiet=False,
+                         list_filter=None):
+        
+        def filter_function(slice):
+            for column,value,operator in list_filter:
+                if operator == '==':
+                    if slice[column] != value:
+                        return False
+                elif operator == '<=':
+                    if slice[column] > value:
+                        return False
+                elif operator == '<':
+                    if slice[column] >= value:
+                        return False
+                elif operator == '>=':
+                    if slice[column] < value:
+                        return False
+                elif operator == '>':
+                    if slice[column] <= value:
+                        return False
+            return True
+        
+        
+        if list_filter:
+            data = list(filter(filter_function, data))    
+ 
+        
+        if output == None:
+            output = self.output.lower()
+        
+        table = self.create_list_table(data, fields=fields)
+        
+        if(output == 'text'):
+            return self.list_table_text(table,  headers=fields, quiet=quiet)         
+        elif(output == 'json'):
+            return self.list_table_json(data, quiet=quiet)
+        elif(output == 'jupyter'): 
+            return self.list_table_jupyter(table, 
+                                    headers=fields, 
+                                    title=title, 
+                                    title_font_size=title_font_size,
+                                    output=output,
+                                    quiet=quiet)
+        else:
+            logging.error(f"Unknown output type: {output}")
+            
+
+    def create_list_table(self, data, fields=None):
+        table = []
+        for entry in data:
+            row = []
+            for field in fields:
+                row.append(entry[field])
+
+            table.append(row)
+        return table
+    
+    def create_show_table(self, data, fields=None):
+        table = []
+        if fields == None:
+            for key,value in data.items():
+                table.append([key,value])
+        else:
+            for field in fields:
+                table.append([field,data[field]])
+        return table
+    
+  
+    
+       
+   

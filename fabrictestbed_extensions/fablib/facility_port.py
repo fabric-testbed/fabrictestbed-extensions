@@ -61,6 +61,26 @@ class FacilityPort:
         table = [["name", self.get_name()]]
 
         return tabulate(table)
+    
+    def toJson(self):
+        return {     "Name": self.get_name()
+                }
+    
+    def show(self, fields=None, output=None, quiet=False, colors=False):
+        data = self.toJson()
+    
+        fields = ["Name",
+                 ]
+    
+        table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Facility Port', 
+                        output=output, 
+                        quiet=quiet)
+            
+            
+        return table
+
 
     def get_fim_interface(self) -> FimInterface:
         return self.fim_interface
