@@ -1002,7 +1002,7 @@ class Slice:
 
         return exception_string
 
-    def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
+    def wait(self, timeout: int = 1800, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
 
@@ -1054,7 +1054,7 @@ class Slice:
         # time.sleep(interval)
         self.update()
 
-    def wait_ssh(self, timeout: int = 1200, interval: int = 20, progress: bool = False):
+    def wait_ssh(self, timeout: int = 1800, interval: int = 20, progress: bool = False):
         """
         Waits for all nodes to be accesible via ssh.
 
@@ -1214,7 +1214,7 @@ class Slice:
         
         return True
         
-    def wait_jupyter(self, timeout: int = 600, interval: int = 10):
+    def wait_jupyter(self, timeout: int = 1800, interval: int = 10):
         from IPython.display import clear_output
         import time
 
@@ -1263,7 +1263,7 @@ class Slice:
             self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
-    def submit(self, wait: bool = True, wait_timeout: int = 2400, wait_interval: int = 20, progress: bool = True,
+    def submit(self, wait: bool = True, wait_timeout: int = 1800, wait_interval: int = 20, progress: bool = True,
                wait_jupyter: str = "text") -> str:
         """
         Submits a slice request to FABRIC.
