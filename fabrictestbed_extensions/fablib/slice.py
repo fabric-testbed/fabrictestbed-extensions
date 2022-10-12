@@ -264,6 +264,8 @@ class Slice:
         def state_color(val):
             if val == 'StableOK':
                 color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
+            elif val == 'StableError':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
             elif val == 'Configuring':
                 color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             else:

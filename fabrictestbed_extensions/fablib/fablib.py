@@ -504,18 +504,31 @@ class FablibManager:
     FABRIC_LOGO = "fabric_logo.png"
     
     FABRIC_PRIMARY_EXTRA_LIGHT = '#dbf3ff'
-
-    SUCCESS_COLOR =  '#008e7a'
-    SUCCESS_LIGHT_COLOR = '#4fbfa9'
-    SUCCESS_DARK_COLOR = '#00604e'
     
-    ERROR_COLOR = '#b00020'
-    ERROR_LIGHT_COLOR = '#e94948'
-    ERROR_DARK_COLOR = '#790000'
+    SUCCESS_COLOR =  '#8eff92'
+    SUCCESS_LIGHT_COLOR = '#c3ffc4'
+    SUCCESS_DARK_COLOR = '#59cb63'
+    
+    ERROR_COLOR = '#ff8589'
+    ERROR_LIGHT_COLOR = '#ffb7b9'
+    ERROR_DARK_COLOR = '#b34140'
      
-    IN_PROGRESS_COLOR = '#ff8542'
-    IN_PROGRESS_LIGHT_COLOR = '#ffb670'
-    IN_PROGRESS_DARK_COLOR = '#c65612'
+    IN_PROGRESS_COLOR = '#ffff8c'
+    IN_PROGRESS_LIGHT_COLOR = '#ffffbe'
+    IN_PROGRESS_DARK_COLOR = '#c8555c'
+    
+
+    #SUCCESS_COLOR =  '#008e7a'
+    #SUCCESS_LIGHT_COLOR = '#4fbfa9'
+    #SUCCESS_DARK_COLOR = '#00604e'
+    
+    #ERROR_COLOR = '#b00020'
+    #ERROR_LIGHT_COLOR = '#e94948'
+    #ERROR_DARK_COLOR = '#790000'
+     
+    #IN_PROGRESS_COLOR = '#ff8542'
+    #IN_PROGRESS_LIGHT_COLOR = '#ffb670'
+    #IN_PROGRESS_DARK_COLOR = '#c65612'
     
     OTHER1_COLOR = '#b481a4' #pinkish
     OTHER1_LIGHT_COLOR = '#e7b1d5' #pinkish
