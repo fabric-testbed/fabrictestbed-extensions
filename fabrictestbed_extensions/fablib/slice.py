@@ -263,9 +263,11 @@ class Slice:
         
         def state_color(val):
             if val == 'StableOK':
-                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
+            elif val == 'StableError':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
             elif val == 'Configuring':
-                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             else:
                 color = ''
             #return 'color: %s' % color
@@ -279,7 +281,8 @@ class Slice:
                         quiet=quiet)
         #if colors:
             #slice_table = slice_table.apply(highlight, axis=1)
-            #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+            #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])  
+        slice_table.applymap(state_color)
             
             
         return slice_table
@@ -999,7 +1002,7 @@ class Slice:
 
         return exception_string
 
-    def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
+    def wait(self, timeout: int = 1800, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
 
@@ -1051,7 +1054,7 @@ class Slice:
         # time.sleep(interval)
         self.update()
 
-    def wait_ssh(self, timeout: int = 1200, interval: int = 20, progress: bool = False):
+    def wait_ssh(self, timeout: int = 1800, interval: int = 20, progress: bool = False):
         """
         Waits for all nodes to be accesible via ssh.
 
@@ -1199,15 +1202,19 @@ class Slice:
     def isReady(self):
         if not self.isStable():
             return False
-        
+                                
         for node in self.get_nodes():
-            if node.get_management_ip() == None:
+            if node.get_reservation_state() == 'Ticketed':
+                logging.warning(f"slice not ready: node {node.get_name()} status: {node.get_status()}")              
+                return False
+            
+            if node.get_reservation_state() == 'Active' and node.get_management_ip() == None:
                 logging.warning(f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}")              
                 return False
         
         return True
         
-    def wait_jupyter(self, timeout: int = 600, interval: int = 10):
+    def wait_jupyter(self, timeout: int = 1800, interval: int = 10):
         from IPython.display import clear_output
         import time
 
@@ -1256,7 +1263,7 @@ class Slice:
             self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
-    def submit(self, wait: bool = True, wait_timeout: int = 2400, wait_interval: int = 20, progress: bool = True,
+    def submit(self, wait: bool = True, wait_timeout: int = 1800, wait_interval: int = 20, progress: bool = True,
                wait_jupyter: str = "text") -> str:
         """
         Submits a slice request to FABRIC.
@@ -1328,19 +1335,35 @@ class Slice:
         :return: Tabulated srting of all networks information
         :rtype: String
         """
-        def highlight(x):
-            if x.State == 'Ticketed':
-                return ['background-color: yellow']*(len(fields))
-            elif x.State == 'None':
-                return ['opacity: 50%']*(len(fields))
+        
+        def error_color(val):            
+            #if 'Failure' in val:
+            if val != '' and not 'TicketReviewPolicy' in val:
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
             else:
-                return ['background-color: ']*(len(fields))
+                color = ''
+            #return 'color: %s' % color
+            
+            return 'background-color: %s' % color
+        def highlight(x):
+            
+            print(f'x: {x}')
+            
+            if x.State == 'Closed':
+                #return [f'background-color: {self.get_fablib_manager().ERROR_LIGHT_COLOR}']*(len(fields))
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            #elif x.State == 'None':
+            #    return ['opacity: 50%']*(len(fields))
+            #else:
+            #    return ['background-color: ']*(len(fields))
+            
+            return 'background-color: %s' % color
 
         def state_color(val):
             if val == 'Active':
-                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
             elif val == 'Ticketed':
-                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             else:
                 color = ''
             #return 'color: %s' % color
@@ -1374,7 +1397,11 @@ class Slice:
         
         if colors:
             #table = table.apply(highlight, axis=1)
-            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])  
+            #table = table.applymap(highlight, subset=pd.IndexSlice[:, ['State','Error']])
+            table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
+
+                           
         if not quiet:
             display(table)
 
@@ -1391,9 +1418,20 @@ class Slice:
         :rtype: String
         """
         
+        def error_color(val):            
+            #if 'Failure' in val:
+            if val != '' and not 'TicketReviewPolicy' in val:
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            else:
+                color = ''
+            #return 'color: %s' % color
+            
+            return 'background-color: %s' % color
+        
+        
         def highlight(x):
             if x.State == 'Ticketed':
-                return [f'background-color: {self.get_fablib_manager().FABRIC_SECONDARY}']*(len(fields))
+                return [f'background-color: {self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}']*(len(fields))
             elif x.State == 'None':
                 return ['opacity: 50%']*(len(fields))
             else:
@@ -1401,9 +1439,9 @@ class Slice:
 
         def state_color(val):
             if val == 'Active':
-                color = f'{self.get_fablib_manager().FABRIC_PRIMARY_LIGHT}'
+                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
             elif val == 'Ticketed':
-                color = f'{self.get_fablib_manager().FABRIC_SECONDARY_LIGHT}'
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             else:
                 color = ''
             #return 'color: %s' % color
@@ -1428,7 +1466,9 @@ class Slice:
         
         if colors:
             #table = table.apply(highlight, axis=1)
-            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])                 
+            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])     
+            table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])                 
+
         if not quiet:
             display(table)
 

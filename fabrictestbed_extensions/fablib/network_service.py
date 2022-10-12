@@ -412,7 +412,7 @@ class NetworkService:
 
         :return: Tabulated string of network service information
         :rtype: String
-        """
+        """        
         table = [ ["ID", self.get_reservation_id()],
             ["Name", self.get_name()],
             ["Layer", self.get_layer()],
@@ -426,7 +426,7 @@ class NetworkService:
 
         return tabulate(table) #, headers=["Property", "Value"])
     
-    def toJson(self):
+    def toJson(self):    
         return {    "ID": self.get_reservation_id(),
                     "Name": self.get_name(),
                     "Layer": self.get_layer(),
