@@ -502,6 +502,29 @@ class FablibManager:
     FABRIC_LIGHT = '#f3f3f9'
     FABRIC_WHITE = '#ffffff'
     FABRIC_LOGO = "fabric_logo.png"
+    
+    FABRIC_PRIMARY_EXTRA_LIGHT = '#dbf3ff'
+
+    SUCCESS_COLOR =  '#008e7a'
+    SUCCESS_LIGHT_COLOR = '#4fbfa9'
+    SUCCESS_DARK_COLOR = '#00604e'
+    
+    ERROR_COLOR = '#b00020'
+    ERROR_LIGHT_COLOR = '#e94948'
+    ERROR_DARK_COLOR = '#790000'
+     
+    IN_PROGRESS_COLOR = '#ff8542'
+    IN_PROGRESS_LIGHT_COLOR = '#ffb670'
+    IN_PROGRESS_DARK_COLOR = '#c65612'
+    
+    OTHER1_COLOR = '#b481a4' #pinkish
+    OTHER1_LIGHT_COLOR = '#e7b1d5' #pinkish
+    OTHER1_DARK_COLOR = '#845475' #pinkish
+
+    OTHER2_COLOR = '#374955' #dark gey/blue
+    OTHER2_LIGHT_COLOR = '#627481' #dark gey/blue
+    OTHER2_DARK_COLOR = '#0f222c' #dark gey/blue
+
 
 
     LOG_LEVELS = {
@@ -1165,7 +1188,7 @@ class FablibManager:
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes)
+        return_status, slices = self.get_slice_manager().slices(excludes=excludes,  limit=200)
 
         return_slices = []
         if return_status == Status.OK:
@@ -1257,7 +1280,7 @@ class FablibManager:
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes, name=slice_name, slice_id=slice_id)
+        return_status, slices = self.get_slice_manager().slices(excludes=excludes, name=slice_name, slice_id=slice_id, limit=200)
 
         if self.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -1370,16 +1393,34 @@ class FablibManager:
     
         printable_table = pd.DataFrame(table)
         
-        properties = {'text-align': 'left', 'border': '1px black solid !important'}
+        properties = {#'background-color': f'{FablibManager.FABRIC_LIGHT}',
+                      'text-align': 'left', 
+                      'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
         
         printable_table = printable_table.style.set_caption(title)
         printable_table = printable_table.set_properties(**properties, overwrite=False)
         printable_table = printable_table.hide(axis='index')
         printable_table = printable_table.hide(axis='columns')
-        printable_table = printable_table.set_table_styles([{
-            'selector': 'caption',
-            'props': f'caption-side: top; font-size:{title_font_size};'
-        }], overwrite=False)
+        
+        printable_table = printable_table.set_table_styles([{ 'selector': 'tr:nth-child(even)', 
+                                                               'props':  [('background', 
+                                                                           f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}')]}],
+                                                           overwrite=False)
+        
+        
+        caption_props  =  [ ("text-align", "center"),
+                            ("font-size", "150%"),
+                            #("color", f'{FablibManager.FABRIC_BLACK}'),
+                            #("background-color", f'{FablibManager.FABRIC_WHITE}'), 
+                            #("font-family", "courier"),
+                            #("font-family", "montserrat"),
+                            #("font-family", "IBM plex sans")'
+                          ]
+                                
+        printable_table = printable_table.set_table_styles([{ 'selector': 'caption', 
+                                                               'props':  caption_props }],
+                                                          overwrite=False)
+    
 
         if not quiet:
             display(printable_table)
@@ -1453,23 +1494,46 @@ class FablibManager:
 
         
         # Table config (maybe some of this is unnecessary?
-        properties = {'text-align': 'left', 'border': '1px black solid !important'}
+        #df.style.set_properties(**{'background-color': 'black',
+        #                   'color': 'green'})
+        
+        
+        properties = {#'background-color': f'{FablibManager.FABRIC_LIGHT}',
+                      'text-align': 'left', 
+                      'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
 
         printable_table = printable_table.style.set_caption(title)
         printable_table = printable_table.hide(axis="index")
         #printable_table = printable_table.set_properties(**{'text-align': 'left'}, overwrite=False)
         printable_table = printable_table.set_properties(**properties, overwrite=False)
+        
+        
+        caption_props  =  [ ("text-align", "center"),
+                            ("font-size", "150%"),
+                            ('caption-side', 'top'),
+                            #("color", f'{FablibManager.FABRIC_BLACK}'),
+                            #("background-color", f'{FablibManager.FABRIC_WHITE}'), 
+                            #("font-family", "courier"),
+                            #("font-family", "montserrat"),
+                            #("font-family", "IBM plex sans")'
+                          ]
+                                
+        printable_table = printable_table.set_table_styles([{ 'selector': 'caption', 
+                                                               'props':  caption_props }],
+                                                          overwrite=False)
+        
+        
         printable_table = printable_table.set_table_styles([dict(selector='th', 
                                                                  props=[('text-align', 'left')])], 
                                                            overwrite=False)
-        printable_table = printable_table.set_table_styles([dict(selector='caption', 
-                                                                 props=[('caption-side', 'top'),
-                                                                        ('font-size', title_font_size)])],
+        printable_table = printable_table.set_table_styles([{ 'selector': 'tr:nth-child(even)', 
+                                                           'props':  [('background', 
+                                                                       f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}')]}],
                                                            overwrite=False)
+
         printable_table = printable_table.set_table_styles([dict(selector='.level0', 
                                                                  props=[('border', '1px black solid !important')])],
                                                            overwrite=False)
-
 
         if not quiet:
             display(printable_table)

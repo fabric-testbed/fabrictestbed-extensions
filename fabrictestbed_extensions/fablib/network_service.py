@@ -412,21 +412,21 @@ class NetworkService:
 
         :return: Tabulated string of network service information
         :rtype: String
-        """
+        """        
         table = [ ["ID", self.get_reservation_id()],
             ["Name", self.get_name()],
             ["Layer", self.get_layer()],
             ["Type", self.get_type()],
             ["Site", self.get_site()],
-            ["Gateway", self.get_gateway()],
-            ["Subnet", self.get_subnet()],
+            ["Gateway", str(self.get_gateway() or '') ],
+            ["Subnet", str(self.get_subnet() or '') ],
             ["State", self.get_reservation_state()],
             ["Error", self.get_error_message()],
             ]
 
         return tabulate(table) #, headers=["Property", "Value"])
     
-    def toJson(self):
+    def toJson(self):    
         return {    "ID": self.get_reservation_id(),
                     "Name": self.get_name(),
                     "Layer": self.get_layer(),
