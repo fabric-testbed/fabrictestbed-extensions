@@ -134,9 +134,6 @@ class NetworkService:
         :rtype: bool
         """
 
-        # Hack for testing
-        return True
-
         sites = set([])
         nics = set([])
         nodes = set([])
@@ -145,7 +142,7 @@ class NetworkService:
                 sites.add(interface.get_site())
                 nics.add(interface.get_model())
                 nodes.add(interface.get_node())
-            except Excpetion as e:
+            except Exception as e:
                 logging.info(f"validate_nstype: skipping interface {interface.get_name()}, likely its a facility port")
             
 
