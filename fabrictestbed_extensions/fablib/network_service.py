@@ -418,8 +418,8 @@ class NetworkService:
             ["Layer", self.get_layer()],
             ["Type", self.get_type()],
             ["Site", self.get_site()],
-            ["Gateway", str(self.get_gateway() or '') ],
-            ["Subnet", str(self.get_subnet() or '') ],
+            ["Gateway", self.get_gateway()],
+            ["Subnet", self.get_subnet()],
             ["State", self.get_reservation_state()],
             ["Error", self.get_error_message()],
             ]
