@@ -367,3 +367,30 @@ class Component:
             raise Exception(str(output))
 
         return output
+
+    
+    def get_device_name(self) -> str:
+        """
+        Not for API use
+        """
+        labels = self.get_fim_component().get_property(pname="label_allocations")
+        return labels.device_name
+
+    @staticmethod
+    def new_storage(node: Node, name: str, auto_mount: bool = False):
+        """
+        Not intended for API use
+
+        Creates a new FIM component on the fablib node inputted.
+
+        :param node: the fablib node to build the component on
+        :param name: the name of the new component
+        :param auto_mount: True - mount the storage; False - do not mount
+        :return: the new fablib compoent
+        :rtype: Component
+        """
+        # Hack to make it possile to find interfaces
+
+        fim_component = node.fim_node.add_storage(name=name, labels=Labels(local_name=name),
+                                                  flags=Flags(auto_mount=auto_mount))
+        return Component(node=node, fim_component=fim_component)

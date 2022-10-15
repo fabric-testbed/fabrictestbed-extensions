@@ -469,6 +469,8 @@ class Slice:
         """
         if self.get_state() in ["StableOK",
                                 "StableError",
+                                "ModifyOK",
+                                "ModifyError",
                                 "Closing",
                                 "Dead"]:
             return True
@@ -1002,7 +1004,7 @@ class Slice:
 
         return exception_string
 
-    def wait(self, timeout: int = 1800, interval: int = 10, progress: bool = False):
+    def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
 
@@ -1028,12 +1030,14 @@ class Slice:
                                                                                    name=self.slice_name)
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
-                if slice.state == "StableOK":
+                if slice.state == "StableOK" or slice.state == "ModifyOK":
                     if progress:
                         print(" Slice state: {}".format(slice.state))
                     return slice
-                if slice.state == "Closing" or slice.state == "Dead" or slice.state == "StableError":
-                    if progress: print(" Slice state: {}".format(slice.state))
+                if slice.state == "Closing" or slice.state == "Dead" or slice.state == "StableError" or \
+                        slice.state == "ModifyError":
+                    if progress:
+                        print(" Slice state: {}".format(slice.state))
                     try:
                         exception_string = self.build_error_exception_string()
                     except Exception as e:
@@ -1474,3 +1478,72 @@ class Slice:
 
         
         return table
+    
+    def modify(self, wait: int = True, wait_timeout: int = 600, wait_interval: int = 10, progress: bool = True,
+               wait_jupyter: str = "text"):
+        """
+        Submits a modify slice request to FABRIC.
+
+        Can be blocking or non-blocking.
+
+        Blocking calls can, optionally,configure timeouts and intervals.
+
+        Blocking calls can, optionally, print progress info.
+
+
+        :param wait: indicator for whether to wait for the slice's resources to be active
+        :param wait_timeout: how many seconds to wait on the slice resources
+        :param wait_interval: how often to check on the slice resources
+        :param progress: indicator for whether to show progress while waiting
+        :param wait_jupyter: Special wait for jupyter notebooks.
+        """
+
+        if not wait:
+            progress = False
+
+        # Generate Slice Graph
+        slice_graph = self.get_fim_topology().serialize()
+
+        # Request slice from Orchestrator
+        return_status, slice_reservations = self.fablib_manager.get_slice_manager().modify(slice_id=self.slice_id,
+                                                                                           slice_graph=slice_graph)
+        if return_status != Status.OK:
+            raise Exception("Failed to submit modify slice: {}, {}".format(return_status, slice_reservations))
+
+        logging.debug(f'slice_reservations: {slice_reservations}')
+        logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        self.slice_id = slice_reservations[0].slice_id
+
+        time.sleep(1)
+        self.update()
+
+        if progress and wait_jupyter == 'text' and self.fablib_manager.is_jupyter_notebook():
+            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            return self.slice_id
+
+        if wait:
+            self.wait_ssh(timeout=wait_timeout, interval=wait_interval, progress=progress)
+
+            if progress:
+                print("Running post boot config ... ",end="")
+
+            self.update()
+            self.post_boot_config()
+
+        if progress:
+            print("Done!")
+
+    def modify_accept(self):
+        """
+        Submits a accept to accept the last modify slice request to FABRIC.
+        """
+        # Request slice from Orchestrator
+        return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(slice_id=self.slice_id)
+        if return_status != Status.OK:
+            raise Exception("Failed to accept the last modify slice: {}, {}".format(return_status, topology))
+        else:
+            self.topology = topology
+
+        logging.debug(f'modified topology: {topology}')
+
+        self.update_slice()

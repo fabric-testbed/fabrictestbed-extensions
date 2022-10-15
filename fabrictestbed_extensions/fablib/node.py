@@ -1768,3 +1768,27 @@ class Node:
             return True
         else:
             return False
+
+    def get_storage(self, name: str) -> Component:
+        """
+        Gets a particular storage associated with this node.
+        :param name: the name of the storage
+        :type name: String
+        :raise Exception: if storage not found by name
+        :return: the storage on the FABRIC node
+        :rtype: Component
+        """
+        try:
+            return Component(self, self.get_fim_node().components[name])
+        except Exception as e:
+            logging.error(e, exc_info=True)
+            raise Exception(f"Storage not found: {name}")
+
+    def add_storage(self, name: str, auto_mount: bool = False) -> Component:
+        """
+        Creates a new FABRIC Storage component and attaches it to the Node
+        :param name: Name of the Storage volume created for the project outside the scope of the Slice
+        :param auto_mount: Mount the storage volume
+        :rtype: Component
+        """
+        return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
