@@ -268,6 +268,8 @@ class Slice:
                 color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             elif val == 'StableError':
                 color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            elif val == 'ModifyError':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
             elif val == 'Configuring':
                 color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             elif val == 'Modifying':
@@ -394,6 +396,10 @@ class Slice:
             logging.warning(f"slice.update_slivers failed: {e}")
 
         self.update_topology()
+        
+        if self.get_state() == "ModifyOK":
+            self.modify_accept()
+        
 
     def get_private_key_passphrase(self) -> str:
         """
@@ -1228,8 +1234,8 @@ class Slice:
             iface_thread.result()
             
             
-        if self.get_state() == "ModifyOK":
-            self.modify_accept()
+        #if self.get_state() == "ModifyOK":
+        #    self.modify_accept()
         
 
     def validIPAddress(self, IP: str) -> str:
@@ -1276,6 +1282,8 @@ class Slice:
 
             time.sleep(interval)
             self.update()
+            
+            
 
             slice_show_table = self.show(colors=True, quiet=True)
             node_table = self.list_nodes(colors=True, quiet=True)
@@ -1301,6 +1309,8 @@ class Slice:
         print("Running post_boot_config ... ", end="")
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
+        
+        
 
         if hasNetworks:
             self.list_interfaces()
