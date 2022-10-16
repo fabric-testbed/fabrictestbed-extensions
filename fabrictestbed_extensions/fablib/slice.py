@@ -264,9 +264,13 @@ class Slice:
         def state_color(val):
             if val == 'StableOK':
                 color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
+            elif val == 'ModifyOK':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             elif val == 'StableError':
                 color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
             elif val == 'Configuring':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            elif val == 'Modifying':
                 color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             else:
                 color = ''
@@ -484,7 +488,17 @@ class Slice:
         :return: the slice state
         :rtype: SliceState
         """
-        return self.sm_slice.state
+        
+        if self.sm_slice == None:
+            state = None
+        else:
+            try: 
+                state = self.sm_slice.state
+            except Exception as e:
+                logging.warning(f"Exception in get_state from non-None sm_slice. Returning None state: {e}")
+                state = None
+        
+        return state
 
     def get_name(self) -> str:
         """
@@ -511,7 +525,17 @@ class Slice:
         :return: timestamp when lease ends
         :rtype: String
         """
-        return self.sm_slice.lease_end_time
+        
+        if self.sm_slice == None:
+            lease_end_time = None
+        else:
+            try: 
+                lease_end_time = self.sm_slice.lease_end_time
+            except Exception as e:
+                logging.warning(f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}")
+                lease_end_time = None
+        
+        return lease_end_time
     
     def get_lease_start(self) -> str:
         """
@@ -520,7 +544,18 @@ class Slice:
         :return: timestamp when lease starts
         :rtype: String
         """
-        return self.sm_slice.lease_start_time
+        
+        if self.sm_slice == None:
+            lease_start_time = None
+        else:
+            try: 
+                lease_start_time = self.sm_slice.lease_start_time
+            except Exception as e:
+                logging.warning(f"Exception in get_lease_start from non-None sm_slice. Returning None state: {e}")
+                lease_start_time = None
+        
+        return lease_start_time        
+
 
     def get_project_id(self) -> str:
         """
@@ -1191,6 +1226,10 @@ class Slice:
 
         for iface_thread in iface_threads:
             iface_thread.result()
+            
+            
+        if self.get_state() == "ModifyOK":
+            self.modify_accept()
         
 
     def validIPAddress(self, IP: str) -> str:
@@ -1286,7 +1325,13 @@ class Slice:
         :param wait_jupyter: Special wait for jupyter notebooks.
         :return: slice_id
         """
-
+        
+        if self.get_state() == None:
+            modify = False
+        else:
+            modify = True
+        
+        
         if not wait:
             progress = False
 
@@ -1294,7 +1339,11 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(slice_name=self.slice_name,
+        if modify:
+            return_status, slice_reservations = self.fablib_manager.get_slice_manager().modify(slice_id=self.slice_id,
+                                                                                           slice_graph=slice_graph)
+        else:
+            return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(slice_name=self.slice_name,
                                                                                            slice_graph=slice_graph,
                                                                                            ssh_key=self.get_slice_public_key())
         if return_status != Status.OK:
