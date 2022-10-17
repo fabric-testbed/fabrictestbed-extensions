@@ -663,8 +663,14 @@ class Node:
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
-    def execute_thread(self, command: str, retry: int = 3, retry_interval: int = 10, username: str = None,
-                       private_key_file: str = None, private_key_passphrase: str = None) -> threading.Thread:
+    def execute_thread(self, 
+                       command: str, 
+                       retry: int = 3, 
+                       retry_interval: int = 10, 
+                       username: str = None,
+                       private_key_file: str = None, 
+                       private_key_passphrase: str = None, 
+                       output_file: str = None) -> threading.Thread:
         """
         Creates a thread that calls node.execute().  Results (i.e. stdout, stderr) from the thread can be
         retrieved with by calling thread.result()
@@ -684,7 +690,8 @@ class Node:
                                                                                retry_interval=retry_interval,
                                                                                username=username,
                                                                                private_key_file=private_key_file,
-                                                                               private_key_passphrase=private_key_passphrase)
+                                                                               private_key_passphrase=private_key_passphrase,
+                                                                               output_file=output_file)
     
     def execute(self, command, 
                       retry=3, 
@@ -695,7 +702,8 @@ class Node:
                       chunking=False, 
                       quiet=True, 
                       read_timeout=10, 
-                      timeout=None):
+                      timeout=None,
+                      output_file=None):
         """
         Runs a command on the FABRIC node.
         :param command: the command to run
@@ -723,8 +731,11 @@ class Node:
 
         logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
 
-        if not quiet:
-            chunking = True
+        if output_file:
+            file = open(output_file, "a")
+                    
+        #if not quiet:
+        chunking = True
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
@@ -761,7 +772,7 @@ class Node:
         else:
             node_key_passphrase=self.get_private_key_file()
 
-        for attempt in range(retry):
+        for attempt in range(int(retry)):
             try:
                 key = self.get_paramiko_key(private_key_file=node_key_file, get_private_key_passphrase=node_key_passphrase)
                 bastion=paramiko.SSHClient()
@@ -798,6 +809,7 @@ class Node:
                     rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
                     if not quiet:
                         print(rtn_stdout, rtn_stderr)
+
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
                     stdout_chunks = []
@@ -812,6 +824,10 @@ class Node:
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
                                 if not quiet: 
                                     print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
+                                if output_file:
+                                    file.write(str(stdoutbytes,'utf-8').replace('\\n','\n'))
+                                    file.flush()
+                                    
                                 stdout_chunks.append(stdoutbytes)
                                 got_chunk = True
                             if c.recv_stderr_ready(): 
@@ -819,6 +835,9 @@ class Node:
                                 stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
                                 if not quiet: 
                                     print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
+                                if output_file:
+                                    file.write(str(stderrbytes,'utf-8').replace('\\n','\n'))
+                                    file.flush()
                                 stderr_chunks.append(stderrbytes)
                                 got_chunk = True
 
@@ -847,6 +866,9 @@ class Node:
                 logging.debug(f"rtn_stdout: {rtn_stdout}")
                 logging.debug(f"rtn_stderr: {rtn_stderr}")
 
+                if output_file:
+                    file.close()
+                
                 return rtn_stdout, rtn_stderr
                 #success, skip other tries
                 break
@@ -863,6 +885,12 @@ class Node:
                     logging.debug("Exception in bastion_channel.close()")
                     pass
 
+                try:
+                    if output_file:
+                        file.close()
+                except:
+                    logging.debug("Exception in output_file close()")
+                    pass
 
                 if attempt+1 == retry:
                     raise e
@@ -934,7 +962,7 @@ class Node:
         else:
             node_key_passphrase=self.get_private_key_passphrase()
 
-        for attempt in range(retry):
+        for attempt in range(int(retry)):
             try:
                 key = self.get_paramiko_key(private_key_file=node_key_file,
                                               get_private_key_passphrase=node_key_passphrase)
@@ -1045,7 +1073,7 @@ class Node:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
-        for attempt in range(retry):
+        for attempt in range(int(retry)):
             try:
                 key = self.get_paramiko_key(private_key_file=self.get_private_key_file(),
                                               get_private_key_passphrase=self.get_private_key_file())
@@ -1151,7 +1179,7 @@ class Node:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
-        for attempt in range(retry):
+        for attempt in range(int(retry)):
             try:
                 key = self.get_paramiko_key(private_key_file=self.get_private_key_file(),
                                               get_private_key_passphrase=self.get_private_key_file())
@@ -1768,3 +1796,27 @@ class Node:
             return True
         else:
             return False
+
+    def get_storage(self, name: str) -> Component:
+        """
+        Gets a particular storage associated with this node.
+        :param name: the name of the storage
+        :type name: String
+        :raise Exception: if storage not found by name
+        :return: the storage on the FABRIC node
+        :rtype: Component
+        """
+        try:
+            return Component(self, self.get_fim_node().components[name])
+        except Exception as e:
+            logging.error(e, exc_info=True)
+            raise Exception(f"Storage not found: {name}")
+
+    def add_storage(self, name: str, auto_mount: bool = False) -> Component:
+        """
+        Creates a new FABRIC Storage component and attaches it to the Node
+        :param name: Name of the Storage volume created for the project outside the scope of the Slice
+        :param auto_mount: Mount the storage volume
+        :rtype: Component
+        """
+        return Component.new_storage(node=self, name=name, auto_mount=auto_mount)

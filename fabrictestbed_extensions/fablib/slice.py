@@ -264,9 +264,15 @@ class Slice:
         def state_color(val):
             if val == 'StableOK':
                 color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
+            elif val == 'ModifyOK':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             elif val == 'StableError':
                 color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            elif val == 'ModifyError':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
             elif val == 'Configuring':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            elif val == 'Modifying':
                 color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
             else:
                 color = ''
@@ -390,6 +396,10 @@ class Slice:
             logging.warning(f"slice.update_slivers failed: {e}")
 
         self.update_topology()
+        
+        if self.get_state() == "ModifyOK":
+            self.modify_accept()
+        
 
     def get_private_key_passphrase(self) -> str:
         """
@@ -469,6 +479,8 @@ class Slice:
         """
         if self.get_state() in ["StableOK",
                                 "StableError",
+                                "ModifyOK",
+                                "ModifyError",
                                 "Closing",
                                 "Dead"]:
             return True
@@ -482,7 +494,17 @@ class Slice:
         :return: the slice state
         :rtype: SliceState
         """
-        return self.sm_slice.state
+        
+        if self.sm_slice == None:
+            state = None
+        else:
+            try: 
+                state = self.sm_slice.state
+            except Exception as e:
+                logging.warning(f"Exception in get_state from non-None sm_slice. Returning None state: {e}")
+                state = None
+        
+        return state
 
     def get_name(self) -> str:
         """
@@ -509,7 +531,17 @@ class Slice:
         :return: timestamp when lease ends
         :rtype: String
         """
-        return self.sm_slice.lease_end_time
+        
+        if self.sm_slice == None:
+            lease_end_time = None
+        else:
+            try: 
+                lease_end_time = self.sm_slice.lease_end_time
+            except Exception as e:
+                logging.warning(f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}")
+                lease_end_time = None
+        
+        return lease_end_time
     
     def get_lease_start(self) -> str:
         """
@@ -518,7 +550,18 @@ class Slice:
         :return: timestamp when lease starts
         :rtype: String
         """
-        return self.sm_slice.lease_start_time
+        
+        if self.sm_slice == None:
+            lease_start_time = None
+        else:
+            try: 
+                lease_start_time = self.sm_slice.lease_start_time
+            except Exception as e:
+                logging.warning(f"Exception in get_lease_start from non-None sm_slice. Returning None state: {e}")
+                lease_start_time = None
+        
+        return lease_start_time        
+
 
     def get_project_id(self) -> str:
         """
@@ -1002,7 +1045,7 @@ class Slice:
 
         return exception_string
 
-    def wait(self, timeout: int = 1800, interval: int = 10, progress: bool = False):
+    def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
 
@@ -1028,12 +1071,14 @@ class Slice:
                                                                                    name=self.slice_name)
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
-                if slice.state == "StableOK":
+                if slice.state == "StableOK" or slice.state == "ModifyOK":
                     if progress:
                         print(" Slice state: {}".format(slice.state))
                     return slice
-                if slice.state == "Closing" or slice.state == "Dead" or slice.state == "StableError":
-                    if progress: print(" Slice state: {}".format(slice.state))
+                if slice.state == "Closing" or slice.state == "Dead" or slice.state == "StableError" or \
+                        slice.state == "ModifyError":
+                    if progress:
+                        print(" Slice state: {}".format(slice.state))
                     try:
                         exception_string = self.build_error_exception_string()
                     except Exception as e:
@@ -1177,16 +1222,20 @@ class Slice:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        iface_threads = []
-        for interface in self.get_interfaces():
-            try:
-                iface_threads.append(executor.submit(interface.ip_link_toggle))
-            except Exception as e:
-                logging.error(f"Interface: {interface.get_name()} failed to toggle")
-                logging.error(e, exc_info=True)
+        #iface_threads = []
+        #for interface in self.get_interfaces():
+        #    try:
+        #        iface_threads.append(executor.submit(interface.ip_link_toggle))
+        #    except Exception as e:
+        #        logging.error(f"Interface: {interface.get_name()} failed to toggle")
+        #        logging.error(e, exc_info=True)
 
-        for iface_thread in iface_threads:
-            iface_thread.result()
+        #for iface_thread in iface_threads:
+        #    iface_thread.result()
+            
+            
+        #if self.get_state() == "ModifyOK":
+        #    self.modify_accept()
         
 
     def validIPAddress(self, IP: str) -> str:
@@ -1233,6 +1282,8 @@ class Slice:
 
             time.sleep(interval)
             self.update()
+            
+            
 
             slice_show_table = self.show(colors=True, quiet=True)
             node_table = self.list_nodes(colors=True, quiet=True)
@@ -1258,6 +1309,8 @@ class Slice:
         print("Running post_boot_config ... ", end="")
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
+        
+        
 
         if hasNetworks:
             self.list_interfaces()
@@ -1282,7 +1335,13 @@ class Slice:
         :param wait_jupyter: Special wait for jupyter notebooks.
         :return: slice_id
         """
-
+        
+        if self.get_state() == None:
+            modify = False
+        else:
+            modify = True
+        
+        
         if not wait:
             progress = False
 
@@ -1290,7 +1349,11 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(slice_name=self.slice_name,
+        if modify:
+            return_status, slice_reservations = self.fablib_manager.get_slice_manager().modify(slice_id=self.slice_id,
+                                                                                           slice_graph=slice_graph)
+        else:
+            return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(slice_name=self.slice_name,
                                                                                            slice_graph=slice_graph,
                                                                                            ssh_key=self.get_slice_public_key())
         if return_status != Status.OK:
@@ -1474,3 +1537,72 @@ class Slice:
 
         
         return table
+    
+    def modify(self, wait: int = True, wait_timeout: int = 600, wait_interval: int = 10, progress: bool = True,
+               wait_jupyter: str = "text"):
+        """
+        Submits a modify slice request to FABRIC.
+
+        Can be blocking or non-blocking.
+
+        Blocking calls can, optionally,configure timeouts and intervals.
+
+        Blocking calls can, optionally, print progress info.
+
+
+        :param wait: indicator for whether to wait for the slice's resources to be active
+        :param wait_timeout: how many seconds to wait on the slice resources
+        :param wait_interval: how often to check on the slice resources
+        :param progress: indicator for whether to show progress while waiting
+        :param wait_jupyter: Special wait for jupyter notebooks.
+        """
+
+        if not wait:
+            progress = False
+
+        # Generate Slice Graph
+        slice_graph = self.get_fim_topology().serialize()
+
+        # Request slice from Orchestrator
+        return_status, slice_reservations = self.fablib_manager.get_slice_manager().modify(slice_id=self.slice_id,
+                                                                                           slice_graph=slice_graph)
+        if return_status != Status.OK:
+            raise Exception("Failed to submit modify slice: {}, {}".format(return_status, slice_reservations))
+
+        logging.debug(f'slice_reservations: {slice_reservations}')
+        logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        self.slice_id = slice_reservations[0].slice_id
+
+        time.sleep(1)
+        self.update()
+
+        if progress and wait_jupyter == 'text' and self.fablib_manager.is_jupyter_notebook():
+            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            return self.slice_id
+
+        if wait:
+            self.wait_ssh(timeout=wait_timeout, interval=wait_interval, progress=progress)
+
+            if progress:
+                print("Running post boot config ... ",end="")
+
+            self.update()
+            self.post_boot_config()
+
+        if progress:
+            print("Done!")
+
+    def modify_accept(self):
+        """
+        Submits a accept to accept the last modify slice request to FABRIC.
+        """
+        # Request slice from Orchestrator
+        return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(slice_id=self.slice_id)
+        if return_status != Status.OK:
+            raise Exception("Failed to accept the last modify slice: {}, {}".format(return_status, topology))
+        else:
+            self.topology = topology
+
+        logging.debug(f'modified topology: {topology}')
+
+        self.update_slice()
