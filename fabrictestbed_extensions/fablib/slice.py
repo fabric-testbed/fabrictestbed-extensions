@@ -1222,16 +1222,16 @@ class Slice:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        iface_threads = []
-        for interface in self.get_interfaces():
-            try:
-                iface_threads.append(executor.submit(interface.ip_link_toggle))
-            except Exception as e:
-                logging.error(f"Interface: {interface.get_name()} failed to toggle")
-                logging.error(e, exc_info=True)
+        #iface_threads = []
+        #for interface in self.get_interfaces():
+        #    try:
+        #        iface_threads.append(executor.submit(interface.ip_link_toggle))
+        #    except Exception as e:
+        #        logging.error(f"Interface: {interface.get_name()} failed to toggle")
+        #        logging.error(e, exc_info=True)
 
-        for iface_thread in iface_threads:
-            iface_thread.result()
+        #for iface_thread in iface_threads:
+        #    iface_thread.result()
             
             
         #if self.get_state() == "ModifyOK":
