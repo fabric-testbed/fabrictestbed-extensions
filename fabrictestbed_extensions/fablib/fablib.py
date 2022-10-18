@@ -488,8 +488,7 @@ class FablibManager:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
-    
-    
+
     FABRIC_PRIMARY = '#27aae1'
     FABRIC_PRIMARY_LIGHT = '#cde4ef'
     FABRIC_PRIMARY_DARK = '#078ac1'
@@ -516,29 +515,6 @@ class FablibManager:
     IN_PROGRESS_COLOR = '#ffff8c'
     IN_PROGRESS_LIGHT_COLOR = '#ffffbe'
     IN_PROGRESS_DARK_COLOR = '#c8555c'
-    
-
-    #SUCCESS_COLOR =  '#008e7a'
-    #SUCCESS_LIGHT_COLOR = '#4fbfa9'
-    #SUCCESS_DARK_COLOR = '#00604e'
-    
-    #ERROR_COLOR = '#b00020'
-    #ERROR_LIGHT_COLOR = '#e94948'
-    #ERROR_DARK_COLOR = '#790000'
-     
-    #IN_PROGRESS_COLOR = '#ff8542'
-    #IN_PROGRESS_LIGHT_COLOR = '#ffb670'
-    #IN_PROGRESS_DARK_COLOR = '#c65612'
-    
-    OTHER1_COLOR = '#b481a4' #pinkish
-    OTHER1_LIGHT_COLOR = '#e7b1d5' #pinkish
-    OTHER1_DARK_COLOR = '#845475' #pinkish
-
-    OTHER2_COLOR = '#374955' #dark gey/blue
-    OTHER2_LIGHT_COLOR = '#627481' #dark gey/blue
-    OTHER2_DARK_COLOR = '#0f222c' #dark gey/blue
-
-
 
     LOG_LEVELS = {
         'DEBUG': logging.DEBUG,
@@ -578,10 +554,11 @@ class FablibManager:
                  project_id: str = None,
                  bastion_username: str = None,
                  bastion_key_filename: str = None,
-                 log_level=None,
+                 log_level: int = None,
                  log_file: str = None,
                  data_dir: str = None,
-                 output = None):
+                 output: str = None,
+                 execute_thread_pool_size: int = 64):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -591,14 +568,16 @@ class FablibManager:
          - defaults (if needed and possible)
 
         """
-        
-        if(self.is_jupyter_notebook()):
-            self.output = 'jupyter'
-        else:
-            self.output = 'text'
 
+        if output != None:
+            self.output = output
+        else:
+            if(self.is_jupyter_notebook()):
+                self.output = 'pandas'
+            else:
+                self.output = 'text'
         
-        self.ssh_thread_pool_executor = ThreadPoolExecutor(64)
+        self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
 
         # init attributes
         self.bastion_passphrase = None
@@ -750,21 +729,32 @@ class FablibManager:
         except Exception as e:
             logging.warning(f"Failed to create data dir: {self.data_dir}")
 
-    def set_log_level(self, log_level):
+    def set_log_level(self, log_level: str = 'INFO'):
         """
         Sets the current log level for logging
 
-        Options:  logging.DEBUG
-                  logging.INFO
-                  logging.WARNING
-                  logging.ERROR
-                  logging.CRITICAL
+        Options:  'DEBUG'
+                  'INFO'
+                  'WARNING'
+                  'ERROR'
+                  'CRITICAL'
 
         :param log_level: new log level
-        :type progress: Level
+        :type str: Level
         """
 
         self.log_level = log_level
+
+        try:
+            for handler in logging.root.handlers[:]:
+                logging.root.removeHandler(handler)
+        except Exception as e:
+            pass
+
+        if self.log_file and self.log_level:
+            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                                datefmt='%H:%M:%S')
 
     def get_log_file(self) -> str:
         """
@@ -779,9 +769,6 @@ class FablibManager:
         except Exception as e:
             logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
-        logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                            format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                            datefmt='%H:%M:%S')
         return self.log_file
 
     def set_log_file(self, log_file: str):
@@ -799,6 +786,12 @@ class FablibManager:
         except Exception as e:
             logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
+        try:
+            for handler in logging.root.handlers[:]:
+                logging.root.removeHandler(handler)
+        except:
+            pass
+
         logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                             format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
                             datefmt='%H:%M:%S')
@@ -813,6 +806,14 @@ class FablibManager:
         :rtype: SliceManager
         """
         try:
+            logging.info(f"oc_host={self.orchestrator_host},"
+                         f"cm_host={self.credmgr_host},"
+                         f"project_id={self.project_id},"
+                         f"token_location={self.fabric_token},"
+                         f"initialize=True,"
+                         f"scope='all'")
+
+
             self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
                                               cm_host=self.credmgr_host,
                                               project_id=self.project_id,
@@ -860,39 +861,118 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self,output=None, fields=None, quiet=False, list_filter=None) -> str:
+    def list_sites(self,
+                   output: str = None,
+                   fields: str = None,
+                   quiet: bool = False,
+                   list_filter: list[tuple] = []) -> object:
         """
-        Get a string used to print a tabular list of sites with state
+        Lists all the sites and their attributes.
 
-        :return: tabulated string of site state
-        :rtype: str
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+                  'default': 'text'
+                  'default_jupyter': 'pandas'
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
+
+        list_filter:  A lambda function to filter data by field values.
+
+        Example: list_filter=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param list_filter: lambda function
+        :type list_filter: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
         
         return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, list_filter=list_filter)
 
-    def show_config(self, output=None, fields=None, title='FABlib Config'):
+    def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False):
+        """
+        Show a table containing the current FABlib configuration parameters.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+                  'default': 'text'
+                  'default_jupyter': 'pandas'
+
+        fields: json output will include all available fields.
+
+        Example: fields=['credmgr_host','project_id', 'fablib_log_file']
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
         return self.show_table(self.get_config(), 
                         fields=fields,
-                        title=title, 
-                        output=output)
+                        title='FABlib Config',
+                        output=output,
+                        quiet=quiet)
     
-    def show_site(self, site_name: str):
+    def show_site(self, site_name: str,  output: str = None, fields: list[str] = None, quiet: bool = False):
         """
-        Get a string used to print tabular info about a site
+        Show a table with all the properties of a specific site
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+                  'default': 'text'
+                  'default_jupyter': 'pandas'
+
+        fields: json output will include all available fields.
+
+        Example: fields=['credmgr_host','project_id', 'fablib_log_file']
 
         :param site_name: the name of a site
-        :type site_name: String
-        :return: tabulated string of site state
-        :rtype: String
+        :type site_name: str
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
-        return str(self.get_resources().show_site(site_name))
+        return str(self.get_resources().show_site(site_name,
+                                                  fields=fields,
+                                                  output=output,
+                                                  quiet=quiet))
+
+
 
     def get_resources(self) -> Resources:
         """
-        Get a reference to the resources object. The resouces obeject
+        Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
 
-        :return: the resouces object
+        :return: the resources object
         :rtype: Resources
         """
         if not self.resources:
@@ -1230,11 +1310,37 @@ class FablibManager:
                     quiet=False,
                     list_filter=None):
         """
-        Creates a tabulated string describing all slices.
+        Lists all the slices created by a user.
 
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated string of all slices information
-        :rtype: String
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+                  'default': 'text'
+                  'default_jupyter': 'pandas'
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','State']
+
+        list_filter:  A lambda function to filter data by field values.
+
+        Example: list_filter=lambda s: s['State'] == 'Configuring'
+
+        :param excludes: slice status to exclude
+        :type excludes: list[slice.state]
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param list_filter: lambda function
+        :type list_filter: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
         table = []
         for slice in self.get_slices(excludes=excludes):
@@ -1260,12 +1366,32 @@ class FablibManager:
 
     def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False):
         """
-        Shows a slice's info.
+        Show a table with all the properties of a specific site
 
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated srting of all slices information
-        :rtype: String
-        """    
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+                  'default': 'text'
+                  'default_jupyter': 'pandas'
+
+        fields: json output will include all available fields.
+
+        Example: fields=['Name','State']
+
+        :param name: the name of a slice
+        :type name: str
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
         
         slice = self.get_slice(name=name, slice_id=id)
         
@@ -1457,9 +1583,7 @@ class FablibManager:
                    data, 
                    fields=None, 
                    title='', 
-                   hide_header=False, 
-                   title_font_size='1.25em', 
-                   index=None, 
+                   title_font_size='1.25em',
                    output=None,
                    quiet=False):
         
@@ -1469,11 +1593,11 @@ class FablibManager:
             
         table = self.create_show_table(data, fields=fields)
             
-        if(output == 'text'):
+        if(output == 'text' or output == 'default'):
             return self.show_table_text(table, quiet=quiet)
         elif(output == 'json'):
             return self.show_table_json(data, quiet=quiet)
-        elif(output == 'jupyter'):
+        elif(output == 'pandas' or output == 'jupyter_default'):
             return self.show_table_jupyter(table, 
                                          headers=fields, 
                                          title=title, 
@@ -1574,47 +1698,24 @@ class FablibManager:
                          data, 
                          fields=None, 
                          title='', 
-                         hide_header=False, 
-                         title_font_size='1.25em', 
-                         index=None, 
-                         output=None, 
+                         title_font_size='1.25em',
+                         output=None,
                          quiet=False,
                          list_filter=None):
-        
-        def filter_function(slice):
-            for column,value,operator in list_filter:
-                if operator == '==':
-                    if slice[column] != value:
-                        return False
-                elif operator == '<=':
-                    if slice[column] > value:
-                        return False
-                elif operator == '<':
-                    if slice[column] >= value:
-                        return False
-                elif operator == '>=':
-                    if slice[column] < value:
-                        return False
-                elif operator == '>':
-                    if slice[column] <= value:
-                        return False
-            return True
-        
-        
+
         if list_filter:
-            data = list(filter(filter_function, data))    
- 
+            data = list(filter(list_filter, data))
         
         if output == None:
             output = self.output.lower()
         
         table = self.create_list_table(data, fields=fields)
         
-        if(output == 'text'):
+        if(output == 'default' or output == 'text'):
             return self.list_table_text(table,  headers=fields, quiet=quiet)         
         elif(output == 'json'):
             return self.list_table_json(data, quiet=quiet)
-        elif(output == 'jupyter'): 
+        elif(output == 'default_jupyter' or output == 'pandas'):
             return self.list_table_jupyter(table, 
                                     headers=fields, 
                                     title=title, 

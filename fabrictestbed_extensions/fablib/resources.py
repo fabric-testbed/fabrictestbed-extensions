@@ -89,10 +89,9 @@ class Resources:
                                         "Tesla T4 (GPU)",
                                         "RTX6000 (GPU)",
                                         ])
-    
-     
 
-    def show_site(self, site_name: str) -> str:
+    def show_site_XXX(self, site_name: str) -> str:
+
         """
         Creates a tabulated string of all the available resources at a specific site.
 
@@ -106,28 +105,63 @@ class Resources:
         try:
             site = self.get_topology_site(site_name)
 
-            table = [   [ "Name", site.name ],
-                        [ "CPUs", self.get_cpu_capacity(site_name) ],
-                        [ f"Cores ({Capacities.UNITS['core']})", f"{self.get_core_available(site_name)}/{self.get_core_capacity(site_name)}" ],
-                        [ f"RAM ({Capacities.UNITS['ram']})", f"{self.get_ram_available(site_name)}/{self.get_ram_capacity(site_name)}" ],
-                        [ f"Disk ({Capacities.UNITS['disk']})", f"{self.get_disk_available(site_name)}/{self.get_disk_capacity(site_name)}" ],
-                        [ "Worker Count", self.get_host_capacity(site_name) ],
-                        [ "Physical Address", self.get_location_postal(site_name) ],
-                        [ "Location Coordinates", self.get_location_lat_long(site_name) ],
-                        [ "Basic (100 Gbps NIC)", f"{self.get_component_available(site_name,'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')}" ],
-                        [ "ConnectX-6 (100 Gbps x2 NIC)", f"{self.get_component_available(site_name,'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')}" ],
-                        [ "ConnectX-5 (25 Gbps x2 NIC)", f"{self.get_component_available(site_name,'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')}" ],
-                        [ "P4510 (NVMe 1TB)", f"{self.get_component_available(site_name,'NVME-P4510')}/{self.get_component_capacity(site_name,'NVME-P4510')}" ],
-                        [ "Tesla T4 (GPU)", f"{self.get_component_available(site_name,'GPU-Tesla T4')}/{self.get_component_capacity(site_name,'GPU-Tesla T4')}" ],
-                        [ "RTX6000 (GPU)", f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}" ],
-                    ]
+            table = [["Name", site.name],
+                     ["CPUs", self.get_cpu_capacity(site_name)],
+                     [f"Cores ({Capacities.UNITS['core']})",
+                      f"{self.get_core_available(site_name)}/{self.get_core_capacity(site_name)}"],
+                     [f"RAM ({Capacities.UNITS['ram']})",
+                      f"{self.get_ram_available(site_name)}/{self.get_ram_capacity(site_name)}"],
+                     [f"Disk ({Capacities.UNITS['disk']})",
+                      f"{self.get_disk_available(site_name)}/{self.get_disk_capacity(site_name)}"],
+                     ["Worker Count", self.get_host_capacity(site_name)],
+                     ["Physical Address", self.get_location_postal(site_name)],
+                     ["Location Coordinates", self.get_location_lat_long(site_name)],
+                     ["Basic (100 Gbps NIC)",
+                      f"{self.get_component_available(site_name, 'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site_name, 'SharedNIC-ConnectX-6')}"],
+                     ["ConnectX-6 (100 Gbps x2 NIC)",
+                      f"{self.get_component_available(site_name, 'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site_name, 'SmartNIC-ConnectX-6')}"],
+                     ["ConnectX-5 (25 Gbps x2 NIC)",
+                      f"{self.get_component_available(site_name, 'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site_name, 'SmartNIC-ConnectX-5')}"],
+                     ["P4510 (NVMe 1TB)",
+                      f"{self.get_component_available(site_name, 'NVME-P4510')}/{self.get_component_capacity(site_name, 'NVME-P4510')}"],
+                     ["Tesla T4 (GPU)",
+                      f"{self.get_component_available(site_name, 'GPU-Tesla T4')}/{self.get_component_capacity(site_name, 'GPU-Tesla T4')}"],
+                     ["RTX6000 (GPU)",
+                      f"{self.get_component_available(site_name, 'GPU-RTX6000')}/{self.get_component_capacity(site_name, 'GPU-RTX6000')}"],
+                     ]
 
-            return tabulate(table) #, headers=["Property", "Value"])
+            return tabulate(table)  # , headers=["Property", "Value"])
         except Exception as e:
             logging.warning(f"Failed to show site {site_name}")
             logging.error(e, exc_info=True)
 
             return ""
+
+    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False) -> str:
+
+        """
+        Creates a tabulated string of all the available resources at a specific site.
+
+        Intended for printing available resources at a site.
+
+        :param site_name: site name
+        :type site_name: String
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
+        site = self.topology.sites[site_name]
+
+        data = self.site_to_json(site)
+
+
+        site_table = self.get_fablib_manager().show_table(data,
+                                                           fields=fields,
+                                                           title='Site',
+                                                           output=output,
+                                                           quiet=quiet)
+
+        return site_table
+
 
     def get_site_names(self) -> List[str]:
         """
@@ -465,45 +499,45 @@ class Resources:
         return  {    "Name":  site.name,
                      "CPUs":   self.get_cpu_capacity(site_name),
                  
-                     "Cores Available":   f"{self.get_core_available(site_name)}",
-                     "Cores Total":       f"{self.get_core_capacity(site_name)}",
-                     "Cores Allocated":   f"{self.get_core_capacity(site_name)-self.get_core_available(site_name)}",
+                     "Cores Available":   self.get_core_available(site_name),
+                     "Cores Total":       self.get_core_capacity(site_name),
+                     "Cores Allocated":   self.get_core_capacity(site_name)-self.get_core_available(site_name),
                  
-                     "RAM Available":   f"{self.get_ram_available(site_name)}",
-                     "RAM Total":       f"{self.get_ram_capacity(site_name)}",
-                     "RAM Allocated":   f"{self.get_ram_capacity(site_name)-self.get_ram_available(site_name)}",
+                     "RAM Available":   self.get_ram_available(site_name),
+                     "RAM Total":       self.get_ram_capacity(site_name),
+                     "RAM Allocated":   self.get_ram_capacity(site_name)-self.get_ram_available(site_name),
 
-                     "Disk Available":   f"{self.get_disk_available(site_name)}",
-                     "Disk Total":       f"{self.get_disk_capacity(site_name)}",
-                     "Disk Allocated":   f"{self.get_disk_capacity(site_name)-self.get_disk_available(site_name)}",
+                     "Disk Available":   self.get_disk_available(site_name),
+                     "Disk Total":       self.get_disk_capacity(site_name),
+                     "Disk Allocated":   self.get_disk_capacity(site_name)-self.get_disk_available(site_name),
 
                      "Hosts":  self.get_host_capacity(site_name),
                      "Address":  self.get_location_postal(site_name),
                      "Location":  self.get_location_lat_long(site_name),
                  
-                     "Basic NIC Available":   f"{self.get_component_available(site_name,'SharedNIC-ConnectX-6')}",
-                     "Basic NIC Total":       f"{self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')}",
-                     "Basic NIC Allocated":   f"{self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')-self.get_component_available(site_name,'SharedNIC-ConnectX-6')}",
+                     "Basic NIC Available":   self.get_component_available(site_name,'SharedNIC-ConnectX-6'),
+                     "Basic NIC Total":       self.get_component_capacity(site_name,'SharedNIC-ConnectX-6'),
+                     "Basic NIC Allocated":   self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')-self.get_component_available(site_name,'SharedNIC-ConnectX-6'),
 
-                     "ConnectX-6 Available":    f"{self.get_component_available(site_name,'SmartNIC-ConnectX-6')}",
-                     "ConnectX-6 Total":        f"{self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')}",
-                     "ConnectX-6 Allocated":    f"{self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')-self.get_component_available(site_name,'SmartNIC-ConnectX-6')}",
+                     "ConnectX-6 Available":    self.get_component_available(site_name,'SmartNIC-ConnectX-6'),
+                     "ConnectX-6 Total":        self.get_component_capacity(site_name,'SmartNIC-ConnectX-6'),
+                     "ConnectX-6 Allocated":    self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')-self.get_component_available(site_name,'SmartNIC-ConnectX-6'),
 
-                     "ConnectX-5 Available":     f"{self.get_component_available(site_name,'SmartNIC-ConnectX-5')}",
-                     "ConnectX-5 Total":         f"{self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')}",
-                     "ConnectX-5 Allocated":     f"{self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')-self.get_component_available(site_name,'SmartNIC-ConnectX-5')}",
+                     "ConnectX-5 Available":     self.get_component_available(site_name,'SmartNIC-ConnectX-5'),
+                     "ConnectX-5 Total":         self.get_component_capacity(site_name,'SmartNIC-ConnectX-5'),
+                     "ConnectX-5 Allocated":     self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')-self.get_component_available(site_name,'SmartNIC-ConnectX-5'),
 
-                     "NVMe Available":   f"{self.get_component_available(site_name,'NVME-P4510')}",
-                     "NVMe Total":       f"{self.get_component_capacity(site_name,'NVME-P4510')}",
-                     "NVMe Allocated":   f"{self.get_component_capacity(site_name,'NVME-P4510')-self.get_component_available(site_name,'NVME-P4510')}",
+                     "NVMe Available":   self.get_component_available(site_name,'NVME-P4510'),
+                     "NVMe Total":       self.get_component_capacity(site_name,'NVME-P4510'),
+                     "NVMe Allocated":   self.get_component_capacity(site_name,'NVME-P4510')-self.get_component_available(site_name,'NVME-P4510'),
 
-                     "Tesla T4 Available":   f"{self.get_component_available(site_name,'GPU-Tesla T4')}",
-                     "Tesla T4 Total":       f"{self.get_component_capacity(site_name,'GPU-Tesla T4')}",
-                     "Tesla T4 Allocated":   f"{self.get_component_capacity(site_name,'GPU-Tesla T4')-self.get_component_available(site_name,'GPU-Tesla T4')}",
+                     "Tesla T4 Available":   self.get_component_available(site_name,'GPU-Tesla T4'),
+                     "Tesla T4 Total":       self.get_component_capacity(site_name,'GPU-Tesla T4'),
+                     "Tesla T4 Allocated":   self.get_component_capacity(site_name,'GPU-Tesla T4')-self.get_component_available(site_name,'GPU-Tesla T4'),
 
-                     "RTX6000 Available":  f"{self.get_component_available(site_name,'GPU-RTX6000')}",
-                     "RTX6000 Total":      f"{self.get_component_capacity(site_name,'GPU-RTX6000')}",
-                     "RTX6000 Allocated":  f"{self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000')}",
+                     "RTX6000 Available":  self.get_component_available(site_name,'GPU-RTX6000'),
+                     "RTX6000 Total":      self.get_component_capacity(site_name,'GPU-RTX6000'),
+                     "RTX6000 Allocated":  self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000'),
 
                 }
     
