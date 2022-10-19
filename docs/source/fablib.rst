@@ -13,7 +13,7 @@
 
    .. automethod:: get_log_level
 
-   .. automethod:: get_log_file
+   .. automethod:: set_log_file
 
    .. automethod:: get_log_file
 
@@ -22,6 +22,8 @@
    .. automethod:: get_site_names
 
    .. automethod:: list_sites
+
+   .. automethod:: show_config
 
    .. automethod:: show_site
 
@@ -59,13 +61,17 @@
 
    .. automethod:: get_bastion_private_ipv6_addr
 
-   .. automethod:: set_slice_manager
-
    .. automethod:: get_slice_manager
 
    .. automethod:: new_slice
 
    .. automethod:: get_available_resources
+
+   .. automethod:: get_fim_slices
+
+   .. automethod:: list_slices
+
+   .. automethod:: show_slice
 
    .. automethod:: get_slices
 
@@ -75,7 +81,6 @@
 
    .. automethod:: delete_all
 
-   .. automethod:: get_log_level
 
 .. automodule:: slice
 

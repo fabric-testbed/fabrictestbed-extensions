@@ -205,10 +205,13 @@ class Node:
                                                 list_filter=list_filter)
         
     
-    def list_interfaces(self, fields=None, output=None, quiet=False, list_filter=[]):
+    def list_interfaces(self, fields=None, output=None, quiet=False, list_filter=None):
         
-        list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
-        
+        #list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
+        name_filter = lambda s: s['Name'] == self.get_name()
+        if list_filter != None:
+            list_filter = lambda x: list_filter(x) + name_filter(x)
+
         return self.get_slice().list_interfaces(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
