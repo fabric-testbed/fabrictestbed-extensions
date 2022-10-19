@@ -863,7 +863,7 @@ class FablibManager:
                    output: str = None,
                    fields: str = None,
                    quiet: bool = False,
-                   filter_function = None) -> object:
+                   filter_function=None) -> object:
         """
         Lists all the sites and their attributes.
 
@@ -896,7 +896,8 @@ class FablibManager:
         :rtype: Object
         """
 
-        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, filter_function=filter_function)
+        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet,
+                                               filter_function=filter_function)
 
     def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False):
         """
@@ -1489,7 +1490,6 @@ class FablibManager:
                 if progress: print(f", Success!")
             except Exception as e:
                 if progress: print(f", Failed!")
-
 
     def is_jupyter_notebook(self) -> bool:
         """
