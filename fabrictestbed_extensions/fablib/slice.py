@@ -104,7 +104,7 @@ class Slice:
 
         The slice topology can be saved before the original request has been submitted
         or after. If the slice is saved after it is instantiated, only the topology is
-        save.  Any configuration of nodes is not included.
+        saved.  Any configuration of nodes is not included.
 
         :param filename: path to the file to save the slice.
         :type filename: String
@@ -127,11 +127,10 @@ class Slice:
         self.get_fim_topology().load(file_name=filename)
 
     def list_interfaces(self, 
-                        output=None, 
-                        fields=None, 
-                        colors=False, 
-                        quiet=False, 
-                        list_filter=None):
+                        output: str = None,
+                        fields: List[str] = None,
+                        quiet: bool = False,
+                        filter_function = None):
         """
         Creates a tabulated string describing all interfaces in the slice.
 
@@ -200,7 +199,7 @@ class Slice:
                         fields=fields,
                         title='Interfaces',
                         output=output,
-                        quiet=quiet, list_filter=list_filter)
+                        quiet=quiet, filter_function=filter_function)
         
         return table
         
@@ -1389,7 +1388,7 @@ class Slice:
                       fields=None, 
                       colors=False, 
                       quiet=False, 
-                      list_filter=None):
+                      filter_function=None):
         """
         Creates a tabulated string describing all networks in the slice.
 
@@ -1456,7 +1455,7 @@ class Slice:
                         fields=fields,
                         title='Networks',
                         output=output,
-                        quiet=True, list_filter=list_filter)
+                        quiet=True, filter_function=filter_function)
         
         if colors:
             #table = table.apply(highlight, axis=1)
@@ -1471,7 +1470,7 @@ class Slice:
         
         return table
     
-    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, list_filter=None):
+    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, filter_function=None):
         """
         Creates a tabulated string describing all nodes in the slice.
 
@@ -1525,7 +1524,7 @@ class Slice:
                         fields=fields,
                         title='Nodes',
                         output=output,
-                        quiet=True, list_filter=list_filter)
+                        quiet=True, filter_function=filter_function)
         
         if colors:
             #table = table.apply(highlight, axis=1)

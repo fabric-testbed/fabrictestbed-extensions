@@ -515,7 +515,6 @@ class Resources:
                      #"Address",
                      #"Location",
                      
-                     "Cores Available",
                      #"Cores Capacity",
                      #"Cores Allocated",
                      

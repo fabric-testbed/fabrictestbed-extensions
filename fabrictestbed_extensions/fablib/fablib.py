@@ -863,7 +863,7 @@ class FablibManager:
                    output: str = None,
                    fields: str = None,
                    quiet: bool = False,
-                   list_filter: list[tuple] = []) -> object:
+                   filter_function = None) -> object:
         """
         Lists all the sites and their attributes.
 
@@ -880,9 +880,9 @@ class FablibManager:
 
         Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
 
-        list_filter:  A lambda function to filter data by field values.
+        filter_function:  A lambda function to filter data by field values.
 
-        Example: list_filter=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
 
         :param output: output format
         :type output: str
@@ -890,13 +890,13 @@ class FablibManager:
         :type fields: List[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param list_filter: lambda function
-        :type list_filter: lambda
+        :param filter_function: lambda function
+        :type filter_function: lambda
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
-        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, list_filter=list_filter)
+        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, filter_function=filter_function)
 
     def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False):
         """
@@ -1305,7 +1305,7 @@ class FablibManager:
                     output=None,
                     fields=None,
                     quiet=False,
-                    list_filter=None):
+                    filter_function=None):
         """
         Lists all the slices created by a user.
 
@@ -1322,9 +1322,9 @@ class FablibManager:
 
         Example: fields=['Name','State']
 
-        list_filter:  A lambda function to filter data by field values.
+        filter_function:  A lambda function to filter data by field values.
 
-        Example: list_filter=lambda s: s['State'] == 'Configuring'
+        Example: filter_function=lambda s: s['State'] == 'Configuring'
 
         :param excludes: slice status to exclude
         :type excludes: list[slice.state]
@@ -1334,8 +1334,8 @@ class FablibManager:
         :type fields: List[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param list_filter: lambda function
-        :type list_filter: lambda
+        :param filter_function: lambda function
+        :type filter_function: lambda
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -1357,7 +1357,7 @@ class FablibManager:
                                title='Slices',
                                output=output,
                                quiet=quiet,
-                               list_filter=list_filter
+                               filter_function=filter_function
                                )
 
     def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False):
@@ -1685,10 +1685,10 @@ class FablibManager:
                    title_font_size='1.25em',
                    output=None,
                    quiet=False,
-                   list_filter=None):
+                   filter_function=None):
 
-        if list_filter:
-            data = list(filter(list_filter, data))
+        if filter_function:
+            data = list(filter(filter_function, data))
 
         if output == None:
             output = self.output.lower()

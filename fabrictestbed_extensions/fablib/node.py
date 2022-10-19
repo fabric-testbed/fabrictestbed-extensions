@@ -196,36 +196,42 @@ class Node:
                         output=output, 
                         quiet=quiet)
         
-    def list_components(self, fields=None, output=None, quiet=False, list_filter=None):
-        list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
+    def list_components(self, fields=None, output=None, quiet=False, filter_function=None):
+        #filter_function = filter_function + [ ('Node',self.get_name(),'==') ]
+        name_filter = lambda s: s['Node'] == self.get_name()
+        if filter_function != None:
+            filter_function = lambda x: filter_function(x) + name_filter(x)
         
         return self.get_slice().list_components(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
-                                                list_filter=list_filter)
+                                                filter_function=filter_function)
         
     
-    def list_interfaces(self, fields=None, output=None, quiet=False, list_filter=None):
+    def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None):
         
-        #list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
-        name_filter = lambda s: s['Name'] == self.get_name()
-        if list_filter != None:
-            list_filter = lambda x: list_filter(x) + name_filter(x)
+        #filter_function = filter_function + [ ('Node',self.get_name(),'==') ]
+        name_filter = lambda s: s['Node'] == self.get_name()
+        if filter_function != None:
+            filter_function = lambda x: filter_function(x) + name_filter(x)
 
         return self.get_slice().list_interfaces(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
-                                                list_filter=list_filter)
+                                                filter_function=filter_function)
         
     
-    def list_networks(self, fields=None, output=None, quiet=False, list_filter=None):
+    def list_networks(self, fields=None, output=None, quiet=False, filter_function=None):
         
-        list_filter = list_filter + [ ('Node',self.get_name(),'==') ]
-        
+        #filter_function = filter_function + [ ('Node',self.get_name(),'==') ]
+        name_filter = lambda s: s['Node'] == self.get_name()
+        if filter_function != None:
+            filter_function = lambda x: filter_function(x) + name_filter(x)
+
         return self.get_slice().list_networks(fields=fields, 
-                                                output=output, 
+                                                output=output,
                                                 quiet=quiet, 
-                                                list_filter=list_filter)
+                                                filter_function=filter_function)
         
     def get_fim_node(self) -> FimNode:
         """
@@ -1521,7 +1527,7 @@ class Node:
 
             return addrs   
         except Exception as e:
-            ogging.warning(f"Exception: {e}")
+            logging.warning(f"Exception: {e}")
             
 
             
