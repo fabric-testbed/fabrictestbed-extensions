@@ -134,7 +134,7 @@ class Resources:
 
     def get_topology_site(self, site_name: str) -> str:
         """
-        Note intended as an API call
+        Not recommended for most users.
         """
         try:
             return self.topology.sites[site_name]

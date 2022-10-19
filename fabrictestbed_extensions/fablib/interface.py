@@ -26,6 +26,7 @@ from __future__ import annotations
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
+import json
 
 import logging
 
@@ -84,8 +85,23 @@ class Interface:
                     ]
 
         return tabulate(table)
-    
+
     def toJson(self):
+        """
+        Returns the interface attributes as a json string
+
+        :return: slice attributes as json string
+        :rtype: str
+        """
+        return json.dumps(self.toDict(), indent=4)
+
+    def toDict(self):
+        """
+        Returns the interface attributes as a dictionary
+
+        :return: slice attributes as dictionary
+        :rtype: dict
+        """
         if self.get_network():
             logging.info(f"Getting results from get network name thread for iface {self.get_name()} ")
             network_name = self.get_network().get_name()
@@ -107,8 +123,37 @@ class Interface:
                   "Physical Device": self.get_physical_os_interface_name(),
                   "Device": self.get_os_interface(),
                  }
+
+
+
     def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
+        """
+        Show a table containing the current interface attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['Name','MAC']
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param colors: True to specify state colors for pandas output
+        :type colors: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        data = self.toDict()
     
         fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
                 "MAC", "Device"
@@ -140,8 +185,33 @@ class Interface:
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
+
+    def get_device_name(self) -> str:
+        """
+         Gets a name of the device name on the node
+
+         If the interface requires a FABRIC VLAN tag, the interface name returned
+         will be the VLAN tagged interface name.
+
+         :return: OS interface name
+         :rtype: String
+         """
+        try:
+            # logging.debug(f"iface: {self}")
+            os_iface = self.get_physical_os_interface_name()
+            vlan = self.get_vlan()
+
+            if vlan is not None:
+                os_iface = f"{os_iface}.{vlan}"
+        except:
+            os_iface = None
+
+        return os_iface
+
     def get_os_interface(self) -> str:
         """
+        Deprecated: see interface.get_device_name()
+
         Gets a name of the interface the operating system uses for this
         FABLib interface.
 
@@ -165,7 +235,7 @@ class Interface:
 
     def get_mac(self) -> str:
         """
-        Gets the MAC addrress of the interface.
+        Gets the MAC address of the interface.
 
         :return: MAC address
         :rtype: String
@@ -310,7 +380,13 @@ class Interface:
 
     def get_fim_interface(self) -> FimInterface:
         """
-        Not intended for API use
+        Not recommended for most users.
+
+        Gets the node's FABRIC Information Model (fim) object. This method
+        is used to access data at a lower level than FABlib.
+
+        :return: the FABRIC model node
+        :rtype: fim interface
         """
         return self.fim_interface
 
@@ -322,7 +398,10 @@ class Interface:
         :return: bandwith
         :rtype: String
         """
-        return self.get_fim_interface().capacities.bw
+        if self.get_component().get_model() == 'NIC_Basic':
+            return 100
+        else:
+            return self.get_fim_interface().capacities.bw
 
     def get_vlan(self) -> str:
         """
@@ -446,6 +525,12 @@ class Interface:
     
     # fablib.Interface.get_ip_link()
     def get_ip_link(self):
+        """
+        Gets the ip link info for this interface.
+
+        :return ip link info
+        :rtype: str
+        """
         try:
             stdout, stderr = self.get_node().execute('ip -j link list')
 
@@ -464,6 +549,12 @@ class Interface:
 
     # fablib.Interface.get_ip_addr()
     def get_ip_addr(self):
+        """
+        Gets the ip addr info for this interface.
+
+        :return ip addr info
+        :rtype: str
+        """
         try:
             stdout, stderr = self.get_node().execute('ip -j addr list')
 
@@ -486,6 +577,12 @@ class Interface:
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):
+        """
+        Gets a list of ips assigned to this interface.
+
+        :return list of ips
+        :rtype: list[str]
+        """
         return_ips = []
         try:
             dev = self.get_os_interface()

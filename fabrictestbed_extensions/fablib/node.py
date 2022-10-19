@@ -164,8 +164,24 @@ class Node:
         :rtype: Node
         """
         return Node(slice, node)
-    
+
     def toJson(self):
+        """
+        Returns the node attributes as a json string
+
+        :return: slice attributes as json string
+        :rtype: str
+        """
+        return json.dumps(self.toDict(), indent=4)
+
+
+    def toDict(self):
+        """
+        Returns the node attributes as a dictionary
+
+        :return: slice attributes as dictionary
+        :rtype: dict
+        """
         return { "ID":  self.get_reservation_id(),
                 "Name": self.get_name(),
                 "Cores": self.get_cores(),
@@ -182,25 +198,113 @@ class Node:
                 }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
-        
-        fields = ["ID", "Name", "Cores", "RAM", "Disk",
-                "Image", "Image Type","Host", "Site",
-                "Management IP", "State", 
-                "Error","SSH Command "
-                 ]
-        
-        node_table = self.get_fablib_manager().show_table(data, 
-                        fields=fields,
-                        title='Node', 
-                        output=output, 
-                        quiet=quiet)
+        """
+        Show a table containing the current node attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['Name','State']
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param colors: True to specify state colors for pandas output
+        :type colors: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        data = self.toDict()
+
+        if fields == None:
+            fields = ["ID", "Name", "Cores", "RAM", "Disk",
+                    "Image", "Image Type","Host", "Site",
+                    "Management IP", "State",
+                    "Error","SSH Command "
+                     ]
+
+        def state_color(val):
+            if val == 'Active':
+                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
+            elif val == 'Configuring':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            elif val == 'Closed':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            else:
+                color = ''
+            return 'background-color: %s' % color
+
+        if colors and self.get_fablib_manager().is_jupyter_notebook():
+
+            table = self.get_fablib_manager().show_table(data,
+                                                               fields=fields,
+                                                               title='Node',
+                                                               output='pandas',
+                                                               quiet=True)
+            table.applymap(state_color)
+
+            if quiet == False:
+                display(table)
+        else:
+            table = self.get_fablib_manager().show_table(data,
+                            fields=fields,
+                            title='Node',
+                            output=output,
+                            quiet=quiet)
+
+        return table
         
     def list_components(self, fields=None, output=None, quiet=False, filter_function=None):
-        #filter_function = filter_function + [ ('Node',self.get_name(),'==') ]
-        name_filter = lambda s: s['Node'] == self.get_name()
+        """
+        Lists all the components in the node with their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','Model']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Model'] == 'NIC_Basic'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        components = []
+        for component in self.get_components():
+            components.append(component.get_name())
+
+
+        name_filter = lambda s: s['Name'] in set(components)
         if filter_function != None:
             filter_function = lambda x: filter_function(x) + name_filter(x)
+        else:
+            filter_function = name_filter
         
         return self.get_slice().list_components(fields=fields, 
                                                 output=output, 
@@ -209,11 +313,45 @@ class Node:
         
     
     def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None):
-        
-        #filter_function = filter_function + [ ('Node',self.get_name(),'==') ]
-        name_filter = lambda s: s['Node'] == self.get_name()
+        """
+        Lists all the interfaces in the node with their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','MAC']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Node'] == 'Node1'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        ifaces = []
+        for iface in self.get_interfaces():
+            ifaces.append(iface.get_name())
+
+        name_filter = lambda s: s['Name'] in set(ifaces)
         if filter_function != None:
             filter_function = lambda x: filter_function(x) + name_filter(x)
+        else:
+            filter_function = name_filter
 
         return self.get_slice().list_interfaces(fields=fields, 
                                                 output=output, 
@@ -222,11 +360,46 @@ class Node:
         
     
     def list_networks(self, fields=None, output=None, quiet=False, filter_function=None):
-        
-        #filter_function = filter_function + [ ('Node',self.get_name(),'==') ]
-        name_filter = lambda s: s['Node'] == self.get_name()
+        """
+        Lists all the networks attached to  the nodes with their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','Type']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Type'] == 'FABNetv4'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+
+        networks = []
+        for iface in self.get_interfaces():
+            networks.append(iface.get_network().get_name())
+
+        name_filter = lambda s: s['Name'] in set(networks)
         if filter_function != None:
             filter_function = lambda x: filter_function(x) + name_filter(x)
+        else:
+            filter_function = name_filter
 
         return self.get_slice().list_networks(fields=fields, 
                                                 output=output,
@@ -235,9 +408,12 @@ class Node:
         
     def get_fim_node(self) -> FimNode:
         """
-        Not intended for API call.
-        Gets the FABRIC node associated with this fablib node.
-        :return: the real FABRIC node
+        Not recommended for most users.
+
+        Gets the node's FABRIC Information Model (fim) object. This method
+        is used to access data at a lower level than FABlib.
+
+        :return: the FABRIC model node
         :rtype: FIMNode
         """
         return self.fim_node
@@ -683,12 +859,21 @@ class Node:
         """
         Creates a thread that calls node.execute().  Results (i.e. stdout, stderr) from the thread can be
         retrieved with by calling thread.result()
+
         :param command: the command to run
+        :type command: str
         :param retry: the number of times to retry SSH upon failure
+        :type retry: int
         :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+        :type retry_interval: int
         :param username: username
-        :param private_key_file: private key file
+        :type username: str
+        :param private_key_file: path to private key file
+        :type private_key_file: str
         :param private_key_passphrase: pass phrase
+        :type private_key_passphrase: str
+        :param output_file: path to a file where the stdout/stderr will be written. None for no file output
+        :type output_file: List[str]
         :return: a thread that called node.execute()
         :raise Exception: if management IP is invalid
         """
@@ -715,12 +900,24 @@ class Node:
                       output_file=None):
         """
         Runs a command on the FABRIC node.
+
+        The function uses paramiko to ssh to the FABRIC node and execute an arbitrary shell command.
+
+
         :param command: the command to run
         :type command: str
         :param retry: the number of times to retry SSH upon failure
         :type retry: int
         :param retry_interval: the number of seconds to wait before retrying SSH upon failure
         :type retry_interval: int
+        :param username: username
+        :type username: str
+        :param private_key_file: path to private key file
+        :type private_key_file: str
+        :param private_key_passphrase: pass phrase
+        :type private_key_passphrase: str
+        :param output_file: path to a file where the stdout/stderr will be written. None for no file output
+        :type output_file: List[str]
         :param chunking: enable reading stdout and stderr in real-time with chunks
         :type chunking: bool
         :param output: print stdout and stderr to the screen
@@ -907,124 +1104,6 @@ class Node:
                 #Fail, try again
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
-                    logging.debug(e, exc_info=True)
-
-                time.sleep(retry_interval)
-                pass
-
-        raise Exception("ssh failed: Should not get here")
-
-
-
-
-
-    def execute_old(self, command: str, retry: int = 3, retry_interval: int = 10, username: str = None,
-                private_key_file:str = None, private_key_passphrase:str = None) -> Tuple[str, str]:
-        """
-        Runs a command on the FABRIC node.
-        :param command: the command to run
-        :type command: str
-        :param retry: the number of times to retry SSH upon failure
-        :type retry: int
-        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
-        :type retry_interval: int
-        :param username
-        :param private_key_file
-        :param private_key_passphrase
-        :return: a tuple of  (stdout[Sting],stderr[String])
-        :rtype: Tuple
-        :raise Exception: if management IP is invalid
-        """
-        import logging
-
-        logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
-
-        if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-            start = time.time()
-
-        # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-        if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = ('0.0.0.0', 22)
-
-        elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = ('0:0:0:0:0:0:0:0', 22)
-        else:
-            raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
-        dest_addr = (management_ip, 22)
-
-        bastion_username = self.get_fablib_manager().get_bastion_username()
-        bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
-
-        if username is not None:
-            node_username = username
-        else:
-            node_username = self.username
-
-        if private_key_file is not None:
-            node_key_file = private_key_file
-        else:
-            node_key_file = self.get_private_key_file()
-
-        if private_key_passphrase is not None:
-            node_key_passphrase = private_key_passphrase
-        else:
-            node_key_passphrase=self.get_private_key_passphrase()
-
-        for attempt in range(int(retry)):
-            try:
-                key = self.get_paramiko_key(private_key_file=node_key_file,
-                                              get_private_key_passphrase=node_key_passphrase)
-                bastion=paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=bastion_username,
-                                key_filename=bastion_key_file)
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
-
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-                client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
-
-                stdin, stdout, stderr = client.exec_command(command)
-                rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
-                rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-
-                client.close()
-                bastion_channel.close()
-
-                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-                    end = time.time()
-                    logging.debug(f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds")
-
-                logging.debug(f"rtn_stdout: {rtn_stdout}")
-                logging.debug(f"rtn_stderr: {rtn_stderr}")
-
-                return rtn_stdout, rtn_stderr
-                #success, skip other tries
-                break
-            except Exception as e:
-                try:
-                    client.close()
-                except:
-                    logging.debug("Exception in client.close")
-                    pass
-                try:
-                    bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
-                    pass
-
-
-                if attempt+1 == retry:
-                    raise e
-
-                #Fail, try again
-                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-                    logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, "
-                                  f"Node: {self.get_name()}, trying again")
                     logging.debug(e, exc_info=True)
 
                 time.sleep(retry_interval)
@@ -1466,50 +1545,33 @@ class Node:
             raise e
 
     def network_manager_stop(self):
+        """
+        Stop network manager on the node.
+        """
         try:
-            # for iface in self.get_interfaces():
-            #     dev = iface.get_os_interface()
-            #     if dev != None:
-            #         logging.info(f"nmcli delete con for {dev}")
-            #         logging.info(f"sudo nmcli -t -g GENERAL.CONNECTION device show {dev}")
-            #         stdout, stderr = self.execute(f"sudo nmcli -t -g GENERAL.CONNECTION device show {dev}")
-            #         logging.info(f"stdout: {stdout}, stderr: {stderr}")
-            #
-            #         conn = stdout.rstrip('\n')
-            #         if conn != '':
-            #             logging.info(f"sudo nmcli conn delete '{conn}'")
-            #             stdout, stderr = self.execute(f"sudo nmcli conn delete '{conn}'")
-            #             logging.info(f"stdout: {stdout}, stderr: {stderr}")
-            #         else:
-            #             logging.info(f"No conn for device. conn: '{conn}'")
-
             stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager")
             logging.info(f"Stopped NetworkManager with 'sudo systemctl stop "
                          f"NetworkManager': stdout: {stdout}\nstderr: {stderr}")
-
-            #for iface in self.get_interfaces():
-            #    try:
-            #        iface.ip_link_down()
-            #    except Exception as e:
-            #        logging.info(f"Attempt to bring down dev failed")
-            #
-            #    try:
-            #        iface.ip_link_up()
-            #    except Exception as e:
-            #        logging.info(f"Attempt to bring up dev failed")
         except Exception as e:
             logging.warning(f"Failed to stop network manager: {e}")
             raise e
 
     def network_manager_start(self):
+        """
+        (re)Start network manager on the node.
+        """
         try:
-            stdout, stderr = self.execute(f"sudo systemctl start NetworkManager")
+            stdout, stderr = self.execute(f"sudo systemctl restart NetworkManager")
             logging.info(f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}")
         except Exception as e:
             logging.warning(f"Failed to start network manager: {e}")
             raise e
 
     def get_ip_routes(self):
+
+        """
+        Get a list of routes from the node.
+        """
         try:
             stdout, stderr = self.execute('ip -j route list')
             return json.loads(stdout)
@@ -1520,6 +1582,9 @@ class Node:
 
     # fablib.Node.get_ip_addrs()
     def get_ip_addrs(self):
+        """
+        Get a list of ip address info from the node.
+        """
         try:
             stdout, stderr = self.execute('ip -j addr list')
 

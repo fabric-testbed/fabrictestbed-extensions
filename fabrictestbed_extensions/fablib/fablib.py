@@ -31,6 +31,8 @@ from concurrent.futures import ThreadPoolExecutor
 from IPython import get_ipython
 
 from typing import List, Dict
+import json
+
 
 from typing import TYPE_CHECKING
 
@@ -873,8 +875,6 @@ class FablibManager:
         output:  'text': string formatted with tabular
                   'pandas': pandas dataframe
                   'json': string in json format
-                  'default': 'text'
-                  'default_jupyter': 'pandas'
 
         fields: json output will include all available fields/columns.
 
@@ -909,8 +909,6 @@ class FablibManager:
         output:  'text': string formatted with tabular
                   'pandas': pandas dataframe
                   'json': string in json format
-                  'default': 'text'
-                  'default_jupyter': 'pandas'
 
         fields: json output will include all available fields.
 
@@ -941,8 +939,6 @@ class FablibManager:
         output:  'text': string formatted with tabular
                   'pandas': pandas dataframe
                   'json': string in json format
-                  'default': 'text'
-                  'default_jupyter': 'pandas'
 
         fields: json output will include all available fields.
 
@@ -1316,8 +1312,6 @@ class FablibManager:
         output:  'text': string formatted with tabular
                   'pandas': pandas dataframe
                   'json': string in json format
-                  'default': 'text'
-                  'default_jupyter': 'pandas'
 
         fields: json output will include all available fields/columns.
 
@@ -1371,8 +1365,6 @@ class FablibManager:
         output:  'text': string formatted with tabular
                   'pandas': pandas dataframe
                   'json': string in json format
-                  'default': 'text'
-                  'default_jupyter': 'pandas'
 
         fields: json output will include all available fields.
 
@@ -1695,11 +1687,11 @@ class FablibManager:
 
         table = self.create_list_table(data, fields=fields)
 
-        if (output == 'default' or output == 'text'):
+        if output == 'text':
             return self.list_table_text(table, headers=fields, quiet=quiet)
-        elif (output == 'json'):
+        elif output == 'json':
             return self.list_table_json(data, quiet=quiet)
-        elif (output == 'default_jupyter' or output == 'pandas'):
+        elif output == 'pandas':
             return self.list_table_jupyter(table,
                                            headers=fields,
                                            title=title,

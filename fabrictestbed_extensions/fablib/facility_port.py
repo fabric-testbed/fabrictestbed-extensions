@@ -24,6 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 from tabulate import tabulate
+import json
 
 from fabrictestbed.slice_editor import Labels, Capacities
 from fabrictestbed_extensions.fablib.interface import Interface
@@ -61,13 +62,16 @@ class FacilityPort:
         table = [["name", self.get_name()]]
 
         return tabulate(table)
-    
+
     def toJson(self):
+        return json.dumps(self.toDict(), indent=4)
+
+    def toDict(self):
         return {     "Name": self.get_name()
                 }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
+        data = self.toDict()
     
         fields = ["Name",
                  ]

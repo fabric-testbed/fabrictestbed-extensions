@@ -95,11 +95,19 @@
 
   .. automethod:: load
 
+  .. automethod:: show
+
   .. automethod:: list_nodes
 
   .. automethod:: list_interfaces
 
+  .. automethod:: list_components
+
   .. automethod:: new_slice
+
+  .. automethod:: toJson
+
+  .. automethod:: toDict
 
   .. automethod:: get_fim_topology
 
@@ -123,9 +131,15 @@
 
   .. automethod:: get_lease_end
 
+  .. automethod:: get_lease_start
+
+  .. automethod:: get_project_id
+
   .. automethod:: add_l2network
 
   .. automethod:: add_l3network
+
+  .. automethod:: add_facility_port
 
   .. automethod:: add_node
 
@@ -157,8 +171,6 @@
 
   .. automethod:: get_l3network
 
-  .. automethod:: add_facility_port
-
   .. automethod:: delete
 
   .. automethod:: renew
@@ -171,7 +183,13 @@
 
   .. automethod:: post_boot_config
 
+  .. automethod:: wait_jupyter
+
   .. automethod:: submit
+
+  .. automethod:: list_networks
+
+  .. automethod:: list_nodes
 
 
 ``Node``
@@ -183,6 +201,20 @@
 
  .. automethod:: __str__
 
+ .. automethod:: toJson
+
+ .. automethod:: toDict
+
+ .. automethod:: show
+
+ .. automethod:: list_components
+
+ .. automethod:: list_interfaces
+
+ .. automethod:: list_networks
+
+ .. automethod:: get_fim_node
+
  .. automethod:: set_capacities
 
  .. automethod:: set_instance_type
@@ -190,6 +222,8 @@
  .. automethod:: set_image
 
  .. automethod:: set_host
+
+ .. automethod:: set_site
 
  .. automethod:: get_slice
 
@@ -214,6 +248,8 @@
  .. automethod:: get_reservation_id
 
  .. automethod:: get_reservation_state
+
+ .. automethod:: get_error_message
 
  .. automethod:: get_interfaces
 
@@ -281,6 +317,14 @@
 
  .. automethod:: ip_link_down
 
+ .. automethod:: network_manager_stop
+
+ .. automethod:: network_manager_start
+
+ .. automethod:: get_ip_routes
+
+ .. automethod:: get_ip_addrs
+
  .. automethod:: clear_all_ifaces
 
  .. automethod:: remove_all_vlan_os_interfaces
@@ -290,6 +334,10 @@
  .. automethod:: add_vlan_os_interface
 
  .. automethod:: ping_test
+
+ .. automethod:: get_storage
+
+ .. automethod:: add_storage
 
 
 .. automodule:: component
@@ -301,8 +349,16 @@
 
   .. automethod:: __str__
 
+  .. automethod:: toJson
+
+  .. automethod:: toDict
+
+  .. automethod:: show
+
+
   .. automethod:: list_interfaces
 
+  .. automethod:: get_fim_component
 
 
 
@@ -345,7 +401,15 @@
 
   .. automethod:: __str__
 
+  .. automethod:: toJson
+
+  .. automethod:: toDict
+
+  .. automethod:: show
+
   .. automethod:: get_mac
+
+  .. automethod:: get_device_name
 
   .. automethod:: get_os_interface
 
@@ -381,6 +445,12 @@
 
   .. automethod:: get_network
 
+  .. automethod:: get_ip_link
+
+  .. automethod::  get_ip_addr
+
+  .. automethod::  get_ips
+
 
 .. automodule:: network_service
 
@@ -391,6 +461,14 @@
 .. autoclass:: network_service.NetworkService
 
   .. automethod:: __str__
+
+  .. automethod:: toJson
+
+  .. automethod:: toDict
+
+  .. automethod:: show
+
+  .. automethod:: get_fim_network_service
 
   .. automethod:: get_slice
 

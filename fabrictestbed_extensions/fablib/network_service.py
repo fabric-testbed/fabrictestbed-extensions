@@ -38,6 +38,7 @@ from fabrictestbed.slice_editor import ServiceType, NetworkService as FimNetwork
 from fim.slivers.network_service import ServiceType, NSLayer
 
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
+import json
 
 
 class NetworkService:
@@ -422,8 +423,23 @@ class NetworkService:
             ]
 
         return tabulate(table) #, headers=["Property", "Value"])
-    
-    def toJson(self):    
+
+    def toJson(self):
+        """
+        Returns the network attributes as a json string
+
+        :return: network attributes as json string
+        :rtype: str
+        """
+        return json.dumps(self.toDict(), indent=4)
+
+    def toDict(self):
+        """
+        Returns the network attributes as a dictionary
+
+        :return: network attributes as dictionary
+        :rtype: dict
+        """
         return {    "ID": self.get_reservation_id(),
                     "Name": self.get_name(),
                     "Layer": self.get_layer(),
@@ -436,7 +452,33 @@ class NetworkService:
                 }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
+        """
+        Show a table containing the current network attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['Name','State']
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param colors: True to specify state colors for pandas output
+        :type colors: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        data = self.toDict()
         
         fields = ["ID", "Name", "Layer", "Type", "Site",
                 "Gateway", "Subnet","State", "Error",
@@ -501,7 +543,7 @@ class NetworkService:
 
     def get_fim_network_service(self) -> FimNetworkService:
         """
-        Not intended for API use
+        Not recommended for most users.
 
         Gets the FABRIC network service this instance represents.
 

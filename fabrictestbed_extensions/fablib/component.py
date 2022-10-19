@@ -24,6 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 from typing import TYPE_CHECKING
+import json
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -59,7 +60,7 @@ class Component:
         """
         table = [   [ "Name", self.get_name() ],
                     [ "Details", self.get_details() ],
-                    [ "Disk (G)", self.get_disk() ],
+                    [ "Disk", self.get_disk() ],
                     [ "Units", self.get_unit() ],
                     [ "PCI Address", self.get_pci_addr() ],
                     [ "Model", self.get_model() ],
@@ -70,11 +71,26 @@ class Component:
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
-    
+
     def toJson(self):
+        """
+        Returns the component attributes as a json string
+
+        :return: slice attributes as json string
+        :rtype: str
+        """
+        return json.dumps(self.toDict(), indent=4)
+    
+    def toDict(self):
+        """
+        Returns the component attributes as a dictionary
+
+        :return: slice attributes as dictionary
+        :rtype: dict
+        """
         return {     "Name": self.get_name(),
                      "Details": self.get_details(),
-                     "Disk (G)": self.get_disk(),
+                     "Disk": self.get_disk(),
                      "Units": self.get_unit(),
                      "PCI Address": self.get_pci_addr(),
                      "Model": self.get_model(),
@@ -82,9 +98,34 @@ class Component:
                 }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
+        """
+         Show a table containing the current component attributes.
+
+         There are several output options: "text", "pandas", and "json" that determine the format of the
+         output that is returned and (optionally) displayed/printed.
+
+         output:  'text': string formatted with tabular
+                   'pandas': pandas dataframe
+                   'json': string in json format
+
+         fields: json output will include all available fields.
+
+         Example: fields=['Name','PCI Address']
+
+         :param output: output format
+         :type output: str
+         :param fields: list of fields to show
+         :type fields: List[str]
+         :param quiet: True to specify printing/display
+         :type quiet: bool
+         :param colors: True to specify state colors for pandas output
+         :type colors: bool
+         :return: table in format specified by output parameter
+         :rtype: Object
+         """
+        data = self.toDict()
     
-        fields = ["Name", "Details", "Disk (G)", "Units", "PCI Address",
+        fields = ["Name", "Details", "Disk", "Units", "PCI Address",
                 "Model", "Type"
                  ]
     
@@ -97,31 +138,77 @@ class Component:
             
         return table
 
-    def list_interfaces(self) -> List[str]:
+    def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None):
         """
-        Creates a tabulated string describing all components in the slice.
+        Lists all the interfaces in the component with their attributes.
 
-        Intended for printing a list of all components.
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated srting of all components information
-        :rtype: String
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','MAC']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Node'] == 'Node1'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
-        table = []
+
+        ifaces = []
         for iface in self.get_interfaces():
-            network_name = ""
-            if iface.get_network():
-                network_name = iface.get_network().get_name()
+            ifaces.append(iface.get_name())
 
-            table.append( [     iface.get_name(),
-                                network_name,
-                                iface.get_bandwidth(),
-                                iface.get_vlan(),
-                                iface.get_mac(),
-                                iface.get_physical_os_interface_name(),
-                                iface.get_os_interface(),
-                                ] )
+        name_filter = lambda s: s['Name'] in set(ifaces)
+        if filter_function != None:
+            filter_function = lambda x: filter_function(x) + name_filter(x)
+        else:
+            filter_function = name_filter
 
-        return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
+        return self.get_slice().list_interfaces(fields=fields,
+                                                output=output,
+                                                quiet=quiet,
+                                                filter_function=filter_function)
+
+    # def list_interfaces(self) -> List[str]:
+    #     """
+    #     Creates a tabulated string describing all components in the slice.
+    #
+    #     Intended for printing a list of all components.
+    #
+    #     :return: Tabulated srting of all components information
+    #     :rtype: String
+    #     """
+    #     table = []
+    #     for iface in self.get_interfaces():
+    #         network_name = ""
+    #         if iface.get_network():
+    #             network_name = iface.get_network().get_name()
+    #
+    #         table.append( [     iface.get_name(),
+    #                             network_name,
+    #                             iface.get_bandwidth(),
+    #                             iface.get_vlan(),
+    #                             iface.get_mac(),
+    #                             iface.get_physical_os_interface_name(),
+    #                             iface.get_os_interface(),
+    #                             ] )
+    #
+    #     return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
 
     @staticmethod
     def calculate_name(node: Node = None, name: str = None) -> str:
@@ -185,9 +272,10 @@ class Component:
 
     def get_fim_component(self) -> FimComponent:
         """
-        Not intended for API use
+        Not recommended for most users.
 
-        Gets the FABRIC component this fablib component represents.
+        GGets the FABRIC component this fablib component represents. This method
+        is used to access data at a lower level than FABlib.
 
         :return: the FABRIC component on this component
         :rtype: FIMComponent
@@ -345,7 +433,7 @@ class Component:
         """
         Configure the NVMe drive.
 
-        Note this works but may be reorganzied. 
+        Note this works but may be reorganized.
 
         :param mount_point: The mount point in the filesystem. Default = /mnt/nvme_mount
         :type mount_point: String

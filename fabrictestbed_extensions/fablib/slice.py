@@ -30,6 +30,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
+import json
 
 
 from typing import TYPE_CHECKING
@@ -126,18 +127,157 @@ class Slice:
 
         self.get_fim_topology().load(file_name=filename)
 
+    def show(self, fields=None, output=None, quiet=False, colors=False):
+        """
+        Show a table containing the current slice attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['Name','State']
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param colors: True to specify state colors for pandas output
+        :type colors: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        data = self.toDict()
+
+        def state_color(val):
+            if val == 'StableOK':
+                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
+            elif val == 'ModifyOK':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            elif val == 'StableError':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            elif val == 'ModifyError':
+                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            elif val == 'Configuring':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            elif val == 'Modifying':
+                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            else:
+                color = ''
+            return 'background-color: %s' % color
+
+        if colors and self.get_fablib_manager().is_jupyter_notebook():
+
+            slice_table = self.get_fablib_manager().show_table(data,
+                                                               fields=fields,
+                                                               title='Slice',
+                                                               output='pandas',
+                                                               quiet=True)
+            slice_table.applymap(state_color)
+
+            if quiet == False:
+                display(slice_table)
+        else:
+            slice_table = self.get_fablib_manager().show_table(data,
+                                                               fields=fields,
+                                                               title='Slice',
+                                                               output=output,
+                                                               quiet=quiet)
+
+        return slice_table
+
+    def list_components(self,
+                        output: str = None,
+                        fields: List[str] = None,
+                        quiet: bool = False,
+                        filter_function=None):
+
+        """
+        Lists all the components in the slice with their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','Model']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Model'] == 'NIC_Basic'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+        table = []
+        for component in self.get_components():
+            table.append(component.toDict())
+
+        if fields == None:
+            fields = ["Name", "Details", "Disk",
+                      "Units", "PCI Address", "Model",
+                      "Type"]
+
+        table = self.get_fablib_manager().list_table(table,
+                                                     fields=fields,
+                                                     title='Components',
+                                                     output=output,
+                                                     quiet=quiet, filter_function=filter_function)
+
+        return table
+
     def list_interfaces(self, 
                         output: str = None,
                         fields: List[str] = None,
                         quiet: bool = False,
                         filter_function = None):
         """
-        Creates a tabulated string describing all interfaces in the slice.
+        Lists all the interfaces in the slice with their attributes.
 
-        Intended to print a list of all interfaces.
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated string of all interfaces
-        :rtype: String
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','Type', 'State']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Type'] == 'FABNetv4'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
         executor = ThreadPoolExecutor(64)
 
@@ -247,8 +387,24 @@ class Slice:
             logging.error(e, exc_info=True)
 
         return slice
-    
+
     def toJson(self):
+        """
+        Returns the slice attributes as a json string
+
+        :return: slice attributes as json string
+        :rtype: str
+        """
+        return json.dumps(self.toDict(), indent=4)
+
+
+    def toDict(self):
+        """
+        Returns the slice attributes as a dictionary
+
+        :return: slice attributes as dictionary
+        :rtype: dict
+        """
         return {  "ID": self.get_slice_id(),
                   "Name": self.get_name(),
                   "Lease Expiration (UTC)": self.get_lease_end(),
@@ -257,40 +413,7 @@ class Slice:
                   "State": self.get_state(),
                 }
     
-    def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
-        
-        def state_color(val):
-            if val == 'StableOK':
-                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
-            elif val == 'ModifyOK':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
-            elif val == 'StableError':
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
-            elif val == 'ModifyError':
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
-            elif val == 'Configuring':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
-            elif val == 'Modifying':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
-            else:
-                color = ''
-            #return 'color: %s' % color
-            return 'background-color: %s' % color
 
-        
-        slice_table = self.get_fablib_manager().show_table(data, 
-                        fields=fields,
-                        title='Slice', 
-                        output=output, 
-                        quiet=quiet)
-        #if colors:
-            #slice_table = slice_table.apply(highlight, axis=1)
-            #slice_table = slice_table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])  
-        slice_table.applymap(state_color)
-            
-            
-        return slice_table
             
         
     def get_fim_topology(self) -> ExperimentTopology:
@@ -307,7 +430,7 @@ class Slice:
 
     def update_slice(self):
         """
-        Note recommended for most users.  See Slice.update() method.
+        Not recommended for most users.  See Slice.update() method.
 
         Updates this slice manager slice to store the most up-to-date
         slice manager slice
@@ -380,7 +503,7 @@ class Slice:
 
     def update(self):
         """
-        Query the FABRIC services for updated information about this slice.
+        (re)Query the FABRIC services for updated information about this slice.
 
         :raises Exception: if updating topology fails
         """
@@ -488,10 +611,10 @@ class Slice:
 
     def get_state(self) -> str:
         """
-        Gets the slice state off of the slice manager slice.
+        Gets the slice state.
 
         :return: the slice state
-        :rtype: SliceState
+        :rtype: str
         """
         
         if self.sm_slice == None:
@@ -1156,38 +1279,38 @@ class Slice:
                 return False
         return True
 
-    def link(self):
-        for node in self.get_nodes():
-            if node.get_image() in ["rocky", "centos", "fedora"]:
-                node.execute("sudo yum install -y -qq docker")
-
-            if node.get_image() in ["ubuntu", "debian"]:
-                node.execute("sudo apt-get install -y -q docker.io")
-
-            ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
-            node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}")
-
-            interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
-            NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
-
-            try:
-                if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools")
-                if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools")
-            except Exception as e:
-                logging.error(f"Error installing docker on node {node.get_name()}")
-                logging.error(e, exc_info=True)
-
-            for iface in interfaces:
-                try:
-                        node.execute(f'sudo ip link set dev {iface} promisc on')
-                        node.execute(f'sudo ip link set {iface} netns {NSPID}')
-                        node.execute(f'docker exec Docker ip link set dev {iface} up')
-                        node.execute(f'docker exec Docker ip link set dev {iface} promisc on')
-                        node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1')
-                except Exception as e:
-                        logging.error(f"Interface: {iface} failed to link")
-                        logging.error("--> Try installing docker or docker.io on container <--")
-                        logging.error(e, exc_info=True)
+    # def link(self):
+    #     for node in self.get_nodes():
+    #         if node.get_image() in ["rocky", "centos", "fedora"]:
+    #             node.execute("sudo yum install -y -qq docker")
+    #
+    #         if node.get_image() in ["ubuntu", "debian"]:
+    #             node.execute("sudo apt-get install -y -q docker.io")
+    #
+    #         ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
+    #         node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}")
+    #
+    #         interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
+    #         NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
+    #
+    #         try:
+    #             if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools")
+    #             if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools")
+    #         except Exception as e:
+    #             logging.error(f"Error installing docker on node {node.get_name()}")
+    #             logging.error(e, exc_info=True)
+    #
+    #         for iface in interfaces:
+    #             try:
+    #                     node.execute(f'sudo ip link set dev {iface} promisc on')
+    #                     node.execute(f'sudo ip link set {iface} netns {NSPID}')
+    #                     node.execute(f'docker exec Docker ip link set dev {iface} up')
+    #                     node.execute(f'docker exec Docker ip link set dev {iface} promisc on')
+    #                     node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1')
+    #             except Exception as e:
+    #                     logging.error(f"Interface: {iface} failed to link")
+    #                     logging.error("--> Try installing docker or docker.io on container <--")
+    #                     logging.error(e, exc_info=True)
     
     def post_boot_config(self):
         """
@@ -1263,6 +1386,18 @@ class Slice:
         return True
         
     def wait_jupyter(self, timeout: int = 1800, interval: int = 10):
+        """
+        Waits for the slice to be in a stable and displays jupyter compliant tables of the slice progress.
+
+        :param timeout: how many seconds to wait on the slice
+        :type timeout: int
+        :param interval: how often in seconds to check on slice state
+        :type interval: int
+        :raises Exception: if the slice state is undesirable, or waiting times out
+        :return: the stable slice on the slice manager
+        :rtype: SMSlice
+        """
+
         from IPython.display import clear_output
         import time
 
@@ -1390,12 +1525,35 @@ class Slice:
                       quiet=False, 
                       filter_function=None):
         """
-        Creates a tabulated string describing all networks in the slice.
+        Lists all the networks in the slice.
 
-        Intended for printing a list of all networks.
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated srting of all networks information
-        :rtype: String
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','State']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['State'] == 'Active'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :param colors: True to add colors to the table when possible
+        :type colors: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
         
         def error_color(val):            
@@ -1472,12 +1630,35 @@ class Slice:
     
     def list_nodes(self, output=None, fields=None, colors=False, quiet=False, filter_function=None):
         """
-        Creates a tabulated string describing all nodes in the slice.
+        Lists all the nodes in the slice.
 
-        Intended for printing a list of all slices.
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated srting of all slices information
-        :rtype: String
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','State']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['State'] == 'Active'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :param colors: True to add colors to the table when possible
+        :type colors: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
         
         def error_color(val):            
@@ -1511,7 +1692,7 @@ class Slice:
         
         table = []
         for node in self.get_nodes():
-            table.append(node.toJson())
+            table.append(node.toDict())
     
         if fields == None:
             fields=["ID", "Name",  "Site",  "Host", 
