@@ -693,10 +693,10 @@ class FablibManager:
 
         self.set_log_file(log_file=self.log_file)
 
-        if self.log_file is not None and self.log_level is not None:
-            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                                datefmt='%H:%M:%S')
+        #if self.log_file is not None and self.log_level is not None:
+        #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+        #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+        #                        datefmt='%H:%M:%S')
 
         self.bastion_private_ipv4_addr = '0.0.0.0'
         self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
@@ -746,6 +746,12 @@ class FablibManager:
         except Exception as e:
             pass
 
+        try:
+            if self.log_file not os.path.isdir(os.path.dirname(self.log_file)):
+                os.makedirs(os.path.dirname(self.log_file))
+        except Exception as e:
+            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+
         if self.log_file and self.log_level:
             logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                                 format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
@@ -768,11 +774,7 @@ class FablibManager:
         :return log_file: new log level
         :rtype log_file: string
         """
-        try:
-            if not os.path.isdir(os.path.dirname(self.log_file)):
-                os.makedirs(os.path.dirname(self.log_file))
-        except Exception as e:
-            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+
 
 
         return self.log_file
