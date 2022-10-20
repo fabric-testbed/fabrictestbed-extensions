@@ -747,7 +747,7 @@ class FablibManager:
             pass
 
         try:
-            if self.log_file not os.path.isdir(os.path.dirname(self.log_file)):
+            if self.log_file and not os.path.isdir(os.path.dirname(self.log_file)):
                 os.makedirs(os.path.dirname(self.log_file))
         except Exception as e:
             logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
