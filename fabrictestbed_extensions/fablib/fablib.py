@@ -750,7 +750,8 @@ class FablibManager:
             if self.log_file and not os.path.isdir(os.path.dirname(self.log_file)):
                 os.makedirs(os.path.dirname(self.log_file))
         except Exception as e:
-            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+            pass
+            #logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
         if self.log_file and self.log_level:
             logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
@@ -792,7 +793,8 @@ class FablibManager:
             if not os.path.isdir(os.path.dirname(self.log_file)):
                 os.makedirs(os.path.dirname(self.log_file))
         except Exception as e:
-            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+            pass
+            #logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
         try:
             for handler in logging.root.handlers[:]:
