@@ -1694,6 +1694,9 @@ class FablibManager:
         if output == None:
             output = self.output.lower()
 
+        if fields == None:
+            fields = list(data[0].keys())
+
         table = self.create_list_table(data, fields=fields)
 
         if output == 'text':

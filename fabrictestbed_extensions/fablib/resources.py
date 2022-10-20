@@ -499,58 +499,55 @@ class Resources:
                      "RTX6000 Allocated":  self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000'),
 
                 }
-    
+
+    default_site_fields = ["Name",
+
+              "Hosts",
+              "CPUs",
+              # "Address",
+              # "Location",
+
+              # "Cores Capacity",
+              # "Cores Allocated",
+
+              "RAM Available",
+              # "RAM Capacity",
+              # "RAM Allocated",
+
+              "Disk Available",
+              # "Disk Capacity",
+              # "Disk Allocated",
+
+              "Basic NIC Available",
+              # "Basic NIC Capacity",
+              # "Basic NIC Allocated",
+
+              "ConnectX-6 Available",
+              # "ConnectX-6 Capacity",
+              # "ConnectX-6 Allocated",
+
+              "ConnectX-5 Available",
+              # "ConnectX-5 Capacity",
+              # "ConnectX-5 Allocated",
+
+              "NVMe Available",
+              # "NVMe Capacity",
+              # "NVMe Allocated",
+
+              "Tesla T4 Available",
+              # "Tesla T4 Capacity",
+              # "Tesla T4 Allocated",
+
+              "RTX6000 Available",
+              # "RTX6000 Capacity",
+              # "RTX6000 Allocated",
+              ]
+
     
     def list_sites(self, output=None, fields=None, quiet=False, filter_function=None):
         table = []
         for site_name, site in self.topology.sites.items():
             table.append(self.site_to_dict(site))
-            
-        if not fields:
-            # Default fields to display
-            fields= [  "Name",
-                
-                     "Hosts",
-                     "CPUs",
-                     #"Address",
-                     #"Location",
-                     
-                     #"Cores Capacity",
-                     #"Cores Allocated",
-                     
-                     "RAM Available",
-                     #"RAM Capacity",
-                     #"RAM Allocated",
-                     
-                     "Disk Available",
-                     #"Disk Capacity",
-                     #"Disk Allocated",
-
-                     "Basic NIC Available",
-                     #"Basic NIC Capacity",
-                     #"Basic NIC Allocated",
-
-                     "ConnectX-6 Available",
-                     #"ConnectX-6 Capacity",
-                     #"ConnectX-6 Allocated",
-
-                     "ConnectX-5 Available",
-                     #"ConnectX-5 Capacity",
-                     #"ConnectX-5 Allocated",
-
-                     "NVMe Available",
-                     #"NVMe Capacity",
-                     #"NVMe Allocated",
-
-                     "Tesla T4 Available",
-                     #"Tesla T4 Capacity",
-                     #"Tesla T4 Allocated",
-
-                     "RTX6000 Available",
-                     #"RTX6000 Capacity",
-                     #"RTX6000 Allocated",
-                    ]
-            
 
         table =  self.get_fablib_manager().list_table(table,
                         fields=fields,
