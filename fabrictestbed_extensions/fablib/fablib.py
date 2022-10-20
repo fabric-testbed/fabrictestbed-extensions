@@ -768,6 +768,13 @@ class FablibManager:
         :return log_file: new log level
         :rtype log_file: string
         """
+        try:
+            if not os.path.isdir(os.path.dirname(self.log_file)):
+                os.makedirs(os.path.dirname(self.log_file))
+        except Exception as e:
+            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+
+
         return self.log_file
 
     def set_log_file(self, log_file: str):
