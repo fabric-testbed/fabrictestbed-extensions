@@ -33,7 +33,6 @@ from IPython import get_ipython
 from typing import List, Dict
 import json
 
-
 from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
@@ -693,7 +692,7 @@ class FablibManager:
 
         self.set_log_file(log_file=self.log_file)
 
-        #if self.log_file is not None and self.log_level is not None:
+        # if self.log_file is not None and self.log_level is not None:
         #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
         #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
         #                        datefmt='%H:%M:%S')
@@ -751,7 +750,7 @@ class FablibManager:
                 os.makedirs(os.path.dirname(self.log_file))
         except Exception as e:
             pass
-            #logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+            # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
         if self.log_file and self.log_level:
             logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
@@ -776,8 +775,6 @@ class FablibManager:
         :rtype log_file: string
         """
 
-
-
         return self.log_file
 
     def set_log_file(self, log_file: str):
@@ -794,7 +791,7 @@ class FablibManager:
                 os.makedirs(os.path.dirname(self.log_file))
         except Exception as e:
             pass
-            #logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+            # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
         try:
             for handler in logging.root.handlers[:]:
@@ -984,7 +981,7 @@ class FablibManager:
 
         return self.resources
 
-    def get_random_site(self, avoid: List[str] = []) -> str:
+    def get_random_site(self, avoid: List[str] = [], filter_function=None) -> str:
         """
         Get a random site.
 
@@ -993,9 +990,9 @@ class FablibManager:
         :return: one site name
         :rtype: String
         """
-        return self.get_random_sites(count=1, avoid=avoid)[0]
+        return self.get_random_sites(count=1, avoid=avoid, filter_function=filter_function)[0]
 
-    def get_random_sites(self, count: int = 1, avoid: List[str] = []) -> List[str]:
+    def get_random_sites(self, count: int = 1, avoid: List[str] = [], filter_function=None) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -1013,7 +1010,12 @@ class FablibManager:
             if site not in avoid:
                 avoid.append(site)
 
-        sites = self.get_resources().get_site_list()
+        site_list = self.list_sites(output='list', quiet=True,
+                                    filter_function=filter_function)
+
+        sites = list(map(lambda x: x['Name'], site_list))
+
+        #sites = self.get_resources().get_site_list()
         for site in avoid:
             if site in sites:
                 sites.remove(site)
@@ -1355,7 +1357,7 @@ class FablibManager:
                           "State": slice.get_state(),
                           })
 
-        #if fields == None:
+        # if fields == None:
         #    fields = ["ID", "Name", "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
 
         return self.list_table(table,
