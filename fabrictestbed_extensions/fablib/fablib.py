@@ -31,20 +31,19 @@ from concurrent.futures import ThreadPoolExecutor
 from IPython import get_ipython
 
 from typing import List, Dict
+import json
 
 from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
 import pandas as pd
 from tabulate import tabulate
-import json 
+import json
 
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
     Capacities
 )
-
-
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
@@ -57,9 +56,6 @@ from fabrictestbed_extensions.fablib.slice import Slice
 
 
 class fablib:
-
-    
-    
     default_fablib_manager = None
 
     @staticmethod
@@ -375,7 +371,7 @@ class fablib:
         return fablib.get_default_fablib_manager().get_available_resources(update=update)
 
     @staticmethod
-    def get_fim_slice(excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing]) -> List[OrchestratorSlice]:
+    def get_fim_slice(excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
 
@@ -393,7 +389,7 @@ class fablib:
         return fablib.get_default_fablib_manager().get_fim_slice(excludes=excludes)
 
     @staticmethod
-    def get_slices(excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing]) -> List[Slice]:
+    def get_slices(excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -488,8 +484,7 @@ class FablibManager:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
-    
-    
+
     FABRIC_PRIMARY = '#27aae1'
     FABRIC_PRIMARY_LIGHT = '#cde4ef'
     FABRIC_PRIMARY_DARK = '#078ac1'
@@ -502,43 +497,20 @@ class FablibManager:
     FABRIC_LIGHT = '#f3f3f9'
     FABRIC_WHITE = '#ffffff'
     FABRIC_LOGO = "fabric_logo.png"
-    
+
     FABRIC_PRIMARY_EXTRA_LIGHT = '#dbf3ff'
-    
-    SUCCESS_COLOR =  '#8eff92'
+
+    SUCCESS_COLOR = '#8eff92'
     SUCCESS_LIGHT_COLOR = '#c3ffc4'
     SUCCESS_DARK_COLOR = '#59cb63'
-    
+
     ERROR_COLOR = '#ff8589'
     ERROR_LIGHT_COLOR = '#ffb7b9'
     ERROR_DARK_COLOR = '#b34140'
-     
+
     IN_PROGRESS_COLOR = '#ffff8c'
     IN_PROGRESS_LIGHT_COLOR = '#ffffbe'
     IN_PROGRESS_DARK_COLOR = '#c8555c'
-    
-
-    #SUCCESS_COLOR =  '#008e7a'
-    #SUCCESS_LIGHT_COLOR = '#4fbfa9'
-    #SUCCESS_DARK_COLOR = '#00604e'
-    
-    #ERROR_COLOR = '#b00020'
-    #ERROR_LIGHT_COLOR = '#e94948'
-    #ERROR_DARK_COLOR = '#790000'
-     
-    #IN_PROGRESS_COLOR = '#ff8542'
-    #IN_PROGRESS_LIGHT_COLOR = '#ffb670'
-    #IN_PROGRESS_DARK_COLOR = '#c65612'
-    
-    OTHER1_COLOR = '#b481a4' #pinkish
-    OTHER1_LIGHT_COLOR = '#e7b1d5' #pinkish
-    OTHER1_DARK_COLOR = '#845475' #pinkish
-
-    OTHER2_COLOR = '#374955' #dark gey/blue
-    OTHER2_LIGHT_COLOR = '#627481' #dark gey/blue
-    OTHER2_DARK_COLOR = '#0f222c' #dark gey/blue
-
-
 
     LOG_LEVELS = {
         'DEBUG': logging.DEBUG,
@@ -578,10 +550,11 @@ class FablibManager:
                  project_id: str = None,
                  bastion_username: str = None,
                  bastion_key_filename: str = None,
-                 log_level=None,
+                 log_level: int = None,
                  log_file: str = None,
                  data_dir: str = None,
-                 output = None):
+                 output: str = None,
+                 execute_thread_pool_size: int = 64):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -591,14 +564,16 @@ class FablibManager:
          - defaults (if needed and possible)
 
         """
-        
-        if(self.is_jupyter_notebook()):
-            self.output = 'jupyter'
-        else:
-            self.output = 'text'
 
-        
-        self.ssh_thread_pool_executor = ThreadPoolExecutor(64)
+        if output != None:
+            self.output = output
+        else:
+            if (self.is_jupyter_notebook()):
+                self.output = 'pandas'
+            else:
+                self.output = 'text'
+
+        self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
 
         # init attributes
         self.bastion_passphrase = None
@@ -716,13 +691,11 @@ class FablibManager:
             self.data_dir = data_dir
 
         self.set_log_file(log_file=self.log_file)
-        self.set_data_dir(data_dir=self.data_dir)
 
-        
-        if self.log_file is not None and self.log_level is not None:
-            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                                datefmt='%H:%M:%S')
+        # if self.log_file is not None and self.log_level is not None:
+        #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+        #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+        #                        datefmt='%H:%M:%S')
 
         self.bastion_private_ipv4_addr = '0.0.0.0'
         self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
@@ -735,36 +708,64 @@ class FablibManager:
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
 
-    def set_data_dir(self, data_dir: str):
-        """
-        Sets the directory for fablib to store temporary data
+    # def set_data_dir(self, data_dir: str):
+    #    """
+    #    Sets the directory for fablib to store temporary data
+    #
+    #    :param data_dir: new log data_dir
+    #    :type data_dir: String
+    #    """
+    #    self.data_dir = data_dir
+    #
+    #    try:
+    #        if not os.path.isdir(self.data_dir):
+    #            os.makedirs(self.data_dir)
+    #    except Exception as e:
+    #        logging.warning(f"Failed to create data dir: {self.data_dir}")
 
-        :param data_dir: new log data_dir
-        :type data_dir: String
-        """
-        self.data_dir = data_dir
-
-        try:
-            if not os.path.isdir(self.data_dir):
-                os.makedirs(self.data_dir)
-        except Exception as e:
-            logging.warning(f"Failed to create data dir: {self.data_dir}")
-
-    def set_log_level(self, log_level):
+    def set_log_level(self, log_level: str = 'INFO'):
         """
         Sets the current log level for logging
 
-        Options:  logging.DEBUG
-                  logging.INFO
-                  logging.WARNING
-                  logging.ERROR
-                  logging.CRITICAL
+        Options:  'DEBUG'
+                  'INFO'
+                  'WARNING'
+                  'ERROR'
+                  'CRITICAL'
 
         :param log_level: new log level
-        :type progress: Level
+        :type str: Level
         """
 
         self.log_level = log_level
+
+        try:
+            for handler in logging.root.handlers[:]:
+                logging.root.removeHandler(handler)
+        except Exception as e:
+            pass
+
+        try:
+            if self.log_file and not os.path.isdir(os.path.dirname(self.log_file)):
+                os.makedirs(os.path.dirname(self.log_file))
+        except Exception as e:
+            pass
+            # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+
+        if self.log_file and self.log_level:
+            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
+                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+                                datefmt='%H:%M:%S')
+
+    def get_log_level(self):
+        """
+        Get the current log level for logging
+
+        :return log_file: new log level
+        :rtype log_file: string
+        """
+
+        return self.log_level
 
     def get_log_file(self) -> str:
         """
@@ -773,15 +774,7 @@ class FablibManager:
         :return log_file: new log level
         :rtype log_file: string
         """
-        try:
-            if not os.path.isdir(os.path.dirname(self.log_file)):
-                os.makedirs(os.path.dirname(self.log_file))
-        except Exception as e:
-            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
-        logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                            format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                            datefmt='%H:%M:%S')
         return self.log_file
 
     def set_log_file(self, log_file: str):
@@ -797,7 +790,14 @@ class FablibManager:
             if not os.path.isdir(os.path.dirname(self.log_file)):
                 os.makedirs(os.path.dirname(self.log_file))
         except Exception as e:
-            logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+            pass
+            # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
+
+        try:
+            for handler in logging.root.handlers[:]:
+                logging.root.removeHandler(handler)
+        except:
+            pass
 
         logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
                             format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
@@ -813,6 +813,13 @@ class FablibManager:
         :rtype: SliceManager
         """
         try:
+            logging.info(f"oc_host={self.orchestrator_host},"
+                         f"cm_host={self.credmgr_host},"
+                         f"project_id={self.project_id},"
+                         f"token_location={self.fabric_token},"
+                         f"initialize=True,"
+                         f"scope='all'")
+
             self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
                                               cm_host=self.credmgr_host,
                                               project_id=self.project_id,
@@ -832,6 +839,8 @@ class FablibManager:
     def get_image_names(self) -> List[str]:
         """
         Gets a list of available image names.
+
+        This is statically defined for now. Eventually, images will be managed dynamically.
 
         :return: list of image names as strings
         :rtype: list[str]
@@ -860,39 +869,111 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self,output=None, fields=None, quiet=False, list_filter=None) -> str:
+    def list_sites(self,
+                   output: str = None,
+                   fields: str = None,
+                   quiet: bool = False,
+                   filter_function=None) -> object:
         """
-        Get a string used to print a tabular list of sites with state
+        Lists all the sites and their attributes.
 
-        :return: tabulated string of site state
-        :rtype: str
-        """
-        
-        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet, list_filter=list_filter)
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-    def show_config(self, output=None, fields=None, title='FABlib Config'):
-        return self.show_table(self.get_config(), 
-                        fields=fields,
-                        title=title, 
-                        output=output)
-    
-    def show_site(self, site_name: str):
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
-        Get a string used to print tabular info about a site
+
+        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet,
+                                               filter_function=filter_function)
+
+    def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False):
+        """
+        Show a table containing the current FABlib configuration parameters.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['credmgr_host','project_id', 'fablib_log_file']
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+        return self.show_table(self.get_config(),
+                               fields=fields,
+                               title='FABlib Config',
+                               output=output,
+                               quiet=quiet)
+
+    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False):
+        """
+        Show a table with all the properties of a specific site
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['credmgr_host','project_id', 'fablib_log_file']
 
         :param site_name: the name of a site
-        :type site_name: String
-        :return: tabulated string of site state
-        :rtype: String
+        :type site_name: str
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
-        return str(self.get_resources().show_site(site_name))
+        return str(self.get_resources().show_site(site_name,
+                                                  fields=fields,
+                                                  output=output,
+                                                  quiet=quiet))
 
     def get_resources(self) -> Resources:
         """
-        Get a reference to the resources object. The resouces obeject
+        Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
 
-        :return: the resouces object
+        :return: the resources object
         :rtype: Resources
         """
         if not self.resources:
@@ -900,7 +981,7 @@ class FablibManager:
 
         return self.resources
 
-    def get_random_site(self, avoid: List[str] = []) -> str:
+    def get_random_site(self, avoid: List[str] = [], filter_function=None) -> str:
         """
         Get a random site.
 
@@ -909,9 +990,9 @@ class FablibManager:
         :return: one site name
         :rtype: String
         """
-        return self.get_random_sites(count=1, avoid=avoid)[0]
+        return self.get_random_sites(count=1, avoid=avoid, filter_function=filter_function)[0]
 
-    def get_random_sites(self, count: int = 1, avoid: List[str] = []) -> List[str]:
+    def get_random_sites(self, count: int = 1, avoid: List[str] = [], filter_function=None) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -929,7 +1010,12 @@ class FablibManager:
             if site not in avoid:
                 avoid.append(site)
 
-        sites = self.get_resources().get_site_list()
+        site_list = self.list_sites(output='list', quiet=True,
+                                    filter_function=filter_function)
+
+        sites = list(map(lambda x: x['Name'], site_list))
+
+        #sites = self.get_resources().get_site_list()
         for site in avoid:
             if site in sites:
                 sites.remove(site)
@@ -957,7 +1043,7 @@ class FablibManager:
     def get_config(self) -> Dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
-        variable values values.
+        variable values.
 
         :return: dictionary mapping keywords to FABRIC values
         :rtype: Dict[String, String]
@@ -1170,11 +1256,11 @@ class FablibManager:
         """
         Get the available resources.
 
-        Optionally update the availalbe resources by querying the FABRIC
-        services. Otherwise, this method returns the exisitng information.
+        Optionally update the available resources by querying the FABRIC
+        services. Otherwise, this method returns the existing information.
 
         :param update:
-        :return: Availalbe Resources object
+        :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
 
@@ -1186,11 +1272,13 @@ class FablibManager:
 
         return self.resources
 
-    def get_fim_slice(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing]) -> List[OrchestratorSlice]:
+    def get_fim_slices(self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]) -> List[
+        OrchestratorSlice]:
         """
-        Not intended for API use.
-
         Gets a list of fim slices from the slice manager.
+
+        This is not recommened for most users and should only be used to bypass fablib inorder
+        to create custom low-level functionality.
 
         By default this method ignores Dead and Closing slices. Optional,
         parameter allows excluding a different list of slice states.  Pass
@@ -1198,10 +1286,10 @@ class FablibManager:
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
-        :return: a list of slices
+        :return: a list of fim models of slices
         :rtype: List[Slice]
         """
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes,  limit=200)
+        return_status, slices = self.get_slice_manager().slices(excludes=excludes, limit=200)
 
         return_slices = []
         if return_status == Status.OK:
@@ -1210,69 +1298,108 @@ class FablibManager:
         else:
             raise Exception(f"Failed to get slice list: {slices}")
         return return_slices
-    
-    def tabulate_slices(self,slices):
-        table = []
-        for slice in slices:
-            table.append([slice.get_slice_id(),
-                          slice.get_name(),
-                          slice.get_lease_end(),
-                          slice.get_state(),
-                        ])
 
-        return tabulate(table, headers=["ID", "Name",  "Lease Expiration (UTC)", "State"])
-    
-            
-    def list_slices(self, 
-                    excludes = [SliceState.Dead,SliceState.Closing], 
-                    output=None, 
-                    fields=None, 
+    # def tabulate_slices(self, slices):
+    #     table = []
+    #     for slice in slices:
+    #         table.append([slice.get_slice_id(),
+    #                       slice.get_name(),
+    #                       slice.get_lease_end(),
+    #                       slice.get_state(),
+    #                       ])
+    #
+    #     return tabulate(table, headers=["ID", "Name", "Lease Expiration (UTC)", "State"])
+
+    def list_slices(self,
+                    excludes=[SliceState.Dead, SliceState.Closing],
+                    output=None,
+                    fields=None,
                     quiet=False,
-                    list_filter=None):
+                    filter_function=None):
         """
-        Creates a tabulated string describing all slices.
+        Lists all the slices created by a user.
 
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated string of all slices information
-        :rtype: String
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','State']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['State'] == 'Configuring'
+
+        :param excludes: slice status to exclude
+        :type excludes: list[slice.state]
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
         """
         table = []
         for slice in self.get_slices(excludes=excludes):
-            table.append({ "ID": slice.get_slice_id(),
+            table.append({"ID": slice.get_slice_id(),
                           "Name": slice.get_name(),
                           "Lease Expiration (UTC)": slice.get_lease_end(),
                           "Lease Start (UTC)": slice.get_lease_start(),
                           "Project ID": slice.get_project_id(),
                           "State": slice.get_state(),
-                         })  
-        
+                          })
 
-        if fields == None:
-            fields=["ID", "Name",  "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
+        # if fields == None:
+        #    fields = ["ID", "Name", "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
+
         return self.list_table(table,
-                        fields=fields,
-                        title='Slices',
-                        output=output,
-                        quiet=quiet, 
-                        list_filter=list_filter 
-                        )
-
+                               fields=fields,
+                               title='Slices',
+                               output=output,
+                               quiet=quiet,
+                               filter_function=filter_function
+                               )
 
     def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False):
         """
-        Shows a slice's info.
+        Show a table with all the properties of a specific site
 
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
 
-        :return: Tabulated srting of all slices information
-        :rtype: String
-        """    
-        
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields.
+
+        Example: fields=['Name','State']
+
+        :param name: the name of a slice
+        :type name: str
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
         slice = self.get_slice(name=name, slice_id=id)
-        
+
         return slice.show(output=output, fields=fields, quiet=quiet)
 
-
-    def get_slices(self, excludes: List[SliceState] = [SliceState.Dead,SliceState.Closing],
+    def get_slices(self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
                    slice_name: str = None, slice_id: str = None) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -1293,7 +1420,8 @@ class FablibManager:
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes, name=slice_name, slice_id=slice_id, limit=200)
+        return_status, slices = self.get_slice_manager().slices(excludes=excludes, name=slice_name, slice_id=slice_id,
+                                                                limit=200)
 
         if self.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -1368,15 +1496,13 @@ class FablibManager:
             except Exception as e:
                 if progress: print(f", Failed!")
 
-    def get_log_level(self):
-        """
-        Gets the current log level for logging
-        """
-        return self.log_level
-        
-
-        
     def is_jupyter_notebook(self) -> bool:
+        """
+        Test for running inside a jupyter notebook
+
+        :return: bool, True if in jupyter notebook
+        :rtype: bool
+        """
         try:
             shell = get_ipython().__class__.__name__
             if shell == 'ZMQInteractiveShell':
@@ -1388,242 +1514,224 @@ class FablibManager:
         except NameError:
             return False
 
-        
     def show_table_text(self, table, quiet=False):
         printable_table = tabulate(table)
-        
+
         if not quiet:
             print(f"\n{printable_table}")
-            
+
         return printable_table
-        
-    def show_table_jupyter(self, 
-                                 table, 
-                                 headers=None, 
-                                 title='', 
-                                 title_font_size='1.25em', 
-                                 quiet=False):
-    
+
+    def show_table_jupyter(self,
+                           table,
+                           headers=None,
+                           title='',
+                           title_font_size='1.25em',
+                           quiet=False):
+
         printable_table = pd.DataFrame(table)
-        
-        properties = {#'background-color': f'{FablibManager.FABRIC_LIGHT}',
-                      'text-align': 'left', 
-                      'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
-        
+
+        properties = {  # 'background-color': f'{FablibManager.FABRIC_LIGHT}',
+            'text-align': 'left',
+            'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
+
         printable_table = printable_table.style.set_caption(title)
         printable_table = printable_table.set_properties(**properties, overwrite=False)
         printable_table = printable_table.hide(axis='index')
         printable_table = printable_table.hide(axis='columns')
-        
-        printable_table = printable_table.set_table_styles([{ 'selector': 'tr:nth-child(even)', 
-                                                           'props':  [('background', f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
-                                                                      ('color', f'{FablibManager.FABRIC_BLACK}')]}],
+
+        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(even)',
+                                                             'props': [('background',
+                                                                        f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
+                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
                                                            overwrite=False)
-        printable_table = printable_table.set_table_styles([{ 'selector': 'tr:nth-child(odd)', 
-                                                               'props':  [('background', f'{FablibManager.FABRIC_WHITE}'),
-                                                                          ('color', f'{FablibManager.FABRIC_BLACK}')]}],
+        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(odd)',
+                                                             'props': [('background', f'{FablibManager.FABRIC_WHITE}'),
+                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
                                                            overwrite=False)
 
-        
-        
-        caption_props  =  [ ("text-align", "center"),
-                            ("font-size", "150%"),
-                            #("color", f'{FablibManager.FABRIC_BLACK}'),
-                            #("background-color", f'{FablibManager.FABRIC_WHITE}'), 
-                            #("font-family", "courier"),
-                            #("font-family", "montserrat"),
-                            #("font-family", "IBM plex sans")'
-                          ]
-                                
-        printable_table = printable_table.set_table_styles([{ 'selector': 'caption', 
-                                                               'props':  caption_props }],
-                                                          overwrite=False)
-    
+        caption_props = [("text-align", "center"),
+                         ("font-size", "150%"),
+                         # ("color", f'{FablibManager.FABRIC_BLACK}'),
+                         # ("background-color", f'{FablibManager.FABRIC_WHITE}'),
+                         # ("font-family", "courier"),
+                         # ("font-family", "montserrat"),
+                         # ("font-family", "IBM plex sans")'
+                         ]
+
+        printable_table = printable_table.set_table_styles([{'selector': 'caption',
+                                                             'props': caption_props}],
+                                                           overwrite=False)
 
         if not quiet:
             display(printable_table)
-            
+
         return printable_table
-    
+
     def show_table_json(self, data, quiet=False):
-        json_str = json.dumps(data, indent = 4)
-        
+        json_str = json.dumps(data, indent=4)
+
         if not quiet:
             print(f"{json_str}")
-            
+
         return json_str
-        
-    def show_table(self, 
-                   data, 
-                   fields=None, 
-                   title='', 
-                   hide_header=False, 
-                   title_font_size='1.25em', 
-                   index=None, 
+
+    def show_table_dict(self, data, quiet=False):
+        if not quiet:
+            print(f"{data}")
+
+        return data
+
+    def show_table(self,
+                   data,
+                   fields=None,
+                   title='',
+                   title_font_size='1.25em',
                    output=None,
                    quiet=False):
-        
+
         if output == None:
             output = self.output.lower()
-            
-            
+
         table = self.create_show_table(data, fields=fields)
-            
-        if(output == 'text'):
+
+        if (output == 'text' or output == 'default'):
             return self.show_table_text(table, quiet=quiet)
-        elif(output == 'json'):
+        elif (output == 'json'):
             return self.show_table_json(data, quiet=quiet)
-        elif(output == 'jupyter'):
-            return self.show_table_jupyter(table, 
-                                         headers=fields, 
-                                         title=title, 
-                                         title_font_size=title_font_size,
-                                         quiet=quiet)
+        elif (output == 'dict'):
+            return self.show_table_dict(data, quiet=quiet)
+        elif (output == 'pandas' or output == 'jupyter_default'):
+            return self.show_table_jupyter(table,
+                                           headers=fields,
+                                           title=title,
+                                           title_font_size=title_font_size,
+                                           quiet=quiet)
         else:
             logging.error(f"Unknown output type: {output}")
 
-
-    
     def list_table_text(self, table, headers=None, quiet=False):
         if headers is not None:
             printable_table = tabulate(table, headers=headers)
         else:
             printable_table = tabulate(table)
-        
+
         if not quiet:
             print(f"\n{printable_table}")
-            
-        return printable_table
-        
 
-    def list_table_jupyter(self, 
-                           table, 
-                           headers=None, 
-                           title='', 
-                           title_font_size='1.25em', 
+        return printable_table
+
+    def list_table_jupyter(self,
+                           table,
+                           headers=None,
+                           title='',
+                           title_font_size='1.25em',
                            output=None,
                            quiet=False):
-        
+
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
         else:
-            printable_table = pd.DataFrame(table)    
+            printable_table = pd.DataFrame(table)
 
-
-        
-        # Table config (maybe some of this is unnecessary?
-        #df.style.set_properties(**{'background-color': 'black',
+            # Table config (maybe some of this is unnecessary?
+        # df.style.set_properties(**{'background-color': 'black',
         #                   'color': 'green'})
-        
-        
-        properties = {#'background-color': f'{FablibManager.FABRIC_LIGHT}',
-                      'text-align': 'left', 
-                      'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
+
+        properties = {  # 'background-color': f'{FablibManager.FABRIC_LIGHT}',
+            'text-align': 'left',
+            'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
 
         printable_table = printable_table.style.set_caption(title)
         printable_table = printable_table.hide(axis="index")
-        #printable_table = printable_table.set_properties(**{'text-align': 'left'}, overwrite=False)
+        # printable_table = printable_table.set_properties(**{'text-align': 'left'}, overwrite=False)
         printable_table = printable_table.set_properties(**properties, overwrite=False)
-        
-        
-        caption_props  =  [ ("text-align", "center"),
-                            ("font-size", "150%"),
-                            ('caption-side', 'top'),
-                            #("color", f'{FablibManager.FABRIC_BLACK}'),
-                            #("background-color", f'{FablibManager.FABRIC_WHITE}'), 
-                            #("font-family", "courier"),
-                            #("font-family", "montserrat"),
-                            #("font-family", "IBM plex sans")'
-                          ]
-                                
-        printable_table = printable_table.set_table_styles([{ 'selector': 'caption', 
-                                                               'props':  caption_props }],
-                                                          overwrite=False)
-        
-        
-        printable_table = printable_table.set_table_styles([dict(selector='th', 
-                                                                 props=[('text-align', 'left')])], 
-                                                           overwrite=False)
-        printable_table = printable_table.set_table_styles([{ 'selector': 'tr:nth-child(even)', 
-                                                           'props':  [('background', f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
-                                                                      ('color', f'{FablibManager.FABRIC_BLACK}')]}],
-                                                           overwrite=False)
-        printable_table = printable_table.set_table_styles([{ 'selector': 'tr:nth-child(odd)', 
-                                                               'props':  [('background', f'{FablibManager.FABRIC_WHITE}'),
-                                                                          ('color', f'{FablibManager.FABRIC_BLACK}')]}],
+
+        caption_props = [("text-align", "center"),
+                         ("font-size", "150%"),
+                         ('caption-side', 'top'),
+                         # ("color", f'{FablibManager.FABRIC_BLACK}'),
+                         # ("background-color", f'{FablibManager.FABRIC_WHITE}'),
+                         # ("font-family", "courier"),
+                         # ("font-family", "montserrat"),
+                         # ("font-family", "IBM plex sans")'
+                         ]
+
+        printable_table = printable_table.set_table_styles([{'selector': 'caption',
+                                                             'props': caption_props}],
                                                            overwrite=False)
 
-        printable_table = printable_table.set_table_styles([dict(selector='.level0', 
+        printable_table = printable_table.set_table_styles([dict(selector='th',
+                                                                 props=[('text-align', 'left')])],
+                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(even)',
+                                                             'props': [('background',
+                                                                        f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
+                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
+                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(odd)',
+                                                             'props': [('background', f'{FablibManager.FABRIC_WHITE}'),
+                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
+                                                           overwrite=False)
+
+        printable_table = printable_table.set_table_styles([dict(selector='.level0',
                                                                  props=[('border', '1px black solid !important')])],
                                                            overwrite=False)
 
         if not quiet:
             display(printable_table)
-        
+
         return printable_table
-    
+
     def list_table_json(self, data, quiet=False):
-        json_str = json.dumps(data, indent = 4)
-        
+        json_str = json.dumps(data, indent=4)
+
         if not quiet:
             print(f"{json_str}")
-            
+
         return json_str
-        
-    def list_table(self, 
-                         data, 
-                         fields=None, 
-                         title='', 
-                         hide_header=False, 
-                         title_font_size='1.25em', 
-                         index=None, 
-                         output=None, 
-                         quiet=False,
-                         list_filter=None):
-        
-        def filter_function(slice):
-            for column,value,operator in list_filter:
-                if operator == '==':
-                    if slice[column] != value:
-                        return False
-                elif operator == '<=':
-                    if slice[column] > value:
-                        return False
-                elif operator == '<':
-                    if slice[column] >= value:
-                        return False
-                elif operator == '>=':
-                    if slice[column] < value:
-                        return False
-                elif operator == '>':
-                    if slice[column] <= value:
-                        return False
-            return True
-        
-        
-        if list_filter:
-            data = list(filter(filter_function, data))    
- 
-        
+
+    def list_table_list(self, data, quiet=False):
+        if not quiet:
+            print(f"{data}")
+
+        return data
+
+    def list_table(self,
+                   data,
+                   fields=None,
+                   title='',
+                   title_font_size='1.25em',
+                   output=None,
+                   quiet=False,
+                   filter_function=None):
+
+        if filter_function:
+            data = list(filter(filter_function, data))
+
         if output == None:
             output = self.output.lower()
-        
+
+        if fields == None and len(data) > 0:
+            fields = list(data[0].keys())
+
         table = self.create_list_table(data, fields=fields)
-        
-        if(output == 'text'):
-            return self.list_table_text(table,  headers=fields, quiet=quiet)         
-        elif(output == 'json'):
+
+        if output == 'text':
+            return self.list_table_text(table, headers=fields, quiet=quiet)
+        elif output == 'json':
             return self.list_table_json(data, quiet=quiet)
-        elif(output == 'jupyter'): 
-            return self.list_table_jupyter(table, 
-                                    headers=fields, 
-                                    title=title, 
-                                    title_font_size=title_font_size,
-                                    output=output,
-                                    quiet=quiet)
+        elif output == 'list':
+            return self.list_table_list(data, quiet=quiet)
+        elif output == 'pandas':
+            return self.list_table_jupyter(table,
+                                           headers=fields,
+                                           title=title,
+                                           title_font_size=title_font_size,
+                                           output=output,
+                                           quiet=quiet)
         else:
             logging.error(f"Unknown output type: {output}")
-            
 
     def create_list_table(self, data, fields=None):
         table = []
@@ -1634,18 +1742,13 @@ class FablibManager:
 
             table.append(row)
         return table
-    
+
     def create_show_table(self, data, fields=None):
         table = []
         if fields == None:
-            for key,value in data.items():
-                table.append([key,value])
+            for key, value in data.items():
+                table.append([key, value])
         else:
             for field in fields:
-                table.append([field,data[field]])
+                table.append([field, data[field]])
         return table
-    
-  
-    
-       
-   
