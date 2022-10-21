@@ -1355,8 +1355,8 @@ class FablibManager:
                           "State": slice.get_state(),
                           })
 
-        if fields == None:
-            fields = ["ID", "Name", "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
+        #if fields == None:
+        #    fields = ["ID", "Name", "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
 
         return self.list_table(table,
                                fields=fields,
@@ -1574,6 +1574,12 @@ class FablibManager:
 
         return json_str
 
+    def show_table_dict(self, data, quiet=False):
+        if not quiet:
+            print(f"{data}")
+
+        return data
+
     def show_table(self,
                    data,
                    fields=None,
@@ -1591,6 +1597,8 @@ class FablibManager:
             return self.show_table_text(table, quiet=quiet)
         elif (output == 'json'):
             return self.show_table_json(data, quiet=quiet)
+        elif (output == 'dict'):
+            return self.show_table_dict(data, quiet=quiet)
         elif (output == 'pandas' or output == 'jupyter_default'):
             return self.show_table_jupyter(table,
                                            headers=fields,
@@ -1681,6 +1689,12 @@ class FablibManager:
 
         return json_str
 
+    def list_table_list(self, data, quiet=False):
+        if not quiet:
+            print(f"{data}")
+
+        return data
+
     def list_table(self,
                    data,
                    fields=None,
@@ -1696,7 +1710,7 @@ class FablibManager:
         if output == None:
             output = self.output.lower()
 
-        if fields == None:
+        if fields == None and len(data) > 0:
             fields = list(data[0].keys())
 
         table = self.create_list_table(data, fields=fields)
@@ -1705,6 +1719,8 @@ class FablibManager:
             return self.list_table_text(table, headers=fields, quiet=quiet)
         elif output == 'json':
             return self.list_table_json(data, quiet=quiet)
+        elif output == 'list':
+            return self.list_table_list(data, quiet=quiet)
         elif output == 'pandas':
             return self.list_table_jupyter(table,
                                            headers=fields,
