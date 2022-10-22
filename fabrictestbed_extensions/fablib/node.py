@@ -893,8 +893,7 @@ class Node:
                       username=None, 
                       private_key_file=None, 
                       private_key_passphrase=None,
-                      chunking=False, 
-                      print_output=False,
+                      quite=False,
                       read_timeout=10, 
                       timeout=None,
                       output_file=None):
@@ -918,8 +917,6 @@ class Node:
         :type private_key_passphrase: str
         :param output_file: path to a file where the stdout/stderr will be written. None for no file output
         :type output_file: List[str]
-        :param chunking: enable reading stdout and stderr in real-time with chunks
-        :type chunking: bool
         :param output: print stdout and stderr to the screen
         :type output: bool
         :param read_timeout: the number of seconds to wait before retrying to
@@ -1013,7 +1010,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                     rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-                    if  print_output:
+                    if quiet = False:
                         print(rtn_stdout, rtn_stderr)
 
                 else:
@@ -1028,7 +1025,7 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if print_output:
+                                if quiet = False:
                                     print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
                                 if output_file:
                                     file.write(str(stdoutbytes,'utf-8').replace('\\n','\n'))
@@ -1039,7 +1036,7 @@ class Node:
                             if c.recv_stderr_ready(): 
                                 # make sure to read stderr to prevent stall
                                 stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
-                                if print_output:
+                                if quiet = False:
                                     print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
                                 if output_file:
                                     file.write(str(stderrbytes,'utf-8').replace('\\n','\n'))
