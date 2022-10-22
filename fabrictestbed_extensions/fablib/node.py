@@ -894,7 +894,7 @@ class Node:
                       username=None, 
                       private_key_file=None, 
                       private_key_passphrase=None,
-                      quite=False,
+                      quiet=False,
                       read_timeout=10, 
                       timeout=None,
                       output_file=None):
