@@ -885,7 +885,8 @@ class Node:
                                                                                username=username,
                                                                                private_key_file=private_key_file,
                                                                                private_key_passphrase=private_key_passphrase,
-                                                                               output_file=output_file)
+                                                                               output_file=output_file,
+                                                                               quiet=True)
     
     def execute(self, command, 
                       retry=3, 
@@ -1010,7 +1011,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
                     rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
-                    if quiet = False:
+                    if quiet == False:
                         print(rtn_stdout, rtn_stderr)
 
                 else:
@@ -1025,7 +1026,7 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if quiet = False:
+                                if quiet == False:
                                     print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
                                 if output_file:
                                     file.write(str(stdoutbytes,'utf-8').replace('\\n','\n'))
@@ -1036,7 +1037,7 @@ class Node:
                             if c.recv_stderr_ready(): 
                                 # make sure to read stderr to prevent stall
                                 stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
-                                if quiet = False:
+                                if quiet == False:
                                     print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
                                 if output_file:
                                     file.write(str(stderrbytes,'utf-8').replace('\\n','\n'))
@@ -1376,7 +1377,7 @@ class Node:
         self.upload_file(temp_file, temp_file, retry, retry_interval)
         os.remove(temp_file)
         self.execute("mkdir -p "+remote_directory_path + "; tar -xf " + temp_file + " -C " +
-                     remote_directory_path + "; rm " + temp_file, retry, retry_interval)
+                     remote_directory_path + "; rm " + temp_file, retry, retry_interval, quiet=True)
         return "success"
 
     def download_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
@@ -1421,13 +1422,13 @@ class Node:
         logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
 
         temp_file = "/tmp/unpackingfile.tar.gz"
-        self.execute("tar -czf " + temp_file + " " + remote_directory_path, retry, retry_interval)
+        self.execute("tar -czf " + temp_file + " " + remote_directory_path, retry, retry_interval, quiet=True)
 
         self.download_file(temp_file, temp_file, retry, retry_interval)
         tar_file = tarfile.open(temp_file)
         tar_file.extractall(local_directory_path)
 
-        self.execute("rm " + temp_file, retry, retry_interval)
+        self.execute("rm " + temp_file, retry, retry_interval, quiet=True)
         os.remove(temp_file)
         return "success"
 
@@ -1443,7 +1444,7 @@ class Node:
             if self.get_management_ip() is None:
                 logging.debug(f"Node: {self.get_name()} failed test_ssh because management_ip == None" )
 
-            self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10)
+            self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10, quiet=True)
         except Exception as e:
             #logging.debug(f"{e}")
             logging.debug(e, exc_info=True)
@@ -1460,7 +1461,7 @@ class Node:
         # TODO: Add docstring after doc networking classes
         # Assumes that the default route uses the management network
         logging.debug(f"{self.get_name()}->get_management_os_interface")
-        stdout, stderr = self.execute("sudo ip -j route list")
+        stdout, stderr = self.execute("sudo ip -j route list", quiet=True)
         stdout_json = json.loads(stdout)
 
         #print(pythonObj)
@@ -1479,7 +1480,7 @@ class Node:
         """
         management_dev = self.get_management_os_interface()
 
-        stdout, stderr = self.execute("sudo ip -j addr list")
+        stdout, stderr = self.execute("sudo ip -j addr list", quiet=True)
         stdout_json = json.loads(stdout)
         dataplane_devs = []
         for i in stdout_json:
@@ -1501,8 +1502,8 @@ class Node:
         :param os_iface: the name of the interface to flush
         :type os_iface: String
         """
-        stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}")
-        stdout, stderr = self.execute(f"sudo ip -6 addr flush dev {os_iface}")
+        stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}", quiet=True)
+        stdout, stderr = self.execute(f"sudo ip -6 addr flush dev {os_iface}", quiet=True)
 
     def ip_addr_list(self, output='json', update=False):
 
@@ -1511,11 +1512,11 @@ class Node:
                 return self.ip_addr_list_json
             else:
                 if output == 'json':
-                    stdout, stderr = self.execute(f"sudo  ip -j addr list")
+                    stdout, stderr = self.execute(f"sudo  ip -j addr list", quiet=True)
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
                 else:
-                    stdout, stderr = self.execute(f"sudo ip list")
+                    stdout, stderr = self.execute(f"sudo ip list", quiet=True)
                     return stdout
         except Exception as e:
             logging.warning(f"Failed to get ip addr list: {e}")
@@ -1536,7 +1537,7 @@ class Node:
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} route add {subnet} via {gateway}")
+            self.execute(f"{ip_command} route add {subnet} via {gateway}", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to add route: {e}")
             raise e
@@ -1546,7 +1547,7 @@ class Node:
         Stop network manager on the node.
         """
         try:
-            stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager")
+            stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager", quiet=True)
             logging.info(f"Stopped NetworkManager with 'sudo systemctl stop "
                          f"NetworkManager': stdout: {stdout}\nstderr: {stderr}")
         except Exception as e:
@@ -1558,7 +1559,7 @@ class Node:
         (re)Start network manager on the node.
         """
         try:
-            stdout, stderr = self.execute(f"sudo systemctl restart NetworkManager")
+            stdout, stderr = self.execute(f"sudo systemctl restart NetworkManager", quiet=True)
             logging.info(f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}")
         except Exception as e:
             logging.warning(f"Failed to start network manager: {e}")
@@ -1570,7 +1571,7 @@ class Node:
         Get a list of routes from the node.
         """
         try:
-            stdout, stderr = self.execute('ip -j route list')
+            stdout, stderr = self.execute('ip -j route list', quiet=True)
             return json.loads(stdout)
         except Exception as e:
             logging.warning(f"Exception: {e}")
@@ -1583,7 +1584,7 @@ class Node:
         Get a list of ip address info from the node.
         """
         try:
-            stdout, stderr = self.execute('ip -j addr list')
+            stdout, stderr = self.execute('ip -j addr list', quiet=True)
 
             addrs = json.loads(stdout)
 
@@ -1608,7 +1609,7 @@ class Node:
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} route del {subnet} via {gateway}")
+            self.execute(f"{ip_command} route del {subnet} via {gateway}", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to del route: {e}")
             raise e
@@ -1631,7 +1632,7 @@ class Node:
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
+            self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to add addr: {e}")
             raise e
@@ -1654,7 +1655,7 @@ class Node:
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ")
+            self.execute(f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to del addr: {e}")
             raise e
@@ -1687,13 +1688,13 @@ class Node:
             return
 
         try:
-            self.execute(f"{ip_command} link set dev {interface.get_physical_os_interface()} up")
+            self.execute(f"{ip_command} link set dev {interface.get_physical_os_interface()} up", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to up link: {e}")
             raise e
 
         try:
-            self.execute(f"{ip_command} link set dev {interface.get_os_interface()} up")
+            self.execute(f"{ip_command} link set dev {interface.get_os_interface()} up", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to up link: {e}")
             raise e
@@ -1719,7 +1720,7 @@ class Node:
             return
 
         try:
-            self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down")
+            self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down", quiet=True)
         except Exception as e:
             logging.warning(f"Failed to down link: {e}")
             raise e
@@ -1748,27 +1749,27 @@ class Node:
 
         if mtu is not None:
             command += f" mtu {mtu}"
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
 
         # config vlan iface
         if vlan is not None:
             # create vlan iface
             command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
-            stdout, stderr = self.execute(command)
+            stdout, stderr = self.execute(command, quiet=True)
 
             # bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
             command = f'{ip_command} link set dev {os_iface} up'
             if mtu != None:
                 command += f" mtu {mtu}"
-            stdout, stderr = self.execute(command)
+            stdout, stderr = self.execute(command, quiet=True)
 
         if ip is not None and cidr is not None:
             #Set ip
             command = f"{ip_command} addr add {ip}/{cidr} dev {os_iface}"
-            stdout, stderr = self.execute(command)
+            stdout, stderr = self.execute(command, quiet=True)
 
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
 
     def clear_all_ifaces(self):
         """
@@ -1785,7 +1786,7 @@ class Node:
         # TODO: Add docstring after doc networking classes
         management_os_iface = self.get_management_os_interface()
 
-        stdout, stderr = self.execute("sudo ip -j addr list")
+        stdout, stderr = self.execute("sudo ip -j addr list", quiet=True)
         stdout_json = json.loads(stdout)
         dataplane_devs = []
         for i in stdout_json:
@@ -1804,7 +1805,7 @@ class Node:
         """
         # TODO: Add docstring after doc networking classes
         command = f"sudo ip -j addr show {os_iface}"
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
         try:
             [stdout_json] = json.loads(stdout)
         except Exception as e:
@@ -1814,7 +1815,7 @@ class Node:
         link = stdout_json['link']
 
         command = f"sudo ip link del link {link} name {os_iface}"
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
 
     def add_vlan_os_interface(self, os_iface: str = None, vlan: str = None, ip: str = None, cidr: str = None,
                               mtu: str = None, interface: str = None):
@@ -1841,13 +1842,13 @@ class Node:
             ip_command = "sudo ip"
 
         command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
 
         command = f'{ip_command} link set dev {os_iface} up'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
 
         command = f'{ip_command} link set dev {os_iface}.{vlan} up'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
 
         if ip != None and cidr != None:
             self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
@@ -1862,7 +1863,7 @@ class Node:
         logging.debug(f"ping_test: node {self.get_name()}")
 
         command = f'ping -c 1 {dst_ip}  2>&1 > /dev/null && echo Success'
-        stdout, stderr = self.execute(command)
+        stdout, stderr = self.execute(command, quiet=True)
         if stdout.replace("\n","") == 'Success':
             return True
         else:
