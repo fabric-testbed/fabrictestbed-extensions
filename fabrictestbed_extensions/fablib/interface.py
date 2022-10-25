@@ -532,7 +532,7 @@ class Interface:
         :rtype: str
         """
         try:
-            stdout, stderr = self.get_node().execute('ip -j link list')
+            stdout, stderr = self.get_node().execute('ip -j link list', quiet=True)
 
             links = json.loads(stdout)
 
@@ -556,7 +556,7 @@ class Interface:
         :rtype: str
         """
         try:
-            stdout, stderr = self.get_node().execute('ip -j addr list')
+            stdout, stderr = self.get_node().execute('ip -j addr list', quiet=True)
 
             addrs = json.loads(stdout)
 

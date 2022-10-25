@@ -484,6 +484,7 @@ class FablibManager:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
+    FABRIC_AVOID = 'FABRIC_AVOID'
 
     FABRIC_PRIMARY = '#27aae1'
     FABRIC_PRIMARY_LIGHT = '#cde4ef'
@@ -581,6 +582,7 @@ class FablibManager:
         self.log_level = self.default_log_level
         self.set_log_level(self.log_level)
         self.data_dir = None
+        self.avoid = []
 
         # Setup slice key dict
         # self.slice_keys = {}
@@ -669,6 +671,8 @@ class FablibManager:
             self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE])
         if self.FABRIC_LOG_LEVEL in fabric_rc_dict:
             self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL])
+        if self.FABRIC_AVOID in fabric_rc_dict:
+            self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID])
 
         # Set config values from constructor arguments
         if credmgr_host is not None:
@@ -722,6 +726,20 @@ class FablibManager:
     #            os.makedirs(self.data_dir)
     #    except Exception as e:
     #        logging.warning(f"Failed to create data dir: {self.data_dir}")
+
+    def set_avoid_csv(self, avoid_csv: str = ''):
+
+        avoid = []
+        for site in avoid_csv.split(','):
+            avoid.append(site.strip())
+
+        self.set_avoid(avoid)
+
+    def set_avoid(self, avoid: list = []):
+        self.avoid = avoid
+
+    def get_avoid(self):
+        return self.avoid
 
     def set_log_level(self, log_level: str = 'INFO'):
         """
@@ -1003,10 +1021,8 @@ class FablibManager:
         :return: list of random site names.
         :rtype: List[Sting]
         """
-        # Hack to always avoid a list of sites. Real fix is to check availability
-        always_avoid = []
 
-        for site in always_avoid:
+        for site in self.get_avoid():
             if site not in avoid:
                 avoid.append(site)
 

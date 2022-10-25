@@ -440,15 +440,15 @@ class Component:
         """
         output = []
         try:
-            output.append(self.node.execute('sudo fdisk -l /dev/nvme*'))
-            output.append(self.node.execute('sudo parted -s /dev/nvme0n1 mklabel gpt'))
-            output.append(self.node.execute('sudo parted -s /dev/nvme0n1 print'))
-            output.append(self.node.execute('sudo parted -s /dev/nvme0n1 print unit MB print free'))
-            output.append(self.node.execute('sudo parted -s --align optimal /dev/nvme0n1 mkpart primary ext4 0% 960197MB'))
-            output.append(self.node.execute('lsblk /dev/nvme0n1'))
-            output.append(self.node.execute('sudo mkfs.ext4 /dev/nvme0n1p1'))
-            output.append(self.node.execute(f'sudo mkdir {mount_point} && sudo mount /dev/nvme0n1p1 {mount_point}'))
-            output.append(self.node.execute(f'df -h {mount_point}'))
+            output.append(self.node.execute('sudo fdisk -l /dev/nvme*'), quiet=True)
+            output.append(self.node.execute('sudo parted -s /dev/nvme0n1 mklabel gpt'), quiet=True)
+            output.append(self.node.execute('sudo parted -s /dev/nvme0n1 print'), quiet=True)
+            output.append(self.node.execute('sudo parted -s /dev/nvme0n1 print unit MB print free'), quiet=True)
+            output.append(self.node.execute('sudo parted -s --align optimal /dev/nvme0n1 mkpart primary ext4 0% 960197MB'), quiet=True)
+            output.append(self.node.execute('lsblk /dev/nvme0n1'), quiet=True)
+            output.append(self.node.execute('sudo mkfs.ext4 /dev/nvme0n1p1'), quiet=True)
+            output.append(self.node.execute(f'sudo mkdir {mount_point} && sudo mount /dev/nvme0n1p1 {mount_point}'), quiet=True)
+            output.append(self.node.execute(f'df -h {mount_point}'), quiet=True)
         except Exception as e:
             print(f"config_nvme Fail: {self.get_name()}")
             #traceback.print_exc()
