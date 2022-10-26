@@ -471,6 +471,13 @@ class fablib:
     def is_jupyter_notebook() -> bool:
         return fablib.get_default_fablib_manager().is_jupyter_notebook()
 
+    @staticmethod
+    def get_ssh_config_file() -> str:
+        """
+        Gets the location of the ssh config file specified in the fabric rc.
+        """
+        return fablib.get_default_fablib_manager().get_ssh_config_file()
+
 
 class FablibManager:
     FABRIC_BASTION_USERNAME = "FABRIC_BASTION_USERNAME"
@@ -482,6 +489,7 @@ class FablibManager:
     FABRIC_SLICE_PUBLIC_KEY_FILE = "FABRIC_SLICE_PUBLIC_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_FILE = "FABRIC_SLICE_PRIVATE_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
+    FABRIC_SSH_CONFIG_FILE = "FABRIC_SSH_CONFIG_FILE"
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
     FABRIC_AVOID = 'FABRIC_AVOID'
@@ -666,6 +674,9 @@ class FablibManager:
         if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
             self.default_slice_key['slice_private_key_passphrase'] = fabric_rc_dict[
                 self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+        
+        if self.FABRIC_SSH_CONFIG_FILE in fabric_rc_dict:
+            self.ssh_config_file = fabric_rc_dict[self.FABRIC_SSH_CONFIG_FILE]
 
         if self.FABRIC_LOG_FILE in fabric_rc_dict:
             self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE])
@@ -1314,6 +1325,12 @@ class FablibManager:
         else:
             raise Exception(f"Failed to get slice list: {slices}")
         return return_slices
+
+    def get_ssh_config_file(self):
+        """
+        Gets the location of the ssh config file specified in the fabric rc.
+        """
+        return self.ssh_config_file
 
     # def tabulate_slices(self, slices):
     #     table = []

@@ -797,13 +797,30 @@ class Node:
             logging.error(e, exc_info=True)
             raise Exception(f"Component not found: {name}")
 
+    def get_ssh_config_file(self) -> str:
+        """
+        Gets the SSH config file specified in the fabric rc
+        :return: The path to the SSH config file
+        :rtype: str
+        """
+        return self.get_fablib_manager().get_ssh_config_file()
+
     def get_ssh_command(self) -> str:
         """
         Gets a SSH command used to access this node node from a terminal.
         :return: the SSH command to access this node
         :rtype: str
         """
-        return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
+        try:
+            ssh_config_file_path = self.get_ssh_config_file()
+            if not ssh_config_file_path:
+                ssh_config_file_path = "/path/to/your/ssh/config/file"
+        except Exception as e:
+            logging.debug("SSH config file not found in rc, printing default message")
+            ssh_config_file_path = "/path/to/your/ssh/config/file"
+        
+        return 'ssh -i {} -F {} {}@{}'.format(self.get_private_key_file(),
+                                           ssh_config_file_path,
                                            self.get_username(),
                                            self.get_management_ip())
 
