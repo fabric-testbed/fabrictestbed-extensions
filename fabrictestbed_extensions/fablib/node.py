@@ -299,17 +299,27 @@ class Node:
         for component in self.get_components():
             components.append(component.get_name())
 
+        def combined_filter_function(x):
+            if filter_function == None:
+                if x['Name'] in set(components):
+                    return True
+            else:
+                if filter_function(x) and x['Name'] in set(components):
+                    return True
 
-        name_filter = lambda s: s['Name'] in set(components)
-        if filter_function != None:
-            filter_function = lambda x: filter_function(x) + name_filter(x)
-        else:
-            filter_function = name_filter
-        
+            return False
+
+
+        #name_filter = lambda s: s['Name'] in set(components)
+        #if filter_function != None:
+        #    filter_function = lambda x: filter_function(x) + name_filter(x)
+        #else:
+        #    filter_function = name_filter
+
         return self.get_slice().list_components(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
-                                                filter_function=filter_function)
+                                                filter_function=combined_filter_function)
         
     
     def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None):
@@ -347,16 +357,27 @@ class Node:
         for iface in self.get_interfaces():
             ifaces.append(iface.get_name())
 
-        name_filter = lambda s: s['Name'] in set(ifaces)
-        if filter_function != None:
-            filter_function = lambda x: filter_function(x) + name_filter(x)
-        else:
-            filter_function = name_filter
+
+        def combined_filter_function(x):
+            if filter_function == None:
+                if x['Name'] in set(ifaces):
+                    return True
+            else:
+                if filter_function(x) and x['Name'] in set(ifaces):
+                    return True
+
+            return False
+
+        #name_filter = lambda s: s['Name'] in set(ifaces)
+        #if filter_function != None:
+        #    filter_function = lambda x: filter_function(x) + name_filter(x)
+        #else:
+        #    filter_function = name_filter
 
         return self.get_slice().list_interfaces(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
-                                                filter_function=filter_function)
+                                                filter_function=combined_filter_function)
         
     
     def list_networks(self, fields=None, output=None, quiet=False, filter_function=None):
@@ -395,16 +416,26 @@ class Node:
         for iface in self.get_interfaces():
             networks.append(iface.get_network().get_name())
 
-        name_filter = lambda s: s['Name'] in set(networks)
-        if filter_function != None:
-            filter_function = lambda x: filter_function(x) + name_filter(x)
-        else:
-            filter_function = name_filter
+        def combined_filter_function(x):
+            if filter_function == None:
+                if x['Name'] in set(networks):
+                    return True
+            else:
+                if filter_function(x) and x['Name'] in set(networks):
+                    return True
+
+            return False
+
+        #name_filter = lambda s: s['Name'] in set(networks)
+        #if filter_function != None:
+        #    filter_function = lambda x: filter_function(x) + name_filter(x)
+        #else:
+        #    filter_function = name_filter
 
         return self.get_slice().list_networks(fields=fields, 
                                                 output=output,
                                                 quiet=quiet, 
-                                                filter_function=filter_function)
+                                                filter_function=combined_filter_function)
         
     def get_fim_node(self) -> FimNode:
         """
