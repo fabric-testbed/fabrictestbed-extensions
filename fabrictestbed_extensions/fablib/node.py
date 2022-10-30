@@ -111,7 +111,7 @@ class Node:
             ["Management IP", self.get_management_ip()],
             ["Reservation State", self.get_reservation_state()],
             ["Error Message", self.get_error_message()],
-            ["SSH Command ", self.get_ssh_command()],
+            ["SSH Command", self.get_ssh_command()],
             ]
 
         return tabulate(table) #, headers=["Property", "Value"])
@@ -175,27 +175,68 @@ class Node:
         return json.dumps(self.toDict(), indent=4)
 
 
-    def toDict(self):
+    def toDict(self, skip=[]):
         """
         Returns the node attributes as a dictionary
 
-        :return: slice attributes as dictionary
+        :return: slice attributes as  dictionary
         :rtype: dict
         """
-        return { "ID":  self.get_reservation_id(),
-                "Name": self.get_name(),
-                "Cores": self.get_cores(),
-                "RAM": self.get_ram(),
-                "Disk": self.get_disk(),
-                "Image": self.get_image(),
-                "Image Type": self.get_image_type(),
-                "Host": self.get_host(),
-                "Site": self.get_site(),
-                "Management IP": self.get_management_ip(),
-                "State": self.get_reservation_state(),
-                "Error": self.get_error_message(),
-                "SSH Command ": self.get_ssh_command()
-                }
+        rtn_dict = {}
+
+        if "ID" not in skip:
+            rtn_dict["ID"] =  str(self.get_reservation_id())
+        if "Name" not in skip:
+            rtn_dict["Name"] =  str(self.get_name())
+        if "Cores" not in skip:
+            rtn_dict["Cores"] =   str(self.get_cores())
+        if "RAM" not in skip:
+            rtn_dict["RAM"] =  str(self.get_ram())
+        if "Disk" not in skip:
+            rtn_dict["Disk"] =   str(self.get_disk())
+        if "Image" not in skip:
+            rtn_dict["Image"] =   str(self.get_image())
+        if "Image Type" not in skip:
+            rtn_dict["Image Type"] =   str(self.get_image_type())
+        if "Host" not in skip:
+            rtn_dict["Host"] =   str(self.get_host())
+        if "Site" not in skip:
+            rtn_dict["Site"] =   str(self.get_site())
+        if "Username" not in skip:
+            rtn_dict["Username"] =   str(self.get_username())
+        if "Management IP" not in skip:
+            rtn_dict["Management IP"] =   str(self.get_management_ip())
+        if "State" not in skip:
+            rtn_dict["State"] =   str(self.get_reservation_state())
+        if "Error" not in skip:
+            rtn_dict["Error"] =   str(self.get_error_message())
+        if "SSH Command" not in skip:
+            rtn_dict["SSH Command"] =   str(self.get_ssh_command())
+        if "Public SSH Key File" not in skip:
+            rtn_dict["Public SSH Key File"] =   str(self.get_public_key_file())
+        if "Private SSH Key File" not in skip:
+            rtn_dict["Private SSH Key File"] =   str(self.get_private_key_file())
+        if "SSH Config File" not in skip:
+            rtn_dict["SSH Config File"] = str(self.get_fablib_manager().get_ssh_config_file())
+
+        return rtn_dict
+        #return { "ID":  str(self.get_reservation_id()),
+        #        "Name": str(self.get_name()),
+        #        "Cores": str(self.get_cores()),
+        #        "RAM": str(self.get_ram()),
+        #        "Disk": str(self.get_disk()),
+        #        "Image": str(self.get_image()),
+        #        "Image Type": str(self.get_image_type()),
+        #        "Host": str(self.get_host()),
+        #        "Site": str(self.get_site()),
+        #        "Username" : str(self.get_username()),
+        #        "Management IP": str(self.get_management_ip()),
+        #        "State": str(self.get_reservation_state()),
+        #        "Error": str(self.get_error_message()),
+        #        "SSH Command": str(self.get_ssh_command()),
+        #        "Public SSH Key File": str(self.get_public_key_file()),
+        #        "Private SSH Key File": str(self.get_private_key_file()),
+        #         }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
         """
@@ -230,7 +271,7 @@ class Node:
             fields = ["ID", "Name", "Cores", "RAM", "Disk",
                     "Image", "Image Type","Host", "Site",
                     "Management IP", "State",
-                    "Error","SSH Command "
+                    "Error","SSH Command"
                      ]
 
         def state_color(val):
@@ -834,9 +875,21 @@ class Node:
         :return: the SSH command to access this node
         :rtype: str
         """
-        return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
-                                           self.get_username(),
-                                           self.get_management_ip())
+
+        ssh_command = self.get_fablib_manager().get_ssh_command_line()
+
+        for key,val in self.toDict(skip=["SSH Command"]).items():
+            remove_str = '${'+str(key).strip()+'}'
+            add_str = str(val)
+            ssh_command = ssh_command.replace(remove_str, add_str)
+
+        return ssh_command
+
+        #return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
+        #                                   self.get_username(),
+        #                                   self.get_management_ip())
+
+
 
     def validIPAddress(self, IP: str) -> str:
         """

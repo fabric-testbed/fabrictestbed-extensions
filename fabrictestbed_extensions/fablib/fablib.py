@@ -485,6 +485,8 @@ class FablibManager:
     FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
     FABRIC_AVOID = 'FABRIC_AVOID'
+    FABRIC_SSH_COMMAND_LINE = 'FABRIC_SSH_COMMAND_LINE'
+    FABRIC_SSH_CONFIG_FILE = 'FABRIC_SSH_CONFIG_FILE'
 
     FABRIC_PRIMARY = '#27aae1'
     FABRIC_PRIMARY_LIGHT = '#cde4ef'
@@ -587,6 +589,8 @@ class FablibManager:
         self.set_log_level(self.log_level)
         self.data_dir = None
         self.avoid = []
+        self.ssh_command_line = 'ssh -F ${SSH Config File} ${Username}@${Management IP}'
+        self.ssh_config_file = ''
 
         # Setup slice key dict
         # self.slice_keys = {}
@@ -652,19 +656,19 @@ class FablibManager:
 
         # Basstion host setup
         if self.FABRIC_BASTION_HOST in fabric_rc_dict:
-            self.bastion_public_addr = fabric_rc_dict[self.FABRIC_BASTION_HOST]
+            self.bastion_public_addr = fabric_rc_dict[self.FABRIC_BASTION_HOST].strip().strip('\"')
         if self.FABRIC_BASTION_USERNAME in fabric_rc_dict:
-            self.bastion_username = fabric_rc_dict[self.FABRIC_BASTION_USERNAME]
+            self.bastion_username = fabric_rc_dict[self.FABRIC_BASTION_USERNAME].strip().strip('\"')
         if self.FABRIC_BASTION_KEY_LOCATION in fabric_rc_dict:
-            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_BASTION_KEY_LOCATION]
+            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_BASTION_KEY_LOCATION].strip().strip('\"')
         if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
-            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE].strip().strip('\"')
 
         # Slice keys
         if self.FABRIC_SLICE_PRIVATE_KEY_FILE in fabric_rc_dict:
-            self.default_slice_key['slice_private_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_FILE]
+            self.default_slice_key['slice_private_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_FILE].strip().strip('\"')
         if self.FABRIC_SLICE_PUBLIC_KEY_FILE in fabric_rc_dict:
-            self.default_slice_key['slice_public_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE]
+            self.default_slice_key['slice_public_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE].strip().strip('\"')
             with open(fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE], "r") as fd:
                 self.default_slice_key['slice_public_key'] = fd.read().strip()
         if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
@@ -672,11 +676,16 @@ class FablibManager:
                 self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
 
         if self.FABRIC_LOG_FILE in fabric_rc_dict:
-            self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE])
+            self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE].strip().strip('\"'))
         if self.FABRIC_LOG_LEVEL in fabric_rc_dict:
-            self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL])
+            self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL].strip().strip('\"'))
         if self.FABRIC_AVOID in fabric_rc_dict:
-            self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID])
+            self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID].strip().strip('\"'))
+        if self.FABRIC_SSH_COMMAND_LINE in fabric_rc_dict:
+            self.set_ssh_command_line(fabric_rc_dict[self.FABRIC_SSH_COMMAND_LINE].strip().strip('\"').strip("'"))
+        if self.FABRIC_SSH_CONFIG_FILE in fabric_rc_dict:
+            self.set_ssh_config_file(fabric_rc_dict[self.FABRIC_SSH_CONFIG_FILE].strip().strip('\"').strip("'"))
+
 
         # Set config values from constructor arguments
         if credmgr_host is not None:
@@ -730,6 +739,20 @@ class FablibManager:
     #            os.makedirs(self.data_dir)
     #    except Exception as e:
     #        logging.warning(f"Failed to create data dir: {self.data_dir}")
+
+    def get_ssh_command_line(self):
+        return self.ssh_command_line
+
+    def set_ssh_command_line(self, command):
+        self.ssh_command_line = command
+
+    def get_ssh_config_file(self):
+        return self.ssh_config_file
+
+    def set_ssh_config_file(self, command):
+        self.ssh_config_file = command
+
+
 
     def set_avoid_csv(self, avoid_csv: str = ''):
 

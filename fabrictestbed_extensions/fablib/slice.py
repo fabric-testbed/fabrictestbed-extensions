@@ -1687,7 +1687,7 @@ class Slice:
         if fields == None:
             fields = ["ID", "Name", "Site", "Host",
                       "Cores", "RAM", "Disk", "Image",
-                      "Management IP", "State", "Error"]
+                      "Username", "Management IP", "State", "Error"]
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
