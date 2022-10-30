@@ -1717,7 +1717,7 @@ class FablibManager:
 
         return printable_table
 
-    def list_table_json(self, data, quiet=False):
+    def list_table_json(self, data,  quiet=False):
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
@@ -1749,15 +1749,18 @@ class FablibManager:
         if fields == None and len(data) > 0:
             fields = list(data[0].keys())
 
-        table = self.create_list_table(data, fields=fields)
+
+
 
         if output == 'text':
+            table = self.create_list_table(data, fields=fields)
             return self.list_table_text(table, headers=fields, quiet=quiet)
         elif output == 'json':
             return self.list_table_json(data, quiet=quiet)
         elif output == 'list':
             return self.list_table_list(data, quiet=quiet)
         elif output == 'pandas':
+            table = self.create_list_table(data, fields=fields)
             return self.list_table_jupyter(table,
                                            headers=fields,
                                            title=title,
