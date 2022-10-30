@@ -576,6 +576,10 @@ class FablibManager:
 
         self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
 
+
+        # Hack to avoid sites in maintence.  TODO: Make dynamic call to FABRIC API
+        self.sites_in_maintenance = ['STAR', 'MAX']
+
         # init attributes
         self.bastion_passphrase = None
         self.log_file = self.default_log_file
@@ -1021,13 +1025,23 @@ class FablibManager:
         :return: list of random site names.
         :rtype: List[Sting]
         """
+        # Always filter out sites in maintenance and sites that can't support any VMs
+        def combined_filter_function(site):
+            if filter_function == None:
+                if site['Name'] not in self.sites_in_maintenance and site['Hosts'] > 0:
+                    return True
+            else:
+                if filter_function(site) and site['Name'] not in self.sites_in_maintenance and site['Hosts'] > 0:
+                    return True
+
+            return False
 
         for site in self.get_avoid():
             if site not in avoid:
                 avoid.append(site)
 
         site_list = self.list_sites(output='list', quiet=True,
-                                    filter_function=filter_function)
+                                    filter_function=combined_filter_function)
 
         sites = list(map(lambda x: x['Name'], site_list))
 
@@ -1038,9 +1052,12 @@ class FablibManager:
 
         rtn_sites = []
         for i in range(count):
-            rand_site = random.choice(sites)
-            sites.remove(rand_site)
-            rtn_sites.append(rand_site)
+            if len(sites) > 0:
+                rand_site = random.choice(sites)
+                sites.remove(rand_site)
+                rtn_sites.append(rand_site)
+            else:
+                rtn_sites.append(None)
         return rtn_sites
 
     def get_default_slice_key(self) -> Dict[str, str]:
