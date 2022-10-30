@@ -342,7 +342,7 @@ class fablib:
         return fablib.get_default_fablib_manager().new_slice(name)
 
     @staticmethod
-    def get_site_advertisment(site: str) -> FimNode:
+    def get_site_advertisement(site: str) -> FimNode:
         """
         Not intended for API use.
 
@@ -353,7 +353,7 @@ class fablib:
         :return: fim object for this site
         :rtype: Node
         """
-        return fablib.get_default_fablib_manager().get_site_advertisment(site)
+        return fablib.get_default_fablib_manager().get_site_advertisement(site)
 
     @staticmethod
     def get_available_resources(update: bool = False) -> Resources:
@@ -895,7 +895,8 @@ class FablibManager:
                    output: str = None,
                    fields: str = None,
                    quiet: bool = False,
-                   filter_function=None) -> object:
+                   filter_function=None,
+                   update: bool = True) -> object:
         """
         Lists all the sites and their attributes.
 
@@ -926,7 +927,7 @@ class FablibManager:
         :rtype: Object
         """
 
-        return self.get_resources().list_sites(output=output, fields=fields, quiet=quiet,
+        return self.get_resources(update=update).list_sites(output=output, fields=fields, quiet=quiet,
                                                filter_function=filter_function)
 
     def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False):
@@ -990,7 +991,7 @@ class FablibManager:
                                                   output=output,
                                                   quiet=quiet))
 
-    def get_resources(self) -> Resources:
+    def get_resources(self, update: bool = True) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -999,11 +1000,11 @@ class FablibManager:
         :rtype: Resources
         """
         if not self.resources:
-            self.get_available_resources()
+            self.get_available_resources(update=update)
 
         return self.resources
 
-    def get_random_site(self, avoid: List[str] = [], filter_function=None) -> str:
+    def get_random_site(self, avoid: List[str] = [], filter_function=None, update: bool = True) -> str:
         """
         Get a random site.
 
@@ -1012,9 +1013,9 @@ class FablibManager:
         :return: one site name
         :rtype: String
         """
-        return self.get_random_sites(count=1, avoid=avoid, filter_function=filter_function)[0]
+        return self.get_random_sites(count=1, avoid=avoid, filter_function=filter_function, update=update)[0]
 
-    def get_random_sites(self, count: int = 1, avoid: List[str] = [], filter_function=None) -> List[str]:
+    def get_random_sites(self, count: int = 1, avoid: List[str] = [], filter_function=None, update: bool = True) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -1041,7 +1042,7 @@ class FablibManager:
                 avoid.append(site)
 
         site_list = self.list_sites(output='list', quiet=True,
-                                    filter_function=combined_filter_function)
+                                    filter_function=combined_filter_function, update=update)
 
         sites = list(map(lambda x: x['Name'], site_list))
 
@@ -1268,7 +1269,7 @@ class FablibManager:
         # fabric = fablib()
         return Slice.new_slice(self, name=name)
 
-    def get_site_advertisment(self, site: str) -> FimNode:
+    def get_site_advertisement(self, site: str) -> FimNode:
         """
         Not intended for API use.
 
@@ -1279,6 +1280,7 @@ class FablibManager:
         :return: fim object for this site
         :rtype: Node
         """
+        logging.info(f"Updating get_site_advertisement")
         return_status, topology = self.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
@@ -1299,8 +1301,7 @@ class FablibManager:
 
         if self.resources is None:
             self.resources = Resources(self)
-
-        if update:
+        elif update:
             self.resources.update()
 
         return self.resources
