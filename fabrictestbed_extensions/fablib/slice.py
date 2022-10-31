@@ -125,7 +125,7 @@ class Slice:
 
         self.get_fim_topology().load(file_name=filename)
 
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current slice attributes.
 
@@ -177,7 +177,8 @@ class Slice:
                                                                fields=fields,
                                                                title='Slice',
                                                                output='pandas',
-                                                               quiet=True)
+                                                               quiet=True,
+                                                               pretty_names=pretty_names)
             slice_table.applymap(state_color)
 
             if quiet == False:
@@ -187,7 +188,8 @@ class Slice:
                                                                fields=fields,
                                                                title='Slice',
                                                                output=output,
-                                                               quiet=quiet)
+                                                               quiet=quiet,
+                                                               pretty_names=pretty_names)
 
         return slice_table
 
@@ -398,12 +400,12 @@ class Slice:
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {"ID": self.get_slice_id(),
-                "Name": self.get_name(),
-                "Lease Expiration (UTC)": self.get_lease_end(),
-                "Lease Start (UTC)": self.get_lease_start(),
-                "Project ID": self.get_project_id(),
-                "State": self.get_state(),
+        return { 'id': { 'pretty_name': 'ID', 'value': self.get_slice_id()},
+                'name': { 'pretty_name': 'Name', 'value':  self.get_name()},
+                'lease_end': { 'pretty_name': 'Lease Expiration (UTC)', 'value':  self.get_lease_end()},
+                'lease_start': { 'pretty_name': 'Lease Start (UTC)', 'value':  self.get_lease_start()},
+                'project_id': { 'pretty_name': 'Project ID', 'value': self.get_project_id()},
+                'state': { 'pretty_name': 'State', 'value':  self.get_state()},
                 }
 
     def get_fim_topology(self) -> ExperimentTopology:
@@ -1619,7 +1621,7 @@ class Slice:
 
         return table
 
-    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, filter_function=None):
+    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, filter_function=None, pretty_names=True):
         """
         Lists all the nodes in the slice.
 
@@ -1684,22 +1686,28 @@ class Slice:
         for node in self.get_nodes():
             table.append(node.toDict())
 
-        if fields == None:
-            fields = ["ID", "Name", "Site", "Host",
-                      "Cores", "RAM", "Disk", "Image",
-                      "Username", "Management IP", "State", "Error"]
+        #if fields == None:
+        #    fields = ["ID", "Name", "Site", "Host",
+        #              "Cores", "RAM", "Disk", "Image",
+        #              "Username", "Management IP", "State", "Error"]
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
                                                      title='Nodes',
                                                      output=output,
-                                                     quiet=True, filter_function=filter_function)
+                                                     quiet=True,
+                                                     filter_function=filter_function,
+                                                     pretty_names=pretty_names)
 
         if colors:
-            # table = table.apply(highlight, axis=1)
-            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])
-            table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
-
+            if pretty_names:
+                # table = table.apply(highlight, axis=1)
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
+            else:
+                # table = table.apply(highlight, axis=1)
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['state']])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['error']])
         if not quiet:
             display(table)
 

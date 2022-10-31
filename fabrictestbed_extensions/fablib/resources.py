@@ -95,7 +95,7 @@ class Resources:
 
 
 
-    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False) -> str:
+    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True) -> str:
 
         """
         Creates a tabulated string of all the available resources at a specific site.
@@ -116,7 +116,8 @@ class Resources:
                                                            fields=fields,
                                                            title='Site',
                                                            output=output,
-                                                           quiet=quiet)
+                                                           quiet=quiet,
+                                                          pretty_names=pretty_names)
 
         return site_table
 
@@ -458,96 +459,54 @@ class Resources:
 
     def site_to_dict(self, site):
         site_name = site.name
-        return  {    "Name":  site.name,
-                     "CPUs":   self.get_cpu_capacity(site_name),
+        return  {    'name': { 'pretty_name': 'Name', 'value':  site.name},
+
+                     'address': { 'pretty_name': "Address", 'value': self.get_location_postal(site_name)},
+                     'location': { 'pretty_name': "Location", 'value': self.get_location_lat_long(site_name)},
+
+                     'hosts': {'pretty_name': "Hosts", 'value': self.get_host_capacity(site_name)},
+                     'cpus': {'pretty_name': "CPUs", 'value': self.get_cpu_capacity(site_name)},
+
+                     'cores_available': { 'pretty_name': "Cores Available", 'value':   self.get_core_available(site_name)},
+                     'cores_capacity': { 'pretty_name': "Cores Capacity", 'value':       self.get_core_capacity(site_name)},
+                     'cores_allocated': { 'pretty_name': "Cores Allocated", 'value':   self.get_core_capacity(site_name)-self.get_core_available(site_name)},
                  
-                     "Cores Available":   self.get_core_available(site_name),
-                     "Cores Capacity":       self.get_core_capacity(site_name),
-                     "Cores Allocated":   self.get_core_capacity(site_name)-self.get_core_available(site_name),
-                 
-                     "RAM Available":   self.get_ram_available(site_name),
-                     "RAM Capacity":       self.get_ram_capacity(site_name),
-                     "RAM Allocated":   self.get_ram_capacity(site_name)-self.get_ram_available(site_name),
+                     'ram_available': { 'pretty_name': "RAM Available", 'value':   self.get_ram_available(site_name)},
+                     'ram_capacity': { 'pretty_name': "RAM Capacity", 'value':       self.get_ram_capacity(site_name)},
+                     'ram_allocated': { 'pretty_name': "RAM Allocated", 'value':   self.get_ram_capacity(site_name)-self.get_ram_available(site_name)},
 
-                     "Disk Available":   self.get_disk_available(site_name),
-                     "Disk Capacity":       self.get_disk_capacity(site_name),
-                     "Disk Allocated":   self.get_disk_capacity(site_name)-self.get_disk_available(site_name),
+                     'disk_available': { 'pretty_name': "Disk Available", 'value':   self.get_disk_available(site_name)},
+                     'disk_capacity': { 'pretty_name': "Disk Capacity", 'value':       self.get_disk_capacity(site_name)},
+                     'disk_allocated': { 'pretty_name': "Disk Allocated", 'value':   self.get_disk_capacity(site_name)-self.get_disk_available(site_name)},
 
-                     "Hosts":  self.get_host_capacity(site_name),
-                     "Address":  self.get_location_postal(site_name),
-                     "Location":  self.get_location_lat_long(site_name),
-                 
-                     "Basic NIC Available":   self.get_component_available(site_name,'SharedNIC-ConnectX-6'),
-                     "Basic NIC Capacity":       self.get_component_capacity(site_name,'SharedNIC-ConnectX-6'),
-                     "Basic NIC Allocated":   self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')-self.get_component_available(site_name,'SharedNIC-ConnectX-6'),
+                     'nic_basic_available': { 'pretty_name': "Basic NIC Available", 'value':   self.get_component_available(site_name,'SharedNIC-ConnectX-6')},
+                     'nic_basic_capacity': { 'pretty_name': "Basic NIC Capacity", 'value':       self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')},
+                     'nic_basic_allocated': { 'pretty_name': "Basic NIC Allocated", 'value':   self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')-self.get_component_available(site_name,'SharedNIC-ConnectX-6')},
 
-                     "ConnectX-6 Available":    self.get_component_available(site_name,'SmartNIC-ConnectX-6'),
-                     "ConnectX-6 Capacity":        self.get_component_capacity(site_name,'SmartNIC-ConnectX-6'),
-                     "ConnectX-6 Allocated":    self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')-self.get_component_available(site_name,'SmartNIC-ConnectX-6'),
+                     'nic_connectx_6_available': { 'pretty_name': "ConnectX-6 Available", 'value':    self.get_component_available(site_name,'SmartNIC-ConnectX-6')},
+                     'nic_connectx_6_capacity': { 'pretty_name': "ConnectX-6 Capacity", 'value':        self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')},
+                     'nic_connectx_6_allocated': { 'pretty_name': "ConnectX-6 Allocated", 'value':    self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')-self.get_component_available(site_name,'SmartNIC-ConnectX-6')},
 
-                     "ConnectX-5 Available":     self.get_component_available(site_name,'SmartNIC-ConnectX-5'),
-                     "ConnectX-5 Capacity":         self.get_component_capacity(site_name,'SmartNIC-ConnectX-5'),
-                     "ConnectX-5 Allocated":     self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')-self.get_component_available(site_name,'SmartNIC-ConnectX-5'),
+                     'nic_connectx_5_available': { 'pretty_name': "ConnectX-5 Available", 'value':     self.get_component_available(site_name,'SmartNIC-ConnectX-5')},
+                     'nic_connectx_5_capacity': { 'pretty_name': "ConnectX-5 Capacity", 'value':         self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')},
+                     'nic_connectx_5_allocated': { 'pretty_name': "ConnectX-5 Allocated", 'value':     self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')-self.get_component_available(site_name,'SmartNIC-ConnectX-5')},
 
-                     "NVMe Available":   self.get_component_available(site_name,'NVME-P4510'),
-                     "NVMe Capacity":       self.get_component_capacity(site_name,'NVME-P4510'),
-                     "NVMe Allocated":   self.get_component_capacity(site_name,'NVME-P4510')-self.get_component_available(site_name,'NVME-P4510'),
+                     'nvme_available': { 'pretty_name': "NVMe Available", 'value':   self.get_component_available(site_name,'NVME-P4510')},
+                     'nvme_capacity': { 'pretty_name': "NVMe Capacity", 'value':       self.get_component_capacity(site_name,'NVME-P4510')},
+                     'nvme_allocated': { 'pretty_name': "NVMe Allocated", 'value':   self.get_component_capacity(site_name,'NVME-P4510')-self.get_component_available(site_name,'NVME-P4510')},
 
-                     "Tesla T4 Available":   self.get_component_available(site_name,'GPU-Tesla T4'),
-                     "Tesla T4 Capacity":       self.get_component_capacity(site_name,'GPU-Tesla T4'),
-                     "Tesla T4 Allocated":   self.get_component_capacity(site_name,'GPU-Tesla T4')-self.get_component_available(site_name,'GPU-Tesla T4'),
+                     'tesla_t4_available': { 'pretty_name': "Tesla T4 Available", 'value':   self.get_component_available(site_name,'GPU-Tesla T4')},
+                     'tesla_t4_capacity': { 'pretty_name': "Tesla T4 Capacity", 'value':       self.get_component_capacity(site_name,'GPU-Tesla T4')},
+                     'tesla_t4_allocated': { 'pretty_name': "Tesla T4 Allocated", 'value':   self.get_component_capacity(site_name,'GPU-Tesla T4')-self.get_component_available(site_name,'GPU-Tesla T4')},
 
-                     "RTX6000 Available":  self.get_component_available(site_name,'GPU-RTX6000'),
-                     "RTX6000 Capacity":      self.get_component_capacity(site_name,'GPU-RTX6000'),
-                     "RTX6000 Allocated":  self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000'),
+                     'rtx6000_available': { 'pretty_name': "RTX6000 Available", 'value':  self.get_component_available(site_name,'GPU-RTX6000')},
+                     'rtx6000_capacity': { 'pretty_name': "RTX6000 Capacity", 'value':      self.get_component_capacity(site_name,'GPU-RTX6000')},
+                     'rtx6000_allocated': { 'pretty_name': "RTX6000 Allocated", 'value':  self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000')}
 
                 }
 
-    default_site_fields = ["Name",
 
-              "Hosts",
-              "CPUs",
-              # "Address",
-              # "Location",
-
-              # "Cores Capacity",
-              # "Cores Allocated",
-
-              "RAM Available",
-              # "RAM Capacity",
-              # "RAM Allocated",
-
-              "Disk Available",
-              # "Disk Capacity",
-              # "Disk Allocated",
-
-              "Basic NIC Available",
-              # "Basic NIC Capacity",
-              # "Basic NIC Allocated",
-
-              "ConnectX-6 Available",
-              # "ConnectX-6 Capacity",
-              # "ConnectX-6 Allocated",
-
-              "ConnectX-5 Available",
-              # "ConnectX-5 Capacity",
-              # "ConnectX-5 Allocated",
-
-              "NVMe Available",
-              # "NVMe Capacity",
-              # "NVMe Allocated",
-
-              "Tesla T4 Available",
-              # "Tesla T4 Capacity",
-              # "Tesla T4 Allocated",
-
-              "RTX6000 Available",
-              # "RTX6000 Capacity",
-              # "RTX6000 Allocated",
-              ]
-
-    
-    def list_sites(self, output=None, fields=None, quiet=False, filter_function=None):
+    def list_sites(self, output=None, fields=None, quiet=False, filter_function=None, pretty_names=True):
         table = []
         for site_name, site in self.topology.sites.items():
             table.append(self.site_to_dict(site))
@@ -557,6 +516,7 @@ class Resources:
                         title='Sites',
                         output=output,
                         quiet=quiet, 
-                        filter_function=filter_function)
+                        filter_function=filter_function,
+                        pretty_names=pretty_names)
 
         return table

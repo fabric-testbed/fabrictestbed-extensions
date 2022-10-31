@@ -185,39 +185,37 @@ class Node:
         rtn_dict = {}
 
         if "ID" not in skip:
-            rtn_dict["ID"] =  str(self.get_reservation_id())
+            rtn_dict['id'] = {'pretty_name': 'ID', 'value': str(self.get_reservation_id())}
         if "Name" not in skip:
-            rtn_dict["Name"] =  str(self.get_name())
+            rtn_dict['name'] = {'pretty_name': 'Name', 'value': str(self.get_name())}
         if "Cores" not in skip:
-            rtn_dict["Cores"] =   str(self.get_cores())
+            rtn_dict['cores'] = {'pretty_name': 'Cores', 'value': str(self.get_cores())}
         if "RAM" not in skip:
-            rtn_dict["RAM"] =  str(self.get_ram())
+            rtn_dict['ram'] = {'pretty_name': 'RAM', 'value': str(self.get_ram())}
         if "Disk" not in skip:
-            rtn_dict["Disk"] =   str(self.get_disk())
+            rtn_dict['disk'] = {'pretty_name': 'Disk', 'value': str(self.get_disk())}
         if "Image" not in skip:
-            rtn_dict["Image"] =   str(self.get_image())
+            rtn_dict['image'] = {'pretty_name': 'Image', 'value': str(self.get_image())}
         if "Image Type" not in skip:
-            rtn_dict["Image Type"] =   str(self.get_image_type())
+            rtn_dict['image_type'] = {'pretty_name': 'Image Type', 'value': str(self.get_image_type())}
         if "Host" not in skip:
-            rtn_dict["Host"] =   str(self.get_host())
+            rtn_dict['host'] = {'pretty_name': 'Host', 'value': str(self.get_host())}
         if "Site" not in skip:
-            rtn_dict["Site"] =   str(self.get_site())
+            rtn_dict['site'] = {'pretty_name': 'Site', 'value': str(self.get_site())}
         if "Username" not in skip:
-            rtn_dict["Username"] =   str(self.get_username())
+            rtn_dict['username'] = {'pretty_name': 'Username', 'value': str(self.get_username())}
         if "Management IP" not in skip:
-            rtn_dict["Management IP"] =   str(self.get_management_ip())
+            rtn_dict['management_ip'] = {'pretty_name': 'Management IP', 'value': str(self.get_management_ip())}
         if "State" not in skip:
-            rtn_dict["State"] =   str(self.get_reservation_state())
+            rtn_dict['state'] = {'pretty_name': 'State', 'value': str(self.get_reservation_state())}
         if "Error" not in skip:
-            rtn_dict["Error"] =   str(self.get_error_message())
+            rtn_dict['error'] = {'pretty_name': 'Error', 'value': str(self.get_error_message())}
         if "SSH Command" not in skip:
-            rtn_dict["SSH Command"] =   str(self.get_ssh_command())
+            rtn_dict['command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
         if "Public SSH Key File" not in skip:
-            rtn_dict["Public SSH Key File"] =   str(self.get_public_key_file())
+            rtn_dict['public_ssh_key_file'] = {'pretty_name': 'Public SSH Key File', 'value': str(self.get_public_key_file())}
         if "Private SSH Key File" not in skip:
-            rtn_dict["Private SSH Key File"] =   str(self.get_private_key_file())
-        if "SSH Config File" not in skip:
-            rtn_dict["SSH Config File"] = str(self.get_fablib_manager().get_ssh_config_file())
+            rtn_dict['private_ssh_key_file'] = {'pretty_name': 'Private SSH Key File', 'value': str(self.get_private_key_file())}
 
         return rtn_dict
         #return { "ID":  str(self.get_reservation_id()),
@@ -267,12 +265,12 @@ class Node:
 
         data = self.toDict()
 
-        if fields == None:
-            fields = ["ID", "Name", "Cores", "RAM", "Disk",
-                    "Image", "Image Type","Host", "Site",
-                    "Management IP", "State",
-                    "Error","SSH Command"
-                     ]
+        #if fields == None:
+        #    fields = ["ID", "Name", "Cores", "RAM", "Disk",
+        #            "Image", "Image Type","Host", "Site",
+        #            "Management IP", "State",
+        #            "Error","SSH Command"
+        #             ]
 
         def state_color(val):
             if val == 'Active':
@@ -879,6 +877,11 @@ class Node:
         ssh_command = self.get_fablib_manager().get_ssh_command_line()
 
         for key,val in self.toDict(skip=["SSH Command"]).items():
+            remove_str = '${'+str(key).strip()+'}'
+            add_str = str(val)
+            ssh_command = ssh_command.replace(remove_str, add_str)
+
+        for key,val in self.get_fablib_manager().get_config().items():
             remove_str = '${'+str(key).strip()+'}'
             add_str = str(val)
             ssh_command = ssh_command.replace(remove_str, add_str)

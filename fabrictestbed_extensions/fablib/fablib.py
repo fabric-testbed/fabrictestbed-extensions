@@ -486,7 +486,6 @@ class FablibManager:
     FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
     FABRIC_AVOID = 'FABRIC_AVOID'
     FABRIC_SSH_COMMAND_LINE = 'FABRIC_SSH_COMMAND_LINE'
-    FABRIC_SSH_CONFIG_FILE = 'FABRIC_SSH_CONFIG_FILE'
 
     FABRIC_PRIMARY = '#27aae1'
     FABRIC_PRIMARY_LIGHT = '#cde4ef'
@@ -589,7 +588,7 @@ class FablibManager:
         self.set_log_level(self.log_level)
         self.data_dir = None
         self.avoid = []
-        self.ssh_command_line = 'ssh -F ${SSH Config File} ${Username}@${Management IP}'
+        self.ssh_command_line = 'ssh ${Username}@${Management IP}'
         self.ssh_config_file = ''
 
         # Setup slice key dict
@@ -683,9 +682,6 @@ class FablibManager:
             self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID].strip().strip('\"'))
         if self.FABRIC_SSH_COMMAND_LINE in fabric_rc_dict:
             self.set_ssh_command_line(fabric_rc_dict[self.FABRIC_SSH_COMMAND_LINE].strip().strip('\"').strip("'"))
-        if self.FABRIC_SSH_CONFIG_FILE in fabric_rc_dict:
-            self.set_ssh_config_file(fabric_rc_dict[self.FABRIC_SSH_CONFIG_FILE].strip().strip('\"').strip("'"))
-
 
         # Set config values from constructor arguments
         if credmgr_host is not None:
@@ -745,14 +741,6 @@ class FablibManager:
 
     def set_ssh_command_line(self, command):
         self.ssh_command_line = command
-
-    def get_ssh_config_file(self):
-        return self.ssh_config_file
-
-    def set_ssh_config_file(self, command):
-        self.ssh_config_file = command
-
-
 
     def set_avoid_csv(self, avoid_csv: str = ''):
 
@@ -919,7 +907,8 @@ class FablibManager:
                    fields: str = None,
                    quiet: bool = False,
                    filter_function=None,
-                   update: bool = True) -> object:
+                   update: bool = True,
+                   pretty_names=True) -> object:
         """
         Lists all the sites and their attributes.
 
@@ -951,9 +940,9 @@ class FablibManager:
         """
 
         return self.get_resources(update=update).list_sites(output=output, fields=fields, quiet=quiet,
-                                               filter_function=filter_function)
+                                               filter_function=filter_function, pretty_names=pretty_names)
 
-    def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False):
+    def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True):
         """
         Show a table containing the current FABlib configuration parameters.
 
@@ -981,9 +970,10 @@ class FablibManager:
                                fields=fields,
                                title='FABlib Config',
                                output=output,
-                               quiet=quiet)
+                               quiet=quiet,
+                               pretty_names=pretty_names)
 
-    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False):
+    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True):
         """
         Show a table with all the properties of a specific site
 
@@ -1012,7 +1002,8 @@ class FablibManager:
         return str(self.get_resources().show_site(site_name,
                                                   fields=fields,
                                                   output=output,
-                                                  quiet=quiet))
+                                                  quiet=quiet,
+                                                  pretty_names=pretty_names))
 
     def get_resources(self, update: bool = True) -> Resources:
         """
@@ -1097,7 +1088,7 @@ class FablibManager:
         """
         return self.default_slice_key
 
-    def get_config(self) -> Dict[str, str]:
+    def get_config(self) -> Dict[str, Dict[str, str]]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
         variable values.
@@ -1105,23 +1096,21 @@ class FablibManager:
         :return: dictionary mapping keywords to FABRIC values
         :rtype: Dict[String, String]
         """
-        return {'credmgr_host': self.credmgr_host,
-                'orchestrator_host': self.orchestrator_host,
-                'fabric_token': self.fabric_token,
-                'project_id': self.project_id,
-                'bastion_username': self.bastion_username,
-                'bastion_key_filename': self.bastion_key_filename,
-                'bastion_public_addr': self.bastion_public_addr,
-                'bastion_passphrase': self.bastion_passphrase,
-                # 'bastion_private_ipv4_addr': self.bastion_private_ipv4_addr,
-                # 'slice_public_key': self.get_default_slice_public_key(),
-                'slice_public_key_file': self.get_default_slice_public_key_file(),
-                'slice_private_key_file': self.get_default_slice_private_key_file(),
-                'fabric_slice_private_key_passphrase': self.get_default_slice_private_key_passphrase(),
-                'fablib_log_file': self.get_log_file(),
-                'fablib_log_level': self.get_log_level()
+        return { 'credmgr_host': { 'pretty_name': 'Credential Manager', 'value': self.credmgr_host},
+                'orchestrator_host':  { 'pretty_name': 'Orchestrator', 'value': self.orchestrator_host},
+                'fabric_token':  { 'pretty_name': 'Token File', 'value':self.fabric_token},
+                'project_id':  { 'pretty_name': 'Project ID', 'value':self.project_id},
+                'bastion_username':  { 'pretty_name': 'Bastion Username', 'value':self.bastion_username},
+                'bastion_private_key_file':  { 'pretty_name': 'Bastion Private Key File', 'value':self.bastion_key_filename},
+                'bastion_host':  { 'pretty_name': 'Bastion Host', 'value':self.bastion_public_addr},
+                'bastion_private_key_passphrase':  { 'pretty_name': 'Bastion Private Key Passphrase', 'value':self.bastion_passphrase},
+                'slice_public_key_file':  { 'pretty_name': 'Slice Public Key File', 'value':self.get_default_slice_public_key_file()},
+                'slice_private_key_file':  { 'pretty_name': 'Slice Private Key File', 'value':self.get_default_slice_private_key_file()},
+                'fabric_slice_private_key_passphrase':  { 'pretty_name': 'Slice Private Key Passphrase', 'value':self.get_default_slice_private_key_passphrase()},
+                'fablib_log_file': { 'pretty_name': 'Log File', 'value': self.get_log_file()},
+                'fablib_log_level':  { 'pretty_name': 'Log Level', 'value':self.get_log_level()}
 
-                }
+                 }
 
     def get_default_slice_public_key(self) -> str:
         """
@@ -1372,7 +1361,8 @@ class FablibManager:
                     output=None,
                     fields=None,
                     quiet=False,
-                    filter_function=None):
+                    filter_function=None,
+                    pretty_names=True):
         """
         Lists all the slices created by a user.
 
@@ -1406,13 +1396,14 @@ class FablibManager:
         """
         table = []
         for slice in self.get_slices(excludes=excludes):
-            table.append({"ID": slice.get_slice_id(),
-                          "Name": slice.get_name(),
-                          "Lease Expiration (UTC)": slice.get_lease_end(),
-                          "Lease Start (UTC)": slice.get_lease_start(),
-                          "Project ID": slice.get_project_id(),
-                          "State": slice.get_state(),
-                          })
+            table.append(slice.toDict())
+            #table.append({"ID": slice.get_slice_id(),
+            #              "Name": slice.get_name(),
+            #              "Lease Expiration (UTC)": slice.get_lease_end(),
+            #              "Lease Start (UTC)": slice.get_lease_start(),
+            #              "Project ID": slice.get_project_id(),
+            #              "State": slice.get_state(),
+            #              })
 
         # if fields == None:
         #    fields = ["ID", "Name", "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
@@ -1422,10 +1413,11 @@ class FablibManager:
                                title='Slices',
                                output=output,
                                quiet=quiet,
-                               filter_function=filter_function
+                               filter_function=filter_function,
+                               pretty_names=pretty_names
                                )
 
-    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False):
+    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False,  pretty_names=True):
         """
         Show a table with all the properties of a specific site
 
@@ -1454,7 +1446,7 @@ class FablibManager:
 
         slice = self.get_slice(name=name, slice_id=id)
 
-        return slice.show(output=output, fields=fields, quiet=quiet)
+        return slice.show(output=output, fields=fields, quiet=quiet, pretty_names=pretty_names)
 
     def get_slices(self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
                    slice_name: str = None, slice_id: str = None) -> List[Slice]:
@@ -1645,12 +1637,13 @@ class FablibManager:
                    title='',
                    title_font_size='1.25em',
                    output=None,
-                   quiet=False):
+                   quiet=False,
+                   pretty_names=True):
 
         if output == None:
             output = self.output.lower()
 
-        table = self.create_show_table(data, fields=fields)
+        table = self.create_show_table(data, fields=fields, pretty_names=pretty_names)
 
         if (output == 'text' or output == 'default'):
             return self.show_table_text(table, quiet=quiet)
@@ -1761,7 +1754,8 @@ class FablibManager:
                    title_font_size='1.25em',
                    output=None,
                    quiet=False,
-                   filter_function=None):
+                   filter_function=None,
+                   pretty_names=True):
 
         if filter_function:
             data = list(filter(filter_function, data))
@@ -1772,20 +1766,29 @@ class FablibManager:
         if fields == None and len(data) > 0:
             fields = list(data[0].keys())
 
+        if pretty_names:
+            headers = []
+            for field in fields:
+                headers.append(data[0][field]['pretty_name'])
 
-
+            #for key, value in data[0].items():
+            #    if key in fields:
+            #        headers.append(value['pretty_name'])
+        else:
+            headers = fields
 
         if output == 'text':
             table = self.create_list_table(data, fields=fields)
-            return self.list_table_text(table, headers=fields, quiet=quiet)
+            return self.list_table_text(table, headers=headers, quiet=quiet)
         elif output == 'json':
             return self.list_table_json(data, quiet=quiet)
         elif output == 'list':
             return self.list_table_list(data, quiet=quiet)
         elif output == 'pandas':
             table = self.create_list_table(data, fields=fields)
+
             return self.list_table_jupyter(table,
-                                           headers=fields,
+                                           headers=headers,
                                            title=title,
                                            title_font_size=title_font_size,
                                            output=output,
@@ -1798,12 +1801,40 @@ class FablibManager:
         for entry in data:
             row = []
             for field in fields:
+                row.append(entry[field]['value'])
+
+            table.append(row)
+        return table
+
+    def create_list_tableXXX(self, data, fields=None):
+        table = []
+        for entry in data:
+            row = []
+            for field in fields:
                 row.append(entry[field])
 
             table.append(row)
         return table
 
-    def create_show_table(self, data, fields=None):
+    def create_show_table(self, data, fields=None, pretty_names=True):
+        table = []
+        if fields == None:
+            for key, value in data.items():
+                if pretty_names:
+                    table.append([value['pretty_name'], value['value']])
+                else:
+                    table.append([key, value['value']])
+        else:
+            for field in fields:
+                value = data[field]
+                if pretty_names:
+                    table.append([value['pretty_name'], value['value']])
+                else:
+                    table.append([field, value['value']])
+
+        return table
+
+    def create_show_tableXXX(self, data, fields=None):
         table = []
         if fields == None:
             for key, value in data.items():
