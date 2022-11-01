@@ -88,13 +88,13 @@ class Component:
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {     "Name": self.get_name(),
-                     "Details": self.get_details(),
-                     "Disk": self.get_disk(),
-                     "Units": self.get_unit(),
-                     "PCI Address": self.get_pci_addr(),
-                     "Model": self.get_model(),
-                     "Type": self.get_type()
+        return { 'name': { 'pretty_name': 'Name', 'value': self.get_name()},
+                'details': { 'pretty_name': 'Details', 'value': self.get_details()},
+                'disk': { 'pretty_name': 'Disk', 'value': self.get_disk()},
+                'units': { 'pretty_name': 'Units', 'value': self.get_unit()},
+                'pci_address': { 'pretty_name': 'PCI Address', 'value': self.get_pci_addr()},
+                'model': { 'pretty_name': 'Model', 'value': self.get_model()},
+                'type': { 'pretty_name': 'Type', 'value': self.get_type()}
                 }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
@@ -125,9 +125,9 @@ class Component:
          """
         data = self.toDict()
     
-        fields = ["Name", "Details", "Disk", "Units", "PCI Address",
-                "Model", "Type"
-                 ]
+        #fields = ["Name", "Details", "Disk", "Units", "PCI Address",
+        #        "Model", "Type"
+        #         ]
     
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,

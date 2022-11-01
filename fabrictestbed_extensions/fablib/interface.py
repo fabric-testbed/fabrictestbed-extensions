@@ -114,15 +114,15 @@ class Interface:
         else:
             node_name = None
 
-        return {  "Name": self.get_name(),
-                  "Node": node_name,
-                  "Network": network_name,
-                  "Bandwidth": self.get_bandwidth(),
-                  "VLAN": self.get_vlan(),
-                  "MAC": self.get_mac(),
-                  "Physical Device": self.get_physical_os_interface_name(),
-                  "Device": self.get_os_interface(),
-                 }
+        return {'name': { 'pretty_name': 'Name', 'value': self.get_name()},
+                'node': { 'pretty_name': 'Node', 'value': node_name},
+                'network': { 'pretty_name': 'Network', 'value': network_name},
+                'bandwidth': { 'pretty_name': 'Bandwidth', 'value': self.get_bandwidth()},
+                'vlan': { 'pretty_name': 'VLAN', 'value': self.get_vlan()},
+                'mac': { 'pretty_name': 'MAC', 'value': self.get_mac()},
+                'physical_dev': { 'pretty_name': 'Physical Device', 'value': self.get_physical_os_interface_name()},
+                'dev': { 'pretty_name': 'Device', 'value': self.get_os_interface()},
+                }
 
 
 
@@ -155,9 +155,9 @@ class Interface:
 
         data = self.toDict()
     
-        fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
-                "MAC", "Device"
-                 ]
+        #fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
+        #        "MAC", "Device"
+        #         ]
     
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,

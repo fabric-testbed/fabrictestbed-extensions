@@ -67,14 +67,14 @@ class FacilityPort:
         return json.dumps(self.toDict(), indent=4)
 
     def toDict(self):
-        return {     "Name": self.get_name()
-                }
+        return {'name': { 'pretty_name': 'Name', 'value': self.get_name()}
+               }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
         data = self.toDict()
     
-        fields = ["Name",
-                 ]
+        #fields = ["Name",
+        #         ]
     
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,

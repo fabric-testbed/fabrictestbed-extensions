@@ -440,15 +440,15 @@ class NetworkService:
         :return: network attributes as dictionary
         :rtype: dict
         """
-        return {    "ID": self.get_reservation_id(),
-                    "Name": self.get_name(),
-                    "Layer": self.get_layer(),
-                    "Type": self.get_type(),
-                    "Site": self.get_site(),
-                    "Gateway": self.get_gateway(),
-                    "Subnet": self.get_subnet(),
-                    "State": self.get_reservation_state(),
-                    "Error": self.get_error_message(),
+        return {'id': { 'pretty_name': 'ID', 'value': self.get_reservation_id()},
+                'name': {'pretty_name': 'Name', 'value': self.get_name()},
+                'layer': {'pretty_name': 'Layer', 'value': self.get_layer()},
+                'type': {'pretty_name': 'Type', 'value': self.get_type()},
+                'site': {'pretty_name': 'Site', 'value': self.get_site()},
+                'gateway': {'pretty_name': 'Gateway', 'value': self.get_gateway()},
+                'subnet': {'pretty_name': 'Subnet', 'value': self.get_subnet()},
+                'state': {'pretty_name': 'State', 'value': self.get_reservation_state()},
+                'error': {'pretty_name': 'Error', 'value': self.get_error_message()},
                 }
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
@@ -480,9 +480,9 @@ class NetworkService:
 
         data = self.toDict()
         
-        fields = ["ID", "Name", "Layer", "Type", "Site",
-                "Gateway", "Subnet","State", "Error",
-                 ]
+        #fields = ["ID", "Name", "Layer", "Type", "Site",
+        #        "Gateway", "Subnet","State", "Error",
+        #         ]
         
         node_table = self.get_fablib_manager().show_table(data, 
                         fields=fields,

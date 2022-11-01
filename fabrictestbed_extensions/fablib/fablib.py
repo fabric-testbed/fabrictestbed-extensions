@@ -1043,10 +1043,10 @@ class FablibManager:
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
             if filter_function == None:
-                if site['Name'] not in self.sites_in_maintenance and site['Hosts'] > 0:
+                if site['name']['value'] not in self.sites_in_maintenance and site['hosts']['value'] > 0:
                     return True
             else:
-                if filter_function(site) and site['Name'] not in self.sites_in_maintenance and site['Hosts'] > 0:
+                if filter_function(site) and site['name']['value'] not in self.sites_in_maintenance and site['hosts']['value'] > 0:
                     return True
 
             return False
@@ -1058,7 +1058,7 @@ class FablibManager:
         site_list = self.list_sites(output='list', quiet=True,
                                     filter_function=combined_filter_function, update=update)
 
-        sites = list(map(lambda x: x['Name'], site_list))
+        sites = list(map(lambda x: x['name']['value'], site_list))
 
         #sites = self.get_resources().get_site_list()
         for site in avoid:
@@ -1760,13 +1760,20 @@ class FablibManager:
         if filter_function:
             data = list(filter(filter_function, data))
 
+        logging.debug(f"data: {data}\n\n")
+
         if output == None:
             output = self.output.lower()
 
         if fields == None and len(data) > 0:
             fields = list(data[0].keys())
 
-        if pretty_names:
+        if fields == None:
+            fields = []
+
+        logging.debug(f"fields: {fields}\n\n")
+
+        if pretty_names and len(data) > 0:
             headers = []
             for field in fields:
                 headers.append(data[0][field]['pretty_name'])
@@ -1776,6 +1783,9 @@ class FablibManager:
             #        headers.append(value['pretty_name'])
         else:
             headers = fields
+
+        logging.debug(f"headers: {headers}\n\n")
+
 
         if output == 'text':
             table = self.create_list_table(data, fields=fields)

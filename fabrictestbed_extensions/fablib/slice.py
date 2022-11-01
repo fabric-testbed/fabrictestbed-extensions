@@ -232,10 +232,10 @@ class Slice:
         for component in self.get_components():
             table.append(component.toDict())
 
-        if fields == None:
-            fields = ["Name", "Details", "Disk",
-                      "Units", "PCI Address", "Model",
-                      "Type"]
+        #if fields == None:
+        #    fields = ["Name", "Details", "Disk",
+        #              "Units", "PCI Address", "Model",
+        #              "Type"]
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
@@ -318,20 +318,21 @@ class Slice:
             else:
                 node_name = None
 
-            table.append({"Name": iface.get_name(),
-                          "Node": node_name,
-                          "Network": network_name,
-                          "Bandwidth": iface.get_bandwidth(),
-                          "VLAN": iface.get_vlan(),
-                          "MAC": iface.get_mac(),
-                          "Physical Device": physical_os_interface_name_threads[iface.get_name()].result(),
-                          "Device": os_interface_threads[iface.get_name()].result(),
-                          })
+            table.append(iface.toDict())
+            #table.append({"Name": iface.get_name(),
+            #              "Node": node_name,
+            #              "Network": network_name,
+            #              "Bandwidth": iface.get_bandwidth(),
+            #              "VLAN": iface.get_vlan(),
+            #              "MAC": iface.get_mac(),
+            #              "Physical Device": physical_os_interface_name_threads[iface.get_name()].result(),
+            #              "Device": os_interface_threads[iface.get_name()].result(),
+            #              })
 
-        if fields == None:
-            fields = ["Name", "Node", "Network",
-                      "Bandwidth", "VLAN", "MAC",
-                      "Device"]
+        #if fields == None:
+        #    fields = ["Name", "Node", "Network",
+        #              "Bandwidth", "VLAN", "MAC",
+        #              "Device"]
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
@@ -1588,21 +1589,12 @@ class Slice:
 
         table = []
         for network in self.get_networks():
-            table.append({"ID": network.get_reservation_id(),
-                          "Name": network.get_name(),
-                          "Layer": network.get_layer(),
-                          "Type": network.get_type(),
-                          "Site": network.get_site(),
-                          "Gateway": network.get_gateway(),
-                          "L3 Subnet": network.get_subnet(),
-                          "State": network.get_reservation_state(),
-                          "Error": network.get_error_message(),
-                          })
+            table.append(network.toDict())
 
-        if fields == None:
-            fields = ["ID", "Name", "Layer", "Type",
-                      "Site", "Gateway", "L3 Subnet", "State",
-                      "Error"]
+        #if fields == None:
+        #    fields = ["ID", "Name", "Layer", "Type",
+        #              "Site", "Gateway", "L3 Subnet", "State",
+        #              "Error"]
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,

@@ -211,7 +211,7 @@ class Node:
         if "Error" not in skip:
             rtn_dict['error'] = {'pretty_name': 'Error', 'value': str(self.get_error_message())}
         if "SSH Command" not in skip:
-            rtn_dict['command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
+            rtn_dict['ssh_command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
         if "Public SSH Key File" not in skip:
             rtn_dict['public_ssh_key_file'] = {'pretty_name': 'Public SSH Key File', 'value': str(self.get_public_key_file())}
         if "Private SSH Key File" not in skip:
@@ -340,10 +340,10 @@ class Node:
 
         def combined_filter_function(x):
             if filter_function == None:
-                if x['Name'] in set(components):
+                if x['name']['value'] in set(components):
                     return True
             else:
-                if filter_function(x) and x['Name'] in set(components):
+                if filter_function(x) and x['name']['value'] in set(components):
                     return True
 
             return False
@@ -399,10 +399,10 @@ class Node:
 
         def combined_filter_function(x):
             if filter_function == None:
-                if x['Name'] in set(ifaces):
+                if x['name']['value'] in set(ifaces):
                     return True
             else:
-                if filter_function(x) and x['Name'] in set(ifaces):
+                if filter_function(x) and x['name']['value'] in set(ifaces):
                     return True
 
             return False
@@ -457,10 +457,10 @@ class Node:
 
         def combined_filter_function(x):
             if filter_function == None:
-                if x['Name'] in set(networks):
+                if x['name']['value'] in set(networks):
                     return True
             else:
-                if filter_function(x) and x['Name'] in set(networks):
+                if filter_function(x) and x['name']['value'] in set(networks):
                     return True
 
             return False
