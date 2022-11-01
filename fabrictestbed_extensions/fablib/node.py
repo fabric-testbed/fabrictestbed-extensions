@@ -208,7 +208,7 @@ class Node:
         if "error" not in skip:
             dict_pretty_names['error'] = {'pretty_name': 'Error', 'value': str(self.get_error_message())}
         if "ssh_command" not in skip:
-            dict_pretty_names['ssh_command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
+            dict_pretty_names['ssh_command'] = {'pretty_name': 'SSH Command', 'value': str(self.get_ssh_command())}
         if "public_ssh_key_file" not in skip:
             dict_pretty_names['public_ssh_key_file'] = {'pretty_name': 'Public SSH Key File', 'value': str(self.get_public_key_file())}
         if "private_ssh_key_file" not in skip:

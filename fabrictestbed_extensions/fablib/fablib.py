@@ -1786,9 +1786,9 @@ class FablibManager:
             table = self.create_list_table(data, fields=fields)
             return self.list_table_text(table, headers=headers, quiet=quiet)
         elif output == 'json':
-            return self.list_table_json(data, quiet=quiet)
+            return self.list_table_json(self.remove_dict_pretty_names(data), quiet=quiet)
         elif output == 'list':
-            return self.list_table_list(data, quiet=quiet)
+            return self.list_table_list(self.remove_dict_pretty_names(data), quiet=quiet)
         elif output == 'pandas':
             table = self.create_list_table(data, fields=fields)
 
