@@ -1729,6 +1729,10 @@ class FablibManager:
         return printable_table
 
     def list_table_json(self, data,  quiet=False):
+        data_tmp = data
+        for d in data_tmp:
+            data = self.remove_dict_pretty_names(d)
+
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
@@ -1737,6 +1741,10 @@ class FablibManager:
         return json_str
 
     def list_table_list(self, data, quiet=False):
+        data_tmp = data
+        for d in data_tmp:
+            data = self.remove_dict_pretty_names(d)
+
         if not quiet:
             print(f"{data}")
 
@@ -1786,9 +1794,9 @@ class FablibManager:
             table = self.create_list_table(data, fields=fields)
             return self.list_table_text(table, headers=headers, quiet=quiet)
         elif output == 'json':
-            return self.list_table_json(self.remove_dict_pretty_names(data), quiet=quiet)
+            return self.list_table_json(data, quiet=quiet)
         elif output == 'list':
-            return self.list_table_list(self.remove_dict_pretty_names(data), quiet=quiet)
+            return self.list_table_list(data, quiet=quiet)
         elif output == 'pandas':
             table = self.create_list_table(data, fields=fields)
 
