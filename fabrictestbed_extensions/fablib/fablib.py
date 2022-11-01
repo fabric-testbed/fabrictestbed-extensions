@@ -1729,11 +1729,11 @@ class FablibManager:
         return printable_table
 
     def list_table_json(self, data,  quiet=False):
-        data_tmp = data
-        for d in data_tmp:
-            data.append(self.remove_dict_pretty_names(d))
+        rtn_data = []
+        for d in data:
+            rtn_data.append(self.remove_dict_pretty_names(d))
 
-        json_str = json.dumps(data, indent=4)
+        json_str = json.dumps(rtn_data, indent=4)
 
         if not quiet:
             print(f"{json_str}")
@@ -1741,14 +1741,14 @@ class FablibManager:
         return json_str
 
     def list_table_list(self, data, quiet=False):
-        data_tmp = data
-        for d in data_tmp:
-            data.append(self.remove_dict_pretty_names(d))
+        rtn_data = []
+        for d in data:
+            rtn_data.append(self.remove_dict_pretty_names(d))
 
         if not quiet:
-            print(f"{data}")
+            print(f"{rtn_data}")
 
-        return data
+        return rtn_data
 
     def list_table(self,
                    data,
