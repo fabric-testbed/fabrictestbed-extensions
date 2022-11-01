@@ -31,6 +31,7 @@ import logging
 
 from tabulate import tabulate
 import select
+from string import Template
 
 
 from typing import List, Union, Tuple
@@ -70,6 +71,7 @@ class Node:
         self.slice = slice
         self.host = None
         self.ip_addr_list_json = None
+        self.template_substitution_dict = {}
 
         # Try to set the username.
         try:
@@ -179,37 +181,37 @@ class Node:
         """
         dict_pretty_names = {}
 
-        if "ID" not in skip:
+        if "id" not in skip:
             dict_pretty_names['id'] = {'pretty_name': 'ID', 'value': str(self.get_reservation_id())}
-        if "Name" not in skip:
+        if "name" not in skip:
             dict_pretty_names['name'] = {'pretty_name': 'Name', 'value': str(self.get_name())}
-        if "Cores" not in skip:
+        if "cores" not in skip:
             dict_pretty_names['cores'] = {'pretty_name': 'Cores', 'value': str(self.get_cores())}
-        if "RAM" not in skip:
+        if "ram" not in skip:
             dict_pretty_names['ram'] = {'pretty_name': 'RAM', 'value': str(self.get_ram())}
-        if "Disk" not in skip:
+        if "disk" not in skip:
             dict_pretty_names['disk'] = {'pretty_name': 'Disk', 'value': str(self.get_disk())}
-        if "Image" not in skip:
+        if "image" not in skip:
             dict_pretty_names['image'] = {'pretty_name': 'Image', 'value': str(self.get_image())}
-        if "Image Type" not in skip:
+        if "image_type" not in skip:
             dict_pretty_names['image_type'] = {'pretty_name': 'Image Type', 'value': str(self.get_image_type())}
-        if "Host" not in skip:
+        if "host" not in skip:
             dict_pretty_names['host'] = {'pretty_name': 'Host', 'value': str(self.get_host())}
-        if "Site" not in skip:
+        if "site" not in skip:
             dict_pretty_names['site'] = {'pretty_name': 'Site', 'value': str(self.get_site())}
-        if "Username" not in skip:
+        if "username" not in skip:
             dict_pretty_names['username'] = {'pretty_name': 'Username', 'value': str(self.get_username())}
-        if "Management IP" not in skip:
+        if "management_ip" not in skip:
             dict_pretty_names['management_ip'] = {'pretty_name': 'Management IP', 'value': str(self.get_management_ip())}
-        if "State" not in skip:
+        if "state" not in skip:
             dict_pretty_names['state'] = {'pretty_name': 'State', 'value': str(self.get_reservation_state())}
-        if "Error" not in skip:
+        if "error" not in skip:
             dict_pretty_names['error'] = {'pretty_name': 'Error', 'value': str(self.get_error_message())}
-        if "SSH Command" not in skip:
+        if "ssh_command" not in skip:
             dict_pretty_names['ssh_command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
-        if "Public SSH Key File" not in skip:
+        if "public_ssh_key_file" not in skip:
             dict_pretty_names['public_ssh_key_file'] = {'pretty_name': 'Public SSH Key File', 'value': str(self.get_public_key_file())}
-        if "Private SSH Key File" not in skip:
+        if "private_ssh_key_file" not in skip:
             dict_pretty_names['private_ssh_key_file'] = {'pretty_name': 'Private SSH Key File', 'value': str(self.get_private_key_file())}
 
 
@@ -237,6 +239,25 @@ class Node:
         #        "Public SSH Key File": str(self.get_public_key_file()),
         #        "Private SSH Key File": str(self.get_private_key_file()),
         #         }
+
+    def get_template_substitution_dict(self):
+        self.template_substitution_dict = {}
+
+        # process node
+        for key, value in self.toDict(skip=['ssh_command']).items():
+            self.template_substitution_dict[f'self_{key}'] = value
+
+        # process slice
+        for key, value in self.get_slice().toDict().items():
+            self.template_substitution_dict[f'slice_{key}'] = value
+
+        return self.template_substitution_dict
+
+
+    def template_substitution(self, str):
+        src = Template(str)
+        result = src.safe_substitute(self.get_template_substitution_dict())
+        return result
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
         """
@@ -876,19 +897,26 @@ class Node:
         :rtype: str
         """
 
-        ssh_command = self.get_fablib_manager().get_ssh_command_line()
+        #ssh_command = self.get_fablib_manager().get_ssh_command_line()
 
-        for key,val in self.toDict(skip=["SSH Command"]).items():
-            remove_str = '${'+str(key).strip()+'}'
-            add_str = str(val)
-            ssh_command = ssh_command.replace(remove_str, add_str)
+        #return self.template_substitution(ssh_command)
+        try:
+            return self.template_substitution(self.get_fablib_manager().get_ssh_command_line())
+        except:
+            return self.get_fablib_manager().get_ssh_command_line()
 
-        for key,val in self.get_fablib_manager().get_config().items():
-            remove_str = '${'+str(key).strip()+'}'
-            add_str = str(val)
-            ssh_command = ssh_command.replace(remove_str, add_str)
 
-        return ssh_command
+        #for key,val in self.toDict(skip=["SSH Command"]).items():
+        #    remove_str = '${'+str(key).strip()+'}'
+        #    add_str = str(val)
+        #    ssh_command = ssh_command.replace(remove_str, add_str)
+
+        #for key,val in self.get_fablib_manager().get_config().items():
+        #    remove_str = '${'+str(key).strip()+'}'
+        #    add_str = str(val)
+        #    ssh_command = ssh_command.replace(remove_str, add_str)
+
+        #return ssh_command
 
         #return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
         #                                   self.get_username(),
