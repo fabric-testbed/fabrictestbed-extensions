@@ -1731,7 +1731,7 @@ class FablibManager:
     def list_table_json(self, data,  quiet=False):
         data_tmp = data
         for d in data_tmp:
-            data = self.remove_dict_pretty_names(d)
+            data.append(self.remove_dict_pretty_names(d))
 
         json_str = json.dumps(data, indent=4)
 
@@ -1743,7 +1743,7 @@ class FablibManager:
     def list_table_list(self, data, quiet=False):
         data_tmp = data
         for d in data_tmp:
-            data = self.remove_dict_pretty_names(d)
+            data.append(self.remove_dict_pretty_names(d))
 
         if not quiet:
             print(f"{data}")
