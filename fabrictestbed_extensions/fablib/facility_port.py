@@ -23,6 +23,7 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 from tabulate import tabulate
 import json
 
@@ -66,12 +67,17 @@ class FacilityPort:
     def toJson(self):
         return json.dumps(self.toDict(), indent=4)
 
-    def toDict(self):
-        return {'name': { 'pretty_name': 'Name', 'value': self.get_name()}
+    def toDict(self, pretty_names=False):
+        dict_pretty_names = {'name': { 'pretty_name': 'Name', 'value': self.get_name()}
                }
+
+        if pretty_names == False:
+            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
+        else:
+            return dict_pretty_names
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toDict()
+        data = self.toDict(pretty_names=True)
     
         #fields = ["Name",
         #         ]

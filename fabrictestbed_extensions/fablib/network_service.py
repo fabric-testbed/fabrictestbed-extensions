@@ -24,6 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 import logging
+
 from tabulate import tabulate
 from typing import List
 
@@ -433,14 +434,14 @@ class NetworkService:
         """
         return json.dumps(self.toDict(), indent=4)
 
-    def toDict(self):
+    def toDict(self, pretty_names=False):
         """
         Returns the network attributes as a dictionary
 
         :return: network attributes as dictionary
         :rtype: dict
         """
-        return {'id': { 'pretty_name': 'ID', 'value': self.get_reservation_id()},
+        dict_pretty_names = {'id': { 'pretty_name': 'ID', 'value': self.get_reservation_id()},
                 'name': {'pretty_name': 'Name', 'value': self.get_name()},
                 'layer': {'pretty_name': 'Layer', 'value': self.get_layer()},
                 'type': {'pretty_name': 'Type', 'value': self.get_type()},
@@ -450,6 +451,11 @@ class NetworkService:
                 'state': {'pretty_name': 'State', 'value': self.get_reservation_state()},
                 'error': {'pretty_name': 'Error', 'value': self.get_error_message()},
                 }
+
+        if pretty_names == False:
+            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
+        else:
+            return dict_pretty_names
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
         """
@@ -478,7 +484,7 @@ class NetworkService:
         :rtype: Object
         """
 
-        data = self.toDict()
+        data = self.toDict(pretty_names=True)
         
         #fields = ["ID", "Name", "Layer", "Type", "Site",
         #        "Gateway", "Subnet","State", "Error",

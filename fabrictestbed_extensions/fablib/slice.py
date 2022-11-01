@@ -152,7 +152,7 @@ class Slice:
         :rtype: Object
         """
 
-        data = self.toDict()
+        data = self.toDict(pretty_names=True)
 
         def state_color(val):
             if val == 'StableOK':
@@ -230,7 +230,7 @@ class Slice:
         """
         table = []
         for component in self.get_components():
-            table.append(component.toDict())
+            table.append(component.toDict(pretty_names=True))
 
         #if fields == None:
         #    fields = ["Name", "Details", "Disk",
@@ -318,7 +318,7 @@ class Slice:
             else:
                 node_name = None
 
-            table.append(iface.toDict())
+            table.append(iface.toDict(pretty_names=True))
             #table.append({"Name": iface.get_name(),
             #              "Node": node_name,
             #              "Network": network_name,
@@ -392,22 +392,27 @@ class Slice:
         :return: slice attributes as json string
         :rtype: str
         """
-        return json.dumps(self.toDict(), indent=4)
+        return json.dumps(self.toDict(pretty_names=True), indent=4)
 
-    def toDict(self):
+    def toDict(self, pretty_names=False):
         """
         Returns the slice attributes as a dictionary
 
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return { 'id': { 'pretty_name': 'ID', 'value': self.get_slice_id()},
-                'name': { 'pretty_name': 'Name', 'value':  self.get_name()},
-                'lease_end': { 'pretty_name': 'Lease Expiration (UTC)', 'value':  self.get_lease_end()},
-                'lease_start': { 'pretty_name': 'Lease Start (UTC)', 'value':  self.get_lease_start()},
-                'project_id': { 'pretty_name': 'Project ID', 'value': self.get_project_id()},
-                'state': { 'pretty_name': 'State', 'value':  self.get_state()},
-                }
+        dict_pretty_names = { 'id': { 'pretty_name': 'ID', 'value': self.get_slice_id()},
+                                'name': { 'pretty_name': 'Name', 'value':  self.get_name()},
+                                'lease_end': { 'pretty_name': 'Lease Expiration (UTC)', 'value':  self.get_lease_end()},
+                                'lease_start': { 'pretty_name': 'Lease Start (UTC)', 'value':  self.get_lease_start()},
+                                'project_id': { 'pretty_name': 'Project ID', 'value': self.get_project_id()},
+                                'state': { 'pretty_name': 'State', 'value':  self.get_state()},
+                              }
+
+        if pretty_names == False:
+            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
+        else:
+            return dict_pretty_names
 
     def get_fim_topology(self) -> ExperimentTopology:
         """
@@ -1589,7 +1594,7 @@ class Slice:
 
         table = []
         for network in self.get_networks():
-            table.append(network.toDict())
+            table.append(network.toDict(pretty_names=True))
 
         #if fields == None:
         #    fields = ["ID", "Name", "Layer", "Type",
@@ -1676,7 +1681,7 @@ class Slice:
 
         table = []
         for node in self.get_nodes():
-            table.append(node.toDict())
+            table.append(node.toDict(pretty_names=True))
 
         #if fields == None:
         #    fields = ["ID", "Name", "Site", "Host",

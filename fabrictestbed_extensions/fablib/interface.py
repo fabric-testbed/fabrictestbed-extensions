@@ -95,7 +95,7 @@ class Interface:
         """
         return json.dumps(self.toDict(), indent=4)
 
-    def toDict(self):
+    def toDict(self, pretty_names=False):
         """
         Returns the interface attributes as a dictionary
 
@@ -114,7 +114,7 @@ class Interface:
         else:
             node_name = None
 
-        return {'name': { 'pretty_name': 'Name', 'value': self.get_name()},
+        dict_pretty_names =  {'name': { 'pretty_name': 'Name', 'value': self.get_name()},
                 'node': { 'pretty_name': 'Node', 'value': node_name},
                 'network': { 'pretty_name': 'Network', 'value': network_name},
                 'bandwidth': { 'pretty_name': 'Bandwidth', 'value': self.get_bandwidth()},
@@ -124,6 +124,10 @@ class Interface:
                 'dev': { 'pretty_name': 'Device', 'value': self.get_os_interface()},
                 }
 
+        if pretty_names == False:
+            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
+        else:
+            return dict_pretty_names
 
 
     def show(self, fields=None, output=None, quiet=False, colors=False):
@@ -153,7 +157,7 @@ class Interface:
         :rtype: Object
         """
 
-        data = self.toDict()
+        data = self.toDict(pretty_names=True)
     
         #fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
         #        "MAC", "Device"

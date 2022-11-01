@@ -511,7 +511,7 @@ class Resources:
         for site_name, site in self.topology.sites.items():
             table.append(self.site_to_dict(site))
 
-        table =  self.get_fablib_manager().list_table(table,
+        table == self.get_fablib_manager().list_table(table,
                         fields=fields,
                         title='Sites',
                         output=output,

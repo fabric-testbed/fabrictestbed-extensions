@@ -81,14 +81,14 @@ class Component:
         """
         return json.dumps(self.toDict(), indent=4)
     
-    def toDict(self):
+    def toDict(self, pretty_names = False):
         """
         Returns the component attributes as a dictionary
 
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return { 'name': { 'pretty_name': 'Name', 'value': self.get_name()},
+        dict_pretty_names =  { 'name': { 'pretty_name': 'Name', 'value': self.get_name()},
                 'details': { 'pretty_name': 'Details', 'value': self.get_details()},
                 'disk': { 'pretty_name': 'Disk', 'value': self.get_disk()},
                 'units': { 'pretty_name': 'Units', 'value': self.get_unit()},
@@ -96,6 +96,11 @@ class Component:
                 'model': { 'pretty_name': 'Model', 'value': self.get_model()},
                 'type': { 'pretty_name': 'Type', 'value': self.get_type()}
                 }
+
+        if pretty_names == False:
+            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
+        else:
+            return dict_pretty_names
     
     def show(self, fields=None, output=None, quiet=False, colors=False):
         """
@@ -123,7 +128,7 @@ class Component:
          :return: table in format specified by output parameter
          :rtype: Object
          """
-        data = self.toDict()
+        data = self.toDict(pretty_names=True)
     
         #fields = ["Name", "Details", "Disk", "Units", "PCI Address",
         #        "Model", "Type"

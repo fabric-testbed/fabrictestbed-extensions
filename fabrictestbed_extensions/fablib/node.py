@@ -32,11 +32,6 @@ import logging
 from tabulate import tabulate
 import select
 
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
-
 
 from typing import List, Union, Tuple
 
@@ -175,47 +170,54 @@ class Node:
         return json.dumps(self.toDict(), indent=4)
 
 
-    def toDict(self, skip=[]):
+    def toDict(self, pretty_names=False, skip=[]):
         """
         Returns the node attributes as a dictionary
 
         :return: slice attributes as  dictionary
         :rtype: dict
         """
-        rtn_dict = {}
+        dict_pretty_names = {}
 
         if "ID" not in skip:
-            rtn_dict['id'] = {'pretty_name': 'ID', 'value': str(self.get_reservation_id())}
+            dict_pretty_names['id'] = {'pretty_name': 'ID', 'value': str(self.get_reservation_id())}
         if "Name" not in skip:
-            rtn_dict['name'] = {'pretty_name': 'Name', 'value': str(self.get_name())}
+            dict_pretty_names['name'] = {'pretty_name': 'Name', 'value': str(self.get_name())}
         if "Cores" not in skip:
-            rtn_dict['cores'] = {'pretty_name': 'Cores', 'value': str(self.get_cores())}
+            dict_pretty_names['cores'] = {'pretty_name': 'Cores', 'value': str(self.get_cores())}
         if "RAM" not in skip:
-            rtn_dict['ram'] = {'pretty_name': 'RAM', 'value': str(self.get_ram())}
+            dict_pretty_names['ram'] = {'pretty_name': 'RAM', 'value': str(self.get_ram())}
         if "Disk" not in skip:
-            rtn_dict['disk'] = {'pretty_name': 'Disk', 'value': str(self.get_disk())}
+            dict_pretty_names['disk'] = {'pretty_name': 'Disk', 'value': str(self.get_disk())}
         if "Image" not in skip:
-            rtn_dict['image'] = {'pretty_name': 'Image', 'value': str(self.get_image())}
+            dict_pretty_names['image'] = {'pretty_name': 'Image', 'value': str(self.get_image())}
         if "Image Type" not in skip:
-            rtn_dict['image_type'] = {'pretty_name': 'Image Type', 'value': str(self.get_image_type())}
+            dict_pretty_names['image_type'] = {'pretty_name': 'Image Type', 'value': str(self.get_image_type())}
         if "Host" not in skip:
-            rtn_dict['host'] = {'pretty_name': 'Host', 'value': str(self.get_host())}
+            dict_pretty_names['host'] = {'pretty_name': 'Host', 'value': str(self.get_host())}
         if "Site" not in skip:
-            rtn_dict['site'] = {'pretty_name': 'Site', 'value': str(self.get_site())}
+            dict_pretty_names['site'] = {'pretty_name': 'Site', 'value': str(self.get_site())}
         if "Username" not in skip:
-            rtn_dict['username'] = {'pretty_name': 'Username', 'value': str(self.get_username())}
+            dict_pretty_names['username'] = {'pretty_name': 'Username', 'value': str(self.get_username())}
         if "Management IP" not in skip:
-            rtn_dict['management_ip'] = {'pretty_name': 'Management IP', 'value': str(self.get_management_ip())}
+            dict_pretty_names['management_ip'] = {'pretty_name': 'Management IP', 'value': str(self.get_management_ip())}
         if "State" not in skip:
-            rtn_dict['state'] = {'pretty_name': 'State', 'value': str(self.get_reservation_state())}
+            dict_pretty_names['state'] = {'pretty_name': 'State', 'value': str(self.get_reservation_state())}
         if "Error" not in skip:
-            rtn_dict['error'] = {'pretty_name': 'Error', 'value': str(self.get_error_message())}
+            dict_pretty_names['error'] = {'pretty_name': 'Error', 'value': str(self.get_error_message())}
         if "SSH Command" not in skip:
-            rtn_dict['ssh_command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
+            dict_pretty_names['ssh_command'] = {'pretty_name': 'Command', 'value': str(self.get_ssh_command())}
         if "Public SSH Key File" not in skip:
-            rtn_dict['public_ssh_key_file'] = {'pretty_name': 'Public SSH Key File', 'value': str(self.get_public_key_file())}
+            dict_pretty_names['public_ssh_key_file'] = {'pretty_name': 'Public SSH Key File', 'value': str(self.get_public_key_file())}
         if "Private SSH Key File" not in skip:
-            rtn_dict['private_ssh_key_file'] = {'pretty_name': 'Private SSH Key File', 'value': str(self.get_private_key_file())}
+            dict_pretty_names['private_ssh_key_file'] = {'pretty_name': 'Private SSH Key File', 'value': str(self.get_private_key_file())}
+
+
+        if pretty_names == False:
+            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
+        else:
+            return dict_pretty_names
+
 
         return rtn_dict
         #return { "ID":  str(self.get_reservation_id()),
@@ -263,7 +265,7 @@ class Node:
         :rtype: Object
         """
 
-        data = self.toDict()
+        data = self.toDict(pretty_names=True)
 
         #if fields == None:
         #    fields = ["ID", "Name", "Cores", "RAM", "Disk",

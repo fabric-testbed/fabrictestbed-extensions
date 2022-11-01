@@ -31,7 +31,6 @@ from concurrent.futures import ThreadPoolExecutor
 from IPython import get_ipython
 
 from typing import List, Dict
-import json
 
 from typing import TYPE_CHECKING
 
@@ -40,10 +39,6 @@ import pandas as pd
 from tabulate import tabulate
 import json
 
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
@@ -1396,7 +1391,7 @@ class FablibManager:
         """
         table = []
         for slice in self.get_slices(excludes=excludes):
-            table.append(slice.toDict())
+            table.append(slice.toDict(pretty_names=True))
             #table.append({"ID": slice.get_slice_id(),
             #              "Name": slice.get_name(),
             #              "Lease Expiration (UTC)": slice.get_lease_end(),
@@ -1853,3 +1848,10 @@ class FablibManager:
             for field in fields:
                 table.append([field, data[field]])
         return table
+
+    @staticmethod
+    def remove_dict_pretty_names(dict):
+        rtn_dict = {}
+        for key, value in dict.items():
+            rtn_dict[key] = value['value']
+        return rtn_dict
