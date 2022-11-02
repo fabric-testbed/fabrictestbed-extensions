@@ -1638,11 +1638,11 @@ class FablibManager:
 
         printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(even)',
                                                              'props': [('background',
-                                                                        f'{FablibManager.FABRIC_WHITE}'),
+                                                                        f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
                                                                        ('color', f'{FablibManager.FABRIC_BLACK}')]}],
                                                            overwrite=False)
         printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(odd)',
-                                                             'props': [('background', f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
+                                                             'props': [('background', f'{FablibManager.FABRIC_WHITE}'),
                                                                        ('color', f'{FablibManager.FABRIC_BLACK}')]}],
                                                            overwrite=False)
 
