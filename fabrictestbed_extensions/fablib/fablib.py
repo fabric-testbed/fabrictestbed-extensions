@@ -903,7 +903,7 @@ class FablibManager:
                    quiet: bool = False,
                    filter_function=None,
                    update: bool = True,
-                   pretty_names=None) -> object:
+                   pretty_names=True) -> object:
         """
         Lists all the sites and their attributes.
 
