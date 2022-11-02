@@ -267,6 +267,7 @@ class Node:
 
         context['node'] = self.toDict(skip=['ssh_command'])
         context['slice'] = self.get_slice().toDict()
+        context['config'] = self.get_fablib_manager().get_config()
 
         context['components'] = {}
         for component in self.get_components():
