@@ -1772,8 +1772,15 @@ class FablibManager:
                                                            overwrite=False)
 
         printable_table = printable_table.set_table_styles([dict(selector='.level0',
-                                                                 props=[('border', '1px black solid !important')])],
+                                                                 props=[('border', '1px black solid !important'),
+                                                                        ('background',f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
+                                                                        ('color', f'{FablibManager.FABRIC_BLACK}')
+                                                                        ])],
                                                            overwrite=False)
+
+        #printable_table = printable_table.set_table_styles([dict(selector='.level0',
+        #                                                         props=[('border', '1px black solid !important')])],
+        #                                                   overwrite=False)
 
         if not quiet:
             display(printable_table)
