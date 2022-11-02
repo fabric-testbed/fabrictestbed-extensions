@@ -152,7 +152,7 @@ class Slice:
         :rtype: Object
         """
 
-        data = self.toDict(pretty_names=True)
+        data = self.toDict()
 
         def state_color(val):
             if val == 'StableOK':
@@ -171,6 +171,11 @@ class Slice:
                 color = ''
             return 'background-color: %s' % color
 
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_names_dict()
+        else:
+            pretty_names_dict = {}
+
         if colors and self.get_fablib_manager().is_jupyter_notebook():
 
             slice_table = self.get_fablib_manager().show_table(data,
@@ -178,7 +183,7 @@ class Slice:
                                                                title='Slice',
                                                                output='pandas',
                                                                quiet=True,
-                                                               pretty_names=pretty_names)
+                                                               pretty_names_dict=pretty_names_dict)
             slice_table.applymap(state_color)
 
             if quiet == False:
@@ -189,7 +194,7 @@ class Slice:
                                                                title='Slice',
                                                                output=output,
                                                                quiet=quiet,
-                                                               pretty_names=pretty_names)
+                                                               pretty_names_dict=pretty_names_dict)
 
         return slice_table
 
@@ -197,7 +202,7 @@ class Slice:
                         output: str = None,
                         fields: List[str] = None,
                         quiet: bool = False,
-                        filter_function=None):
+                        filter_function=None, pretty_names=True):
 
         """
         Lists all the components in the slice with their attributes.
@@ -230,18 +235,24 @@ class Slice:
         """
         table = []
         for component in self.get_components():
-            table.append(component.toDict(pretty_names=True))
+            table.append(component.toDict())
 
         #if fields == None:
         #    fields = ["Name", "Details", "Disk",
         #              "Units", "PCI Address", "Model",
         #              "Type"]
 
+        if pretty_names:
+            pretty_names_dict = Component.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
                                                      title='Components',
                                                      output=output,
-                                                     quiet=quiet, filter_function=filter_function)
+                                                     quiet=quiet, filter_function=filter_function,
+                                                     pretty_names_dict=pretty_names_dict)
 
         return table
 
@@ -249,7 +260,8 @@ class Slice:
                         output: str = None,
                         fields: List[str] = None,
                         quiet: bool = False,
-                        filter_function=None):
+                        filter_function=None,
+                        pretty_names=True):
         """
         Lists all the interfaces in the slice with their attributes.
 
@@ -318,7 +330,7 @@ class Slice:
             else:
                 node_name = None
 
-            table.append(iface.toDict(pretty_names=True))
+            table.append(iface.toDict())
             #table.append({"Name": iface.get_name(),
             #              "Node": node_name,
             #              "Network": network_name,
@@ -333,12 +345,18 @@ class Slice:
         #    fields = ["Name", "Node", "Network",
         #              "Bandwidth", "VLAN", "MAC",
         #              "Device"]
+        if pretty_names:
+            pretty_names_dict = Interface.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
                                                      title='Interfaces',
                                                      output=output,
-                                                     quiet=quiet, filter_function=filter_function)
+                                                     quiet=quiet,
+                                                     filter_function=filter_function,
+                                                     pretty_names_dict=pretty_names_dict)
 
         return table
 
@@ -392,27 +410,32 @@ class Slice:
         :return: slice attributes as json string
         :rtype: str
         """
-        return json.dumps(self.toDict(pretty_names=True), indent=4)
+        return json.dumps(self.toDict(), indent=4)
 
-    def toDict(self, pretty_names=False):
+    @staticmethod
+    def get_pretty_names_dict():
+        return { 'id': 'ID',
+                 'name':  'Name',
+                 'lease_end':'Lease Expiration (UTC)',
+                 'lease_start': 'Lease Start (UTC)',
+                 'project_id': 'Project ID',
+                 'state': 'State',
+               }
+
+    def toDict(self):
         """
         Returns the slice attributes as a dictionary
 
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        dict_pretty_names = { 'id': { 'pretty_name': 'ID', 'value': self.get_slice_id()},
-                                'name': { 'pretty_name': 'Name', 'value':  self.get_name()},
-                                'lease_end': { 'pretty_name': 'Lease Expiration (UTC)', 'value':  self.get_lease_end()},
-                                'lease_start': { 'pretty_name': 'Lease Start (UTC)', 'value':  self.get_lease_start()},
-                                'project_id': { 'pretty_name': 'Project ID', 'value': self.get_project_id()},
-                                'state': { 'pretty_name': 'State', 'value':  self.get_state()},
-                              }
-
-        if pretty_names == False:
-            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
-        else:
-            return dict_pretty_names
+        return {   'id': self.get_slice_id(),
+                    'name':  self.get_name(),
+                    'lease_end':   self.get_lease_end(),
+                    'lease_start':   self.get_lease_start(),
+                    'project_id':  self.get_project_id(),
+                    'state':   self.get_state(),
+                  }
 
     def get_fim_topology(self) -> ExperimentTopology:
         """
@@ -1525,7 +1548,8 @@ class Slice:
                       fields=None,
                       colors=False,
                       quiet=False,
-                      filter_function=None):
+                      filter_function=None,
+                      pretty_names=True):
         """
         Lists all the networks in the slice.
 
@@ -1594,24 +1618,37 @@ class Slice:
 
         table = []
         for network in self.get_networks():
-            table.append(network.toDict(pretty_names=True))
+            table.append(network.toDict())
 
         #if fields == None:
         #    fields = ["ID", "Name", "Layer", "Type",
         #              "Site", "Gateway", "L3 Subnet", "State",
         #              "Error"]
+        if pretty_names:
+            pretty_names_dict = NetworkService.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
+        logging.debug(f"network service: pretty_names_dict = {pretty_names_dict}")
+
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
                                                      title='Networks',
                                                      output=output,
-                                                     quiet=True, filter_function=filter_function)
+                                                     quiet=True,
+                                                     filter_function=filter_function,
+                                                     pretty_names_dict=pretty_names_dict)
 
         if colors:
-            # table = table.apply(highlight, axis=1)
-            table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])
-            # table = table.applymap(highlight, subset=pd.IndexSlice[:, ['State','Error']])
-            table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
+            if pretty_names:
+                # table = table.apply(highlight, axis=1)
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
+            else:
+                # table = table.apply(highlight, axis=1)
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['state']])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['error']])
 
         if not quiet:
             display(table)
@@ -1681,12 +1718,19 @@ class Slice:
 
         table = []
         for node in self.get_nodes():
-            table.append(node.toDict(pretty_names=True))
+            table.append(node.toDict())
 
         #if fields == None:
         #    fields = ["ID", "Name", "Site", "Host",
         #              "Cores", "RAM", "Disk", "Image",
         #              "Username", "Management IP", "State", "Error"]
+
+        if pretty_names:
+            pretty_names_dict = Node.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
+        logging.debug(f"pretty_names_dict = {pretty_names_dict}")
 
         table = self.get_fablib_manager().list_table(table,
                                                      fields=fields,
@@ -1694,7 +1738,7 @@ class Slice:
                                                      output=output,
                                                      quiet=True,
                                                      filter_function=filter_function,
-                                                     pretty_names=pretty_names)
+                                                     pretty_names_dict=pretty_names_dict)
 
         if colors:
             if pretty_names:
@@ -1778,3 +1822,4 @@ class Slice:
         logging.debug(f'modified topology: {topology}')
 
         self.update_slice()
+

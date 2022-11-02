@@ -80,29 +80,38 @@ class Component:
         :rtype: str
         """
         return json.dumps(self.toDict(), indent=4)
+
+    @staticmethod
+    def get_pretty_name_dict():
+        return {
+                "name": "Name",
+                "details": "Details",
+                "disk": "Disk",
+                "units": "Units",
+                "pci_address": "PCI Address",
+                "model": "Model",
+                "type": "Type",
+                }
     
-    def toDict(self, pretty_names = False):
+    def toDict(self):
         """
         Returns the component attributes as a dictionary
 
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        dict_pretty_names =  { 'name': { 'pretty_name': 'Name', 'value': self.get_name()},
-                'details': { 'pretty_name': 'Details', 'value': self.get_details()},
-                'disk': { 'pretty_name': 'Disk', 'value': self.get_disk()},
-                'units': { 'pretty_name': 'Units', 'value': self.get_unit()},
-                'pci_address': { 'pretty_name': 'PCI Address', 'value': self.get_pci_addr()},
-                'model': { 'pretty_name': 'Model', 'value': self.get_model()},
-                'type': { 'pretty_name': 'Type', 'value': self.get_type()}
+        return { 'name':  self.get_name(),
+                'details':  self.get_details(),
+                'disk':  self.get_disk(),
+                'units': self.get_unit(),
+                'pci_address': self.get_pci_addr(),
+                'model':  self.get_model(),
+                'type': self.get_type()
                 }
 
-        if pretty_names == False:
-            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
-        else:
-            return dict_pretty_names
+
     
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
          Show a table containing the current component attributes.
 
@@ -128,17 +137,23 @@ class Component:
          :return: table in format specified by output parameter
          :rtype: Object
          """
-        data = self.toDict(pretty_names=True)
+        data = self.toDict()
     
         #fields = ["Name", "Details", "Disk", "Units", "PCI Address",
         #        "Model", "Type"
         #         ]
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
     
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Component', 
                         output=output, 
-                        quiet=quiet)
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
             
             
         return table

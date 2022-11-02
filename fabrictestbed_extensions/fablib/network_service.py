@@ -434,30 +434,42 @@ class NetworkService:
         """
         return json.dumps(self.toDict(), indent=4)
 
-    def toDict(self, pretty_names=False):
+    @staticmethod
+    def get_pretty_name_dict():
+
+        return {  "id": "ID",
+                "name": "Name",
+                "layer": "Layer",
+                "type": "Type",
+                "site": "Site",
+                "gateway": "Gateway",
+                "subnet": "Subnet",
+                "state": "State",
+                "error": "Error",
+                 }
+
+
+    def toDict(self):
         """
         Returns the network attributes as a dictionary
 
         :return: network attributes as dictionary
         :rtype: dict
         """
-        dict_pretty_names = {'id': { 'pretty_name': 'ID', 'value': self.get_reservation_id()},
-                'name': {'pretty_name': 'Name', 'value': self.get_name()},
-                'layer': {'pretty_name': 'Layer', 'value': self.get_layer()},
-                'type': {'pretty_name': 'Type', 'value': self.get_type()},
-                'site': {'pretty_name': 'Site', 'value': self.get_site()},
-                'gateway': {'pretty_name': 'Gateway', 'value': self.get_gateway()},
-                'subnet': {'pretty_name': 'Subnet', 'value': self.get_subnet()},
-                'state': {'pretty_name': 'State', 'value': self.get_reservation_state()},
-                'error': {'pretty_name': 'Error', 'value': self.get_error_message()},
+        return {'id': self.get_reservation_id(),
+                'name':  self.get_name(),
+                'layer':  self.get_layer(),
+                'type': self.get_type(),
+                'site': self.get_site(),
+                'gateway':  self.get_gateway(),
+                'subnet':  self.get_subnet(),
+                'state':  self.get_reservation_state(),
+                'error': self.get_error_message(),
                 }
 
-        if pretty_names == False:
-            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
-        else:
-            return dict_pretty_names
+
     
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current network attributes.
 
@@ -484,17 +496,23 @@ class NetworkService:
         :rtype: Object
         """
 
-        data = self.toDict(pretty_names=True)
+        data = self.toDict()
         
         #fields = ["ID", "Name", "Layer", "Type", "Site",
         #        "Gateway", "Subnet","State", "Error",
         #         ]
-        
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
         node_table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Network', 
                         output=output, 
-                        quiet=quiet)       
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
     
         return node_table
 

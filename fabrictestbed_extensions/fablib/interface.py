@@ -95,7 +95,27 @@ class Interface:
         """
         return json.dumps(self.toDict(), indent=4)
 
-    def toDict(self, pretty_names=False):
+    @staticmethod
+    def get_pretty_name_dict():
+        return {
+                "name": "Name",
+                "node": "Node",
+                "network": "Network",
+                "bandwidth": "Bandwidth",
+                "vlan": "VLAN",
+                "mac": "MAC",
+                "physical_dev": "Physical Device",
+                "dev": "Device",
+                "username": "Username",
+                "management_ip": "Management IP",
+                "state": "State",
+                "error": "Error",
+                "ssh_command": "SSH Command",
+                "public_ssh_key_file": "Public SSH Key File",
+                "private_ssh_key_file": "Private SSH Key File",
+                }
+
+    def toDict(self):
         """
         Returns the interface attributes as a dictionary
 
@@ -114,23 +134,19 @@ class Interface:
         else:
             node_name = None
 
-        dict_pretty_names =  {'name': { 'pretty_name': 'Name', 'value': self.get_name()},
-                'node': { 'pretty_name': 'Node', 'value': node_name},
-                'network': { 'pretty_name': 'Network', 'value': network_name},
-                'bandwidth': { 'pretty_name': 'Bandwidth', 'value': self.get_bandwidth()},
-                'vlan': { 'pretty_name': 'VLAN', 'value': self.get_vlan()},
-                'mac': { 'pretty_name': 'MAC', 'value': self.get_mac()},
-                'physical_dev': { 'pretty_name': 'Physical Device', 'value': self.get_physical_os_interface_name()},
-                'dev': { 'pretty_name': 'Device', 'value': self.get_os_interface()},
+        return  {'name': self.get_name(),
+                'node': node_name,
+                'network': network_name,
+                'bandwidth': self.get_bandwidth(),
+                'vlan':  self.get_vlan(),
+                'mac':  self.get_mac(),
+                'physical_dev':  self.get_physical_os_interface_name(),
+                'dev':  self.get_os_interface(),
                 }
 
-        if pretty_names == False:
-            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
-        else:
-            return dict_pretty_names
 
 
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current interface attributes.
 
@@ -157,17 +173,24 @@ class Interface:
         :rtype: Object
         """
 
-        data = self.toDict(pretty_names=True)
+        data = self.toDict()
     
         #fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
         #        "MAC", "Device"
         #         ]
-    
+
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Interface', 
                         output=output, 
-                        quiet=quiet)
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
             
             
         return table

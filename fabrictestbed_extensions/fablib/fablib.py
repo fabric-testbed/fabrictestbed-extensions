@@ -903,7 +903,7 @@ class FablibManager:
                    quiet: bool = False,
                    filter_function=None,
                    update: bool = True,
-                   pretty_names=True) -> object:
+                   pretty_names=None) -> object:
         """
         Lists all the sites and their attributes.
 
@@ -933,7 +933,6 @@ class FablibManager:
         :return: table in format specified by output parameter
         :rtype: Object
         """
-
         return self.get_resources(update=update).list_sites(output=output, fields=fields, quiet=quiet,
                                                filter_function=filter_function, pretty_names=pretty_names)
 
@@ -961,12 +960,18 @@ class FablibManager:
         :return: table in format specified by output parameter
         :rtype: Object
         """
+
+        if pretty_names:
+            pretty_names_dict = self.get_config_pretty_names_dict()
+        else:
+            pretty_names_dict = {}
+
         return self.show_table(self.get_config(),
                                fields=fields,
                                title='FABlib Config',
                                output=output,
                                quiet=quiet,
-                               pretty_names=pretty_names)
+                               pretty_names_dict=pretty_names_dict)
 
     def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True):
         """
@@ -1038,10 +1043,10 @@ class FablibManager:
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
             if filter_function == None:
-                if site['name']['value'] not in self.sites_in_maintenance and site['hosts']['value'] > 0:
+                if site['name'] not in self.sites_in_maintenance and site['hosts'] > 0:
                     return True
             else:
-                if filter_function(site) and site['name']['value'] not in self.sites_in_maintenance and site['hosts']['value'] > 0:
+                if filter_function(site) and site['name'] not in self.sites_in_maintenance and site['hosts'] > 0:
                     return True
 
             return False
@@ -1053,7 +1058,7 @@ class FablibManager:
         site_list = self.list_sites(output='list', quiet=True,
                                     filter_function=combined_filter_function, update=update)
 
-        sites = list(map(lambda x: x['name']['value'], site_list))
+        sites = list(map(lambda x: x['name'], site_list))
 
         #sites = self.get_resources().get_site_list()
         for site in avoid:
@@ -1083,7 +1088,49 @@ class FablibManager:
         """
         return self.default_slice_key
 
+
+    def get_config_pretty_names_dict(self):
+        return {'credmgr_host': 'Credential Manager',
+                'orchestrator_host': 'Orchestrator',
+                'fabric_token': 'Token File',
+                'project_id': 'Project ID',
+                'bastion_username': 'Bastion Username',
+                'bastion_private_key_file':  'Bastion Private Key File',
+                'bastion_host': 'Bastion Host',
+                'bastion_private_key_passphrase': 'Bastion Private Key Passphrase',
+                'slice_public_key_file': 'Slice Public Key File',
+                'slice_private_key_file': 'Slice Private Key File',
+                'fabric_slice_private_key_passphrase':  'Slice Private Key Passphrase',
+                'fablib_log_file': 'Log File',
+                'fablib_log_level':  'Log Level',
+
+                }
+
     def get_config(self) -> Dict[str, Dict[str, str]]:
+        """
+        Gets a dictionary mapping keywords to configured FABRIC environment
+        variable values.
+
+        :return: dictionary mapping keywords to FABRIC values
+        :rtype: Dict[String, String]
+        """
+        return { 'credmgr_host': self.credmgr_host,
+                'orchestrator_host': self.orchestrator_host,
+                'fabric_token':  self.fabric_token,
+                'project_id': self.project_id,
+                'bastion_username': self.bastion_username,
+                'bastion_private_key_file': self.bastion_key_filename,
+                'bastion_host': self.bastion_public_addr,
+                'bastion_private_key_passphrase':  self.bastion_passphrase,
+                'slice_public_key_file': self.get_default_slice_public_key_file(),
+                'slice_private_key_file':  self.get_default_slice_private_key_file(),
+                'fabric_slice_private_key_passphrase': self.get_default_slice_private_key_passphrase(),
+                'fablib_log_file':  self.get_log_file(),
+                'fablib_log_level':  self.get_log_level()
+
+                 }
+
+    def get_configXXX(self) -> Dict[str, Dict[str, str]]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
         variable values.
@@ -1391,7 +1438,7 @@ class FablibManager:
         """
         table = []
         for slice in self.get_slices(excludes=excludes):
-            table.append(slice.toDict(pretty_names=True))
+            table.append(slice.toDict())
             #table.append({"ID": slice.get_slice_id(),
             #              "Name": slice.get_name(),
             #              "Lease Expiration (UTC)": slice.get_lease_end(),
@@ -1403,13 +1450,18 @@ class FablibManager:
         # if fields == None:
         #    fields = ["ID", "Name", "Lease Expiration (UTC)", "Lease Start (UTC)", "Project ID", "State"]
 
+        if pretty_names:
+            pretty_names_dict = Slice.get_pretty_names_dict()
+        else:
+            pretty_names_dict = {}
+
         return self.list_table(table,
                                fields=fields,
                                title='Slices',
                                output=output,
                                quiet=quiet,
                                filter_function=filter_function,
-                               pretty_names=pretty_names
+                               pretty_names_dict=pretty_names_dict
                                )
 
     def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False,  pretty_names=True):
@@ -1633,12 +1685,12 @@ class FablibManager:
                    title_font_size='1.25em',
                    output=None,
                    quiet=False,
-                   pretty_names=True):
+                   pretty_names_dict={}):
 
         if output == None:
             output = self.output.lower()
 
-        table = self.create_show_table(data, fields=fields, pretty_names=pretty_names)
+        table = self.create_show_table(data, fields=fields, pretty_names_dict=pretty_names_dict)
 
         if (output == 'text' or output == 'default'):
             return self.show_table_text(table, quiet=quiet)
@@ -1729,11 +1781,7 @@ class FablibManager:
         return printable_table
 
     def list_table_json(self, data,  quiet=False):
-        rtn_data = []
-        for d in data:
-            rtn_data.append(self.remove_dict_pretty_names(d))
-
-        json_str = json.dumps(rtn_data, indent=4)
+        json_str = json.dumps(data, indent=4)
 
         if not quiet:
             print(f"{json_str}")
@@ -1741,14 +1789,10 @@ class FablibManager:
         return json_str
 
     def list_table_list(self, data, quiet=False):
-        rtn_data = []
-        for d in data:
-            rtn_data.append(self.remove_dict_pretty_names(d))
-
         if not quiet:
-            print(f"{rtn_data}")
+            print(f"{data}")
 
-        return rtn_data
+        return data
 
     def list_table(self,
                    data,
@@ -1758,7 +1802,7 @@ class FablibManager:
                    output=None,
                    quiet=False,
                    filter_function=None,
-                   pretty_names=True):
+                   pretty_names_dict={}):
 
         if filter_function:
             data = list(filter(filter_function, data))
@@ -1776,16 +1820,12 @@ class FablibManager:
 
         logging.debug(f"fields: {fields}\n\n")
 
-        if pretty_names and len(data) > 0:
-            headers = []
-            for field in fields:
-                headers.append(data[0][field]['pretty_name'])
-
-            #for key, value in data[0].items():
-            #    if key in fields:
-            #        headers.append(value['pretty_name'])
-        else:
-            headers = fields
+        headers = []
+        for field in fields:
+            if field in pretty_names_dict:
+                headers.append(pretty_names_dict[field])
+            else:
+                headers.append(field)
 
         logging.debug(f"headers: {headers}\n\n")
 
@@ -1814,7 +1854,7 @@ class FablibManager:
         for entry in data:
             row = []
             for field in fields:
-                row.append(entry[field]['value'])
+                row.append(entry[field])
 
             table.append(row)
         return table
@@ -1829,21 +1869,21 @@ class FablibManager:
             table.append(row)
         return table
 
-    def create_show_table(self, data, fields=None, pretty_names=True):
+    def create_show_table(self, data, fields=None, pretty_names_dict={}):
         table = []
         if fields == None:
             for key, value in data.items():
-                if pretty_names:
-                    table.append([value['pretty_name'], value['value']])
+                if key in pretty_names_dict:
+                    table.append([pretty_names_dict[key], value])
                 else:
-                    table.append([key, value['value']])
+                    table.append([key, value])
         else:
             for field in fields:
                 value = data[field]
-                if pretty_names:
-                    table.append([value['pretty_name'], value['value']])
+                if field in  pretty_names_dict:
+                    table.append([pretty_names_dict[field], value])
                 else:
-                    table.append([field, value['value']])
+                    table.append([field, value])
 
         return table
 
@@ -1857,9 +1897,9 @@ class FablibManager:
                 table.append([field, data[field]])
         return table
 
-    @staticmethod
-    def remove_dict_pretty_names(dict):
-        rtn_dict = {}
-        for key, value in dict.items():
-            rtn_dict[key] = value['value']
-        return rtn_dict
+    #@staticmethod
+    #def remove_dict_pretty_names(dict):
+    #    rtn_dict = {}
+    #    for key, value in dict.items():
+    #        rtn_dict[key] = value['value']
+    #    return rtn_dict
