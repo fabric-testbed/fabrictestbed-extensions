@@ -1773,7 +1773,7 @@ class FablibManager:
 
         printable_table = printable_table.set_table_styles([dict(selector='.level0',
                                                                  props=[('border', '1px black solid !important'),
-                                                                        ('background',f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
+                                                                        ('background',f'{FablibManager.FABRIC_WHITE}'),
                                                                         ('color', f'{FablibManager.FABRIC_BLACK}')
                                                                         ])],
                                                            overwrite=False)
