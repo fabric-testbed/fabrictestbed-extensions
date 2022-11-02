@@ -73,7 +73,6 @@ class Node:
         self.slice = slice
         self.host = None
         self.ip_addr_list_json = None
-        self.template_substitution_dict = {}
 
         # Try to set the username.
         try:
@@ -261,18 +260,6 @@ class Node:
         #        "Private SSH Key File": str(self.get_private_key_file()),
         #         }
 
-    def get_template_substitution_dict(self):
-        self.template_substitution_dict = {}
-
-        # process node
-        for key, value in self.toDict(skip=['ssh_command']).items():
-            self.template_substitution_dict[f'self_{key}'] = value
-
-        # process slice
-        for key, value in self.get_slice().toDict().items():
-            self.template_substitution_dict[f'slice_{key}'] = value
-
-        return self.template_substitution_dict
 
 
     def get_template_context(self):
@@ -303,10 +290,7 @@ class Node:
         return output_string
 
 
-    def template_substitution(self, str):
-        src = Template(str)
-        result = src.safe_substitute(self.get_template_substitution_dict())
-        return result
+
     
     def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
