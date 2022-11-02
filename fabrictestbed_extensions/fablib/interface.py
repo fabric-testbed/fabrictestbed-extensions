@@ -95,6 +95,26 @@ class Interface:
         """
         return json.dumps(self.toDict(), indent=4)
 
+    @staticmethod
+    def get_pretty_name_dict():
+        return {
+                "name": "Name",
+                "node": "Node",
+                "network": "Network",
+                "bandwidth": "Bandwidth",
+                "vlan": "VLAN",
+                "mac": "MAC",
+                "physical_dev": "Physical Device",
+                "dev": "Device",
+                "username": "Username",
+                "management_ip": "Management IP",
+                "state": "State",
+                "error": "Error",
+                "ssh_command": "SSH Command",
+                "public_ssh_key_file": "Public SSH Key File",
+                "private_ssh_key_file": "Private SSH Key File",
+                }
+
     def toDict(self):
         """
         Returns the interface attributes as a dictionary
@@ -114,19 +134,19 @@ class Interface:
         else:
             node_name = None
 
-        return {  "Name": self.get_name(),
-                  "Node": node_name,
-                  "Network": network_name,
-                  "Bandwidth": self.get_bandwidth(),
-                  "VLAN": self.get_vlan(),
-                  "MAC": self.get_mac(),
-                  "Physical Device": self.get_physical_os_interface_name(),
-                  "Device": self.get_os_interface(),
-                 }
+        return  {'name': self.get_name(),
+                'node': node_name,
+                'network': network_name,
+                'bandwidth': self.get_bandwidth(),
+                'vlan':  self.get_vlan(),
+                'mac':  self.get_mac(),
+                'physical_dev':  self.get_physical_os_interface_name(),
+                'dev':  self.get_os_interface(),
+                }
 
 
 
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current interface attributes.
 
@@ -155,15 +175,22 @@ class Interface:
 
         data = self.toDict()
     
-        fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
-                "MAC", "Device"
-                 ]
-    
+        #fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
+        #        "MAC", "Device"
+        #         ]
+
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Interface', 
                         output=output, 
-                        quiet=quiet)
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
             
             
         return table

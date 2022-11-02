@@ -24,6 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 import logging
+
 from tabulate import tabulate
 from typing import List
 
@@ -433,6 +434,21 @@ class NetworkService:
         """
         return json.dumps(self.toDict(), indent=4)
 
+    @staticmethod
+    def get_pretty_name_dict():
+
+        return {  "id": "ID",
+                "name": "Name",
+                "layer": "Layer",
+                "type": "Type",
+                "site": "Site",
+                "gateway": "Gateway",
+                "subnet": "Subnet",
+                "state": "State",
+                "error": "Error",
+                 }
+
+
     def toDict(self):
         """
         Returns the network attributes as a dictionary
@@ -440,18 +456,20 @@ class NetworkService:
         :return: network attributes as dictionary
         :rtype: dict
         """
-        return {    "ID": self.get_reservation_id(),
-                    "Name": self.get_name(),
-                    "Layer": self.get_layer(),
-                    "Type": self.get_type(),
-                    "Site": self.get_site(),
-                    "Gateway": self.get_gateway(),
-                    "Subnet": self.get_subnet(),
-                    "State": self.get_reservation_state(),
-                    "Error": self.get_error_message(),
+        return {'id': self.get_reservation_id(),
+                'name':  self.get_name(),
+                'layer':  self.get_layer(),
+                'type': self.get_type(),
+                'site': self.get_site(),
+                'gateway':  self.get_gateway(),
+                'subnet':  self.get_subnet(),
+                'state':  self.get_reservation_state(),
+                'error': self.get_error_message(),
                 }
+
+
     
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current network attributes.
 
@@ -480,15 +498,21 @@ class NetworkService:
 
         data = self.toDict()
         
-        fields = ["ID", "Name", "Layer", "Type", "Site",
-                "Gateway", "Subnet","State", "Error",
-                 ]
-        
+        #fields = ["ID", "Name", "Layer", "Type", "Site",
+        #        "Gateway", "Subnet","State", "Error",
+        #         ]
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
         node_table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Network', 
                         output=output, 
-                        quiet=quiet)       
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
     
         return node_table
 

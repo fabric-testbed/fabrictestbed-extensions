@@ -31,11 +31,9 @@ import logging
 
 from tabulate import tabulate
 import select
+from string import Template
 
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities
-)
+import jinja2
 
 
 from typing import List, Union, Tuple
@@ -111,7 +109,7 @@ class Node:
             ["Management IP", self.get_management_ip()],
             ["Reservation State", self.get_reservation_state()],
             ["Error Message", self.get_error_message()],
-            ["SSH Command ", self.get_ssh_command()],
+            ["SSH Command", self.get_ssh_command()],
             ]
 
         return tabulate(table) #, headers=["Property", "Value"])
@@ -175,29 +173,127 @@ class Node:
         return json.dumps(self.toDict(), indent=4)
 
 
-    def toDict(self):
+
+    @staticmethod
+    def get_pretty_name_dict():
+
+        return {  "id": "ID",
+                "name": "Name",
+                "cores": "Cores",
+                "ram": "RAM",
+                "disk": "Disk",
+                "image": "Image",
+                "image_type": "Image Type",
+                "host": "Host",
+                "site": "Site",
+                "username": "Username",
+                "management_ip": "Management IP",
+                "state": "State",
+                "error": "Error",
+                "ssh_command": "SSH Command",
+                "public_ssh_key_file": "Public SSH Key File",
+                "private_ssh_key_file": "Private SSH Key File",
+                 }
+
+    def toDict(self, skip=[]):
         """
         Returns the node attributes as a dictionary
 
-        :return: slice attributes as dictionary
+        :return: slice attributes as  dictionary
         :rtype: dict
         """
-        return { "ID":  self.get_reservation_id(),
-                "Name": self.get_name(),
-                "Cores": self.get_cores(),
-                "RAM": self.get_ram(),
-                "Disk": self.get_disk(),
-                "Image": self.get_image(),
-                "Image Type": self.get_image_type(),
-                "Host": self.get_host(),
-                "Site": self.get_site(),
-                "Management IP": self.get_management_ip(),
-                "State": self.get_reservation_state(),
-                "Error": self.get_error_message(),
-                "SSH Command ": self.get_ssh_command()
-                }
+        rtn_dict = {}
+
+        if "id" not in skip:
+            rtn_dict['id'] = str(self.get_reservation_id())
+        if "name" not in skip:
+            rtn_dict['name'] =  str(self.get_name())
+        if "cores" not in skip:
+            rtn_dict['cores'] = str(self.get_cores())
+        if "ram" not in skip:
+            rtn_dict['ram'] =  str(self.get_ram())
+        if "disk" not in skip:
+            rtn_dict['disk'] =  str(self.get_disk())
+        if "image" not in skip:
+            rtn_dict['image'] =  str(self.get_image())
+        if "image_type" not in skip:
+            rtn_dict['image_type'] =  str(self.get_image_type())
+        if "host" not in skip:
+            rtn_dict['host'] =  str(self.get_host())
+        if "site" not in skip:
+            rtn_dict['site'] =  str(self.get_site())
+        if "username" not in skip:
+            rtn_dict['username'] =  str(self.get_username())
+        if "management_ip" not in skip:
+            rtn_dict['management_ip'] =  str(self.get_management_ip())
+        if "state" not in skip:
+            rtn_dict['state'] =  str(self.get_reservation_state())
+        if "error" not in skip:
+            rtn_dict['error'] =  str(self.get_error_message())
+        if "ssh_command" not in skip:
+            rtn_dict['ssh_command'] =  str(self.get_ssh_command())
+        if "public_ssh_key_file" not in skip:
+            rtn_dict['public_ssh_key_file'] =  str(self.get_public_key_file())
+        if "private_ssh_key_file" not in skip:
+            rtn_dict['private_ssh_key_file'] = str(self.get_private_key_file())
+
+
+
+
+
+        return rtn_dict
+        #return { "ID":  str(self.get_reservation_id()),
+        #        "Name": str(self.get_name()),
+        #        "Cores": str(self.get_cores()),
+        #        "RAM": str(self.get_ram()),
+        #        "Disk": str(self.get_disk()),
+        #        "Image": str(self.get_image()),
+        #        "Image Type": str(self.get_image_type()),
+        #        "Host": str(self.get_host()),
+        #        "Site": str(self.get_site()),
+        #        "Username" : str(self.get_username()),
+        #        "Management IP": str(self.get_management_ip()),
+        #        "State": str(self.get_reservation_state()),
+        #        "Error": str(self.get_error_message()),
+        #        "SSH Command": str(self.get_ssh_command()),
+        #        "Public SSH Key File": str(self.get_public_key_file()),
+        #        "Private SSH Key File": str(self.get_private_key_file()),
+        #         }
+
+
+
+    def get_template_context(self):
+        context = {}
+
+        context['node'] = self.toDict(skip=['ssh_command'])
+        context['slice'] = self.get_slice().toDict()
+        context['config'] = self.get_fablib_manager().get_config()
+
+        context['components'] = {}
+        for component in self.get_components():
+            context['components'][component.get_name()] = component.toDict()
+
+        context['interfaces'] = {}
+        for interface in self.get_interfaces():
+            context['interfaces'][interface.get_name()] = interface.toDict()
+
+        context['networks'] = {}
+        for network in self.get_networks():
+            context['networks'][network.get_name()] = network.toDict()
+
+        return context
+
+    def render_template(self, input_string):
+        environment = jinja2.Environment()
+        template = environment.from_string(input_string)
+        output_string = template.render(self.get_template_context())
+
+        return output_string
+
+
+
     
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current node attributes.
 
@@ -226,12 +322,12 @@ class Node:
 
         data = self.toDict()
 
-        if fields == None:
-            fields = ["ID", "Name", "Cores", "RAM", "Disk",
-                    "Image", "Image Type","Host", "Site",
-                    "Management IP", "State",
-                    "Error","SSH Command "
-                     ]
+        #if fields == None:
+        #    fields = ["ID", "Name", "Cores", "RAM", "Disk",
+        #            "Image", "Image Type","Host", "Site",
+        #            "Management IP", "State",
+        #            "Error","SSH Command"
+        #             ]
 
         def state_color(val):
             if val == 'Active':
@@ -244,27 +340,34 @@ class Node:
                 color = ''
             return 'background-color: %s' % color
 
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
         if colors and self.get_fablib_manager().is_jupyter_notebook():
 
             table = self.get_fablib_manager().show_table(data,
-                                                               fields=fields,
-                                                               title='Node',
-                                                               output='pandas',
-                                                               quiet=True)
+                                                       fields=fields,
+                                                       title='Node',
+                                                       output='pandas',
+                                                       quiet=True,
+                                                       pretty_names_dict=pretty_names_dict)
             table.applymap(state_color)
 
             if quiet == False:
                 display(table)
         else:
             table = self.get_fablib_manager().show_table(data,
-                            fields=fields,
-                            title='Node',
-                            output=output,
-                            quiet=quiet)
+                                                        fields=fields,
+                                                        title='Node',
+                                                        output=output,
+                                                        quiet=quiet,
+                                                        pretty_names_dict=pretty_names_dict)
 
         return table
         
-    def list_components(self, fields=None, output=None, quiet=False, filter_function=None):
+    def list_components(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
         """
         Lists all the components in the node with their attributes.
 
@@ -299,20 +402,29 @@ class Node:
         for component in self.get_components():
             components.append(component.get_name())
 
+        def combined_filter_function(x):
+            if filter_function == None:
+                if x['name'] in set(components):
+                    return True
+            else:
+                if filter_function(x) and x['name'] in set(components):
+                    return True
 
-        name_filter = lambda s: s['Name'] in set(components)
-        if filter_function != None:
-            filter_function = lambda x: filter_function(x) + name_filter(x)
+            return False
+
+        if pretty_names and len(self.self.get_components()) > 0:
+            pretty_names_dict = self.self.get_components()[0].get_pretty_name_dict()
         else:
-            filter_function = name_filter
-        
+            pretty_names_dict = {}
+
         return self.get_slice().list_components(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
-                                                filter_function=filter_function)
+                                                filter_function=combined_filter_function,
+                                                pretty_names_dict=pretty_names_dict)
         
     
-    def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None):
+    def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
         """
         Lists all the interfaces in the node with their attributes.
 
@@ -347,19 +459,31 @@ class Node:
         for iface in self.get_interfaces():
             ifaces.append(iface.get_name())
 
-        name_filter = lambda s: s['Name'] in set(ifaces)
-        if filter_function != None:
-            filter_function = lambda x: filter_function(x) + name_filter(x)
-        else:
-            filter_function = name_filter
+
+        def combined_filter_function(x):
+            if filter_function == None:
+                if x['name']['value'] in set(ifaces):
+                    return True
+            else:
+                if filter_function(x) and x['name']['value'] in set(ifaces):
+                    return True
+
+            return False
+
+        #name_filter = lambda s: s['Name'] in set(ifaces)
+        #if filter_function != None:
+        #    filter_function = lambda x: filter_function(x) + name_filter(x)
+        #else:
+        #    filter_function = name_filter
 
         return self.get_slice().list_interfaces(fields=fields, 
                                                 output=output, 
                                                 quiet=quiet, 
-                                                filter_function=filter_function)
+                                                filter_function=combined_filter_function,
+                                                pretty_names=pretty_names)
         
     
-    def list_networks(self, fields=None, output=None, quiet=False, filter_function=None):
+    def list_networks(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
         """
         Lists all the networks attached to  the nodes with their attributes.
 
@@ -390,21 +514,41 @@ class Node:
         :rtype: Object
         """
 
+        interfaces = self.get_interfaces()
+        networks = self.get_networks()
 
         networks = []
-        for iface in self.get_interfaces():
+        for iface in interfaces:
             networks.append(iface.get_network().get_name())
 
-        name_filter = lambda s: s['Name'] in set(networks)
-        if filter_function != None:
-            filter_function = lambda x: filter_function(x) + name_filter(x)
+        def combined_filter_function(x):
+            if filter_function == None:
+                if x['name']['value'] in set(networks):
+                    return True
+            else:
+                if filter_function(x) and x['name']['value'] in set(networks):
+                    return True
+
+            return False
+
+
+        if pretty_names and len(networks) > 0:
+            pretty_names_dict = networks[0].get_pretty_name_dict()
         else:
-            filter_function = name_filter
+            pretty_names_dict = {}
 
         return self.get_slice().list_networks(fields=fields, 
                                                 output=output,
                                                 quiet=quiet, 
-                                                filter_function=filter_function)
+                                                filter_function=combined_filter_function,
+                                                pretty_names_dict=pretty_names_dict)
+
+    def get_networks(self):
+        networks = []
+        for interface in self.get_interfaces():
+            networks.append(interface.get_network())
+
+        return networks
         
     def get_fim_node(self) -> FimNode:
         """
@@ -803,9 +947,39 @@ class Node:
         :return: the SSH command to access this node
         :rtype: str
         """
-        return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
-                                           self.get_username(),
-                                           self.get_management_ip())
+
+        #ssh_command = self.get_fablib_manager().get_ssh_command_line()
+
+        #return self.template_substitution(ssh_command)
+
+        #try:
+        #    return self.template_substitution(self.get_fablib_manager().get_ssh_command_line())
+        #except:
+        #    return self.get_fablib_manager().get_ssh_command_line()
+
+        try:
+            return self.render_template(self.get_fablib_manager().get_ssh_command_line())
+        except:
+            return self.get_fablib_manager().get_ssh_command_line()
+
+
+        #for key,val in self.toDict(skip=["SSH Command"]).items():
+        #    remove_str = '${'+str(key).strip()+'}'
+        #    add_str = str(val)
+        #    ssh_command = ssh_command.replace(remove_str, add_str)
+
+        #for key,val in self.get_fablib_manager().get_config().items():
+        #    remove_str = '${'+str(key).strip()+'}'
+        #    add_str = str(val)
+        #    ssh_command = ssh_command.replace(remove_str, add_str)
+
+        #return ssh_command
+
+        #return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
+        #                                   self.get_username(),
+        #                                   self.get_management_ip())
+
+
 
     def validIPAddress(self, IP: str) -> str:
         """

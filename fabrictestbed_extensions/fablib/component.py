@@ -80,6 +80,18 @@ class Component:
         :rtype: str
         """
         return json.dumps(self.toDict(), indent=4)
+
+    @staticmethod
+    def get_pretty_name_dict():
+        return {
+                "name": "Name",
+                "details": "Details",
+                "disk": "Disk",
+                "units": "Units",
+                "pci_address": "PCI Address",
+                "model": "Model",
+                "type": "Type",
+                }
     
     def toDict(self):
         """
@@ -88,16 +100,18 @@ class Component:
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {     "Name": self.get_name(),
-                     "Details": self.get_details(),
-                     "Disk": self.get_disk(),
-                     "Units": self.get_unit(),
-                     "PCI Address": self.get_pci_addr(),
-                     "Model": self.get_model(),
-                     "Type": self.get_type()
+        return { 'name':  self.get_name(),
+                'details':  self.get_details(),
+                'disk':  self.get_disk(),
+                'units': self.get_unit(),
+                'pci_address': self.get_pci_addr(),
+                'model':  self.get_model(),
+                'type': self.get_type()
                 }
+
+
     
-    def show(self, fields=None, output=None, quiet=False, colors=False):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
          Show a table containing the current component attributes.
 
@@ -125,15 +139,21 @@ class Component:
          """
         data = self.toDict()
     
-        fields = ["Name", "Details", "Disk", "Units", "PCI Address",
-                "Model", "Type"
-                 ]
+        #fields = ["Name", "Details", "Disk", "Units", "PCI Address",
+        #        "Model", "Type"
+        #         ]
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
     
         table = self.get_fablib_manager().show_table(data, 
                         fields=fields,
                         title='Component', 
                         output=output, 
-                        quiet=quiet)
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
             
             
         return table

@@ -36,6 +36,40 @@ from fabrictestbed.slice_manager import Status
 
 class Resources:
 
+    site_pretty_names = {
+                            'name': 'Name',
+                            'address':  "Address",
+                            'location': "Location",
+                            'hosts': "Hosts",
+                            'cpus': "CPUs",
+                            'cores_available': "Cores Available",
+                            'cores_capacity': "Cores Capacity",
+                            'cores_allocated': "Cores Allocated",
+                            'ram_available': "RAM Available",
+                            'ram_capacity': "RAM Capacity",
+                            'ram_allocated': "RAM Allocated",
+                            'disk_available': "Disk Available",
+                            'disk_capacity': "Disk Capacity",
+                            'disk_allocated': "Disk Allocated",
+                            'nic_basic_available': "Basic NIC Available",
+                            'nic_basic_capacity': "Basic NIC Capacity",
+                            'nic_basic_allocated': "Basic NIC Allocated",
+                            'nic_connectx_6_available': "ConnectX-6 Available",
+                            'nic_connectx_6_capacity': "ConnectX-6 Capacity",
+                            'nic_connectx_6_allocated': "ConnectX-6 Allocated",
+                            'nic_connectx_5_available': "ConnectX-5 Available",
+                            'nic_connectx_5_capacity': "ConnectX-5 Capacity",
+                            'nic_connectx_5_allocated': "ConnectX-5 Allocated",
+                            'nvme_available': "NVMe Available",
+                            'nvme_capacity': "NVMe Capacity",
+                            'nvme_allocated': "NVMe Allocated",
+                            'tesla_t4_available': "Tesla T4 Available",
+                            'tesla_t4_capacity': "Tesla T4 Capacity",
+                            'tesla_t4_allocated': "Tesla T4 Allocated",
+                            'rtx6000_available': "RTX6000 Available",
+                            'rtx6000_capacity': "RTX6000 Capacity",
+                            'rtx6000_allocated': "RTX6000 Allocated",
+                        }
     def __init__(self,  fablib_manager):
         """
         Constructor
@@ -44,7 +78,9 @@ class Resources:
         super().__init__()
 
         self.fablib_manager = fablib_manager
+
         self.topology = None
+
         self.update()
 
     def __str__(self) -> str:
@@ -93,7 +129,7 @@ class Resources:
 
 
 
-    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False) -> str:
+    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True) -> str:
 
         """
         Creates a tabulated string of all the available resources at a specific site.
@@ -109,12 +145,17 @@ class Resources:
 
         data = self.site_to_dict(site)
 
+        if pretty_names:
+            pretty_names_dict = self.site_pretty_names
+        else:
+            pretty_names_dict = {}
 
         site_table = self.get_fablib_manager().show_table(data,
                                                            fields=fields,
                                                            title='Site',
                                                            output=output,
-                                                           quiet=quiet)
+                                                           quiet=quiet,
+                                                          pretty_names_dict=pretty_names_dict)
 
         return site_table
 
@@ -156,12 +197,12 @@ class Resources:
         try:
             return self.get_topology_site(site_name).components[component_model_name].capacities.unit
         except Exception as e:
-            logging.debug(f"Failed to get {component_model_name} capacity {site_name}")
+            #logging.debug(f"Failed to get {component_model_name} capacity {site_name}")
             return 0
 
     def get_component_allocated(self, site_name: str, component_model_name: str) -> int:
         """
-        Gets gets number of currrently allocated comoponents on a the site
+        Gets gets number of currently allocated components on a the site
         by the component by model name.
 
         :param site_name: site name
@@ -174,12 +215,12 @@ class Resources:
         try:
             return self.get_topology_site(site_name).components[component_model_name].capacity_allocations.unit
         except Exception as e:
-            logging.debug(f"Failed to get {component_model_name} alloacted {site_name}")
+            #logging.debug(f"Failed to get {component_model_name} allocated {site_name}")
             return 0
 
     def get_component_available(self, site_name: str, component_model_name: str) -> int:
         """
-        Gets gets number of currrently available comoponents on a the site
+        Gets gets number of currently available components on the site
         by the component by model name.
 
         :param site_name: site name
@@ -192,7 +233,7 @@ class Resources:
         try:
             return self.get_component_capacity(site_name, component_model_name) - self.get_component_allocated(site_name, component_model_name)
         except Exception as e:
-            logging.debug(f"Failed to get {component_model_name} available {site_name}")
+            #logging.debug(f"Failed to get {component_model_name} available {site_name}")
             return self.get_component_capacity(site_name, component_model_name)
 
     def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
@@ -208,7 +249,7 @@ class Resources:
             #site.get_property("location").to_latlon()
             return self.get_topology_site(site_name).get_property("location").to_latlon()
         except Exception as e:
-            logging.warning(f"Failed to get location postal {site_name}")
+            #logging.warning(f"Failed to get location postal {site_name}")
             return 0, 0
 
     def get_location_postal(self, site_name: str) -> str:
@@ -223,7 +264,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).location.postal
         except Exception as e:
-            logging.debug(f"Failed to get location postal {site_name}")
+            #logging.debug(f"Failed to get location postal {site_name}")
             return ""
 
     def get_host_capacity(self, site_name: str) -> int:
@@ -238,7 +279,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.unit
         except Exception as e:
-            logging.debug(f"Failed to get host count {site_name}")
+            #logging.debug(f"Failed to get host count {site_name}")
             return 0
 
     def get_cpu_capacity(self, site_name: str) -> int:
@@ -253,7 +294,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.cpu
         except Exception as e:
-            logging.debug(f"Failed to get cpu capacity {site_name}")
+            #logging.debug(f"Failed to get cpu capacity {site_name}")
             return 0
 
     def get_core_capacity(self, site_name: str) -> int:
@@ -268,7 +309,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.core
         except Exception as e:
-            logging.debug(f"Failed to get core capacity {site_name}")
+            #logging.debug(f"Failed to get core capacity {site_name}")
             return 0
 
     def get_core_allocated(self, site_name: str) -> int:
@@ -283,7 +324,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacity_allocations.core
         except Exception as e:
-            logging.debug(f"Failed to get cores alloacted {site_name}")
+            #logging.debug(f"Failed to get cores allocated {site_name}")
             return 0
 
     def get_core_available(self, site_name: str) -> int:
@@ -298,7 +339,7 @@ class Resources:
         try:
             return self.get_core_capacity(site_name) - self.get_core_allocated(site_name)
         except Exception as e:
-            logging.debug(f"Failed to get cores available {site_name}")
+            #logging.debug(f"Failed to get cores available {site_name}")
             return self.get_core_capacity(site_name)
 
     def get_ram_capacity(self, site_name: str) -> int:
@@ -313,7 +354,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.ram
         except Exception as e:
-            logging.debug(f"Failed to get ram capacity {site_name}")
+            #logging.debug(f"Failed to get ram capacity {site_name}")
             return 0
 
     def get_ram_allocated(self, site_name: str) -> int:
@@ -328,7 +369,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacity_allocations.ram
         except Exception as e:
-            logging.debug(f"Failed to get ram alloacted {site_name}")
+            #logging.debug(f"Failed to get ram allocated {site_name}")
             return 0
 
     def get_ram_available(self, site_name: str) -> int:
@@ -343,7 +384,7 @@ class Resources:
         try:
             return self.get_ram_capacity(site_name) - self.get_ram_allocated(site_name)
         except Exception as e:
-            logging.debug(f"Failed to get ram available {site_name}")
+            #logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site_name)
 
     def get_disk_capacity(self, site_name: str) -> int:
@@ -358,7 +399,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacities.disk
         except Exception as e:
-            logging.debug(f"Failed to get disk capacity {site_name}")
+            #logging.debug(f"Failed to get disk capacity {site_name}")
             return 0
 
     def get_disk_allocated(self, site_name: str) -> int:
@@ -373,7 +414,7 @@ class Resources:
         try:
             return self.get_topology_site(site_name).capacity_allocations.disk
         except Exception as e:
-            logging.debug(f"Failed to get disk alloacted {site_name}")
+            #logging.debug(f"Failed to get disk allocated {site_name}")
             return 0
 
     def get_disk_available(self, site_name: str) -> int:
@@ -388,7 +429,7 @@ class Resources:
         try:
             return self.get_disk_capacity(site_name) - self.get_disk_allocated(site_name)
         except Exception as e:
-            logging.debug(f"Failed to get disk available {site_name}")
+            #logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site_name)
 
     def get_fablib_manager(self):
@@ -399,6 +440,7 @@ class Resources:
         Update the available resources by querying the FABRIC services
 
         """
+        logging.info(f"Updating available resources")
         return_status, topology = self.get_fablib_manager().get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
@@ -452,108 +494,123 @@ class Resources:
     def site_to_json(self, site):
         return json.dumps(self.site_to_dict(site), indent=4)
 
-
     def site_to_dict(self, site):
         site_name = site.name
-        return  {    "Name":  site.name,
-                     "CPUs":   self.get_cpu_capacity(site_name),
-                 
-                     "Cores Available":   self.get_core_available(site_name),
-                     "Cores Capacity":       self.get_core_capacity(site_name),
-                     "Cores Allocated":   self.get_core_capacity(site_name)-self.get_core_available(site_name),
-                 
-                     "RAM Available":   self.get_ram_available(site_name),
-                     "RAM Capacity":       self.get_ram_capacity(site_name),
-                     "RAM Allocated":   self.get_ram_capacity(site_name)-self.get_ram_available(site_name),
+        return {'name':  site.name,
+                'address':  self.get_location_postal(site_name),
+                'location': self.get_location_lat_long(site_name),
 
-                     "Disk Available":   self.get_disk_available(site_name),
-                     "Disk Capacity":       self.get_disk_capacity(site_name),
-                     "Disk Allocated":   self.get_disk_capacity(site_name)-self.get_disk_available(site_name),
+                'hosts': self.get_host_capacity(site_name),
+                'cpus':  self.get_cpu_capacity(site_name),
 
-                     "Hosts":  self.get_host_capacity(site_name),
-                     "Address":  self.get_location_postal(site_name),
-                     "Location":  self.get_location_lat_long(site_name),
-                 
-                     "Basic NIC Available":   self.get_component_available(site_name,'SharedNIC-ConnectX-6'),
-                     "Basic NIC Capacity":       self.get_component_capacity(site_name,'SharedNIC-ConnectX-6'),
-                     "Basic NIC Allocated":   self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')-self.get_component_available(site_name,'SharedNIC-ConnectX-6'),
+                'cores_available': self.get_core_available(site_name),
+                'cores_capacity': self.get_core_capacity(site_name),
+                'cores_allocated':  self.get_core_capacity(site_name) - self.get_core_available(site_name),
 
-                     "ConnectX-6 Available":    self.get_component_available(site_name,'SmartNIC-ConnectX-6'),
-                     "ConnectX-6 Capacity":        self.get_component_capacity(site_name,'SmartNIC-ConnectX-6'),
-                     "ConnectX-6 Allocated":    self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')-self.get_component_available(site_name,'SmartNIC-ConnectX-6'),
+                'ram_available':  self.get_ram_available(site_name),
+                'ram_capacity': self.get_ram_capacity(site_name),
+                'ram_allocated':  self.get_ram_capacity(site_name) - self.get_ram_available(site_name),
 
-                     "ConnectX-5 Available":     self.get_component_available(site_name,'SmartNIC-ConnectX-5'),
-                     "ConnectX-5 Capacity":         self.get_component_capacity(site_name,'SmartNIC-ConnectX-5'),
-                     "ConnectX-5 Allocated":     self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')-self.get_component_available(site_name,'SmartNIC-ConnectX-5'),
+                'disk_available': self.get_disk_available(site_name),
+                'disk_capacity': self.get_disk_capacity(site_name),
+                'disk_allocated':  self.get_disk_capacity(site_name) - self.get_disk_available(site_name),
 
-                     "NVMe Available":   self.get_component_available(site_name,'NVME-P4510'),
-                     "NVMe Capacity":       self.get_component_capacity(site_name,'NVME-P4510'),
-                     "NVMe Allocated":   self.get_component_capacity(site_name,'NVME-P4510')-self.get_component_available(site_name,'NVME-P4510'),
+                'nic_basic_available':  self.get_component_available(site_name, 'SharedNIC-ConnectX-6'),
+                'nic_basic_capacity':  self.get_component_capacity(site_name, 'SharedNIC-ConnectX-6'),
+                'nic_basic_allocated':  self.get_component_capacity(site_name, 'SharedNIC-ConnectX-6') - self.get_component_available(
+                                            site_name, 'SharedNIC-ConnectX-6'),
 
-                     "Tesla T4 Available":   self.get_component_available(site_name,'GPU-Tesla T4'),
-                     "Tesla T4 Capacity":       self.get_component_capacity(site_name,'GPU-Tesla T4'),
-                     "Tesla T4 Allocated":   self.get_component_capacity(site_name,'GPU-Tesla T4')-self.get_component_available(site_name,'GPU-Tesla T4'),
+                'nic_connectx_6_available':  self.get_component_available(site_name, 'SmartNIC-ConnectX-6'),
+                'nic_connectx_6_capacity': self.get_component_capacity(site_name, 'SmartNIC-ConnectX-6'),
+                'nic_connectx_6_allocated':  self.get_component_capacity(site_name,'SmartNIC-ConnectX-6') - self.get_component_available(
+                                                 site_name, 'SmartNIC-ConnectX-6'),
 
-                     "RTX6000 Available":  self.get_component_available(site_name,'GPU-RTX6000'),
-                     "RTX6000 Capacity":      self.get_component_capacity(site_name,'GPU-RTX6000'),
-                     "RTX6000 Allocated":  self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000'),
+                'nic_connectx_5_available':  self.get_component_available(site_name, 'SmartNIC-ConnectX-5'),
+                'nic_connectx_5_capacity':  self.get_component_capacity(site_name, 'SmartNIC-ConnectX-5'),
+                'nic_connectx_5_allocated':  self.get_component_capacity(site_name,'SmartNIC-ConnectX-5') - self.get_component_available(
+                                                 site_name, 'SmartNIC-ConnectX-5'),
+
+                'nvme_available': self.get_component_available(site_name, 'NVME-P4510'),
+                'nvme_capacity':  self.get_component_capacity(site_name, 'NVME-P4510'),
+                'nvme_allocated': self.get_component_capacity(site_name, 'NVME-P4510') - self.get_component_available(
+                                 site_name, 'NVME-P4510'),
+
+                'tesla_t4_available':  self.get_component_available(site_name, 'GPU-Tesla T4'),
+                'tesla_t4_capacity':  self.get_component_capacity(site_name, 'GPU-Tesla T4'),
+                'tesla_t4_allocated': self.get_component_capacity(site_name, 'GPU-Tesla T4') - self.get_component_available(
+                                           site_name, 'GPU-Tesla T4'),
+
+                'rtx6000_available':  self.get_component_available(site_name, 'GPU-RTX6000'),
+                'rtx6000_capacity':  self.get_component_capacity(site_name, 'GPU-RTX6000'),
+                'rtx6000_allocated':  self.get_component_capacity(site_name,'GPU-RTX6000') - self.get_component_available(
+                                          site_name, 'GPU-RTX6000')
 
                 }
 
-    default_site_fields = ["Name",
+    def site_to_dictXXX(self, site):
+        site_name = site.name
+        return  {    'name': { 'pretty_name': 'Name', 'value':  site.name},
 
-              "Hosts",
-              "CPUs",
-              # "Address",
-              # "Location",
+                     'address': { 'pretty_name': "Address", 'value': self.get_location_postal(site_name)},
+                     'location': { 'pretty_name': "Location", 'value': self.get_location_lat_long(site_name)},
 
-              # "Cores Capacity",
-              # "Cores Allocated",
+                     'hosts': {'pretty_name': "Hosts", 'value': self.get_host_capacity(site_name)},
+                     'cpus': {'pretty_name': "CPUs", 'value': self.get_cpu_capacity(site_name)},
 
-              "RAM Available",
-              # "RAM Capacity",
-              # "RAM Allocated",
+                     'cores_available': { 'pretty_name': "Cores Available", 'value':   self.get_core_available(site_name)},
+                     'cores_capacity': { 'pretty_name': "Cores Capacity", 'value':       self.get_core_capacity(site_name)},
+                     'cores_allocated': { 'pretty_name': "Cores Allocated", 'value':   self.get_core_capacity(site_name)-self.get_core_available(site_name)},
+                 
+                     'ram_available': { 'pretty_name': "RAM Available", 'value':   self.get_ram_available(site_name)},
+                     'ram_capacity': { 'pretty_name': "RAM Capacity", 'value':       self.get_ram_capacity(site_name)},
+                     'ram_allocated': { 'pretty_name': "RAM Allocated", 'value':   self.get_ram_capacity(site_name)-self.get_ram_available(site_name)},
 
-              "Disk Available",
-              # "Disk Capacity",
-              # "Disk Allocated",
+                     'disk_available': { 'pretty_name': "Disk Available", 'value':   self.get_disk_available(site_name)},
+                     'disk_capacity': { 'pretty_name': "Disk Capacity", 'value':       self.get_disk_capacity(site_name)},
+                     'disk_allocated': { 'pretty_name': "Disk Allocated", 'value':   self.get_disk_capacity(site_name)-self.get_disk_available(site_name)},
 
-              "Basic NIC Available",
-              # "Basic NIC Capacity",
-              # "Basic NIC Allocated",
+                     'nic_basic_available': { 'pretty_name': "Basic NIC Available", 'value':   self.get_component_available(site_name,'SharedNIC-ConnectX-6')},
+                     'nic_basic_capacity': { 'pretty_name': "Basic NIC Capacity", 'value':       self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')},
+                     'nic_basic_allocated': { 'pretty_name': "Basic NIC Allocated", 'value':   self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')-self.get_component_available(site_name,'SharedNIC-ConnectX-6')},
 
-              "ConnectX-6 Available",
-              # "ConnectX-6 Capacity",
-              # "ConnectX-6 Allocated",
+                     'nic_connectx_6_available': { 'pretty_name': "ConnectX-6 Available", 'value':    self.get_component_available(site_name,'SmartNIC-ConnectX-6')},
+                     'nic_connectx_6_capacity': { 'pretty_name': "ConnectX-6 Capacity", 'value':        self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')},
+                     'nic_connectx_6_allocated': { 'pretty_name': "ConnectX-6 Allocated", 'value':    self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')-self.get_component_available(site_name,'SmartNIC-ConnectX-6')},
 
-              "ConnectX-5 Available",
-              # "ConnectX-5 Capacity",
-              # "ConnectX-5 Allocated",
+                     'nic_connectx_5_available': { 'pretty_name': "ConnectX-5 Available", 'value':     self.get_component_available(site_name,'SmartNIC-ConnectX-5')},
+                     'nic_connectx_5_capacity': { 'pretty_name': "ConnectX-5 Capacity", 'value':         self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')},
+                     'nic_connectx_5_allocated': { 'pretty_name': "ConnectX-5 Allocated", 'value':     self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')-self.get_component_available(site_name,'SmartNIC-ConnectX-5')},
 
-              "NVMe Available",
-              # "NVMe Capacity",
-              # "NVMe Allocated",
+                     'nvme_available': { 'pretty_name': "NVMe Available", 'value':   self.get_component_available(site_name,'NVME-P4510')},
+                     'nvme_capacity': { 'pretty_name': "NVMe Capacity", 'value':       self.get_component_capacity(site_name,'NVME-P4510')},
+                     'nvme_allocated': { 'pretty_name': "NVMe Allocated", 'value':   self.get_component_capacity(site_name,'NVME-P4510')-self.get_component_available(site_name,'NVME-P4510')},
 
-              "Tesla T4 Available",
-              # "Tesla T4 Capacity",
-              # "Tesla T4 Allocated",
+                     'tesla_t4_available': { 'pretty_name': "Tesla T4 Available", 'value':   self.get_component_available(site_name,'GPU-Tesla T4')},
+                     'tesla_t4_capacity': { 'pretty_name': "Tesla T4 Capacity", 'value':       self.get_component_capacity(site_name,'GPU-Tesla T4')},
+                     'tesla_t4_allocated': { 'pretty_name': "Tesla T4 Allocated", 'value':   self.get_component_capacity(site_name,'GPU-Tesla T4')-self.get_component_available(site_name,'GPU-Tesla T4')},
 
-              "RTX6000 Available",
-              # "RTX6000 Capacity",
-              # "RTX6000 Allocated",
-              ]
+                     'rtx6000_available': { 'pretty_name': "RTX6000 Available", 'value':  self.get_component_available(site_name,'GPU-RTX6000')},
+                     'rtx6000_capacity': { 'pretty_name': "RTX6000 Capacity", 'value':      self.get_component_capacity(site_name,'GPU-RTX6000')},
+                     'rtx6000_allocated': { 'pretty_name': "RTX6000 Allocated", 'value':  self.get_component_capacity(site_name,'GPU-RTX6000')-self.get_component_available(site_name,'GPU-RTX6000')}
 
-    
-    def list_sites(self, output=None, fields=None, quiet=False, filter_function=None):
+                }
+
+
+    def list_sites(self, output=None, fields=None, quiet=False, filter_function=None, pretty_names=True):
         table = []
         for site_name, site in self.topology.sites.items():
             table.append(self.site_to_dict(site))
 
-        table =  self.get_fablib_manager().list_table(table,
+        if pretty_names:
+            pretty_names_dict = self.site_pretty_names
+        else:
+            pretty_names_dict = {}
+
+        return self.get_fablib_manager().list_table(table,
                         fields=fields,
                         title='Sites',
                         output=output,
                         quiet=quiet, 
-                        filter_function=filter_function)
+                        filter_function=filter_function,
+                        pretty_names_dict=pretty_names_dict)
 
-        return table
