@@ -574,7 +574,7 @@ class FablibManager:
 
 
         # Hack to avoid sites in maintence.  TODO: Make dynamic call to FABRIC API
-        self.sites_in_maintenance = ['STAR', 'MAX']
+        self.sites_in_maintenance = []
 
         # init attributes
         self.bastion_passphrase = None
@@ -674,7 +674,7 @@ class FablibManager:
         if self.FABRIC_LOG_LEVEL in fabric_rc_dict:
             self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL].strip().strip('\"'))
         if self.FABRIC_AVOID in fabric_rc_dict:
-            self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID].strip().strip('\"'))
+            self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID].strip().strip('\"').strip("'"))
         if self.FABRIC_SSH_COMMAND_LINE in fabric_rc_dict:
             self.set_ssh_command_line(fabric_rc_dict[self.FABRIC_SSH_COMMAND_LINE].strip().strip('\"').strip("'"))
 
@@ -739,6 +739,8 @@ class FablibManager:
 
     def set_avoid_csv(self, avoid_csv: str = ''):
 
+        avoid_csv = avoid_csv.strip().strip('\"').strip("'")
+
         avoid = []
         for site in avoid_csv.split(','):
             avoid.append(site.strip())
@@ -746,6 +748,7 @@ class FablibManager:
         self.set_avoid(avoid)
 
     def set_avoid(self, avoid: list = []):
+        logging.info(f"Setting global avoid list: {avoid}")
         self.avoid = avoid
 
     def get_avoid(self):

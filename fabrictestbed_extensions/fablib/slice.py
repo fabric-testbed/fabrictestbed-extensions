@@ -422,20 +422,51 @@ class Slice:
                  'state': 'State',
                }
 
-    def toDict(self):
+    def toDict(self, skip=[]):
         """
         Returns the slice attributes as a dictionary
 
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {   'id': self.get_slice_id(),
-                    'name':  self.get_name(),
-                    'lease_end':   self.get_lease_end(),
-                    'lease_start':   self.get_lease_start(),
-                    'project_id':  self.get_project_id(),
-                    'state':   self.get_state(),
+        return {   'id': str(self.get_slice_id()),
+                    'name':  str(self.get_name()),
+                    'lease_end':  str(self.get_lease_end()),
+                    'lease_start':   str(self.get_lease_start()),
+                    'project_id':  str(self.get_project_id()),
+                    'state':   str(self.get_state()),
                   }
+
+    def get_template_context(self, base_object=None, skip=[]):
+        context = {}
+
+        if base_object:
+            context['_self_'] = base_object.toDict(skip=skip)
+        else:
+            context['_self_'] = {}
+
+        context['config'] = self.get_fablib_manager().get_config()
+        context['slice'] = self.toDict()
+
+        context['nodes'] = []
+        for node in self.get_nodes():
+            context['nodes'].append(node.toDict(skip=['ssh_command']))
+
+        context['components'] = []
+        for component in self.get_components():
+            context['components'].append(component.toDict())
+
+        context['interfaces'] = []
+        for interface in self.get_interfaces():
+            context['interfaces'].append(interface.toDict())
+
+        context['networks'] = []
+        for network in self.get_networks():
+            context['networks'].append(network.toDict())
+
+
+
+        return context
 
     def get_fim_topology(self) -> ExperimentTopology:
         """

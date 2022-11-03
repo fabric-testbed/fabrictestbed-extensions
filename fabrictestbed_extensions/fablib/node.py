@@ -262,7 +262,7 @@ class Node:
 
 
 
-    def get_template_context(self):
+    def get_template_contextXXX(self):
         context = {}
 
         context['node'] = self.toDict(skip=['ssh_command'])
@@ -282,6 +282,10 @@ class Node:
             context['networks'][network.get_name()] = network.toDict()
 
         return context
+
+    def get_template_context(self):
+        return self.get_slice().get_template_context(self, skip=['ssh_command'])
+
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
@@ -943,7 +947,7 @@ class Node:
 
     def get_ssh_command(self) -> str:
         """
-        Gets a SSH command used to access this node node from a terminal.
+        Gets an SSH command used to access this node node from a terminal.
         :return: the SSH command to access this node
         :rtype: str
         """

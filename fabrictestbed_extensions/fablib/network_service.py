@@ -449,25 +449,34 @@ class NetworkService:
                  }
 
 
-    def toDict(self):
+    def toDict(self, skip=[]):
         """
         Returns the network attributes as a dictionary
 
         :return: network attributes as dictionary
         :rtype: dict
         """
-        return {'id': self.get_reservation_id(),
-                'name':  self.get_name(),
-                'layer':  self.get_layer(),
-                'type': self.get_type(),
-                'site': self.get_site(),
-                'gateway':  self.get_gateway(),
-                'subnet':  self.get_subnet(),
-                'state':  self.get_reservation_state(),
-                'error': self.get_error_message(),
+        return {'id': str(self.get_reservation_id()),
+                'name':  str(self.get_name()),
+                'layer':  str(self.get_layer()),
+                'type': str(self.get_type()),
+                'site': str(self.get_site()),
+                'gateway':  str(self.get_gateway()),
+                'subnet':  str(self.get_subnet()),
+                'state':  str(self.get_reservation_state()),
+                'error': str(self.get_error_message()),
                 }
 
+    def get_template_context(self):
+        return self.get_slice().get_template_context(self)
 
+
+    def render_template(self, input_string):
+        environment = jinja2.Environment()
+        template = environment.from_string(input_string)
+        output_string = template.render(self.get_template_context())
+
+        return output_string
     
     def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """

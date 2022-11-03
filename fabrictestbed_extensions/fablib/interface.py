@@ -115,7 +115,7 @@ class Interface:
                 "private_ssh_key_file": "Private SSH Key File",
                 }
 
-    def toDict(self):
+    def toDict(self, skip=[]):
         """
         Returns the interface attributes as a dictionary
 
@@ -134,17 +134,26 @@ class Interface:
         else:
             node_name = None
 
-        return  {'name': self.get_name(),
-                'node': node_name,
-                'network': network_name,
-                'bandwidth': self.get_bandwidth(),
-                'vlan':  self.get_vlan(),
-                'mac':  self.get_mac(),
-                'physical_dev':  self.get_physical_os_interface_name(),
-                'dev':  self.get_os_interface(),
+        return  {'name': str(self.get_name()),
+                'node': str(node_name),
+                'network': str(network_name),
+                'bandwidth': str(self.get_bandwidth()),
+                'vlan':  str(self.get_vlan()),
+                'mac':  str(self.get_mac()),
+                'physical_dev':  str(self.get_physical_os_interface_name()),
+                'dev':  str(self.get_os_interface()),
                 }
 
+    def get_template_context(self):
+        return self.get_slice().get_template_context(self)
 
+
+    def render_template(self, input_string):
+        environment = jinja2.Environment()
+        template = environment.from_string(input_string)
+        output_string = template.render(self.get_template_context())
+
+        return output_string
 
     def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
