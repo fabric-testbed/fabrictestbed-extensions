@@ -72,16 +72,19 @@ class FacilityPort:
                 "name": "Name",
                 }
 
-    def toDict(self, pretty_names=False):
-        return {'name': self.get_name()
-                             }
+    def toDict(self, skip=[]):
+        return {'name': str(self.get_name())}
+
+    def get_template_context(self):
+        return self.get_slice().get_template_context(self)
 
 
-        if pretty_names == False:
-            return self.get_fablib_manager().remove_dict_pretty_names(dict_pretty_names)
-        else:
-            return dict_pretty_names
-    
+    def render_template(self, input_string):
+        environment = jinja2.Environment()
+        template = environment.from_string(input_string)
+        output_string = template.render(self.get_template_context())
+
+        return output_string
     def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         data = self.toDict(pretty_names=True)
     

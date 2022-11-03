@@ -93,23 +93,32 @@ class Component:
                 "type": "Type",
                 }
     
-    def toDict(self):
+    def toDict(self, skip=[]):
         """
         Returns the component attributes as a dictionary
 
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return { 'name':  self.get_name(),
-                'details':  self.get_details(),
-                'disk':  self.get_disk(),
-                'units': self.get_unit(),
-                'pci_address': self.get_pci_addr(),
-                'model':  self.get_model(),
-                'type': self.get_type()
+        return { 'name':  str(self.get_name()),
+                'details':  str(self.get_details()),
+                'disk':  str(self.get_disk()),
+                'units': str(self.get_unit()),
+                'pci_address': str(self.get_pci_addr()),
+                'model':  str(self.get_model()),
+                'type': str(self.get_type())
                 }
 
+    def get_template_context(self):
+        return self.get_slice().get_template_context(self)
 
+
+    def render_template(self, input_string):
+        environment = jinja2.Environment()
+        template = environment.from_string(input_string)
+        output_string = template.render(self.get_template_context())
+
+        return output_string
     
     def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
