@@ -574,7 +574,7 @@ class FablibManager:
 
 
         # Hack to avoid sites in maintence.  TODO: Make dynamic call to FABRIC API
-        self.sites_in_maintenance = ['STAR', 'MAX']
+        self.sites_in_maintenance = []
 
         # init attributes
         self.bastion_passphrase = None
