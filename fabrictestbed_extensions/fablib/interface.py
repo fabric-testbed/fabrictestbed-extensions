@@ -142,7 +142,7 @@ class Interface:
                 'mac':  str(self.get_mac()),
                 'physical_dev':  str(self.get_physical_os_interface_name()),
                 'dev':  str(self.get_os_interface()),
-                }
+                 }
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
@@ -583,8 +583,22 @@ class Interface:
         except Exception as e:
             print(f"Exception: {e}")
 
+
+    def get_ip_addr_show(self, dev=None):
+
+        try:
+            if not dev:
+                dev = self.get_os_interface()
+
+            stdout, stderr = self.get_node().execute(f'ip -j addr show {dev}', quiet=True)
+        except Exception as e:
+            (f"Exception: {e}")
+            logging.error(f"Failed to get ip addr show info for interface {self.get_name()}")
+
+        return stdout
+
     # fablib.Interface.get_ip_addr()
-    def get_ip_addr(self):
+    def get_ip_addr(self, dev=None):
         """
         Gets the ip addr info for this interface.
 
@@ -593,6 +607,7 @@ class Interface:
         """
         try:
             stdout, stderr = self.get_node().execute('ip -j addr list', quiet=True)
+
 
             addrs = json.loads(stdout)
 
