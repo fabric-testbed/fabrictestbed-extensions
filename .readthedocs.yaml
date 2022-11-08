@@ -1,9 +1,11 @@
 # Configuration for readthedocs.org.
+# See https://docs.readthedocs.io/en/latest/config-file/v2.html
 
 version: 2
 
-build:
-  tools:
-    # readthedocs.org uses Python 3.7 by default; fablib has to use
-    # Python 3.9 or greater.
-    python: "3.9"
+python:
+  # readthedocs.org uses Python 3.7 by default; fablib has to use
+  # Python 3.9 or greater.
+  version: "3.9"
+  install:
+    - requirements: requirements.txt    
