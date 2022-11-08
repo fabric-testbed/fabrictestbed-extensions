@@ -3,9 +3,7 @@
 
 version: 2
 
-python:
-  # readthedocs.org uses Python 3.7 by default; fablib has to use
-  # Python 3.9 or greater.
-  version: "3.9"
-  install:
-    - requirements: requirements.txt    
+build:
+  os: ubuntu-20.04
+  tools:
+    python: "3.9"
