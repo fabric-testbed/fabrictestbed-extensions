@@ -15,6 +15,8 @@ build:
 sphinx:
   configuration: docs/source/conf.py
 
+# To be able to build API documentation, we need to install both docs
+# requirements and package requirements, it seems.
 python:
   install:
     - requirements: docs/requirements.txt
