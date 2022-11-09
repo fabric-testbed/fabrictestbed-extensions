@@ -10,6 +10,8 @@ build:
   tools:
     python: "3.9"
 
+# Tell RTD location of our Sphinx configuration.  Seems to work
+# without this too, although default is docs/conf.py.
 sphinx:
   configuration: docs/source/conf.py
 
