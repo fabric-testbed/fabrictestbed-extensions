@@ -3,6 +3,8 @@
 
 version: 2
 
+# readthedocs.org uses Python 3.7 by default; fablib has to use Python
+# 3.9 or greater.  This incantation seems to work.
 build:
   os: ubuntu-20.04
   tools:
