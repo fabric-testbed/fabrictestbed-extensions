@@ -31,8 +31,6 @@ import logging
 
 from tabulate import tabulate
 import select
-from string import Template
-
 import jinja2
 
 
@@ -486,7 +484,7 @@ class Node:
                                                 filter_function=combined_filter_function,
                                                 pretty_names=pretty_names)
         
-    
+
     def list_networks(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
         """
         Lists all the networks attached to  the nodes with their attributes.

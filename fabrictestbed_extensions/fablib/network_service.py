@@ -539,7 +539,7 @@ class NetworkService:
 
     def get_site(self) -> str or None:
         try:
-            return self.get_sliver().sliver.site
+            return self.get_sliver().fim_sliver.site
         except Exception as e:
             logging.warning(f"Failed to get site: {e}")
 
@@ -553,7 +553,7 @@ class NetworkService:
         :rtype: String
         """
         try:
-            return self.get_sliver().sliver.layer
+            return self.get_sliver().fim_sliver.layer
         except Exception as e:
             logging.warning(f"Failed to get layer: {e}")
             return None
@@ -566,7 +566,7 @@ class NetworkService:
         :rtype: String
         """
         try:
-            return self.get_sliver().sliver.resource_type
+            return self.get_sliver().fim_sliver.resource_type
         except Exception as e:
             logging.warning(f"Failed to get type: {e}")
             return None
@@ -608,9 +608,9 @@ class NetworkService:
             gateway = None
             if self.get_layer() == NSLayer.L3:
                 if self.get_type() == ServiceType.FABNetv6:
-                    gateway = IPv6Address(self.get_sliver().sliver.gateway.gateway)
+                    gateway = IPv6Address(self.get_sliver().fim_sliver.gateway.gateway)
                 elif self.get_type() == ServiceType.FABNetv4:
-                    gateway = IPv4Address(self.get_sliver().sliver.gateway.gateway)
+                    gateway = IPv4Address(self.get_sliver().fim_sliver.gateway.gateway)
 
             return gateway
         except Exception as e:
@@ -652,9 +652,9 @@ class NetworkService:
             subnet = None
             if self.get_layer() == NSLayer.L3:
                 if self.get_type() == ServiceType.FABNetv6:
-                    subnet = IPv6Network(self.get_sliver().sliver.gateway.subnet)
+                    subnet = IPv6Network(self.get_sliver().fim_sliver.gateway.subnet)
                 elif self.get_type() == ServiceType.FABNetv4:
-                    subnet = IPv4Network(self.get_sliver().sliver.gateway.subnet)
+                    subnet = IPv4Network(self.get_sliver().fim_sliver.gateway.subnet)
             return subnet
         except Exception as e:
             logging.warning(f"Failed to get subnet: {e}")
