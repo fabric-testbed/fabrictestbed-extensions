@@ -46,7 +46,8 @@ class Component:
                             'NIC_ConnectX_5': ComponentModelType.SmartNIC_ConnectX_5,
                             'NVME_P4510': ComponentModelType.NVME_P4510,
                             'GPU_TeslaT4': ComponentModelType.GPU_Tesla_T4,
-                            'GPU_RTX6000': ComponentModelType.GPU_RTX6000
+                            'GPU_RTX6000': ComponentModelType.GPU_RTX6000,
+                            'NIC_OpenStack': ComponentModelType.SharedNIC_OpenStack_vNIC
                             }
 
     def __str__(self):
