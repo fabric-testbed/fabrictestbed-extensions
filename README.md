@@ -2,16 +2,23 @@
 
 [![requirements-badge]][requirements] [![pypi-badge]][pypy]
 
-Extensions for the FABRIC API/CLI.  
+This repository contains implementation of a Python API for
+intereacting with [FABRIC][fabric] testbed, colloquially known as
+"FABlib".
 
 ## Build instructions
-(Do not do `python setup.py sdist bdist_wheel`)
+
+Do not do `python setup.py sdist bdist_wheel`. Instead, do:
+
+```console
+$ pip install build
+$ python -m build
 ```
-python -m build
-```
-Following that upload to PyPi using
-```
-twine upload dist/*
+
+Following that upload to PyPi using:
+
+```console
+$ twine upload dist/*
 ```
 
 ## Install Instructions
@@ -29,3 +36,4 @@ pip install --user .
 [pypy]: https://pypi.org/project/fabrictestbed-extensions/
 [pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
 
+[fabric]: https://fabric-testbed.net/
