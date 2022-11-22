@@ -33,7 +33,7 @@ virtual environment.  Use your favorite: [venv], [virtualenv], or
 Your first encounter with FABlib might be through FABRIC project's
 [JupyterHub][fabric-jupyter] instance.  You will be presented with
 many examples on FABlib usage when you log in there.  The [notebook
-sources][[fabric-jupyter-examples]] can be found on GitHub as well.
+sources][fabric-jupyter-examples] can be found on GitHub as well.
 
 FABlib API documentation can be found [here][fablib-api-rtd], since
 version 1.4.  Older API docs are [here][fablib-api-old].
@@ -71,7 +71,7 @@ $ twine upload dist/*
 [virtualenv]: https://virtualenv.pypa.io/en/latest/
 [virtualenvwrapper]: https://virtualenvwrapper.readthedocs.io/en/latest/
 
-[fabric-jupyter] https://jupyter.fabric-testbed.net/
+[fabric-jupyter]: https://jupyter.fabric-testbed.net/
 [fabric-jupyter-examples]: https://github.com/fabric-testbed/jupyter-examples
 [fabrlib-install]: https://learn.fabric-testbed.net/knowledge-base/install-the-python-api/
 
