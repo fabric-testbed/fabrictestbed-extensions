@@ -30,10 +30,23 @@ work, although FABRIC team tends to use virtualenvwrapper.
 
 ## Using FABlib
 
-Your first encounter with FABlib might be through FABRIC project's
-[JupyterHub][fabric-jupyter] instance.  You will be presented with
-many examples on FABlib usage when you log in there.  The [notebook
-sources][fabric-jupyter-examples] can be found on GitHub as well.
+Once installed, you can use FABlib in your Python projects:
+
+```python
+from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manager
+
+try:
+    fablib = fablib_manager()
+    fablib.show_config()
+except Exception as e:
+    print(f"Exception: {e}")
+```
+
+Your first encounter with FABlib however might be through FABRIC
+project's [JupyterHub][fabric-jupyter] instance.  You will be
+presented with many examples on FABlib usage when you log in there.
+The [notebook sources][fabric-jupyter-examples] can be found on GitHub
+as well.
 
 FABlib API documentation can be found [here][fablib-api-rtd], since
 version 1.4.  Older API docs are [here][fablib-api-old].
