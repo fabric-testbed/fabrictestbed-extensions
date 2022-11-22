@@ -2,7 +2,7 @@
 
 [![requirements-badge]][requirements]
 
-[![PyPI](https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic)](https://pypi.org/project/fabrictestbed-extensions/)
+[![pypi-badge]][pypy]
 
 Extensions for the FABRIC API/CLI.  
 
@@ -27,4 +27,7 @@ pip install --user .
 
 [requirements]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements/?branch=main
 [requirements-badge]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements.svg?branch=main (Requirements Status)
+
+[pypy]: https://pypi.org/project/fabrictestbed-extensions/
+[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
 
