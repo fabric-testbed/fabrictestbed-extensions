@@ -8,18 +8,17 @@ intereacting with [FABRIC][fabric] testbed, colloquially known as
 
 ## Installing FABlib
 
-Install released versions of FABlib from PyPI:
+You can install released versions of FABlib from PyPI:
 
 ```console
 $ pip install fabrictestbed-extensions
 ```
 
-If you want a more "bleeding edge" version of FABlib, install it from
+If you need the current development version of FABlib, install it from
 the git repository:
 
-
 ```console
-$ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions.git
+$ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions@main
 ```
 
 Note that installing FABlib using either methods will also install a
