@@ -6,7 +6,7 @@ This repository contains implementation of a Python API for
 intereacting with [FABRIC][fabric] testbed, colloquially known as
 "FABlib".
 
-## Installing fabrictestbed-extensions
+## Installing FABlib
 
 Install released versions of FABlib from PyPI:
 
@@ -28,7 +28,7 @@ virtual environment.  Use your favorite: [venv], [virtualenv], or
 [virtualenvwrapper].
 
 
-## Using fabrictestbed-extensions
+## Using FABlib
 
 Your first encounter with FABlib might be through FABRIC project's
 [JupyterHub][fabric-jupyter] instance.  You will be presented with
