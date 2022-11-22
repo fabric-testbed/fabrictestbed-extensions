@@ -6,7 +6,7 @@ This repository contains implementation of a Python API for
 intereacting with [FABRIC][fabric] testbed, colloquially known as
 "FABlib".
 
-## Installing the Python package
+## Installing fabrictestbed-extensions
 
 Install released versions of FABlib from PyPI:
 
