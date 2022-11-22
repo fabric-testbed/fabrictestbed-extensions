@@ -1,8 +1,6 @@
 # fabrictestbed-extensions
 
-[![requirements-badge]][requirements]
-
-[![pypi-badge]][pypy]
+[![requirements-badge]][requirements] [![pypi-badge]][pypy]
 
 Extensions for the FABRIC API/CLI.  
 
