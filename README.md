@@ -6,7 +6,7 @@ This repository contains implementation of a Python API for
 intereacting with [FABRIC][fabric] testbed, colloquially known as
 "FABlib".
 
-## Build instructions
+## Building the Python package
 
 Do not do `python setup.py sdist bdist_wheel`. Instead, do:
 
@@ -15,18 +15,28 @@ $ pip install build
 $ python -m build
 ```
 
-Following that upload to PyPi using:
+Following that, upload to PyPi using:
 
 ```console
 $ twine upload dist/*
 ```
 
-## Install Instructions
+## Installing the Python package
+
+Install released versions of FABlib from PyPI:
+
+```console
+$ pip install fabrictestbed-extensions
 ```
-git clone https://github.com/fabric-testbed/fabrictestbed-extensions.git 
-cd fabrictestbed-extensions
-pip install --user .
+
+If you want a more "bleeding edge" version of FABlib, install it from
+the git repository:
+
+
+```console
+$ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions.git
 ```
+
 
 <!-- Badges -->
 
