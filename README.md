@@ -43,7 +43,7 @@ virtual environment.  Use your favorite: [venv], [virtualenv], or
 [virtualenvwrapper].
 
 
-<!-- Badges -->
+<!-- URLs -->
 
 [requirements]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements/?branch=main
 [requirements-badge]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements.svg?branch=main (Requirements Status)
