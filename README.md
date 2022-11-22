@@ -3,7 +3,7 @@
 [![requirements-badge]][requirements] [![pypi-badge]][pypy]
 
 This repository contains implementation of a Python API for
-intereacting with [FABRIC][fabric] testbed, colloquially known as
+intereacting with [FABRIC][fabric] testbed, otherwise known as
 "FABlib".
 
 ## Installing FABlib
