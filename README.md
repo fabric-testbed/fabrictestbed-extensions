@@ -37,6 +37,11 @@ the git repository:
 $ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions.git
 ```
 
+Note that installing FABlib using either methods will also install a
+number of dependencies, so you might want to install FABlib in a
+virtual environment.  Use your favorite: [venv], [virtualenv], or
+[virtualenvwrapper].
+
 
 <!-- Badges -->
 
@@ -47,3 +52,7 @@ $ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions.git
 [pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
 
 [fabric]: https://fabric-testbed.net/
+
+[venv]: https://docs.python.org/3/library/venv.html
+[virtualenv]: https://virtualenv.pypa.io/en/latest/
+[virtualenvwrapper]: https://virtualenvwrapper.readthedocs.io/en/latest/
