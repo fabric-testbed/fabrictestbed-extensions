@@ -1,6 +1,6 @@
 # fabrictestbed-extensions
 
-[![requirements-badge](Requirements Status)][requirements]
+[![requirements-badge]][requirements]
 
 [![PyPI](https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic)](https://pypi.org/project/fabrictestbed-extensions/)
 
@@ -26,5 +26,5 @@ pip install --user .
 <!-- Badges -->
 
 [requirements]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements/?branch=main
-[requirements-badge]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements.svg?branch=main
+[requirements-badge]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements.svg?branch=main (Requirements Status)
 
