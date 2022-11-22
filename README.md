@@ -23,8 +23,9 @@ $ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions@mai
 
 Note that installing FABlib using either methods will also install a
 number of dependencies, so you might want to install FABlib in a
-virtual environment.  Use your favorite: [venv], [virtualenv], or
-[virtualenvwrapper].
+virtual environment.  Your favorite tool for managing virtual
+environments ([venv], [virtualenv], or [virtualenvwrapper]) should
+work, although FABRIC team tends to uuse virtualenvwrapper.
 
 
 ## Using FABlib
