@@ -25,7 +25,7 @@ Note that installing FABlib using either methods will also install a
 number of dependencies, so you might want to install FABlib in a
 virtual environment.  Your favorite tool for managing virtual
 environments ([venv], [virtualenv], or [virtualenvwrapper]) should
-work, although FABRIC team tends to use virtualenvwrapper.
+work, although FABRIC team tends to favor virtualenvwrapper.
 
 
 ## Using FABlib
