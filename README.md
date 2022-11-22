@@ -1,6 +1,6 @@
 # fabrictestbed-extensions
 
-[![requirements-badge]][requirements] [![pypi-badge]][pypy]
+[![requirements-badge]][requirements] [![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
 
 This repository contains implementation of a Python API for
 intereacting with [FABRIC][fabric] testbed, otherwise known as
@@ -78,6 +78,9 @@ $ twine upload dist/*
 [pypy]: https://pypi.org/project/fabrictestbed-extensions/
 [pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
 
+[api-docs]: https://fabric-fablib.readthedocs.io/en/latest/?badge=latest
+[api-docs-badge]: https://readthedocs.org/projects/fabric-fablib/badge/?version=latest (Documentation Status)
+
 [fabric]: https://fabric-testbed.net/
 
 [venv]: https://docs.python.org/3/library/venv.html
@@ -90,4 +93,3 @@ $ twine upload dist/*
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
-
