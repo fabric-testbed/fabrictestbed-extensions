@@ -73,7 +73,7 @@ $ twine upload dist/*
 
 [fabric-jupyter]: https://jupyter.fabric-testbed.net/
 [fabric-jupyter-examples]: https://github.com/fabric-testbed/jupyter-examples
-[fabrlib-install]: https://learn.fabric-testbed.net/knowledge-base/install-the-python-api/
+[fablib-install]: https://learn.fabric-testbed.net/knowledge-base/install-the-python-api/
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
