@@ -12,8 +12,7 @@ jobs:
   black:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out sources
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       # See https://black.readthedocs.io/en/stable/integrations/github_actions.html
       - uses: psf/black@stable
