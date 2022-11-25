@@ -1,0 +1,23 @@
+# Run some code checks with GitHub Actions.
+
+name: Code checks
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v3
+
+      # See https://black.readthedocs.io/en/stable/integrations/github_actions.html
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "."
+          version: "~= 22.0"
