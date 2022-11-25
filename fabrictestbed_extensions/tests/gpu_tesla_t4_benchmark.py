@@ -33,11 +33,16 @@ import time
 import importlib.resources as pkg_resources
 from typing import List
 
-from fabrictestbed.slice_editor import Labels, ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 from fabrictestbed.slice_editor import (
+    Labels,
     ExperimentTopology,
-    Capacities
+    Capacities,
+    ComponentType,
+    ComponentModelType,
+    ServiceType,
+    ComponentCatalog,
 )
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 
@@ -47,7 +52,6 @@ from .. import images
 
 
 class GPUTeslaT4Benchmark(AbcTest):
-
     def __init__(self):
         """
         Constructor
@@ -55,26 +59,23 @@ class GPUTeslaT4Benchmark(AbcTest):
         """
         super().__init__()
 
-
-
-
     def create_slice(self, slice_name, site_name, node_count=1):
-        image = 'default_centos_8'
-        image_type = 'qcow2'
+        image = "default_centos_8"
+        image_type = "qcow2"
         cores = 4
         ram = 8
         disk = 50
         model_type = ComponentModelType.GPU_Tesla_T4
-        #Tesla_T4_component_type = ComponentType.Tesla_T4
-        #Tesla_T4_model = 'P4510'
-        Tesla_T4_name = 'gpu1'
+        # Tesla_T4_component_type = ComponentType.Tesla_T4
+        # Tesla_T4_model = 'P4510'
+        Tesla_T4_name = "gpu1"
 
         self.topology = ExperimentTopology()
 
         cap = Capacities(core=cores, ram=ram, disk=disk)
 
         for node_num in range(0, node_count):
-            node_name="Tesla_T4-"+str(site_name)+"-"+str(node_num)
+            node_name = "Tesla_T4-" + str(site_name) + "-" + str(node_num)
             # Add node
             n1 = self.topology.add_node(name=node_name, site=site_name)
 
@@ -83,206 +84,247 @@ class GPUTeslaT4Benchmark(AbcTest):
 
             # Add the PCI Tesla_T4 device
             n1.add_component(model_type=model_type, name=Tesla_T4_name)
-            #n1.add_component(ctype=Tesla_T4_component_type, model=Tesla_T4_model, name=Tesla_T4_name)
+            # n1.add_component(ctype=Tesla_T4_component_type, model=Tesla_T4_model, name=Tesla_T4_name)
 
         # Generate Slice Graph
         slice_graph = self.topology.serialize()
 
         # Request slice from Orchestrator
-        return_status, slice_reservations = self.slice_manager.create(slice_name=slice_name,
-                                                    slice_graph=slice_graph,
-                                                    ssh_key=self.node_ssh_key)
-
-
-
+        return_status, slice_reservations = self.slice_manager.create(
+            slice_name=slice_name, slice_graph=slice_graph, ssh_key=self.node_ssh_key
+        )
 
         if return_status == Status.OK:
             slice_id = slice_reservations[0].get_slice_id()
-            #print("Submitted slice creation request. Slice ID: {}".format(slice_id))
+            # print("Submitted slice creation request. Slice ID: {}".format(slice_id))
         else:
             print(f"Failure: {slice_reservations}")
 
-        #time.sleep(30)
+        # time.sleep(30)
 
-        return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead,SliceState.Closing])
+        return_status, slices = self.slice_manager.slices(
+            excludes=[SliceState.Dead, SliceState.Closing]
+        )
 
         if return_status == Status.OK:
             self.slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
-            #self.slice = self.wait_for_slice(slice, progress=True)
+            # self.slice = self.wait_for_slice(slice, progress=True)
 
-        #print()
-        #print("Slice Name : {}".format(self.slice.slice_name))
-        #print("ID         : {}".format(self.slice.slice_id))
-        #print("State      : {}".format(self.slice.slice_state))
-        #print("Lease End  : {}".format(self.slice.lease_end))
+        # print()
+        # print("Slice Name : {}".format(self.slice.slice_name))
+        # print("ID         : {}".format(self.slice.slice_id))
+        # print("State      : {}".format(self.slice.slice_state))
+        # print("Lease End  : {}".format(self.slice.lease_end))
 
     def config_test(self):
         for node_name, node in self.topology.nodes.items():
-            #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-            #print("Node:")
-            print("Config | ", end = '')
-            print(str(node_name) + " | ", end = '')
+            # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            # print("Node:")
+            print("Config | ", end="")
+            print(str(node_name) + " | ", end="")
             try:
-                print("{}".format(str(node_name)) + " | ", end = '')
+                print("{}".format(str(node_name)) + " | ", end="")
 
-                #print("   Name              : {}".format(node_name))
-                #print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
-                #print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
-                #print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
-                #print("   Image             : {}".format(node.image_ref))
-                #print("   Image Type        : {}".format(node.image_type))
-                #print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
-                print("{}".format(str(node.get_property(pname='label_allocations').instance_parent)).replace('\n','') + " | ", end = '')
-                #print("   Site              : {}".format(node.site))
-                print("{}".format(str(node.management_ip)).replace('\n','') + " | ", end = '')
+                # print("   Name              : {}".format(node_name))
+                # print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
+                # print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
+                # print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
+                # print("   Image             : {}".format(node.image_ref))
+                # print("   Image Type        : {}".format(node.image_type))
+                # print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
+                print(
+                    "{}".format(
+                        str(
+                            node.get_property(pname="label_allocations").instance_parent
+                        )
+                    ).replace("\n", "")
+                    + " | ",
+                    end="",
+                )
+                # print("   Site              : {}".format(node.site))
+                print(
+                    "{}".format(str(node.management_ip)).replace("\n", "") + " | ",
+                    end="",
+                )
 
-                #print("   Management IP     : {}".format(node.management_ip))
-                #print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
-                #print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
-                #print("   Components        : {}".format(node.components))
-                #print("   Interfaces        : {}".format(node.interfaces))
-                #print()
+                # print("   Management IP     : {}".format(node.management_ip))
+                # print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
+                # print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
+                # print("   Components        : {}".format(node.components))
+                # print("   Interfaces        : {}".format(node.interfaces))
+                # print()
                 name = node_name
                 management_ip = node.management_ip
 
-                #print("------------------------- Test Output ---------------------------")
-                script= '#!/bin/bash  \n' \
-                'sudo yum install -y pciutils \n'
+                # print("------------------------- Test Output ---------------------------")
+                script = "#!/bin/bash  \n" "sudo yum install -y pciutils \n"
                 try:
-                    stdout_str = self.execute_script(node_username='centos', node=node, script=script)
+                    stdout_str = self.execute_script(
+                        node_username="centos", node=node, script=script
+                    )
                     print("Done ")
                 except Exception as e:
                     print("Fail {}".format(str(e)))
-                #print(str(stdout_str.replace('\n','')) + " | ", end = '')
-                #print("-----------------------------------------------------------------")
-                #stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
+                # print(str(stdout_str.replace('\n','')) + " | ", end = '')
+                # print("-----------------------------------------------------------------")
+                # stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
             except Exception as e:
-                print ("Error in test: Error {}".format(e))
+                print("Error in test: Error {}".format(e))
                 traceback.print_exc()
 
     def run_test(self):
         self.config_test()
 
         for node_name, node in self.topology.nodes.items():
-            #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-            #print("Node:")
-            print(str(node_name) + " | ", end = '')
+            # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            # print("Node:")
+            print(str(node_name) + " | ", end="")
             try:
-                #print("   Name              : {}".format(node_name))
-                #print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
-                #print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
-                #print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
-                #print("   Image             : {}".format(node.image_ref))
-                #print("   Image Type        : {}".format(node.image_type))
-                #print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
-                #print("   Site              : {}".format(node.site))
-                #print("   Management IP     : {}".format(node.management_ip))
-                #print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
-                #print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
-                #print("   Components        : {}".format(node.components))
-                #print("   Interfaces        : {}".format(node.interfaces))
-                #print()
+                # print("   Name              : {}".format(node_name))
+                # print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
+                # print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
+                # print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
+                # print("   Image             : {}".format(node.image_ref))
+                # print("   Image Type        : {}".format(node.image_type))
+                # print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
+                # print("   Site              : {}".format(node.site))
+                # print("   Management IP     : {}".format(node.management_ip))
+                # print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
+                # print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
+                # print("   Components        : {}".format(node.components))
+                # print("   Interfaces        : {}".format(node.interfaces))
+                # print()
                 name = node_name
-                reservation_id = node.get_property(pname='reservation_info').reservation_id
+                reservation_id = node.get_property(
+                    pname="reservation_info"
+                ).reservation_id
                 management_ip = node.management_ip
 
-                hostname = reservation_id + '-' + name.lower()
+                hostname = reservation_id + "-" + name.lower()
 
-                expected_stdout = '3D controller: NVIDIA Corporation TU104GL [Tesla T4] (rev a1)'
+                expected_stdout = (
+                    "3D controller: NVIDIA Corporation TU104GL [Tesla T4] (rev a1)"
+                )
 
-                #print("------------------------- Test Output ---------------------------")
-                script= '#!/bin/bash  \n' \
-                """lspci | grep Tesla \n"""
+                # print("------------------------- Test Output ---------------------------")
+                script = "#!/bin/bash  \n" """lspci | grep Tesla \n"""
                 #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
-                stdout_str = self.execute_script(node_username='centos', node=node, script=script)
-                #print(str(stdout_str.replace('\n','')) + " | ", end = '')
-                #print("-----------------------------------------------------------------")
-                #stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
+                stdout_str = self.execute_script(
+                    node_username="centos", node=node, script=script
+                )
+                # print(str(stdout_str.replace('\n','')) + " | ", end = '')
+                # print("-----------------------------------------------------------------")
+                # stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
                 if expected_stdout in stdout_str:
-                    print('Success')
+                    print("Success")
                 else:
-                    print('Fail')
-                    #print('Fail: --{}--  --{}--'.format(expected_stdout,stdout_str))
+                    print("Fail")
+                    # print('Fail: --{}--  --{}--'.format(expected_stdout,stdout_str))
             except Exception as e:
-                print ("Error in test: Error {}".format(e))
+                print("Error in test: Error {}".format(e))
                 traceback.print_exc()
-
-
 
     def delete_slice(self):
         status, result = self.slice_manager.delete(slice_id=self.slice.slice_id)
 
-        #print("Response Status {}".format(status))
-        #print("Response received {}".format(result))
+        # print("Response Status {}".format(status))
+        # print("Response received {}".format(result))
 
     def get_existing_slice(self, slice_name):
-        #Get existing slice
-        return_status, slices = self.slice_manager.slices(excludes=[SliceState.Dead, SliceState.Closing])
+        # Get existing slice
+        return_status, slices = self.slice_manager.slices(
+            excludes=[SliceState.Dead, SliceState.Closing]
+        )
 
         if return_status == Status.OK:
-            #for slice in slices:
+            # for slice in slices:
             #    print("{}:".format(slice.slice_name))
             #    print("   ID         : {}".format(slice.slice_id))
             #    print("   State      : {}".format(slice.slice_state))
             #    print("   Lease End  : {}".format(slice.lease_end))
-            #print("got Slice")
+            # print("got Slice")
             pass
         else:
             print(f"Failure: {slices}")
 
         self.slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
-        status, self.topology = self.slice_manager.get_slice_topology(slice_object=self.slice)
+        status, self.topology = self.slice_manager.get_slice_topology(
+            slice_object=self.slice
+        )
         if return_status == Status.OK:
-            #print("got topology")
+            # print("got topology")
             pass
         else:
             print(f"Failure: {self.topology}")
 
-        #print("Slice Name : {}".format(self.slice.slice_name))
-        #print("ID         : {}".format(self.slice.slice_id))
-        #print("State      : {}".format(self.slice.slice_state))
-        #print("Lease End  : {}".format(self.slice.lease_end))
+        # print("Slice Name : {}".format(self.slice.slice_name))
+        # print("ID         : {}".format(self.slice.slice_id))
+        # print("State      : {}".format(self.slice.slice_state))
+        # print("Lease End  : {}".format(self.slice.lease_end))
 
-    def run_all(self, slice_name, sites=[], create_slice=True, run_test=True, delete=True, node_count=1):
+    def run_all(
+        self,
+        slice_name,
+        sites=[],
+        create_slice=True,
+        run_test=True,
+        delete=True,
+        node_count=1,
+    ):
         for site, node_count in sites:
-            #print("site: {}, node_count: {}".format(site,node_count))
-            self.run(slice_name + "-" + site, create_slice=create_slice, run_test=run_test, delete=delete, site=site, node_count=node_count)
+            # print("site: {}, node_count: {}".format(site,node_count))
+            self.run(
+                slice_name + "-" + site,
+                create_slice=create_slice,
+                run_test=run_test,
+                delete=delete,
+                site=site,
+                node_count=node_count,
+            )
 
-
-    def run(self, slice_name, create_slice=True, run_test=True, delete=True, site=None, node_count=1):
+    def run(
+        self,
+        slice_name,
+        create_slice=True,
+        run_test=True,
+        delete=True,
+        site=None,
+        node_count=1,
+    ):
         """
         Run the test
         :return:
         """
-        print("Tesla_T4 test, slice_name: {}, site: {}".format(slice_name,site))
+        print("Tesla_T4 test, slice_name: {}, site: {}".format(slice_name, site))
         if create_slice:
-            #print("Creating Slice")
+            # print("Creating Slice")
             try:
-                self.create_slice(slice_name,site,node_count=node_count)
+                self.create_slice(slice_name, site, node_count=node_count)
                 time.sleep(5)
 
-                self.slice = self.wait_for_slice(self.slice, progress=True, timeout=300+(20*node_count))
-                #time.sleep(10)
+                self.slice = self.wait_for_slice(
+                    self.slice, progress=True, timeout=300 + (20 * node_count)
+                )
+                # time.sleep(10)
 
             except Exception as e:
                 print("Create Slice FAILED. Error {}".format(e))
                 traceback.print_exc()
-            time.sleep(5*node_count)
-
+            time.sleep(5 * node_count)
 
         self.get_existing_slice(slice_name)
-        #time.sleep(60)
+        # time.sleep(60)
 
         if run_test:
             try:
-                #print("Run Test")
+                # print("Run Test")
                 self.run_test()
             except Exception as e:
                 print("Run test FAILED. Error {}".format(e))
                 traceback.print_exc()
         if delete:
             try:
-                #print("Delete Slice")
+                # print("Delete Slice")
                 self.delete_slice()
             except:
                 print("Delete FAILED")
