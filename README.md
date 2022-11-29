@@ -23,9 +23,9 @@ $ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions@mai
 
 Note that installing FABlib using either methods will also install a
 number of dependencies, so you might want to install FABlib in a
-virtual environment.  Your favorite tool for managing virtual
+virtual environment. Your favorite tool for managing virtual
 environments ([venv], [virtualenv], or [virtualenvwrapper]) should
-work, although FABRIC team tends to favor virtualenvwrapper.
+work. FABRIC team tends to favor virtualenvwrapper.
 
 
 ## Using FABlib
@@ -43,16 +43,16 @@ except Exception as e:
 ```
 
 Your first encounter with FABlib however might be through FABRIC
-project's [JupyterHub][fabric-jupyter] instance.  You will be
-presented with many examples on FABlib usage when you log in there.
-The [notebook sources][fabric-jupyter-examples] can be found on GitHub
-as well.
+project's [JupyterHub][fabric-jupyter] instance. You will be presented
+with many examples on FABlib usage when you log in there. The
+[notebook sources][fabric-jupyter-examples] can be found on GitHub as
+well.
 
-Since FABlib 1.4, API docs can be found [here][fablib-api-rtd].  Older
+Since FABlib 1.4, API docs can be found [here][fablib-api-rtd]. Older
 API docs are [here][fablib-api-old].
 
 If you want to interact with FABRIC from Jupyter installed on your
-computer, see [Install the FABRIC Python API][fablib-install].
+computer, see: [Install the FABRIC Python API][fablib-install].
 
 
 ## Building Python packages
