@@ -1,6 +1,6 @@
 # fabrictestbed-extensions
 
-[![requirements-badge]][requirements] [![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
+[![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
 
 This repository contains implementation of a Python API for
 intereacting with [FABRIC][fabric] testbed, otherwise known as
@@ -71,9 +71,6 @@ $ twine upload dist/*
 ```
 
 <!-- URLs -->
-
-[requirements]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements/?branch=main
-[requirements-badge]: https://requires.io/github/fabric-testbed/fabrictestbed-extensions/requirements.svg?branch=main (Requirements Status)
 
 [pypy]: https://pypi.org/project/fabrictestbed-extensions/
 [pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
