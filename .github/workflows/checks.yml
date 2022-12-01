@@ -35,4 +35,4 @@ jobs:
 
       - name: Run "isort --check"
         run: |
-          python -m isort --check --profile black .
+          python -m isort --check --profile black --verbose .
