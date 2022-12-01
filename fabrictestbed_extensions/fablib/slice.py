@@ -1510,15 +1510,15 @@ class Slice:
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
         )
 
-        node_threads = []
-        for node in self.get_nodes():
-            logging.info(f"Starting thread: {node.get_name()}_network_manager_stop")
-            node_thread = executor.submit(node.network_manager_stop)
-            node_threads.append(node_thread)
-            pass
+        #node_threads = []
+        #for node in self.get_nodes():
+        #    logging.info(f"Starting thread: {node.get_name()}_network_manager_stop")
+        #    node_thread = executor.submit(node.network_manager_stop)
+        #    node_threads.append(node_thread)
+        #    pass
 
-        for node_thread in node_threads:
-            node_thread.result()
+        #for node_thread in node_threads:
+        #    node_thread.result()
 
         for interface in self.get_interfaces():
             try:
@@ -1527,13 +1527,14 @@ class Slice:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        # iface_threads = []
-        # for interface in self.get_interfaces():
-        #    try:
-        #        iface_threads.append(executor.submit(interface.ip_link_toggle))
-        #    except Exception as e:
-        #        logging.error(f"Interface: {interface.get_name()} failed to toggle")
-        #        logging.error(e, exc_info=True)
+        iface_threads = []
+        for interface in self.get_interfaces():
+            try:
+                #iface_threads.append(executor.submit(interface.ip_link_toggle))
+                interface.get_node().execute(f'sudo nmcli device set {interface.get_device_name()} managed no')
+            except Exception as e:
+                logging.error(f"Interface: {interface.get_name()} failed to become unmanged")
+                logging.error(e, exc_info=True)
 
         # for iface_thread in iface_threads:
         #    iface_thread.result()

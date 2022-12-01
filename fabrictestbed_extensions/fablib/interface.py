@@ -43,6 +43,7 @@ from fim.user.interface import Interface as FimInterface
 
 
 class Interface:
+
     def __init__(self, component: Component = None, fim_interface: FimInterface = None):
         """
         Constructor. Sets keyword arguments as instance fields.
@@ -56,7 +57,7 @@ class Interface:
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
-
+        
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
 
@@ -74,15 +75,14 @@ class Interface:
         else:
             network_name = None
 
-        table = [
-            ["Name", self.get_name()],
-            ["Network", network_name],
-            ["Bandwidth", self.get_bandwidth()],
-            ["VLAN", self.get_vlan()],
-            ["MAC", self.get_mac()],
-            ["Physical Device", self.get_physical_os_interface_name()],
-            ["Device", self.get_os_interface()],
-        ]
+        table = [   [ "Name", self.get_name() ],
+                    [ "Network", network_name ],
+                    [ "Bandwidth", self.get_bandwidth() ],
+                    [ "VLAN", self.get_vlan() ],
+                    [ "MAC", self.get_mac() ],
+                    [ "Physical Device", self.get_physical_os_interface_name() ],
+                    [ "Device", self.get_os_interface() ],
+                    ]
 
         return tabulate(table)
 
@@ -98,22 +98,22 @@ class Interface:
     @staticmethod
     def get_pretty_name_dict():
         return {
-            "name": "Name",
-            "node": "Node",
-            "network": "Network",
-            "bandwidth": "Bandwidth",
-            "vlan": "VLAN",
-            "mac": "MAC",
-            "physical_dev": "Physical Device",
-            "dev": "Device",
-            "username": "Username",
-            "management_ip": "Management IP",
-            "state": "State",
-            "error": "Error",
-            "ssh_command": "SSH Command",
-            "public_ssh_key_file": "Public SSH Key File",
-            "private_ssh_key_file": "Private SSH Key File",
-        }
+                "name": "Name",
+                "node": "Node",
+                "network": "Network",
+                "bandwidth": "Bandwidth",
+                "vlan": "VLAN",
+                "mac": "MAC",
+                "physical_dev": "Physical Device",
+                "dev": "Device",
+                "username": "Username",
+                "management_ip": "Management IP",
+                "state": "State",
+                "error": "Error",
+                "ssh_command": "SSH Command",
+                "public_ssh_key_file": "Public SSH Key File",
+                "private_ssh_key_file": "Private SSH Key File",
+                }
 
     def toDict(self, skip=[]):
         """
@@ -123,34 +123,30 @@ class Interface:
         :rtype: dict
         """
         if self.get_network():
-            logging.info(
-                f"Getting results from get network name thread for iface {self.get_name()} "
-            )
+            logging.info(f"Getting results from get network name thread for iface {self.get_name()} ")
             network_name = self.get_network().get_name()
         else:
             network_name = None
 
         if self.get_node():
-            logging.info(
-                f"Getting results from get node name thread for iface {self.get_name()} "
-            )
+            logging.info(f"Getting results from get node name thread for iface {self.get_name()} ")
             node_name = self.get_node().get_name()
         else:
             node_name = None
 
-        return {
-            "name": str(self.get_name()),
-            "node": str(node_name),
-            "network": str(network_name),
-            "bandwidth": str(self.get_bandwidth()),
-            "vlan": str(self.get_vlan()),
-            "mac": str(self.get_mac()),
-            "physical_dev": str(self.get_physical_os_interface_name()),
-            "dev": str(self.get_os_interface()),
-        }
+        return  {'name': str(self.get_name()),
+                'node': str(node_name),
+                'network': str(network_name),
+                'bandwidth': str(self.get_bandwidth()),
+                'vlan':  str(self.get_vlan()),
+                'mac':  str(self.get_mac()),
+                'physical_dev':  str(self.get_physical_os_interface_name()),
+                'dev':  str(self.get_os_interface()),
+                 }
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
+
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
@@ -159,9 +155,7 @@ class Interface:
 
         return output_string
 
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
+    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
         """
         Show a table containing the current interface attributes.
 
@@ -189,54 +183,55 @@ class Interface:
         """
 
         data = self.toDict()
-
-        # fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
+    
+        #fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
         #        "MAC", "Device"
         #         ]
+
 
         if pretty_names:
             pretty_names_dict = self.get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().show_table(
-            data,
-            fields=fields,
-            title="Interface",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
+        table = self.get_fablib_manager().show_table(data, 
+                        fields=fields,
+                        title='Interface', 
+                        output=output, 
+                        quiet=quiet,
+                        pretty_names_dict=pretty_names_dict)
+            
+            
         return table
 
     def set_auto_config(self):
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=True)
-        # fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
+        #fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
 
-        # labels = Labels()
-        # labels.instance_parent = host_name
-        # self.get_fim_node().set_properties(labels=labels)
+        #labels = Labels()
+        #labels.instance_parent = host_name
+        #self.get_fim_node().set_properties(labels=labels)
 
-        # if_labels = Labels.update(if_labels, ipv4=str(next(ips)), ipv4_subnet=str(network))
+        #if_labels = Labels.update(if_labels, ipv4=str(next(ips)), ipv4_subnet=str(network))
         # if_labels = Labels.update(if_labels, vlan="200", ipv4=str(next(ips)))
-        # fim_iface.set_properties(labels=if_labels)
+        #fim_iface.set_properties(labels=if_labels)
 
     def unset_auto_config(self):
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
+
     def get_device_name(self) -> str:
         """
-        Gets a name of the device name on the node
+         Gets a name of the device name on the node
 
-        If the interface requires a FABRIC VLAN tag, the interface name returned
-        will be the VLAN tagged interface name.
+         If the interface requires a FABRIC VLAN tag, the interface name returned
+         will be the VLAN tagged interface name.
 
-        :return: OS interface name
-        :rtype: String
-        """
+         :return: OS interface name
+         :rtype: String
+         """
         try:
             # logging.debug(f"iface: {self}")
             os_iface = self.get_physical_os_interface_name()
@@ -263,7 +258,7 @@ class Interface:
         :rtype: String
         """
         try:
-            # logging.debug(f"iface: {self}")
+            #logging.debug(f"iface: {self}")
             os_iface = self.get_physical_os_interface_name()
             vlan = self.get_vlan()
 
@@ -282,8 +277,8 @@ class Interface:
         :rtype: String
         """
         try:
-            # os_iface = self.get_physical_os_interface()
-            # mac = os_iface['mac']
+            #os_iface = self.get_physical_os_interface()
+            #mac = os_iface['mac']
             mac = self.get_fim_interface().get_property(pname="label_allocations").mac
         except:
             mac = None
@@ -298,11 +293,11 @@ class Interface:
         :rtype: Dict
         """
 
-        ip_addr_list_json = self.get_node().ip_addr_list(output="json")
+        ip_addr_list_json = self.get_node().ip_addr_list(output='json')
 
         mac = self.get_mac()
         for dev in ip_addr_list_json:
-            if str(dev["address"].upper()) == str(mac.upper()):
+            if str(dev['address'].upper()) == str(mac.upper()):
                 return dev
 
         return None
@@ -335,7 +330,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return self.get_os_dev()["ifname"]
+            return self.get_os_dev()['ifname']
         except:
             return None
 
@@ -344,28 +339,19 @@ class Interface:
         Not intended for API use
         """
         if self.get_vlan() is not None:
-            self.get_node().add_vlan_os_interface(
-                os_iface=self.get_physical_os_interface_name(),
-                vlan=self.get_vlan(),
-                interface=self,
-            )
+            self.get_node().add_vlan_os_interface(os_iface=self.get_physical_os_interface_name(),
+                                                  vlan=self.get_vlan(), interface=self)
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
         """
         Depricated
         """
-        if cidr:
-            cidr = str(cidr)
-        if mtu:
-            mtu = str(mtu)
+        if cidr: cidr=str(cidr)
+        if mtu: mtu=str(mtu)
 
-        self.get_node().set_ip_os_interface(
-            os_iface=self.get_physical_os_interface_name(),
-            vlan=self.get_vlan(),
-            ip=ip,
-            cidr=cidr,
-            mtu=mtu,
-        )
+        self.get_node().set_ip_os_interface(os_iface=self.get_physical_os_interface_name(),
+                                            vlan=self.get_vlan(),
+                                            ip=ip, cidr=cidr, mtu=mtu)
 
     def ip_addr_add(self, addr, subnet):
         """
@@ -396,7 +382,7 @@ class Interface:
         """
         if self.get_network() == None:
             return
-
+        
         self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):
@@ -448,7 +434,7 @@ class Interface:
         :return: bandwith
         :rtype: String
         """
-        if self.get_component().get_model() == "NIC_Basic":
+        if self.get_component().get_model() == 'NIC_Basic':
             return 100
         else:
             return self.get_fim_interface().capacities.bw
@@ -468,13 +454,9 @@ class Interface:
 
     def get_reservation_id(self) -> str or None:
         try:
-            # TODO THIS DOESNT WORK.
-            # print(f"{self.get_fim_interface()}")
-            return (
-                self.get_fim_interface()
-                .get_property(pname="reservation_info")
-                .reservation_id
-            )
+            #TODO THIS DOESNT WORK.
+            #print(f"{self.get_fim_interface()}")
+            return self.get_fim_interface().get_property(pname='reservation_info').reservation_id
         except:
             return None
 
@@ -486,11 +468,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return (
-                self.get_fim_interface()
-                .get_property(pname="reservation_info")
-                .reservation_state
-            )
+            return self.get_fim_interface().get_property(pname='reservation_info').reservation_state
         except:
             return None
 
@@ -502,11 +480,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return (
-                self.get_fim_interface()
-                .get_property(pname="reservation_info")
-                .error_message
-            )
+            return self.get_fim_interface().get_property(pname='reservation_info').error_message
         except:
             return ""
 
@@ -572,18 +546,19 @@ class Interface:
         :rtype: NetworkService
         """
         if self.network is not None:
-            # print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
+            #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
             return self.network
         else:
             for net in self.get_slice().get_networks():
                 if net.has_interface(self):
                     self.network = net
-                    # print(f"return found network, {self.network.get_name()}")
+                    #print(f"return found network, {self.network.get_name()}")
                     return self.network
 
-        # print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
+        #print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
         return None
 
+    
     # fablib.Interface.get_ip_link()
     def get_ip_link(self):
         """
@@ -593,7 +568,7 @@ class Interface:
         :rtype: str
         """
         try:
-            stdout, stderr = self.get_node().execute("ip -j link list", quiet=True)
+            stdout, stderr = self.get_node().execute('ip -j link list', quiet=True)
 
             links = json.loads(stdout)
 
@@ -602,14 +577,28 @@ class Interface:
                 return links
 
             for link in links:
-                if link["ifname"] == dev:
+                if link['ifname'] == dev:
                     return link
-            return None
+            return None    
         except Exception as e:
             print(f"Exception: {e}")
 
+
+    def get_ip_addr_show(self, dev=None):
+
+        try:
+            if not dev:
+                dev = self.get_os_interface()
+
+            stdout, stderr = self.get_node().execute(f'ip -j addr show {dev}', quiet=True)
+        except Exception as e:
+            (f"Exception: {e}")
+            logging.error(f"Failed to get ip addr show info for interface {self.get_name()}")
+
+        return stdout
+
     # fablib.Interface.get_ip_addr()
-    def get_ip_addr(self):
+    def get_ip_addr(self, dev=None):
         """
         Gets the ip addr info for this interface.
 
@@ -617,23 +606,25 @@ class Interface:
         :rtype: str
         """
         try:
-            stdout, stderr = self.get_node().execute("ip -j addr list", quiet=True)
+            stdout, stderr = self.get_node().execute('ip -j addr list', quiet=True)
+
 
             addrs = json.loads(stdout)
 
             dev = self.get_os_interface()
-            # print(f"dev: {dev}")
+            #print(f"dev: {dev}")            
 
             if dev == None:
                 return addrs
 
             for addr in addrs:
-                if addr["ifname"] == dev:
-                    return addr["addr_info"][0]["local"]
+                if addr['ifname'] == dev:
+                    return addr['addr_info'][0]['local']
 
-            return None
+            return None    
         except Exception as e:
             print(f"Exception: {e}")
+
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):
@@ -649,14 +640,14 @@ class Interface:
 
             ip_addr = self.get_ip_addr()
 
-            # print(f"{ip_addr}")
+            #print(f"{ip_addr}")
 
-            for addr_info in ip_addr["addr_info"]:
+            for addr_info in ip_addr['addr_info']:
                 if family == None:
-                    return_ips.append(addr_info["local"])
+                    return_ips.append(addr_info['local'])
                 else:
-                    if addr_info["family"] == family:
-                        return_ips.append(addr_info["local"])
+                    if addr_info['family'] == family:
+                        return_ips.append(addr_info['local'])        
         except Exception as e:
             print(f"Exception: {e}")
 
