@@ -1540,12 +1540,17 @@ class Node:
         """
         import tarfile
         import os
+        import tempfile
 
+        
         logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
 
         output_filename = local_directory_path.split('/')[-1]
         root_size = len(local_directory_path) - len(output_filename)
-        temp_file = "/tmp/" + output_filename + ".tar.gz"
+        
+        temp_name = next(tempfile._get_candidate_names())
+
+        temp_file = "/tmp/" + str(temp_name) + ".tar.gz"
 
         with tarfile.open(temp_file, "w:gz") as tar_handle:
             for root, dirs, files in os.walk(local_directory_path):
