@@ -23,13 +23,12 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 import os
-import traceback
 import time
-
+import traceback
 from abc import ABC, abstractmethod
+from ipaddress import IPv4Address, ip_address
 
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from ipaddress import ip_address, IPv4Address
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 
 class AbcTest(ABC):

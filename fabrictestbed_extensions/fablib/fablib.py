@@ -23,27 +23,23 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import os
+
+import json
 import logging
+import os
 import random
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Dict, List
 
-from IPython import get_ipython
-
-from typing import List, Dict
-
-from typing import TYPE_CHECKING
-
-from fabrictestbed.util.constants import Constants
 import pandas as pd
+from fabrictestbed.util.constants import Constants
+from IPython import get_ipython
 from tabulate import tabulate
-import json
-
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
 
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
 from fabrictestbed_extensions.fablib.resources import Resources

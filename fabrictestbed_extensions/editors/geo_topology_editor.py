@@ -23,45 +23,41 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
 import functools
-
 import importlib.resources as pkg_resources
+import os
+import re
+import traceback
 from typing import List
 
 import ipywidgets as widgets
-from ipywidgets import HTML, Layout
+from fabrictestbed.slice_editor import (
+    Capacities,
+    ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    ServiceType,
+)
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from ipyleaflet import (
+    AntPath,
+    CircleMarker,
+    DrawControl,
+    FullScreenControl,
+    Icon,
+    LayerGroup,
     Map,
     Marker,
     Rectangle,
     WidgetControl,
-    basemaps,
-    Icon,
-    LayerGroup,
     ZoomControl,
-    AntPath,
-    DrawControl,
-    CircleMarker,
-    FullScreenControl,
+    basemaps,
 )
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
-)
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
-from .abc_topology_editor import AbcTopologyEditor
+from ipywidgets import HTML, Layout
 
 from .. import images
+from .abc_topology_editor import AbcTopologyEditor
 
 
 class GeoTopologyEditor(AbcTopologyEditor):

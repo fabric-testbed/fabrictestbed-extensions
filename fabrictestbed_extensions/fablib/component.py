@@ -23,21 +23,21 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 import json
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
 
-from tabulate import tabulate
+import logging
 from typing import List
 
-import logging
-
-from fabrictestbed.slice_editor import ComponentModelType, Labels, Flags
 from fabrictestbed.slice_editor import Component as FimComponent
+from fabrictestbed.slice_editor import ComponentModelType, Flags, Labels
+from tabulate import tabulate
 
 
 class Component:

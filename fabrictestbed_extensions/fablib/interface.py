@@ -23,15 +23,14 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
+import json
+import logging
+from ipaddress import IPv4Address
+from typing import TYPE_CHECKING, Any
+
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
-from ipaddress import IPv4Address
-import json
-
-import logging
-
-
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice

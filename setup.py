@@ -22,7 +22,8 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
 from fabrictestbed_extensions import __VERSION__
 
 with open("README.md", "r") as fh:

@@ -23,23 +23,23 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, List
 
 from tabulate import tabulate
-from typing import List
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fabrictestbed.slice_editor import ServiceType, NetworkService as FimNetworkService
-from fim.slivers.network_service import ServiceType, NSLayer
-
-from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 import json
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+
+from fabrictestbed.slice_editor import NetworkService as FimNetworkService
+from fabrictestbed.slice_editor import ServiceType
+from fim.slivers.network_service import NSLayer, ServiceType
 
 
 class NetworkService:

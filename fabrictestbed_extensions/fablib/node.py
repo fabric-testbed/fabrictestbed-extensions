@@ -23,36 +23,32 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import json
+import logging
+import select
 import threading
 import time
-import paramiko
-import logging
-
-from tabulate import tabulate
-import select
 from string import Template
+from typing import TYPE_CHECKING, List, Tuple, Union
 
 import jinja2
-
-
-from typing import List, Union, Tuple
-
-from typing import TYPE_CHECKING
+import paramiko
+from tabulate import tabulate
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fim.slivers.network_service import NSLayer
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
-from fabrictestbed.slice_editor import Labels, CapacityHints, ServiceType
-from fabrictestbed.slice_editor import Capacities
-from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
+from fabrictestbed.slice_editor import Capacities, CapacityHints, Labels
+from fabrictestbed.slice_editor import Node as FimNode
+from fabrictestbed.slice_editor import ServiceType
+from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
-from fabrictestbed.slice_editor import Node as FimNode
 
 
 class Node:
@@ -1734,8 +1730,8 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import tarfile
         import os
+        import tarfile
         import tempfile
 
         logging.debug(
@@ -1827,8 +1823,8 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import tarfile
         import os
+        import tarfile
 
         logging.debug(
             f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}"

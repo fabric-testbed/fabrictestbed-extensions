@@ -24,17 +24,16 @@
 # Author: Paul Ruth (pruth@renci.org)
 import os
 import traceback
-
 from abc import ABC, abstractmethod
 from typing import List
 
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fabrictestbed.slice_editor import (
-    ExperimentTopology,
     Capacities,
-    ComponentType,
     ComponentCatalog,
+    ComponentType,
+    ExperimentTopology,
 )
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 
 class AbcTopologyEditor(ABC):
