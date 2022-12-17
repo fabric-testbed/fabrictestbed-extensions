@@ -3,7 +3,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic)](https://pypi.org/project/fabrictestbed-extensions/)
 
-Extensions for the FABRIC API/CLI.  
+Extensions for the FABRIC API/CLI.
 
 ## Build instructions
 
@@ -26,7 +26,7 @@ For details about publishing to PyPI, see flit documentation about
 
 ## Install Instructions
 ```
-git clone https://github.com/fabric-testbed/fabrictestbed-extensions.git 
+git clone https://github.com/fabric-testbed/fabrictestbed-extensions.git
 cd fabrictestbed-extensions
 pip install --user .
 ```
