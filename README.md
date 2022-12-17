@@ -21,6 +21,9 @@ To upload packages to PyPI:
 $ flit publish
 ```
 
+For details about publishing to PyPI, see flit documentation about
+[package uploads](https://flit.pypa.io/en/latest/upload.html).
+
 ## Install Instructions
 ```
 git clone https://github.com/fabric-testbed/fabrictestbed-extensions.git 
