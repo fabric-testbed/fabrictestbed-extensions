@@ -37,3 +37,6 @@ Homepage = "https://fabric-testbed.net/"
 Sources = "https://github.com/fabric-testbed/fabrictestbed-extensions"
 Documentation = "https://fabric-fablib.readthedocs.io/"
 ChangeLog = "https://github.com/fabric-testbed/fabrictestbed-extensions/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+doc = ["sphinx", "furo"]
