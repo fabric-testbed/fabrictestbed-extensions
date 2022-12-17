@@ -19,5 +19,7 @@ sphinx:
 # requirements and package requirements, it seems.
 python:
   install:
-    - requirements: docs/requirements.txt
-    - requirements: requirements.txt
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
