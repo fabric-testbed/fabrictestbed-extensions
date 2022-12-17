@@ -6,13 +6,19 @@
 Extensions for the FABRIC API/CLI.  
 
 ## Build instructions
-(Do not do `python setup.py sdist bdist_wheel`)
+
+FABlib uses [flit](https://flit.pypa.io/en/stable/) as the build
+backend.  To build source and wheel packages, do this:
+
+```console
+$ pip install flit
+$ flit build
 ```
-python -m build
-```
-Following that upload to PyPi using
-```
-twine upload dist/*
+
+To upload packages to PyPI:
+
+```console
+$ flit publish
 ```
 
 ## Install Instructions
