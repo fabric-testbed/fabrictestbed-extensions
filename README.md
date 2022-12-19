@@ -2,9 +2,8 @@
 
 [![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
 
-This repository contains implementation of a Python API for
-intereacting with [FABRIC][fabric] testbed, otherwise known as
-"FABlib".
+This repository contains implementation of a Python API, otherwise
+known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
 
 
 ## Installing FABlib
