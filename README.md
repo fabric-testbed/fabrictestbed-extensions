@@ -57,8 +57,8 @@ computer, see: [Install the FABRIC Python API][fablib-install].
 
 ## Building FABlib
 
-FABlib uses [flit](https://flit.pypa.io/en/stable/) as the build
-backend.  To build source and wheel packages, do this:
+FABlib uses [flit] as the build backend.  To build source and wheel
+packages, do this:
 
 ```console
 $ pip install flit
@@ -72,7 +72,7 @@ $ flit publish
 ```
 
 For details about publishing to PyPI, see flit documentation about
-[package uploads](https://flit.pypa.io/en/latest/upload.html).
+[package uploads].
 
 
 <!-- URLs -->
@@ -95,3 +95,6 @@ For details about publishing to PyPI, see flit documentation about
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
+
+[flit]: https://flit.pypa.io/en/stable/
+[package uploads]: https://flit.pypa.io/en/latest/upload.html
