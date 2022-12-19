@@ -65,10 +65,29 @@ $ pip install flit
 $ flit build
 ```
 
-To upload packages to PyPI:
+While using flit as the build backend, continuing to use [build] as
+the build frontend should work too:
+
+```
+$ pip install build
+$ python -m build
+```
+
+
+## Releasing FABlib
+
+When it is time to release a new version of FABlib, remember to: (1)
+update the package version in top-level `__init__.py`, (2) build the
+source and wheel packages, and (3) upload packages to PyPI:
 
 ```console
 $ flit publish
+```
+
+Continuing to use twine to publish packages is an option too:
+
+```console
+$ twine upload dist/*
 ```
 
 For details about publishing to PyPI, see flit documentation about
@@ -98,3 +117,5 @@ For details about publishing to PyPI, see flit documentation about
 
 [flit]: https://flit.pypa.io/en/stable/
 [package uploads]: https://flit.pypa.io/en/latest/upload.html
+
+[build]: https://pypi.org/project/build/
