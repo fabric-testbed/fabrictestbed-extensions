@@ -32,11 +32,15 @@ import functools
 import importlib.resources as pkg_resources
 from typing import List
 
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
 from fabrictestbed.slice_editor import (
     ExperimentTopology,
-    Capacities
+    Capacities,
+    ComponentType,
+    ComponentModelType,
+    ServiceType,
+    ComponentCatalog,
 )
+from fabrictestbed.slice_editor import ExperimentTopology, Capacities
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 
 import ipycytoscape as cy
@@ -50,17 +54,17 @@ from .. import images
 
 class CytoscapeTopologyEditor(AbcTopologyEditor):
     # FABRIC design elements https://fabric-testbed.net/branding/style/
-    FABRIC_PRIMARY = '#27aae1'
-    FABRIC_PRIMARY_LIGHT = '#cde4ef'
-    FABRIC_PRIMARY_DARK = '#078ac1'
-    FABRIC_SECONDARY = '#f26522'
-    FABRIC_SECONDARY_LIGHT = '#ff8542'
-    FABRIC_SECONDARY_DARK = '#d24502'
-    FABRIC_BLACK = '#231f20'
-    FABRIC_DARK = '#433f40'
-    FABRIC_GREY = '#666677'
-    FABRIC_LIGHT = '#f3f3f9'
-    FABRIC_WHITE = '#ffffff'
+    FABRIC_PRIMARY = "#27aae1"
+    FABRIC_PRIMARY_LIGHT = "#cde4ef"
+    FABRIC_PRIMARY_DARK = "#078ac1"
+    FABRIC_SECONDARY = "#f26522"
+    FABRIC_SECONDARY_LIGHT = "#ff8542"
+    FABRIC_SECONDARY_DARK = "#d24502"
+    FABRIC_BLACK = "#231f20"
+    FABRIC_DARK = "#433f40"
+    FABRIC_GREY = "#666677"
+    FABRIC_LIGHT = "#f3f3f9"
+    FABRIC_WHITE = "#ffffff"
     FABRIC_LOGO = "fabric_logo.png"
 
     def __init__(self):
@@ -73,90 +77,104 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         self.out = Output()
 
         self.cytoscapeobj = cy.CytoscapeWidget()
-        self.data = { 'nodes': [], 'edges': [] }
+        self.data = {"nodes": [], "edges": []}
 
-        self.style = 'secondary'
+        self.style = "secondary"
 
     def toggle_style(self):
 
-        if self.style == 'primary':
-            self.style = 'secondary'
+        if self.style == "primary":
+            self.style = "secondary"
             color = self.FABRIC_SECONDARY
             dark_color = self.FABRIC_SECONDARY_DARK
-        elif self.style == 'secondary':
-            self.style = 'primary'
+        elif self.style == "secondary":
+            self.style = "primary"
             color = self.FABRIC_PRIMARY
             dark_color = self.FABRIC_PRIMARY_DARK
 
-        self.cytoscapeobj.set_style([{
-                        'selector': 'node',
-                        'css': {
-                            'content': 'data(name)',
-                            'text-valign': 'center',
-                            'color': 'white',
-                            'text-outline-width': 2,
-                            'text-outline-color': dark_color,
-                            'background-color': color
-                        }
-                        },
-                        {
-                        'selector': ':selected',
-                        'css': {
-                            'background-color': dark_color,
-                            'line-color': dark_color,
-                            'target-arrow-color': color,
-                            'source-arrow-color': color,
-                            'text-outline-color': color
-                        }}
-                        ])
-
-
-
+        self.cytoscapeobj.set_style(
+            [
+                {
+                    "selector": "node",
+                    "css": {
+                        "content": "data(name)",
+                        "text-valign": "center",
+                        "color": "white",
+                        "text-outline-width": 2,
+                        "text-outline-color": dark_color,
+                        "background-color": color,
+                    },
+                },
+                {
+                    "selector": ":selected",
+                    "css": {
+                        "background-color": dark_color,
+                        "line-color": dark_color,
+                        "target-arrow-color": color,
+                        "source-arrow-color": color,
+                        "text-outline-color": color,
+                    },
+                },
+            ]
+        )
 
     def build_data(self):
-        cy_nodes = self.data['nodes']
-        cy_edges = self.data['edges']
+        cy_nodes = self.data["nodes"]
+        cy_edges = self.data["edges"]
 
         # Build Site
         for site_name, site in self.advertised_topology.sites.items():
             print("site_name: {}".format(site_name))
-            cy_nodes.append({ 'data': { 'id': site_name, 'name': site_name, 'href': 'http://cytoscape.org' }})
+            cy_nodes.append(
+                {
+                    "data": {
+                        "id": site_name,
+                        "name": site_name,
+                        "href": "http://cytoscape.org",
+                    }
+                }
+            )
 
-        #cy_edges.append({'data': { 'source': 'RENC', 'target': 'UKY' }})
-        #cy_edges.append({'data': { 'source': 'UKY', 'target': 'LBNL' }})
-        #cy_edges.append({'data': { 'source': 'LBNL', 'target': 'RENC' }})
+        # cy_edges.append({'data': { 'source': 'RENC', 'target': 'UKY' }})
+        # cy_edges.append({'data': { 'source': 'UKY', 'target': 'LBNL' }})
+        # cy_edges.append({'data': { 'source': 'LBNL', 'target': 'RENC' }})
 
         for link_name, link in self.advertised_topology.links.items():
-            print("link_name {}, {}".format(link_name,link))
+            print("link_name {}, {}".format(link_name, link))
             print("\n\n Interfaces {}".format(link.interface_list))
 
-            #Source
+            # Source
             source_interface = link.interface_list[0]
-            source_parent = self.advertised_topology.get_parent_element(source_interface)
-            source_node=self.advertised_topology.get_owner_node(source_parent)
+            source_parent = self.advertised_topology.get_parent_element(
+                source_interface
+            )
+            source_node = self.advertised_topology.get_owner_node(source_parent)
 
-            #Target
+            # Target
             target_interface = link.interface_list[1]
-            target_parent = self.advertised_topology.get_parent_element(target_interface)
-            target_node=self.advertised_topology.get_owner_node(target_parent)
+            target_parent = self.advertised_topology.get_parent_element(
+                target_interface
+            )
+            target_node = self.advertised_topology.get_owner_node(target_parent)
 
-            #Build edge
-            cy_edges.append({'data': { 'source': source_node.name, 'target': target_node.name }})
+            # Build edge
+            cy_edges.append(
+                {"data": {"source": source_node.name, "target": target_node.name}}
+            )
 
     def setup_interaction(self):
-        #out = Output()
-        self.cytoscapeobj.on('node', 'click', self.on_click)
-        self.cytoscapeobj.on('node', 'mouseover', self.on_mouseover)
+        # out = Output()
+        self.cytoscapeobj.on("node", "click", self.on_click)
+        self.cytoscapeobj.on("node", "mouseover", self.on_mouseover)
 
     def on_click(self, node):
         with self.out:
-            print('click: {}'.format(str(node)))
+            print("click: {}".format(str(node)))
             self.toggle_style()
 
     def on_mouseover(self, node):
         with self.out:
-            print('mouseovers: {}'.format(str(node)))
-
+            print("mouseovers: {}".format(str(node)))
 
     def start(self):
         """
@@ -172,4 +190,4 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         display(self.cytoscapeobj)
         display(self.out)
 
-        #return self.out, self.cytoscapeobj
+        # return self.out, self.cytoscapeobj

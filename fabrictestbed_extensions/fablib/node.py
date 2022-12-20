@@ -37,6 +37,7 @@ import jinja2
 from typing import List, Union, Tuple
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
@@ -56,7 +57,7 @@ class Node:
     default_cores = 2
     default_ram = 8
     default_disk = 10
-    default_image = 'default_rocky_8'
+    default_image = "default_rocky_8"
 
     def __init__(self, slice: Slice, node: FimNode):
         """
@@ -95,7 +96,8 @@ class Node:
         :return: Tabulated string of node information
         :rtype: String
         """
-        table = [ ["ID", self.get_reservation_id()],
+        table = [
+            ["ID", self.get_reservation_id()],
             ["Name", self.get_name()],
             ["Cores", self.get_cores()],
             ["RAM", self.get_ram()],
@@ -108,9 +110,9 @@ class Node:
             ["Reservation State", self.get_reservation_state()],
             ["Error Message", self.get_error_message()],
             ["SSH Command", self.get_ssh_command()],
-            ]
+        ]
 
-        return tabulate(table) #, headers=["Property", "Value"])
+        return tabulate(table)  # , headers=["Property", "Value"])
 
     def get_sliver(self) -> OrchestratorSliver:
         """
@@ -122,7 +124,9 @@ class Node:
         return self.sliver
 
     @staticmethod
-    def new_node(slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []):
+    def new_node(
+        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
+    ):
         """
         Not intended for API call. See: Slice.add_node()
         Creates a new FABRIC node and returns a fablib node with the new node.
@@ -142,7 +146,9 @@ class Node:
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Node(slice, slice.topology.add_node(name=name, site=site))
-        node.set_capacities(cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk)
+        node.set_capacities(
+            cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
+        )
         node.set_image(Node.default_image)
 
         return node
@@ -170,28 +176,27 @@ class Node:
         """
         return json.dumps(self.toDict(), indent=4)
 
-
-
     @staticmethod
     def get_pretty_name_dict():
 
-        return {  "id": "ID",
-                "name": "Name",
-                "cores": "Cores",
-                "ram": "RAM",
-                "disk": "Disk",
-                "image": "Image",
-                "image_type": "Image Type",
-                "host": "Host",
-                "site": "Site",
-                "username": "Username",
-                "management_ip": "Management IP",
-                "state": "State",
-                "error": "Error",
-                "ssh_command": "SSH Command",
-                "public_ssh_key_file": "Public SSH Key File",
-                "private_ssh_key_file": "Private SSH Key File",
-                 }
+        return {
+            "id": "ID",
+            "name": "Name",
+            "cores": "Cores",
+            "ram": "RAM",
+            "disk": "Disk",
+            "image": "Image",
+            "image_type": "Image Type",
+            "host": "Host",
+            "site": "Site",
+            "username": "Username",
+            "management_ip": "Management IP",
+            "state": "State",
+            "error": "Error",
+            "ssh_command": "SSH Command",
+            "public_ssh_key_file": "Public SSH Key File",
+            "private_ssh_key_file": "Private SSH Key File",
+        }
 
     def toDict(self, skip=[]):
         """
@@ -203,44 +208,40 @@ class Node:
         rtn_dict = {}
 
         if "id" not in skip:
-            rtn_dict['id'] = str(self.get_reservation_id())
+            rtn_dict["id"] = str(self.get_reservation_id())
         if "name" not in skip:
-            rtn_dict['name'] =  str(self.get_name())
+            rtn_dict["name"] = str(self.get_name())
         if "cores" not in skip:
-            rtn_dict['cores'] = str(self.get_cores())
+            rtn_dict["cores"] = str(self.get_cores())
         if "ram" not in skip:
-            rtn_dict['ram'] =  str(self.get_ram())
+            rtn_dict["ram"] = str(self.get_ram())
         if "disk" not in skip:
-            rtn_dict['disk'] =  str(self.get_disk())
+            rtn_dict["disk"] = str(self.get_disk())
         if "image" not in skip:
-            rtn_dict['image'] =  str(self.get_image())
+            rtn_dict["image"] = str(self.get_image())
         if "image_type" not in skip:
-            rtn_dict['image_type'] =  str(self.get_image_type())
+            rtn_dict["image_type"] = str(self.get_image_type())
         if "host" not in skip:
-            rtn_dict['host'] =  str(self.get_host())
+            rtn_dict["host"] = str(self.get_host())
         if "site" not in skip:
-            rtn_dict['site'] =  str(self.get_site())
+            rtn_dict["site"] = str(self.get_site())
         if "username" not in skip:
-            rtn_dict['username'] =  str(self.get_username())
+            rtn_dict["username"] = str(self.get_username())
         if "management_ip" not in skip:
-            rtn_dict['management_ip'] =  str(self.get_management_ip())
+            rtn_dict["management_ip"] = str(self.get_management_ip())
         if "state" not in skip:
-            rtn_dict['state'] =  str(self.get_reservation_state())
+            rtn_dict["state"] = str(self.get_reservation_state())
         if "error" not in skip:
-            rtn_dict['error'] =  str(self.get_error_message())
+            rtn_dict["error"] = str(self.get_error_message())
         if "ssh_command" not in skip:
-            rtn_dict['ssh_command'] =  str(self.get_ssh_command())
+            rtn_dict["ssh_command"] = str(self.get_ssh_command())
         if "public_ssh_key_file" not in skip:
-            rtn_dict['public_ssh_key_file'] =  str(self.get_public_key_file())
+            rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
         if "private_ssh_key_file" not in skip:
-            rtn_dict['private_ssh_key_file'] = str(self.get_private_key_file())
-
-
-
-
+            rtn_dict["private_ssh_key_file"] = str(self.get_private_key_file())
 
         return rtn_dict
-        #return { "ID":  str(self.get_reservation_id()),
+        # return { "ID":  str(self.get_reservation_id()),
         #        "Name": str(self.get_name()),
         #        "Cores": str(self.get_cores()),
         #        "RAM": str(self.get_ram()),
@@ -258,32 +259,29 @@ class Node:
         #        "Private SSH Key File": str(self.get_private_key_file()),
         #         }
 
-
-
     def get_template_contextXXX(self):
         context = {}
 
-        context['node'] = self.toDict(skip=['ssh_command'])
-        context['slice'] = self.get_slice().toDict()
-        context['config'] = self.get_fablib_manager().get_config()
+        context["node"] = self.toDict(skip=["ssh_command"])
+        context["slice"] = self.get_slice().toDict()
+        context["config"] = self.get_fablib_manager().get_config()
 
-        context['components'] = {}
+        context["components"] = {}
         for component in self.get_components():
-            context['components'][component.get_name()] = component.toDict()
+            context["components"][component.get_name()] = component.toDict()
 
-        context['interfaces'] = {}
+        context["interfaces"] = {}
         for interface in self.get_interfaces():
-            context['interfaces'][interface.get_name()] = interface.toDict()
+            context["interfaces"][interface.get_name()] = interface.toDict()
 
-        context['networks'] = {}
+        context["networks"] = {}
         for network in self.get_networks():
-            context['networks'][network.get_name()] = network.toDict()
+            context["networks"][network.get_name()] = network.toDict()
 
         return context
 
     def get_template_context(self):
-        return self.get_slice().get_template_context(self, skip=['ssh_command'])
-
+        return self.get_slice().get_template_context(self, skip=["ssh_command"])
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
@@ -292,10 +290,9 @@ class Node:
 
         return output_string
 
-
-
-    
-    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
+    def show(
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+    ):
         """
         Show a table containing the current node attributes.
 
@@ -324,7 +321,7 @@ class Node:
 
         data = self.toDict()
 
-        #if fields == None:
+        # if fields == None:
         #    fields = ["ID", "Name", "Cores", "RAM", "Disk",
         #            "Image", "Image Type","Host", "Site",
         #            "Management IP", "State",
@@ -332,15 +329,15 @@ class Node:
         #             ]
 
         def state_color(val):
-            if val == 'Active':
-                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
-            elif val == 'Configuring':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
-            elif val == 'Closed':
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            if val == "Active":
+                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+            elif val == "Configuring":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "Closed":
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
-                color = ''
-            return 'background-color: %s' % color
+                color = ""
+            return "background-color: %s" % color
 
         if pretty_names:
             pretty_names_dict = self.get_pretty_name_dict()
@@ -349,27 +346,38 @@ class Node:
 
         if colors and self.get_fablib_manager().is_jupyter_notebook():
 
-            table = self.get_fablib_manager().show_table(data,
-                                                       fields=fields,
-                                                       title='Node',
-                                                       output='pandas',
-                                                       quiet=True,
-                                                       pretty_names_dict=pretty_names_dict)
+            table = self.get_fablib_manager().show_table(
+                data,
+                fields=fields,
+                title="Node",
+                output="pandas",
+                quiet=True,
+                pretty_names_dict=pretty_names_dict,
+            )
             table.applymap(state_color)
 
             if quiet == False:
                 display(table)
         else:
-            table = self.get_fablib_manager().show_table(data,
-                                                        fields=fields,
-                                                        title='Node',
-                                                        output=output,
-                                                        quiet=quiet,
-                                                        pretty_names_dict=pretty_names_dict)
+            table = self.get_fablib_manager().show_table(
+                data,
+                fields=fields,
+                title="Node",
+                output=output,
+                quiet=quiet,
+                pretty_names_dict=pretty_names_dict,
+            )
 
         return table
-        
-    def list_components(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
+
+    def list_components(
+        self,
+        fields=None,
+        output=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the components in the node with their attributes.
 
@@ -406,10 +414,10 @@ class Node:
 
         def combined_filter_function(x):
             if filter_function == None:
-                if x['name'] in set(components):
+                if x["name"] in set(components):
                     return True
             else:
-                if filter_function(x) and x['name'] in set(components):
+                if filter_function(x) and x["name"] in set(components):
                     return True
 
             return False
@@ -419,14 +427,22 @@ class Node:
         else:
             pretty_names_dict = {}
 
-        return self.get_slice().list_components(fields=fields, 
-                                                output=output, 
-                                                quiet=quiet, 
-                                                filter_function=combined_filter_function,
-                                                pretty_names_dict=pretty_names_dict)
-        
-    
-    def list_interfaces(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
+        return self.get_slice().list_components(
+            fields=fields,
+            output=output,
+            quiet=quiet,
+            filter_function=combined_filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+    def list_interfaces(
+        self,
+        fields=None,
+        output=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the interfaces in the node with their attributes.
 
@@ -461,31 +477,38 @@ class Node:
         for iface in self.get_interfaces():
             ifaces.append(iface.get_name())
 
-
         def combined_filter_function(x):
             if filter_function == None:
-                if x['name']['value'] in set(ifaces):
+                if x["name"]["value"] in set(ifaces):
                     return True
             else:
-                if filter_function(x) and x['name']['value'] in set(ifaces):
+                if filter_function(x) and x["name"]["value"] in set(ifaces):
                     return True
 
             return False
 
-        #name_filter = lambda s: s['Name'] in set(ifaces)
-        #if filter_function != None:
+        # name_filter = lambda s: s['Name'] in set(ifaces)
+        # if filter_function != None:
         #    filter_function = lambda x: filter_function(x) + name_filter(x)
-        #else:
+        # else:
         #    filter_function = name_filter
 
-        return self.get_slice().list_interfaces(fields=fields, 
-                                                output=output, 
-                                                quiet=quiet, 
-                                                filter_function=combined_filter_function,
-                                                pretty_names=pretty_names)
-        
+        return self.get_slice().list_interfaces(
+            fields=fields,
+            output=output,
+            quiet=quiet,
+            filter_function=combined_filter_function,
+            pretty_names=pretty_names,
+        )
 
-    def list_networks(self, fields=None, output=None, quiet=False, filter_function=None, pretty_names=True):
+    def list_networks(
+        self,
+        fields=None,
+        output=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the networks attached to  the nodes with their attributes.
 
@@ -525,25 +548,26 @@ class Node:
 
         def combined_filter_function(x):
             if filter_function == None:
-                if x['name']['value'] in set(networks):
+                if x["name"]["value"] in set(networks):
                     return True
             else:
-                if filter_function(x) and x['name']['value'] in set(networks):
+                if filter_function(x) and x["name"]["value"] in set(networks):
                     return True
 
             return False
-
 
         if pretty_names and len(networks) > 0:
             pretty_names_dict = networks[0].get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
-        return self.get_slice().list_networks(fields=fields, 
-                                                output=output,
-                                                quiet=quiet, 
-                                                filter_function=combined_filter_function,
-                                                pretty_names_dict=pretty_names_dict)
+        return self.get_slice().list_networks(
+            fields=fields,
+            output=output,
+            quiet=quiet,
+            filter_function=combined_filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
     def get_networks(self):
         networks = []
@@ -551,7 +575,7 @@ class Node:
             networks.append(interface.get_network())
 
         return networks
-        
+
     def get_fim_node(self) -> FimNode:
         """
         Not recommended for most users.
@@ -587,7 +611,9 @@ class Node:
         :param instance_type: the name of the instance type to set
         :type instance_type: String
         """
-        self.get_fim_node().set_properties(capacity_hints=CapacityHints(instance_type=instance_type))
+        self.get_fim_node().set_properties(
+            capacity_hints=CapacityHints(instance_type=instance_type)
+        )
 
     def set_username(self, username: str = None):
         """
@@ -599,26 +625,26 @@ class Node:
         """
         if username is not None:
             self.username = username
-        elif 'centos' in self.get_image():
-            self.username = 'centos'
-        elif 'ubuntu' in self.get_image():
-            self.username = 'ubuntu'
-        elif 'rocky'in self.get_image():
-            self.username = 'rocky'
-        elif 'fedora'in self.get_image():
-            self.username = 'fedora'
-        elif 'cirros'in self.get_image():
-            self.username = 'cirros'
-        elif 'debian'in self.get_image():
-            self.username = 'debian'
-        elif 'freebsd'in self.get_image():
-            self.username = 'freebsd'
-        elif 'openbsd'in self.get_image():
-            self.username = 'openbsd'
+        elif "centos" in self.get_image():
+            self.username = "centos"
+        elif "ubuntu" in self.get_image():
+            self.username = "ubuntu"
+        elif "rocky" in self.get_image():
+            self.username = "rocky"
+        elif "fedora" in self.get_image():
+            self.username = "fedora"
+        elif "cirros" in self.get_image():
+            self.username = "cirros"
+        elif "debian" in self.get_image():
+            self.username = "debian"
+        elif "freebsd" in self.get_image():
+            self.username = "freebsd"
+        elif "openbsd" in self.get_image():
+            self.username = "openbsd"
         else:
             self.username = None
 
-    def set_image(self, image: str, username: str = None, image_type: str = 'qcow2'):
+    def set_image(self, image: str, username: str = None, image_type: str = "qcow2"):
         """
         Sets the image information of this fablib node on the FABRIC node.
         :param image: the image reference to set
@@ -680,7 +706,7 @@ class Node:
         :rtype: int
         """
         try:
-            return self.get_fim_node().get_property(pname='capacity_allocations').core
+            return self.get_fim_node().get_property(pname="capacity_allocations").core
         except:
             return None
 
@@ -691,7 +717,7 @@ class Node:
         :rtype: int
         """
         try:
-            return self.get_fim_node().get_property(pname='capacity_allocations').ram
+            return self.get_fim_node().get_property(pname="capacity_allocations").ram
         except:
             return None
 
@@ -702,7 +728,7 @@ class Node:
         :rtype: int
         """
         try:
-            return self.get_fim_node().get_property(pname='capacity_allocations').disk
+            return self.get_fim_node().get_property(pname="capacity_allocations").disk
         except:
             return None
 
@@ -737,7 +763,11 @@ class Node:
         try:
             if self.host is not None:
                 return self.host
-            return self.get_fim_node().get_property(pname='label_allocations').instance_parent
+            return (
+                self.get_fim_node()
+                .get_property(pname="label_allocations")
+                .instance_parent
+            )
         except:
             return None
 
@@ -770,7 +800,11 @@ class Node:
         :rtype: String
         """
         try:
-            return self.get_fim_node().get_property(pname='reservation_info').reservation_id
+            return (
+                self.get_fim_node()
+                .get_property(pname="reservation_info")
+                .reservation_id
+            )
         except:
             return None
 
@@ -781,7 +815,11 @@ class Node:
         :rtype: String
         """
         try:
-            return self.get_fim_node().get_property(pname='reservation_info').reservation_state
+            return (
+                self.get_fim_node()
+                .get_property(pname="reservation_info")
+                .reservation_state
+            )
         except:
             return None
 
@@ -792,7 +830,9 @@ class Node:
         :rtype: String
         """
         try:
-            return self.get_fim_node().get_property(pname='reservation_info').error_message
+            return (
+                self.get_fim_node().get_property(pname="reservation_info").error_message
+            )
         except:
             return ""
 
@@ -809,7 +849,9 @@ class Node:
 
         return interfaces
 
-    def get_interface(self, name: str = None, network_name: str = None) -> Interface or None:
+    def get_interface(
+        self, name: str = None, network_name: str = None
+    ) -> Interface or None:
         """
         Gets a particular interface associated with a FABRIC node.
         Accepts either the interface name or a network_name. If a network name
@@ -832,8 +874,11 @@ class Node:
                         return interface
         elif network_name is not None:
             for interface in self.get_interfaces():
-                if interface is not None and interface.get_network() is not None and \
-                        interface.get_network().get_name() == network_name:
+                if (
+                    interface is not None
+                    and interface.get_network() is not None
+                    and interface.get_network().get_name() == network_name
+                ):
                     return interface
 
         raise Exception("Interface not found: {}".format(name))
@@ -950,38 +995,37 @@ class Node:
         :rtype: str
         """
 
-        #ssh_command = self.get_fablib_manager().get_ssh_command_line()
+        # ssh_command = self.get_fablib_manager().get_ssh_command_line()
 
-        #return self.template_substitution(ssh_command)
+        # return self.template_substitution(ssh_command)
 
-        #try:
+        # try:
         #    return self.template_substitution(self.get_fablib_manager().get_ssh_command_line())
-        #except:
+        # except:
         #    return self.get_fablib_manager().get_ssh_command_line()
 
         try:
-            return self.render_template(self.get_fablib_manager().get_ssh_command_line())
+            return self.render_template(
+                self.get_fablib_manager().get_ssh_command_line()
+            )
         except:
             return self.get_fablib_manager().get_ssh_command_line()
 
-
-        #for key,val in self.toDict(skip=["SSH Command"]).items():
+        # for key,val in self.toDict(skip=["SSH Command"]).items():
         #    remove_str = '${'+str(key).strip()+'}'
         #    add_str = str(val)
         #    ssh_command = ssh_command.replace(remove_str, add_str)
 
-        #for key,val in self.get_fablib_manager().get_config().items():
+        # for key,val in self.get_fablib_manager().get_config().items():
         #    remove_str = '${'+str(key).strip()+'}'
         #    add_str = str(val)
         #    ssh_command = ssh_command.replace(remove_str, add_str)
 
-        #return ssh_command
+        # return ssh_command
 
-        #return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
+        # return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
         #                                   self.get_username(),
         #                                   self.get_management_ip())
-
-
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -996,42 +1040,54 @@ class Node:
         except ValueError:
             return "Invalid"
 
-    def get_paramiko_key(self, private_key_file: str = None, get_private_key_passphrase: str = None) -> paramiko.PKey:
-        #TODO: This is a bit of a hack and should probably test he keys for their types
+    def get_paramiko_key(
+        self, private_key_file: str = None, get_private_key_passphrase: str = None
+    ) -> paramiko.PKey:
+        # TODO: This is a bit of a hack and should probably test he keys for their types
         # rather than relying on execptions
         if get_private_key_passphrase:
             try:
-                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file(),
-                                                             password=self.get_private_key_passphrase())
+                return paramiko.RSAKey.from_private_key_file(
+                    self.get_private_key_file(),
+                    password=self.get_private_key_passphrase(),
+                )
             except:
                 pass
 
             try:
-                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file(),
-                                                                        password=self.get_private_key_passphrase())
+                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(
+                    self.get_private_key_file(),
+                    password=self.get_private_key_passphrase(),
+                )
             except:
                 pass
         else:
             try:
-                return paramiko.RSAKey.from_private_key_file(self.get_private_key_file())
+                return paramiko.RSAKey.from_private_key_file(
+                    self.get_private_key_file()
+                )
             except:
                 pass
 
             try:
-                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(self.get_private_key_file())
+                return paramiko.ecdsakey.ECDSAKey.from_private_key_file(
+                    self.get_private_key_file()
+                )
             except:
                 pass
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
-    def execute_thread(self, 
-                       command: str, 
-                       retry: int = 3, 
-                       retry_interval: int = 10, 
-                       username: str = None,
-                       private_key_file: str = None, 
-                       private_key_passphrase: str = None, 
-                       output_file: str = None) -> threading.Thread:
+    def execute_thread(
+        self,
+        command: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+        username: str = None,
+        private_key_file: str = None,
+        private_key_passphrase: str = None,
+        output_file: str = None,
+    ) -> threading.Thread:
         """
         Creates a thread that calls node.execute().  Results (i.e. stdout, stderr) from the thread can be
         retrieved with by calling thread.result()
@@ -1054,26 +1110,35 @@ class Node:
         :raise Exception: if management IP is invalid
         """
 
-        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.execute,
-                                                                               command,
-                                                                               retry=retry,
-                                                                               retry_interval=retry_interval,
-                                                                               username=username,
-                                                                               private_key_file=private_key_file,
-                                                                               private_key_passphrase=private_key_passphrase,
-                                                                               output_file=output_file,
-                                                                               quiet=True)
-    
-    def execute(self, command, 
-                      retry=3, 
-                      retry_interval=10, 
-                      username=None, 
-                      private_key_file=None, 
-                      private_key_passphrase=None,
-                      quiet=False,
-                      read_timeout=10, 
-                      timeout=None,
-                      output_file=None):
+        return (
+            self.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(
+                self.execute,
+                command,
+                retry=retry,
+                retry_interval=retry_interval,
+                username=username,
+                private_key_file=private_key_file,
+                private_key_passphrase=private_key_passphrase,
+                output_file=output_file,
+                quiet=True,
+            )
+        )
+
+    def execute(
+        self,
+        command,
+        retry=3,
+        retry_interval=10,
+        username=None,
+        private_key_file=None,
+        private_key_passphrase=None,
+        quiet=False,
+        read_timeout=10,
+        timeout=None,
+        output_file=None,
+    ):
         """
         Runs a command on the FABRIC node.
 
@@ -1109,70 +1174,87 @@ class Node:
         """
         import logging
 
-        logging.debug(f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}")
+        logging.debug(
+            f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
+        )
 
         if output_file:
             file = open(output_file, "a")
-                    
-        #if not quiet:
+
+        # if not quiet:
         chunking = True
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        #Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-        if self.validIPAddress(management_ip) == 'IPv4':
-            #src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
-            src_addr = ('0.0.0.0',22)
+        # Get and test src and management_ips
+        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        if self.validIPAddress(management_ip) == "IPv4":
+            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+            src_addr = ("0.0.0.0", 22)
 
-        elif self.validIPAddress(management_ip) == 'IPv6':
-            #src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
-            src_addr = ('0:0:0:0:0:0:0:0',22)
+        elif self.validIPAddress(management_ip) == "IPv6":
+            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
+            src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
-
-        bastion_username=self.get_fablib_manager().get_bastion_username()
-        bastion_key_file=self.get_fablib_manager().get_bastion_key_filename()
+        bastion_username = self.get_fablib_manager().get_bastion_username()
+        bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
 
         if username != None:
             node_username = username
         else:
-            node_username=self.username
+            node_username = self.username
 
         if private_key_file != None:
             node_key_file = private_key_file
         else:
-            node_key_file=self.get_private_key_file()
+            node_key_file = self.get_private_key_file()
 
         if private_key_passphrase != None:
             node_key_passphrase = private_key_passphrase
         else:
-            node_key_passphrase=self.get_private_key_file()
+            node_key_passphrase = self.get_private_key_file()
 
         for attempt in range(int(retry)):
             try:
-                key = self.get_paramiko_key(private_key_file=node_key_file, get_private_key_passphrase=node_key_passphrase)
-                bastion=paramiko.SSHClient()
+                key = self.get_paramiko_key(
+                    private_key_file=node_key_file,
+                    get_private_key_passphrase=node_key_passphrase,
+                )
+                bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(), username=bastion_username, key_filename=bastion_key_file)
+                bastion.connect(
+                    self.get_fablib_manager().get_bastion_public_addr(),
+                    username=bastion_username,
+                    key_filename=bastion_key_file,
+                )
 
                 bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+                bastion_channel = bastion_transport.open_channel(
+                    "direct-tcpip", dest_addr, src_addr
+                )
 
                 client = paramiko.SSHClient()
-                #client.load_system_host_keys()
-                #client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                # client.load_system_host_keys()
+                # client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-                client.connect(management_ip,username=node_username,pkey = key, sock=bastion_channel)
+                client.connect(
+                    management_ip,
+                    username=node_username,
+                    pkey=key,
+                    sock=bastion_channel,
+                )
 
-                #stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
+                # stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
 
                 if timeout is not None:
-                    command = f'sudo timeout --foreground -k 10 {timeout} ' + command + '\n'
+                    command = (
+                        f"sudo timeout --foreground -k 10 {timeout} " + command + "\n"
+                    )
 
                 stdin, stdout, stderr = client.exec_command(command)
                 channel = stdout.channel
@@ -1185,47 +1267,71 @@ class Node:
                 # Read stdout and stderr:
                 if not chunking:
                     # The old way
-                    rtn_stdout = str(stdout.read(),'utf-8').replace('\\n','\n')
-                    rtn_stderr = str(stderr.read(),'utf-8').replace('\\n','\n')
+                    rtn_stdout = str(stdout.read(), "utf-8").replace("\\n", "\n")
+                    rtn_stderr = str(stderr.read(), "utf-8").replace("\\n", "\n")
                     if quiet == False:
                         print(rtn_stdout, rtn_stderr)
 
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
                     stdout_chunks = []
-                    stdout_chunks.append(stdout.channel.recv(len(stdout.channel.in_buffer)))
+                    stdout_chunks.append(
+                        stdout.channel.recv(len(stdout.channel.in_buffer))
+                    )
                     stderr_chunks = []
 
-                    while not channel.closed or channel.recv_ready() or channel.recv_stderr_ready(): 
+                    while (
+                        not channel.closed
+                        or channel.recv_ready()
+                        or channel.recv_stderr_ready()
+                    ):
                         got_chunk = False
-                        readq, _, _ = select.select([stdout.channel], [], [], read_timeout)
+                        readq, _, _ = select.select(
+                            [stdout.channel], [], [], read_timeout
+                        )
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
                                 if quiet == False:
-                                    print(str(stdoutbytes,'utf-8').replace('\\n','\n'), end='')
+                                    print(
+                                        str(stdoutbytes, "utf-8").replace("\\n", "\n"),
+                                        end="",
+                                    )
                                 if output_file:
-                                    file.write(str(stdoutbytes,'utf-8').replace('\\n','\n'))
+                                    file.write(
+                                        str(stdoutbytes, "utf-8").replace("\\n", "\n")
+                                    )
                                     file.flush()
-                                    
+
                                 stdout_chunks.append(stdoutbytes)
                                 got_chunk = True
-                            if c.recv_stderr_ready(): 
+                            if c.recv_stderr_ready():
                                 # make sure to read stderr to prevent stall
-                                stderrbytes =  stderr.channel.recv_stderr(len(c.in_stderr_buffer))
+                                stderrbytes = stderr.channel.recv_stderr(
+                                    len(c.in_stderr_buffer)
+                                )
                                 if quiet == False:
-                                    print('\x1b[31m',str(stderrbytes,'utf-8').replace('\\n','\n'),'\x1b[0m', end='')
+                                    print(
+                                        "\x1b[31m",
+                                        str(stderrbytes, "utf-8").replace("\\n", "\n"),
+                                        "\x1b[0m",
+                                        end="",
+                                    )
                                 if output_file:
-                                    file.write(str(stderrbytes,'utf-8').replace('\\n','\n'))
+                                    file.write(
+                                        str(stderrbytes, "utf-8").replace("\\n", "\n")
+                                    )
                                     file.flush()
                                 stderr_chunks.append(stderrbytes)
                                 got_chunk = True
 
-                        if not got_chunk \
-                            and stdout.channel.exit_status_ready() \
-                            and not stderr.channel.recv_stderr_ready() \
-                            and not stdout.channel.recv_ready(): 
-                            stdout.channel.shutdown_read()  
+                        if (
+                            not got_chunk
+                            and stdout.channel.exit_status_ready()
+                            and not stderr.channel.recv_stderr_ready()
+                            and not stdout.channel.recv_ready()
+                        ):
+                            stdout.channel.shutdown_read()
                             stdout.channel.close()
                             break
 
@@ -1233,24 +1339,26 @@ class Node:
                     stderr.close()
 
                     # chunks are groups of bytes, combine and convert to str
-                    rtn_stdout = b''.join(stdout_chunks).decode("utf-8") 
-                    rtn_stderr = b''.join(stderr_chunks).decode("utf-8") 
+                    rtn_stdout = b"".join(stdout_chunks).decode("utf-8")
+                    rtn_stderr = b"".join(stderr_chunks).decode("utf-8")
 
                 client.close()
                 bastion_channel.close()
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
-                    logging.debug(f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds")
+                    logging.debug(
+                        f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds"
+                    )
 
                 logging.debug(f"rtn_stdout: {rtn_stdout}")
                 logging.debug(f"rtn_stderr: {rtn_stderr}")
 
                 if output_file:
                     file.close()
-                
+
                 return rtn_stdout, rtn_stderr
-                #success, skip other tries
+                # success, skip other tries
                 break
             except Exception as e:
                 logging.warning(f"{e}")
@@ -1272,12 +1380,14 @@ class Node:
                     logging.debug("Exception in output_file close()")
                     pass
 
-                if attempt+1 == retry:
+                if attempt + 1 == retry:
                     raise e
 
-                #Fail, try again
+                # Fail, try again
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-                    logging.debug(f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again")
+                    logging.debug(
+                        f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again"
+                    )
                     logging.debug(e, exc_info=True)
 
                 time.sleep(retry_interval)
@@ -1285,7 +1395,13 @@ class Node:
 
         raise Exception("ssh failed: Should not get here")
 
-    def upload_file_thread(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
+    def upload_file_thread(
+        self,
+        local_file_path: str,
+        remote_file_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
         """
         Creates a thread that calls node.upload_file().  Results from the thread can be
         retrieved with by calling thread.result()
@@ -1301,13 +1417,25 @@ class Node:
         :rtype: Thread
         :raise Exception: if management IP is invalid
         """
-        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.upload_file,
-                                                                               local_file_path,
-                                                                               remote_file_path,
-                                                                               retry=retry,
-                                                                               retry_interval=retry_interval)
+        return (
+            self.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(
+                self.upload_file,
+                local_file_path,
+                remote_file_path,
+                retry=retry,
+                retry_interval=retry_interval,
+            )
+        )
 
-    def upload_file(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
+    def upload_file(
+        self,
+        local_file_path: str,
+        remote_file_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
         """
         Upload a local file to a remote location on the node.
         :param local_file_path: the path to the file to upload
@@ -1320,43 +1448,56 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        logging.debug(f"upload node: {self.get_name()}, local_file_path: {local_file_path}")
+        logging.debug(
+            f"upload node: {self.get_name()}, local_file_path: {local_file_path}"
+        )
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-        if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = ('0.0.0.0', 22)
-        elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = ('0:0:0:0:0:0:0:0', 22)
+        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        if self.validIPAddress(management_ip) == "IPv4":
+            src_addr = ("0.0.0.0", 22)
+        elif self.validIPAddress(management_ip) == "IPv6":
+            src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
         for attempt in range(int(retry)):
             try:
-                key = self.get_paramiko_key(private_key_file=self.get_private_key_file(),
-                                              get_private_key_passphrase=self.get_private_key_file())
+                key = self.get_paramiko_key(
+                    private_key_file=self.get_private_key_file(),
+                    get_private_key_passphrase=self.get_private_key_file(),
+                )
 
-                bastion=paramiko.SSHClient()
+                bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(),
-                                username=self.get_fablib_manager().get_bastion_username(),
-                                key_filename=self.get_fablib_manager().get_bastion_key_filename())
+                bastion.connect(
+                    self.get_fablib_manager().get_bastion_public_addr(),
+                    username=self.get_fablib_manager().get_bastion_username(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                )
 
                 bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+                bastion_channel = bastion_transport.open_channel(
+                    "direct-tcpip", dest_addr, src_addr
+                )
 
                 client = paramiko.SSHClient()
                 client.load_system_host_keys()
                 client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-                client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
+                client.connect(
+                    management_ip,
+                    username=self.username,
+                    pkey=key,
+                    sock=bastion_channel,
+                )
 
-                ftp_client=client.open_sftp()
+                ftp_client = client.open_sftp()
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
                 ftp_client.close()
 
@@ -1364,8 +1505,10 @@ class Node:
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
-                    logging.debug(f"Running node.upload_file(): file: {local_file_path}, "
-                                  f"elapsed time: {end - start} seconds")
+                    logging.debug(
+                        f"Running node.upload_file(): file: {local_file_path}, "
+                        f"elapsed time: {end - start} seconds"
+                    )
 
                 return file_attributes
             except Exception as e:
@@ -1380,19 +1523,27 @@ class Node:
                     logging.debug("Exception in bastion_channel.close()")
                     pass
 
-                if attempt+1 == retry:
+                if attempt + 1 == retry:
                     raise e
 
-                #Fail, try again
-                logging.warning(f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}")
-                #traceback.print_exc()
+                # Fail, try again
+                logging.warning(
+                    f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
+                )
+                # traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
 
         raise Exception("scp upload failed")
 
-    def download_file_thread(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
-        """"
+    def download_file_thread(
+        self,
+        local_file_path: str,
+        remote_file_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
+        """ "
         Creates a thread that calls node.download_file().  Results from the thread can be
         retrieved with by calling thread.result()
         :param local_file_path: the destination path for the remote file
@@ -1407,13 +1558,25 @@ class Node:
         :rtype: Thread
         :raise Exception: if management IP is invalid
         """
-        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.download_file,
-                                                                               local_file_path,
-                                                                               remote_file_path,
-                                                                               retry=retry,
-                                                                               retry_interval=retry_interval)
+        return (
+            self.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(
+                self.download_file,
+                local_file_path,
+                remote_file_path,
+                retry=retry,
+                retry_interval=retry_interval,
+            )
+        )
 
-    def download_file(self, local_file_path: str, remote_file_path: str, retry: int = 3, retry_interval: int = 10):
+    def download_file(
+        self,
+        local_file_path: str,
+        remote_file_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
         """
         Download a remote file from the node to a local destination.
         :param local_file_path: the destination path for the remote file
@@ -1425,42 +1588,55 @@ class Node:
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
         """
-        logging.debug(f"download node: {self.get_name()}, remote_file_path: {remote_file_path}")
+        logging.debug(
+            f"download node: {self.get_name()}, remote_file_path: {remote_file_path}"
+        )
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname='management_ip'))
-        if self.validIPAddress(management_ip) == 'IPv4':
-            src_addr = ('0.0.0.0', 22)
+        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        if self.validIPAddress(management_ip) == "IPv4":
+            src_addr = ("0.0.0.0", 22)
 
-        elif self.validIPAddress(management_ip) == 'IPv6':
-            src_addr = ('0:0:0:0:0:0:0:0', 22)
+        elif self.validIPAddress(management_ip) == "IPv6":
+            src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
             raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
         for attempt in range(int(retry)):
             try:
-                key = self.get_paramiko_key(private_key_file=self.get_private_key_file(),
-                                              get_private_key_passphrase=self.get_private_key_file())
+                key = self.get_paramiko_key(
+                    private_key_file=self.get_private_key_file(),
+                    get_private_key_passphrase=self.get_private_key_file(),
+                )
 
-                bastion=paramiko.SSHClient()
+                bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(self.get_fablib_manager().get_bastion_public_addr(),
-                                username=self.get_fablib_manager().get_bastion_username(),
-                                key_filename=self.get_fablib_manager().get_bastion_key_filename())
+                bastion.connect(
+                    self.get_fablib_manager().get_bastion_public_addr(),
+                    username=self.get_fablib_manager().get_bastion_username(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                )
 
                 bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+                bastion_channel = bastion_transport.open_channel(
+                    "direct-tcpip", dest_addr, src_addr
+                )
 
                 client = paramiko.SSHClient()
                 client.load_system_host_keys()
                 client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-                client.connect(management_ip,username=self.username,pkey = key, sock=bastion_channel)
+                client.connect(
+                    management_ip,
+                    username=self.username,
+                    pkey=key,
+                    sock=bastion_channel,
+                )
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.get(remote_file_path, local_file_path)
@@ -1470,8 +1646,10 @@ class Node:
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
-                    logging.debug(f"Running node.download(): file: {remote_file_path}, "
-                                  f"elapsed time: {end - start} seconds")
+                    logging.debug(
+                        f"Running node.download(): file: {remote_file_path}, "
+                        f"elapsed time: {end - start} seconds"
+                    )
 
                 return file_attributes
             except Exception as e:
@@ -1486,20 +1664,27 @@ class Node:
                     logging.debug("Exception in bastion_channel.close()")
                     pass
 
-                if attempt+1 == retry:
+                if attempt + 1 == retry:
                     raise e
 
-                #Fail, try again
-                logging.warning(f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}")
-                #traceback.print_exc()
+                # Fail, try again
+                logging.warning(
+                    f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
+                )
+                # traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
 
         raise Exception("scp download failed")
 
-    def upload_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
-                                retry_interval: int = 10):
-        """"
+    def upload_directory_thread(
+        self,
+        local_directory_path: str,
+        remote_directory_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
+        """ "
         Creates a thread that calls node.upload_directory. Results from the thread can be
         retrieved with by calling thread.result()
         :param local_directory_path: the path to the directory to upload
@@ -1514,14 +1699,25 @@ class Node:
         :rtype: Thread
         :raise Exception: if management IP is invalid
         """
-        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.upload_directory,
-                                                                               local_directory_path,
-                                                                               remote_directory_path,
-                                                                               retry=retry,
-                                                                               retry_interval=retry_interval)
+        return (
+            self.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(
+                self.upload_directory,
+                local_directory_path,
+                remote_directory_path,
+                retry=retry,
+                retry_interval=retry_interval,
+            )
+        )
 
-    def upload_directory(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
-                         retry_interval: int = 10):
+    def upload_directory(
+        self,
+        local_directory_path: str,
+        remote_directory_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
         """
         Upload a directory to remote location on the node.
         Makes a gzipped tarball of a directory and uploades it to a node. Then
@@ -1538,27 +1734,52 @@ class Node:
         """
         import tarfile
         import os
+        import tempfile
 
-        logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
+        logging.debug(
+            f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}"
+        )
 
-        output_filename = local_directory_path.split('/')[-1]
+        output_filename = local_directory_path.split("/")[-1]
         root_size = len(local_directory_path) - len(output_filename)
-        temp_file = "/tmp/" + output_filename + ".tar.gz"
+
+        temp_name = next(tempfile._get_candidate_names())
+
+        temp_file = "/tmp/" + str(temp_name) + ".tar.gz"
 
         with tarfile.open(temp_file, "w:gz") as tar_handle:
             for root, dirs, files in os.walk(local_directory_path):
                 for file in files:
-                    tar_handle.add(os.path.join(root, file), arcname = os.path.join(root, file)[root_size:])
+                    tar_handle.add(
+                        os.path.join(root, file),
+                        arcname=os.path.join(root, file)[root_size:],
+                    )
 
         self.upload_file(temp_file, temp_file, retry, retry_interval)
         os.remove(temp_file)
-        self.execute("mkdir -p "+remote_directory_path + "; tar -xf " + temp_file + " -C " +
-                     remote_directory_path + "; rm " + temp_file, retry, retry_interval, quiet=True)
+        self.execute(
+            "mkdir -p "
+            + remote_directory_path
+            + "; tar -xf "
+            + temp_file
+            + " -C "
+            + remote_directory_path
+            + "; rm "
+            + temp_file,
+            retry,
+            retry_interval,
+            quiet=True,
+        )
         return "success"
 
-    def download_directory_thread(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
-                                  retry_interval: int = 10):
-        """"
+    def download_directory_thread(
+        self,
+        local_directory_path: str,
+        remote_directory_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
+        """ "
         Creates a thread that calls node.download_directory. Results from the thread can be
         retrieved with by calling thread.result()
         :param local_directory_path: the path to the directory to upload
@@ -1571,14 +1792,25 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        return self.get_fablib_manager().get_ssh_thread_pool_executor().submit(self.download_directory,
-                                                                               local_directory_path,
-                                                                               remote_directory_path,
-                                                                               retry=retry,
-                                                                               retry_interval=retry_interval)
+        return (
+            self.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(
+                self.download_directory,
+                local_directory_path,
+                remote_directory_path,
+                retry=retry,
+                retry_interval=retry_interval,
+            )
+        )
 
-    def download_directory(self, local_directory_path: str, remote_directory_path: str, retry: int = 3,
-                           retry_interval: int = 10):
+    def download_directory(
+        self,
+        local_directory_path: str,
+        remote_directory_path: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+    ):
         """
         Downloads a directory from remote location on the node.
         Makes a gzipped tarball of a directory and downloads it from a node. Then
@@ -1595,10 +1827,18 @@ class Node:
         """
         import tarfile
         import os
-        logging.debug(f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}")
+
+        logging.debug(
+            f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}"
+        )
 
         temp_file = "/tmp/unpackingfile.tar.gz"
-        self.execute("tar -czf " + temp_file + " " + remote_directory_path, retry, retry_interval, quiet=True)
+        self.execute(
+            "tar -czf " + temp_file + " " + remote_directory_path,
+            retry,
+            retry_interval,
+            quiet=True,
+        )
 
         self.download_file(temp_file, temp_file, retry, retry_interval)
         tar_file = tarfile.open(temp_file)
@@ -1618,11 +1858,18 @@ class Node:
 
         try:
             if self.get_management_ip() is None:
-                logging.debug(f"Node: {self.get_name()} failed test_ssh because management_ip == None" )
+                logging.debug(
+                    f"Node: {self.get_name()} failed test_ssh because management_ip == None"
+                )
 
-            self.execute(f'echo test_ssh from {self.get_name()}', retry=1, retry_interval=10, quiet=True)
+            self.execute(
+                f"echo test_ssh from {self.get_name()}",
+                retry=1,
+                retry_interval=10,
+                quiet=True,
+            )
         except Exception as e:
-            #logging.debug(f"{e}")
+            # logging.debug(f"{e}")
             logging.debug(e, exc_info=True)
             return False
         return True
@@ -1640,11 +1887,13 @@ class Node:
         stdout, stderr = self.execute("sudo ip -j route list", quiet=True)
         stdout_json = json.loads(stdout)
 
-        #print(pythonObj)
+        # print(pythonObj)
         for i in stdout_json:
-            if i['dst'] == 'default':
-                logging.debug(f"{self.get_name()}->get_management_os_interface: management_os_interface {i['dev']}")
-                return i['dev']
+            if i["dst"] == "default":
+                logging.debug(
+                    f"{self.get_name()}->get_management_os_interface: management_os_interface {i['dev']}"
+                )
+                return i["dev"]
         return None
 
     def get_dataplane_os_interfaces(self) -> List[dict]:
@@ -1660,8 +1909,8 @@ class Node:
         stdout_json = json.loads(stdout)
         dataplane_devs = []
         for i in stdout_json:
-            if i['ifname'] != 'lo' and i['ifname'] !=  management_dev:
-                dataplane_devs.append({'ifname': i['ifname'], 'mac': i['address']})
+            if i["ifname"] != "lo" and i["ifname"] != management_dev:
+                dataplane_devs.append({"ifname": i["ifname"], "mac": i["address"]})
 
         return dataplane_devs
 
@@ -1670,7 +1919,7 @@ class Node:
         Flushes the configuration of all dataplane interfaces in the node.
         """
         for iface in self.get_dataplane_os_interfaces():
-            self.flush_os_interface(iface['ifname'])
+            self.flush_os_interface(iface["ifname"])
 
     def flush_os_interface(self, os_iface: str):
         """
@@ -1679,15 +1928,17 @@ class Node:
         :type os_iface: String
         """
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}", quiet=True)
-        stdout, stderr = self.execute(f"sudo ip -6 addr flush dev {os_iface}", quiet=True)
+        stdout, stderr = self.execute(
+            f"sudo ip -6 addr flush dev {os_iface}", quiet=True
+        )
 
-    def ip_addr_list(self, output='json', update=False):
+    def ip_addr_list(self, output="json", update=False):
 
         try:
             if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
             else:
-                if output == 'json':
+                if output == "json":
                     stdout, stderr = self.execute(f"sudo  ip -j addr list", quiet=True)
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
@@ -1698,7 +1949,11 @@ class Node:
             logging.warning(f"Failed to get ip addr list: {e}")
             raise e
 
-    def ip_route_add(self, subnet: Union[IPv4Network, IPv6Network], gateway: Union[IPv4Address, IPv6Address]):
+    def ip_route_add(
+        self,
+        subnet: Union[IPv4Network, IPv6Network],
+        gateway: Union[IPv4Address, IPv6Address],
+    ):
         """
         Add a route on the node.
         :param subnet: The destination subnet
@@ -1723,9 +1978,13 @@ class Node:
         Stop network manager on the node.
         """
         try:
-            stdout, stderr = self.execute(f"sudo systemctl stop NetworkManager", quiet=True)
-            logging.info(f"Stopped NetworkManager with 'sudo systemctl stop "
-                         f"NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            stdout, stderr = self.execute(
+                f"sudo systemctl stop NetworkManager", quiet=True
+            )
+            logging.info(
+                f"Stopped NetworkManager with 'sudo systemctl stop "
+                f"NetworkManager': stdout: {stdout}\nstderr: {stderr}"
+            )
         except Exception as e:
             logging.warning(f"Failed to stop network manager: {e}")
             raise e
@@ -1735,8 +1994,12 @@ class Node:
         (re)Start network manager on the node.
         """
         try:
-            stdout, stderr = self.execute(f"sudo systemctl restart NetworkManager", quiet=True)
-            logging.info(f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}")
+            stdout, stderr = self.execute(
+                f"sudo systemctl restart NetworkManager", quiet=True
+            )
+            logging.info(
+                f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}"
+            )
         except Exception as e:
             logging.warning(f"Failed to start network manager: {e}")
             raise e
@@ -1747,12 +2010,10 @@ class Node:
         Get a list of routes from the node.
         """
         try:
-            stdout, stderr = self.execute('ip -j route list', quiet=True)
+            stdout, stderr = self.execute("ip -j route list", quiet=True)
             return json.loads(stdout)
         except Exception as e:
             logging.warning(f"Exception: {e}")
-
-
 
     # fablib.Node.get_ip_addrs()
     def get_ip_addrs(self):
@@ -1760,17 +2021,19 @@ class Node:
         Get a list of ip address info from the node.
         """
         try:
-            stdout, stderr = self.execute('ip -j addr list', quiet=True)
+            stdout, stderr = self.execute("ip -j addr list", quiet=True)
 
             addrs = json.loads(stdout)
 
-            return addrs   
+            return addrs
         except Exception as e:
             logging.warning(f"Exception: {e}")
-            
 
-            
-    def ip_route_del(self, subnet: Union[IPv4Network, IPv6Network], gateway: Union[IPv4Address, IPv6Address]):
+    def ip_route_del(
+        self,
+        subnet: Union[IPv4Network, IPv6Network],
+        gateway: Union[IPv4Address, IPv6Address],
+    ):
         """
         Delete a route on the node.
         :param subnet: The destination subnet
@@ -1790,8 +2053,12 @@ class Node:
             logging.warning(f"Failed to del route: {e}")
             raise e
 
-    def ip_addr_add(self, addr: Union[IPv4Address, IPv6Address], subnet: Union[IPv4Network, IPv6Network],
-                    interface: Interface):
+    def ip_addr_add(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[IPv4Network, IPv6Network],
+        interface: Interface,
+    ):
         """
         Add an IP to an interface on the node.
         :param addr: IP address
@@ -1808,13 +2075,20 @@ class Node:
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ", quiet=True)
+            self.execute(
+                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                quiet=True,
+            )
         except Exception as e:
             logging.warning(f"Failed to add addr: {e}")
             raise e
 
-    def ip_addr_del(self, addr: Union[IPv4Address, IPv6Address], subnet: Union[IPv4Network, IPv6Network],
-                    interface: Interface):
+    def ip_addr_del(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[IPv4Network, IPv6Network],
+        interface: Interface,
+    ):
         """
         Delete an IP to an interface on the node.
         :param addr: IP address
@@ -1831,7 +2105,10 @@ class Node:
             ip_command = "sudo ip"
 
         try:
-            self.execute(f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ", quiet=True)
+            self.execute(
+                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                quiet=True,
+            )
         except Exception as e:
             logging.warning(f"Failed to del addr: {e}")
             raise e
@@ -1844,10 +2121,10 @@ class Node:
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-        
+
         if interface == None:
             return
-        
+
         try:
             network = interface.get_network()
             if network == None:
@@ -1864,18 +2141,26 @@ class Node:
             return
 
         try:
-            self.execute(f"{ip_command} link set dev {interface.get_physical_os_interface()} up", quiet=True)
+            self.execute(
+                f"{ip_command} link set dev {interface.get_physical_os_interface()} up",
+                quiet=True,
+            )
         except Exception as e:
             logging.warning(f"Failed to up link: {e}")
             raise e
 
         try:
-            self.execute(f"{ip_command} link set dev {interface.get_os_interface()} up", quiet=True)
+            self.execute(
+                f"{ip_command} link set dev {interface.get_os_interface()} up",
+                quiet=True,
+            )
         except Exception as e:
             logging.warning(f"Failed to up link: {e}")
             raise e
 
-    def ip_link_down(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
+    def ip_link_down(
+        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+    ):
         """
         Bring down a link on an interface on the node.
         :param subnet: subnet.
@@ -1892,17 +2177,26 @@ class Node:
             else:
                 ip_command = "sudo ip"
         except Exception as e:
-            #logging.warning(f"Failed to down link: {e}")
+            # logging.warning(f"Failed to down link: {e}")
             return
 
         try:
-            self.execute(f"{ip_command} link set dev {interface.get_os_interface()} down", quiet=True)
+            self.execute(
+                f"{ip_command} link set dev {interface.get_os_interface()} down",
+                quiet=True,
+            )
         except Exception as e:
             logging.warning(f"Failed to down link: {e}")
             raise e
 
-    def set_ip_os_interface(self, os_iface: str = None, vlan: str = None, ip: str = None, cidr: str = None,
-                            mtu: str = None):
+    def set_ip_os_interface(
+        self,
+        os_iface: str = None,
+        vlan: str = None,
+        ip: str = None,
+        cidr: str = None,
+        mtu: str = None,
+    ):
         """
         Depricated
         """
@@ -1920,8 +2214,10 @@ class Node:
             raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
 
         # Bring up base iface
-        logging.debug(f"{self.get_name()}->set_ip_os_interface: os_iface {os_iface}, vlan {vlan}, ip {ip}, cidr {cidr}, mtu {mtu}")
-        command = f'{ip_command} link set dev {os_iface} up'
+        logging.debug(
+            f"{self.get_name()}->set_ip_os_interface: os_iface {os_iface}, vlan {vlan}, ip {ip}, cidr {cidr}, mtu {mtu}"
+        )
+        command = f"{ip_command} link set dev {os_iface} up"
 
         if mtu is not None:
             command += f" mtu {mtu}"
@@ -1930,18 +2226,18 @@ class Node:
         # config vlan iface
         if vlan is not None:
             # create vlan iface
-            command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+            command = f"{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}"
             stdout, stderr = self.execute(command, quiet=True)
 
             # bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
-            command = f'{ip_command} link set dev {os_iface} up'
+            command = f"{ip_command} link set dev {os_iface} up"
             if mtu != None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command, quiet=True)
 
         if ip is not None and cidr is not None:
-            #Set ip
+            # Set ip
             command = f"{ip_command} addr add {ip}/{cidr} dev {os_iface}"
             stdout, stderr = self.execute(command, quiet=True)
 
@@ -1966,14 +2262,13 @@ class Node:
         stdout_json = json.loads(stdout)
         dataplane_devs = []
         for i in stdout_json:
-            if i['ifname'] == management_os_iface or i['ifname'] == 'lo':
+            if i["ifname"] == management_os_iface or i["ifname"] == "lo":
                 stdout_json.remove(i)
                 continue
 
             # If iface is vlan linked to base iface
-            if 'link' in i.keys():
-                self.remove_vlan_os_interface(os_iface=i['ifname'])
-
+            if "link" in i.keys():
+                self.remove_vlan_os_interface(os_iface=i["ifname"])
 
     def remove_vlan_os_interface(self, os_iface: str = None):
         """
@@ -1988,21 +2283,31 @@ class Node:
             logging.warning(f"os_iface: {os_iface}, stdout: {stdout}, stderr: {stderr}")
             raise e
 
-        link = stdout_json['link']
+        link = stdout_json["link"]
 
         command = f"sudo ip link del link {link} name {os_iface}"
         stdout, stderr = self.execute(command, quiet=True)
 
-    def add_vlan_os_interface(self, os_iface: str = None, vlan: str = None, ip: str = None, cidr: str = None,
-                              mtu: str = None, interface: str = None):
+    def add_vlan_os_interface(
+        self,
+        os_iface: str = None,
+        vlan: str = None,
+        ip: str = None,
+        cidr: str = None,
+        mtu: str = None,
+        interface: str = None,
+    ):
         """
         Depricated
         """
         # TODO: Add docstring after doc networking classes
 
-        if vlan: vlan=str(vlan)
-        if cidr: cidr=str(cidr)
-        if mtu: mtu=str(mtu)
+        if vlan:
+            vlan = str(vlan)
+        if cidr:
+            cidr = str(cidr)
+        if mtu:
+            mtu = str(mtu)
 
         try:
             gateway = None
@@ -2017,17 +2322,19 @@ class Node:
             logging.warning(f"Failed to get network layer and/or type: {e}")
             ip_command = "sudo ip"
 
-        command = f'{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}'
+        command = f"{ip_command} link add link {os_iface} name {os_iface}.{vlan} type vlan id {vlan}"
         stdout, stderr = self.execute(command, quiet=True)
 
-        command = f'{ip_command} link set dev {os_iface} up'
+        command = f"{ip_command} link set dev {os_iface} up"
         stdout, stderr = self.execute(command, quiet=True)
 
-        command = f'{ip_command} link set dev {os_iface}.{vlan} up'
+        command = f"{ip_command} link set dev {os_iface}.{vlan} up"
         stdout, stderr = self.execute(command, quiet=True)
 
         if ip != None and cidr != None:
-            self.set_ip_os_interface(os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu)
+            self.set_ip_os_interface(
+                os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu
+            )
 
     def ping_test(self, dst_ip: str) -> bool:
         """
@@ -2038,9 +2345,9 @@ class Node:
         # TODO: Add docstring after doc networking classes
         logging.debug(f"ping_test: node {self.get_name()}")
 
-        command = f'ping -c 1 {dst_ip}  2>&1 > /dev/null && echo Success'
+        command = f"ping -c 1 {dst_ip}  2>&1 > /dev/null && echo Success"
         stdout, stderr = self.execute(command, quiet=True)
-        if stdout.replace("\n","") == 'Success':
+        if stdout.replace("\n", "") == "Success":
             return True
         else:
             return False

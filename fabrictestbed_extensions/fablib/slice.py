@@ -37,7 +37,10 @@ from typing import TYPE_CHECKING
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
 if TYPE_CHECKING:
-    from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice, Sliver as OrchestratorSliver
+    from fabric_cf.orchestrator.swagger_client import (
+        Slice as OrchestratorSlice,
+        Sliver as OrchestratorSliver,
+    )
     from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 from tabulate import tabulate
@@ -56,7 +59,6 @@ from fabrictestbed_extensions.fablib.interface import Interface
 
 
 class Slice:
-
     def __init__(self, fablib_manager: FablibManager, name: str = None):
         """
         Constructor. Sets the default slice state to be callable.
@@ -88,11 +90,12 @@ class Slice:
         :return: Tabulated string of slice information
         :rtype: String
         """
-        table = [["Slice Name", self.sm_slice.name],
-                 ["Slice ID", self.sm_slice.slice_id],
-                 ["Slice State", self.sm_slice.state],
-                 ["Lease End", self.sm_slice.lease_end_time]
-                 ]
+        table = [
+            ["Slice Name", self.sm_slice.name],
+            ["Slice ID", self.sm_slice.slice_id],
+            ["Slice State", self.sm_slice.state],
+            ["Lease End", self.sm_slice.lease_end_time],
+        ]
 
         return tabulate(table)
 
@@ -113,19 +116,21 @@ class Slice:
 
     def load(self, filename):
         """
-         Loads a slice request topology from file. The file can be loaded to create
-         a new slice with the same topology as a previously saved slice.
+        Loads a slice request topology from file. The file can be loaded to create
+        a new slice with the same topology as a previously saved slice.
 
-         :param filename: path to the file to save the slice.
-         :type filename: String
-         """
+        :param filename: path to the file to save the slice.
+        :type filename: String
+        """
         self.network_iface_map = None
         self.sm_slice = None
         self.slice_id = None
 
         self.get_fim_topology().load(file_name=filename)
 
-    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
+    def show(
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+    ):
         """
         Show a table containing the current slice attributes.
 
@@ -155,21 +160,21 @@ class Slice:
         data = self.toDict()
 
         def state_color(val):
-            if val == 'StableOK':
-                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
-            elif val == 'ModifyOK':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
-            elif val == 'StableError':
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
-            elif val == 'ModifyError':
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
-            elif val == 'Configuring':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
-            elif val == 'Modifying':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            if val == "StableOK":
+                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+            elif val == "ModifyOK":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "StableError":
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+            elif val == "ModifyError":
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+            elif val == "Configuring":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "Modifying":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             else:
-                color = ''
-            return 'background-color: %s' % color
+                color = ""
+            return "background-color: %s" % color
 
         if pretty_names:
             pretty_names_dict = self.get_pretty_names_dict()
@@ -178,31 +183,38 @@ class Slice:
 
         if colors and self.get_fablib_manager().is_jupyter_notebook():
 
-            slice_table = self.get_fablib_manager().show_table(data,
-                                                               fields=fields,
-                                                               title='Slice',
-                                                               output='pandas',
-                                                               quiet=True,
-                                                               pretty_names_dict=pretty_names_dict)
+            slice_table = self.get_fablib_manager().show_table(
+                data,
+                fields=fields,
+                title="Slice",
+                output="pandas",
+                quiet=True,
+                pretty_names_dict=pretty_names_dict,
+            )
             slice_table.applymap(state_color)
 
             if quiet == False:
                 display(slice_table)
         else:
-            slice_table = self.get_fablib_manager().show_table(data,
-                                                               fields=fields,
-                                                               title='Slice',
-                                                               output=output,
-                                                               quiet=quiet,
-                                                               pretty_names_dict=pretty_names_dict)
+            slice_table = self.get_fablib_manager().show_table(
+                data,
+                fields=fields,
+                title="Slice",
+                output=output,
+                quiet=quiet,
+                pretty_names_dict=pretty_names_dict,
+            )
 
         return slice_table
 
-    def list_components(self,
-                        output: str = None,
-                        fields: List[str] = None,
-                        quiet: bool = False,
-                        filter_function=None, pretty_names=True):
+    def list_components(
+        self,
+        output: str = None,
+        fields: List[str] = None,
+        quiet: bool = False,
+        filter_function=None,
+        pretty_names=True,
+    ):
 
         """
         Lists all the components in the slice with their attributes.
@@ -237,7 +249,7 @@ class Slice:
         for component in self.get_components():
             table.append(component.toDict())
 
-        #if fields == None:
+        # if fields == None:
         #    fields = ["Name", "Details", "Disk",
         #              "Units", "PCI Address", "Model",
         #              "Type"]
@@ -247,21 +259,26 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().list_table(table,
-                                                     fields=fields,
-                                                     title='Components',
-                                                     output=output,
-                                                     quiet=quiet, filter_function=filter_function,
-                                                     pretty_names_dict=pretty_names_dict)
+        table = self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Components",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
         return table
 
-    def list_interfaces(self,
-                        output: str = None,
-                        fields: List[str] = None,
-                        quiet: bool = False,
-                        filter_function=None,
-                        pretty_names=True):
+    def list_interfaces(
+        self,
+        output: str = None,
+        fields: List[str] = None,
+        quiet: bool = False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the interfaces in the slice with their attributes.
 
@@ -299,39 +316,59 @@ class Slice:
         os_interface_threads = {}
         for iface in self.get_interfaces():
             if iface.get_network():
-                logging.info(f"Starting get network name thread for iface {iface.get_name()} ")
-                net_name_threads[iface.get_name()] = executor.submit(iface.get_network().get_name)
+                logging.info(
+                    f"Starting get network name thread for iface {iface.get_name()} "
+                )
+                net_name_threads[iface.get_name()] = executor.submit(
+                    iface.get_network().get_name
+                )
 
             if iface.get_node():
-                logging.info(f"Starting get node name thread for iface {iface.get_name()} ")
-                node_name_threads[iface.get_name()] = executor.submit(iface.get_node().get_name)
+                logging.info(
+                    f"Starting get node name thread for iface {iface.get_name()} "
+                )
+                node_name_threads[iface.get_name()] = executor.submit(
+                    iface.get_node().get_name
+                )
 
-            logging.info(f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} ")
-            physical_os_interface_name_threads[iface.get_name()] = executor.submit(iface.get_physical_os_interface_name)
+            logging.info(
+                f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} "
+            )
+            physical_os_interface_name_threads[iface.get_name()] = executor.submit(
+                iface.get_physical_os_interface_name
+            )
 
-            logging.info(f"Starting get get_os_interface_threads for iface {iface.get_name()} ")
-            os_interface_threads[iface.get_name()] = executor.submit(iface.get_os_interface)
+            logging.info(
+                f"Starting get get_os_interface_threads for iface {iface.get_name()} "
+            )
+            os_interface_threads[iface.get_name()] = executor.submit(
+                iface.get_os_interface
+            )
 
         table = []
         for iface in self.get_interfaces():
 
             if iface.get_network():
                 # network_name = iface.get_network().get_name()
-                logging.info(f"Getting results from get network name thread for iface {iface.get_name()} ")
+                logging.info(
+                    f"Getting results from get network name thread for iface {iface.get_name()} "
+                )
                 network_name = net_name_threads[iface.get_name()].result()
             else:
                 network_name = None
 
             if iface.get_node():
                 # node_name = iface.get_node().get_name()
-                logging.info(f"Getting results from get node name thread for iface {iface.get_name()} ")
+                logging.info(
+                    f"Getting results from get node name thread for iface {iface.get_name()} "
+                )
                 node_name = node_name_threads[iface.get_name()].result()
 
             else:
                 node_name = None
 
             table.append(iface.toDict())
-            #table.append({"Name": iface.get_name(),
+            # table.append({"Name": iface.get_name(),
             #              "Node": node_name,
             #              "Network": network_name,
             #              "Bandwidth": iface.get_bandwidth(),
@@ -341,7 +378,7 @@ class Slice:
             #              "Device": os_interface_threads[iface.get_name()].result(),
             #              })
 
-        #if fields == None:
+        # if fields == None:
         #    fields = ["Name", "Node", "Network",
         #              "Bandwidth", "VLAN", "MAC",
         #              "Device"]
@@ -350,13 +387,15 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().list_table(table,
-                                                     fields=fields,
-                                                     title='Interfaces',
-                                                     output=output,
-                                                     quiet=quiet,
-                                                     filter_function=filter_function,
-                                                     pretty_names_dict=pretty_names_dict)
+        table = self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Interfaces",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
         return table
 
@@ -392,13 +431,17 @@ class Slice:
         try:
             slice.update_topology()
         except Exception as e:
-            logging.error(f"Slice {slice.slice_name} could not update topology: slice.get_slice")
+            logging.error(
+                f"Slice {slice.slice_name} could not update topology: slice.get_slice"
+            )
             logging.error(e, exc_info=True)
 
         try:
             slice.update_slivers()
         except Exception as e:
-            logging.error(f"Slice {slice.slice_name} could not update slivers: slice.get_slice")
+            logging.error(
+                f"Slice {slice.slice_name} could not update slivers: slice.get_slice"
+            )
             logging.error(e, exc_info=True)
 
         return slice
@@ -414,13 +457,14 @@ class Slice:
 
     @staticmethod
     def get_pretty_names_dict():
-        return { 'id': 'ID',
-                 'name':  'Name',
-                 'lease_end':'Lease Expiration (UTC)',
-                 'lease_start': 'Lease Start (UTC)',
-                 'project_id': 'Project ID',
-                 'state': 'State',
-               }
+        return {
+            "id": "ID",
+            "name": "Name",
+            "lease_end": "Lease Expiration (UTC)",
+            "lease_start": "Lease Start (UTC)",
+            "project_id": "Project ID",
+            "state": "State",
+        }
 
     def toDict(self, skip=[]):
         """
@@ -429,42 +473,41 @@ class Slice:
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {   'id': str(self.get_slice_id()),
-                    'name':  str(self.get_name()),
-                    'lease_end':  str(self.get_lease_end()),
-                    'lease_start':   str(self.get_lease_start()),
-                    'project_id':  str(self.get_project_id()),
-                    'state':   str(self.get_state()),
-                  }
+        return {
+            "id": str(self.get_slice_id()),
+            "name": str(self.get_name()),
+            "lease_end": str(self.get_lease_end()),
+            "lease_start": str(self.get_lease_start()),
+            "project_id": str(self.get_project_id()),
+            "state": str(self.get_state()),
+        }
 
     def get_template_context(self, base_object=None, skip=[]):
         context = {}
 
         if base_object:
-            context['_self_'] = base_object.toDict(skip=skip)
+            context["_self_"] = base_object.toDict(skip=skip)
         else:
-            context['_self_'] = {}
+            context["_self_"] = {}
 
-        context['config'] = self.get_fablib_manager().get_config()
-        context['slice'] = self.toDict()
+        context["config"] = self.get_fablib_manager().get_config()
+        context["slice"] = self.toDict()
 
-        context['nodes'] = []
+        context["nodes"] = []
         for node in self.get_nodes():
-            context['nodes'].append(node.toDict(skip=['ssh_command']))
+            context["nodes"].append(node.toDict(skip=["ssh_command"]))
 
-        context['components'] = []
+        context["components"] = []
         for component in self.get_components():
-            context['components'].append(component.toDict())
+            context["components"].append(component.toDict())
 
-        context['interfaces'] = []
+        context["interfaces"] = []
         for interface in self.get_interfaces():
-            context['interfaces'].append(interface.toDict())
+            context["interfaces"].append(interface.toDict())
 
-        context['networks'] = []
+        context["networks"] = []
         for network in self.get_networks():
-            context['networks'].append(network.toDict())
-
-
+            context["networks"].append(network.toDict())
 
         return context
 
@@ -492,17 +535,24 @@ class Slice:
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[], slice_id=self.slice_id,
-                                                                               name=self.slice_name)
+        return_status, slices = self.fablib_manager.get_slice_manager().slices(
+            excludes=[], slice_id=self.slice_id, name=self.slice_name
+        )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
-            logging.debug(f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
-                          f"elapsed time: {end - start} seconds")
+            logging.debug(
+                f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
+                f"elapsed time: {end - start} seconds"
+            )
 
         if return_status == Status.OK:
-            self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
+            self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[
+                0
+            ]
         else:
-            raise Exception("Failed to get slice list: {}, {}".format(return_status, slices))
+            raise Exception(
+                "Failed to get slice list: {}, {}".format(return_status, slices)
+            )
 
     def update_topology(self):
         """
@@ -513,14 +563,21 @@ class Slice:
         :raises Exception: if topology could not be gotten from slice manager
         """
         # Update topology
-        if self.sm_slice.model is not None and self.sm_slice.model != '':
+        if self.sm_slice.model is not None and self.sm_slice.model != "":
             self.topology = ExperimentTopology()
             self.topology.load(graph_string=self.sm_slice.model)
             return
 
-        return_status, new_topo = self.fablib_manager.get_slice_manager().get_slice_topology(slice_object=self.sm_slice)
+        (
+            return_status,
+            new_topo,
+        ) = self.fablib_manager.get_slice_manager().get_slice_topology(
+            slice_object=self.sm_slice
+        )
         if return_status != Status.OK:
-            raise Exception("Failed to get slice topology: {}, {}".format(return_status, new_topo))
+            raise Exception(
+                "Failed to get slice topology: {}, {}".format(return_status, new_topo)
+            )
 
         # Set slice attibutes
         self.topology = new_topo
@@ -535,7 +592,9 @@ class Slice:
         """
         if self.sm_slice is None:
             return
-        status, slivers = self.fablib_manager.get_slice_manager().slivers(slice_object=self.sm_slice)
+        status, slivers = self.fablib_manager.get_slice_manager().slivers(
+            slice_object=self.sm_slice
+        )
         if status == Status.OK:
             self.slivers = slivers
             return
@@ -584,8 +643,8 @@ class Slice:
         :return: the private key passphrase
         :rtype: String
         """
-        if 'slice_private_key_passphrase' in self.slice_key.keys():
-            return self.slice_key['slice_private_key_passphrase']
+        if "slice_private_key_passphrase" in self.slice_key.keys():
+            return self.slice_key["slice_private_key_passphrase"]
         else:
             return None
 
@@ -599,8 +658,8 @@ class Slice:
         :return: the public key
         :rtype: String
         """
-        if 'slice_public_key' in self.slice_key.keys():
-            return self.slice_key['slice_public_key']
+        if "slice_public_key" in self.slice_key.keys():
+            return self.slice_key["slice_public_key"]
         else:
             return None
 
@@ -614,8 +673,8 @@ class Slice:
         :return: path to public key file
         :rtype: String
         """
-        if 'slice_public_key_file' in self.slice_key.keys():
-            return self.slice_key['slice_public_key_file']
+        if "slice_public_key_file" in self.slice_key.keys():
+            return self.slice_key["slice_public_key_file"]
         else:
             return None
 
@@ -629,14 +688,13 @@ class Slice:
         :return: path to private key file
         :rtype: String
         """
-        if 'slice_private_key_file' in self.slice_key.keys():
-            return self.slice_key['slice_private_key_file']
+        if "slice_private_key_file" in self.slice_key.keys():
+            return self.slice_key["slice_private_key_file"]
         else:
             return None
 
     def is_dead_or_closing(self):
-        if self.get_state() in ["Closing",
-                                "Dead"]:
+        if self.get_state() in ["Closing", "Dead"]:
             return True
         else:
             return False
@@ -650,12 +708,14 @@ class Slice:
         :return: True if slice is stable, False otherwise
         :rtype: Bool
         """
-        if self.get_state() in ["StableOK",
-                                "StableError",
-                                "ModifyOK",
-                                "ModifyError",
-                                "Closing",
-                                "Dead"]:
+        if self.get_state() in [
+            "StableOK",
+            "StableError",
+            "ModifyOK",
+            "ModifyError",
+            "Closing",
+            "Dead",
+        ]:
             return True
         else:
             return False
@@ -674,7 +734,9 @@ class Slice:
             try:
                 state = self.sm_slice.state
             except Exception as e:
-                logging.warning(f"Exception in get_state from non-None sm_slice. Returning None state: {e}")
+                logging.warning(
+                    f"Exception in get_state from non-None sm_slice. Returning None state: {e}"
+                )
                 state = None
 
         return state
@@ -711,7 +773,9 @@ class Slice:
             try:
                 lease_end_time = self.sm_slice.lease_end_time
             except Exception as e:
-                logging.warning(f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}")
+                logging.warning(
+                    f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
+                )
                 lease_end_time = None
 
         return lease_end_time
@@ -730,7 +794,9 @@ class Slice:
             try:
                 lease_start_time = self.sm_slice.lease_start_time
             except Exception as e:
-                logging.warning(f"Exception in get_lease_start from non-None sm_slice. Returning None state: {e}")
+                logging.warning(
+                    f"Exception in get_lease_start from non-None sm_slice. Returning None state: {e}"
+                )
                 lease_start_time = None
 
         return lease_start_time
@@ -744,7 +810,9 @@ class Slice:
         """
         return self.sm_slice.project_id
 
-    def add_l2network(self, name: str = None, interfaces: List[Interface] = [], type: str = None) -> NetworkService:
+    def add_l2network(
+        self, name: str = None, interfaces: List[Interface] = [], type: str = None
+    ) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
 
@@ -777,9 +845,13 @@ class Slice:
         :return: a new L2 network service
         :rtype: NetworkService
         """
-        return NetworkService.new_l2network(slice=self, name=name, interfaces=interfaces, type=type)
+        return NetworkService.new_l2network(
+            slice=self, name=name, interfaces=interfaces, type=type
+        )
 
-    def add_l3network(self, name: str = None, interfaces: List[Interface] = [], type: str = 'IPv4') -> NetworkService:
+    def add_l3network(
+        self, name: str = None, interfaces: List[Interface] = [], type: str = "IPv4"
+    ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
 
@@ -821,26 +893,42 @@ class Slice:
         :return: a new L3 network service
         :rtype: NetworkService
         """
-        return NetworkService.new_l3network(slice=self, name=name, interfaces=interfaces, type=type)
+        return NetworkService.new_l3network(
+            slice=self, name=name, interfaces=interfaces, type=type
+        )
 
-    def add_facility_port(self, name: str = None, site: str = None, vlan: str = None) -> NetworkService:
+    def add_facility_port(
+        self, name: str = None, site: str = None, vlan: str = None
+    ) -> NetworkService:
         """
-                Adds a new L2 facility port to this slice
+        Adds a new L2 facility port to this slice
 
-                :param name: name of the facility port
-                :type name: String
-                :param site: site
-                :type site: String
-                :param vlan: vlan
-                :type vlan: String
-                :return: a new L2 facility port
-                :rtype: NetworkService
-                """
-        return FacilityPort.new_facility_port(slice=self, name=name, site=site, vlan=vlan)
+        :param name: name of the facility port
+        :type name: String
+        :param site: site
+        :type site: String
+        :param vlan: vlan
+        :type vlan: String
+        :return: a new L2 facility port
+        :rtype: NetworkService
+        """
+        return FacilityPort.new_facility_port(
+            slice=self, name=name, site=site, vlan=vlan
+        )
 
-    def add_node(self, name: str, site: str = None, cores: int = 2, ram: int = 8, disk: int = 10,
-                 image: str = None, instance_type: str = None, docker_image: str = None,
-                 host: str = None, avoid: List[str] = []) -> Node:
+    def add_node(
+        self,
+        name: str,
+        site: str = None,
+        cores: int = 2,
+        ram: int = 8,
+        disk: int = 10,
+        image: str = None,
+        instance_type: str = None,
+        docker_image: str = None,
+        host: str = None,
+        avoid: List[str] = [],
+    ) -> Node:
         """
         Creates a new node on this fablib slice.
 
@@ -888,7 +976,9 @@ class Slice:
 
         return node
 
-    def get_object_by_reservation(self, reservation_id: str) -> Union[Node, NetworkService, Interface, None]:
+    def get_object_by_reservation(
+        self, reservation_id: str
+    ) -> Union[Node, NetworkService, Interface, None]:
         """
         Gets an object associated with this slice by its reservation ID.
 
@@ -923,8 +1013,8 @@ class Slice:
         :rtype: List[Dict[String, String]]
         """
         # strings to ingnor
-        cascade_notice_string1 = 'Closing reservation due to failure in slice'
-        cascade_notice_string2 = 'is in a terminal state'
+        cascade_notice_string1 = "Closing reservation due to failure in slice"
+        cascade_notice_string2 = "is in a terminal state"
 
         origin_notices = []
         for reservation_id, notice in self.get_notices().items():
@@ -932,8 +1022,13 @@ class Slice:
             if cascade_notice_string1 in notice or cascade_notice_string2 in notice:
                 continue
 
-            origin_notices.append({'reservation_id': reservation_id, 'notice': notice,
-                                   'sliver': self.get_object_by_reservation(reservation_id)})
+            origin_notices.append(
+                {
+                    "reservation_id": reservation_id,
+                    "notice": notice,
+                    "sliver": self.get_object_by_reservation(reservation_id),
+                }
+            )
 
         return origin_notices
 
@@ -949,7 +1044,9 @@ class Slice:
             notices[node.get_reservation_id()] = node.get_error_message()
 
         for network_service in self.get_network_services():
-            notices[network_service.get_reservation_id()] = network_service.get_error_message()
+            notices[
+                network_service.get_reservation_id()
+            ] = network_service.get_error_message()
 
         for component in self.get_components():
             notices[component.get_reservation_id()] = component.get_error_message()
@@ -1022,7 +1119,9 @@ class Slice:
         for node in self.get_nodes():
             logging.debug(f"Getting interfaces for node {node.get_name()}")
             for interface in node.get_interfaces():
-                logging.debug(f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}")
+                logging.debug(
+                    f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
+                )
                 interfaces.append(interface)
         return interfaces
 
@@ -1115,8 +1214,13 @@ class Slice:
         # fails for topology that does not have nodes
         try:
             for net_name, net in self.get_fim_topology().network_services.items():
-                if str(net.get_property('type')) in NetworkService.get_fim_network_service_types():
-                    return_networks.append(NetworkService(slice=self, fim_network_service=net))
+                if (
+                    str(net.get_property("type"))
+                    in NetworkService.get_fim_network_service_types()
+                ):
+                    return_networks.append(
+                        NetworkService(slice=self, fim_network_service=net)
+                    )
 
         except Exception as e:
             print(f"get_network_services: exception {e}")
@@ -1159,10 +1263,14 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
-        return_status, result = self.fablib_manager.get_slice_manager().delete(slice_object=self.sm_slice)
+        return_status, result = self.fablib_manager.get_slice_manager().delete(
+            slice_object=self.sm_slice
+        )
 
         if return_status != Status.OK:
-            raise Exception("Failed to delete slice: {}, {}".format(return_status, result))
+            raise Exception(
+                "Failed to delete slice: {}, {}".format(return_status, result)
+            )
 
         self.topology = None
 
@@ -1180,11 +1288,14 @@ class Slice:
         :param end_date: String
         :raises Exception: if renewal fails
         """
-        return_status, result = self.fablib_manager.get_slice_manager().renew(slice_object=self.sm_slice,
-                                                                              new_lease_end_time=end_date)
+        return_status, result = self.fablib_manager.get_slice_manager().renew(
+            slice_object=self.sm_slice, new_lease_end_time=end_date
+        )
 
         if return_status != Status.OK:
-            raise Exception("Failed to renew slice: {}, {}".format(return_status, result))
+            raise Exception(
+                "Failed to renew slice: {}, {}".format(return_status, result)
+            )
 
     def build_error_exception_string(self) -> str:
         """
@@ -1201,16 +1312,18 @@ class Slice:
         exception_string = f"Slice Exception: Slice Name: {self.get_name()}, Slice ID: {self.get_slice_id()}: "
 
         for error in self.get_error_messages():
-            notice = error['notice']
-            sliver = error['sliver']
+            notice = error["notice"]
+            sliver = error["sliver"]
 
             sliver_extra = ""
             if isinstance(sliver, Node):
-                sliver_extra = f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, " \
-                               f"State: {sliver.get_reservation_state()}, "
+                sliver_extra = (
+                    f"Node: {sliver.get_name()}, Site: {sliver.get_site()}, "
+                    f"State: {sliver.get_reservation_state()}, "
+                )
 
             # skip errors that are caused by slice error
-            if 'Closing reservation due to failure in slice' in notice:
+            if "Closing reservation due to failure in slice" in notice:
                 continue
 
             exception_string += f"{exception_string}{sliver_extra}{notice}\n"
@@ -1237,18 +1350,23 @@ class Slice:
         slice = self.sm_slice
 
         if progress:
-            print("Waiting for slice .", end='')
+            print("Waiting for slice .", end="")
         while time.time() < timeout_start + timeout:
-            return_status, slices = self.fablib_manager.get_slice_manager().slices(excludes=[], slice_id=self.slice_id,
-                                                                                   name=self.slice_name)
+            return_status, slices = self.fablib_manager.get_slice_manager().slices(
+                excludes=[], slice_id=self.slice_id, name=self.slice_name
+            )
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.state == "StableOK" or slice.state == "ModifyOK":
                     if progress:
                         print(" Slice state: {}".format(slice.state))
                     return slice
-                if slice.state == "Closing" or slice.state == "Dead" or slice.state == "StableError" or \
-                        slice.state == "ModifyError":
+                if (
+                    slice.state == "Closing"
+                    or slice.state == "Dead"
+                    or slice.state == "StableError"
+                    or slice.state == "ModifyError"
+                ):
                     if progress:
                         print(" Slice state: {}".format(slice.state))
                     try:
@@ -1261,11 +1379,15 @@ class Slice:
                 print(f"Failure: {slices}")
 
             if progress:
-                print(".", end='')
+                print(".", end="")
             time.sleep(interval)
 
         if time.time() >= timeout_start + timeout:
-            raise Exception(" Timeout exceeded ({} sec). Slice: {} ({})".format(timeout, slice.name, slice.state))
+            raise Exception(
+                " Timeout exceeded ({} sec). Slice: {} ({})".format(
+                    timeout, slice.name, slice.state
+                )
+            )
 
         # Update the fim topology (wait to avoid get topology bug)
         # time.sleep(interval)
@@ -1294,7 +1416,7 @@ class Slice:
 
         # Test ssh
         if progress:
-            print("Waiting for ssh in slice .", end='')
+            print("Waiting for ssh in slice .", end="")
         while time.time() < timeout_start + timeout:
             try:
                 if self.test_ssh():
@@ -1302,16 +1424,21 @@ class Slice:
                         print(" ssh successful")
                     return True
 
-                if progress: print(".", end='')
+                if progress:
+                    print(".", end="")
 
                 if time.time() >= timeout_start + timeout:
                     if progress:
-                        print(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
-                    raise Exception(f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})")
+                        print(
+                            f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
+                        )
+                    raise Exception(
+                        f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
+                    )
             except Exception as e:
                 if not time.time() < timeout_start + timeout:
                     raise e
-                logging.warning(f'wait ssh retrying: {e}')
+                logging.warning(f"wait ssh retrying: {e}")
 
             time.sleep(interval)
             self.update()
@@ -1325,7 +1452,9 @@ class Slice:
         """
         for node in self.get_nodes():
             if not node.test_ssh():
-                logging.debug(f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}")
+                logging.debug(
+                    f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}"
+                )
                 return False
         return True
 
@@ -1371,21 +1500,25 @@ class Slice:
         once.
         """
         if self.is_dead_or_closing():
-            print(f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config")
+            print(
+                f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
+            )
             return
         executor = ThreadPoolExecutor(64)
 
-        logging.info(f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}")
+        logging.info(
+            f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
+        )
 
-        node_threads = []
-        for node in self.get_nodes():
-            logging.info(f"Starting thread: {node.get_name()}_network_manager_stop")
-            node_thread = executor.submit(node.network_manager_stop)
-            node_threads.append(node_thread)
-            pass
+        # node_threads = []
+        # for node in self.get_nodes():
+        #    logging.info(f"Starting thread: {node.get_name()}_network_manager_stop")
+        #    node_thread = executor.submit(node.network_manager_stop)
+        #    node_threads.append(node_thread)
+        #    pass
 
-        for node_thread in node_threads:
-            node_thread.result()
+        # for node_thread in node_threads:
+        #    node_thread.result()
 
         for interface in self.get_interfaces():
             try:
@@ -1394,13 +1527,18 @@ class Slice:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        # iface_threads = []
-        # for interface in self.get_interfaces():
-        #    try:
-        #        iface_threads.append(executor.submit(interface.ip_link_toggle))
-        #    except Exception as e:
-        #        logging.error(f"Interface: {interface.get_name()} failed to toggle")
-        #        logging.error(e, exc_info=True)
+        iface_threads = []
+        for interface in self.get_interfaces():
+            try:
+                # iface_threads.append(executor.submit(interface.ip_link_toggle))
+                interface.get_node().execute(
+                    f"sudo nmcli device set {interface.get_device_name()} managed no"
+                )
+            except Exception as e:
+                logging.error(
+                    f"Interface: {interface.get_name()} failed to become unmanged"
+                )
+                logging.error(e, exc_info=True)
 
         # for iface_thread in iface_threads:
         #    iface_thread.result()
@@ -1423,20 +1561,28 @@ class Slice:
             return False
 
         for node in self.get_nodes():
-            if node.get_reservation_state() == 'Ticketed':
-                logging.warning(f"slice not ready: node {node.get_name()} status: {node.get_status()}")
+            if node.get_reservation_state() == "Ticketed":
+                logging.warning(
+                    f"slice not ready: node {node.get_name()} status: {node.get_status()}"
+                )
                 return False
 
-            if node.get_reservation_state() == 'Active' and node.get_management_ip() == None:
-                logging.warning(f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}")
+            if (
+                node.get_reservation_state() == "Active"
+                and node.get_management_ip() == None
+            ):
+                logging.warning(
+                    f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
+                )
                 return False
 
         for net in self.get_networks():
-            if net.get_type() == 'FABNetv4' or net.get_type() == 'FABNetv6':
+            if net.get_type() == "FABNetv4" or net.get_type() == "FABNetv6":
                 try:
                     if net.get_subnet() == None or net.get_available_ips() == None:
                         logging.warning(
-                            f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}")
+                            f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
+                        )
 
                         return False
                 except Exception as e:
@@ -1506,8 +1652,14 @@ class Slice:
             self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
-    def submit(self, wait: bool = True, wait_timeout: int = 1800, wait_interval: int = 20, progress: bool = True,
-               wait_jupyter: str = "text") -> str:
+    def submit(
+        self,
+        wait: bool = True,
+        wait_timeout: int = 1800,
+        wait_interval: int = 20,
+        progress: bool = True,
+        wait_jupyter: str = "text",
+    ) -> str:
         """
         Submits a slice request to FABRIC.
 
@@ -1539,29 +1691,47 @@ class Slice:
 
         # Request slice from Orchestrator
         if modify:
-            return_status, slice_reservations = self.fablib_manager.get_slice_manager().modify(slice_id=self.slice_id,
-                                                                                               slice_graph=slice_graph)
+            (
+                return_status,
+                slice_reservations,
+            ) = self.fablib_manager.get_slice_manager().modify(
+                slice_id=self.slice_id, slice_graph=slice_graph
+            )
         else:
-            return_status, slice_reservations = self.fablib_manager.get_slice_manager().create(
+            (
+                return_status,
+                slice_reservations,
+            ) = self.fablib_manager.get_slice_manager().create(
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
-                ssh_key=self.get_slice_public_key())
+                ssh_key=self.get_slice_public_key(),
+            )
         if return_status != Status.OK:
-            raise Exception("Failed to submit slice: {}, {}".format(return_status, slice_reservations))
+            raise Exception(
+                "Failed to submit slice: {}, {}".format(
+                    return_status, slice_reservations
+                )
+            )
 
-        logging.debug(f'slice_reservations: {slice_reservations}')
+        logging.debug(f"slice_reservations: {slice_reservations}")
         logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
         self.slice_id = slice_reservations[0].slice_id
 
         time.sleep(1)
         self.update()
 
-        if progress and wait_jupyter == 'text' and self.fablib_manager.is_jupyter_notebook():
+        if (
+            progress
+            and wait_jupyter == "text"
+            and self.fablib_manager.is_jupyter_notebook()
+        ):
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 
         if wait:
-            self.wait_ssh(timeout=wait_timeout, interval=wait_interval, progress=progress)
+            self.wait_ssh(
+                timeout=wait_timeout, interval=wait_interval, progress=progress
+            )
 
             if progress:
                 print("Running post boot config ... ", end="")
@@ -1574,13 +1744,15 @@ class Slice:
 
         return self.slice_id
 
-    def list_networks(self,
-                      output=None,
-                      fields=None,
-                      colors=False,
-                      quiet=False,
-                      filter_function=None,
-                      pretty_names=True):
+    def list_networks(
+        self,
+        output=None,
+        fields=None,
+        colors=False,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the networks in the slice.
 
@@ -1615,43 +1787,43 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != '' and not 'TicketReviewPolicy' in val:
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            if val != "" and not "TicketReviewPolicy" in val:
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
-                color = ''
+                color = ""
             # return 'color: %s' % color
 
-            return 'background-color: %s' % color
+            return "background-color: %s" % color
 
         def highlight(x):
 
-            print(f'x: {x}')
+            print(f"x: {x}")
 
-            if x.State == 'Closed':
+            if x.State == "Closed":
                 # return [f'background-color: {self.get_fablib_manager().ERROR_LIGHT_COLOR}']*(len(fields))
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             # elif x.State == 'None':
             #    return ['opacity: 50%']*(len(fields))
             # else:
             #    return ['background-color: ']*(len(fields))
 
-            return 'background-color: %s' % color
+            return "background-color: %s" % color
 
         def state_color(val):
-            if val == 'Active':
-                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
-            elif val == 'Ticketed':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            if val == "Active":
+                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+            elif val == "Ticketed":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             else:
-                color = ''
+                color = ""
             # return 'color: %s' % color
-            return 'background-color: %s' % color
+            return "background-color: %s" % color
 
         table = []
         for network in self.get_networks():
             table.append(network.toDict())
 
-        #if fields == None:
+        # if fields == None:
         #    fields = ["ID", "Name", "Layer", "Type",
         #              "Site", "Gateway", "L3 Subnet", "State",
         #              "Error"]
@@ -1662,31 +1834,40 @@ class Slice:
 
         logging.debug(f"network service: pretty_names_dict = {pretty_names_dict}")
 
-
-        table = self.get_fablib_manager().list_table(table,
-                                                     fields=fields,
-                                                     title='Networks',
-                                                     output=output,
-                                                     quiet=True,
-                                                     filter_function=filter_function,
-                                                     pretty_names_dict=pretty_names_dict)
+        table = self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Networks",
+            output=output,
+            quiet=True,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
         if colors:
             if pretty_names:
                 # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
                 # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['state']])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['error']])
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
 
         if not quiet:
             display(table)
 
         return table
 
-    def list_nodes(self, output=None, fields=None, colors=False, quiet=False, filter_function=None, pretty_names=True):
+    def list_nodes(
+        self,
+        output=None,
+        fields=None,
+        colors=False,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the nodes in the slice.
 
@@ -1721,37 +1902,39 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != '' and not 'TicketReviewPolicy' in val:
-                color = f'{self.get_fablib_manager().ERROR_LIGHT_COLOR}'
+            if val != "" and not "TicketReviewPolicy" in val:
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
-                color = ''
+                color = ""
             # return 'color: %s' % color
 
-            return 'background-color: %s' % color
+            return "background-color: %s" % color
 
         def highlight(x):
-            if x.State == 'Ticketed':
-                return [f'background-color: {self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'] * (len(fields))
-            elif x.State == 'None':
-                return ['opacity: 50%'] * (len(fields))
+            if x.State == "Ticketed":
+                return [
+                    f"background-color: {self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                ] * (len(fields))
+            elif x.State == "None":
+                return ["opacity: 50%"] * (len(fields))
             else:
-                return ['background-color: '] * (len(fields))
+                return ["background-color: "] * (len(fields))
 
         def state_color(val):
-            if val == 'Active':
-                color = f'{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}'
-            elif val == 'Ticketed':
-                color = f'{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}'
+            if val == "Active":
+                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+            elif val == "Ticketed":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             else:
-                color = ''
+                color = ""
             # return 'color: %s' % color
-            return 'background-color: %s' % color
+            return "background-color: %s" % color
 
         table = []
         for node in self.get_nodes():
             table.append(node.toDict())
 
-        #if fields == None:
+        # if fields == None:
         #    fields = ["ID", "Name", "Site", "Host",
         #              "Cores", "RAM", "Disk", "Image",
         #              "Username", "Management IP", "State", "Error"]
@@ -1763,30 +1946,38 @@ class Slice:
 
         logging.debug(f"pretty_names_dict = {pretty_names_dict}")
 
-        table = self.get_fablib_manager().list_table(table,
-                                                     fields=fields,
-                                                     title='Nodes',
-                                                     output=output,
-                                                     quiet=True,
-                                                     filter_function=filter_function,
-                                                     pretty_names_dict=pretty_names_dict)
+        table = self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Nodes",
+            output=output,
+            quiet=True,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
         if colors:
             if pretty_names:
                 # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['State']])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['Error']])
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
                 # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ['state']])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ['error']])
+                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
         if not quiet:
             display(table)
 
         return table
 
-    def modify(self, wait: int = True, wait_timeout: int = 600, wait_interval: int = 10, progress: bool = True,
-               wait_jupyter: str = "text"):
+    def modify(
+        self,
+        wait: int = True,
+        wait_timeout: int = 600,
+        wait_interval: int = 10,
+        progress: bool = True,
+        wait_jupyter: str = "text",
+    ):
         """
         Submits a modify slice request to FABRIC.
 
@@ -1811,24 +2002,38 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        return_status, slice_reservations = self.fablib_manager.get_slice_manager().modify(slice_id=self.slice_id,
-                                                                                           slice_graph=slice_graph)
+        (
+            return_status,
+            slice_reservations,
+        ) = self.fablib_manager.get_slice_manager().modify(
+            slice_id=self.slice_id, slice_graph=slice_graph
+        )
         if return_status != Status.OK:
-            raise Exception("Failed to submit modify slice: {}, {}".format(return_status, slice_reservations))
+            raise Exception(
+                "Failed to submit modify slice: {}, {}".format(
+                    return_status, slice_reservations
+                )
+            )
 
-        logging.debug(f'slice_reservations: {slice_reservations}')
+        logging.debug(f"slice_reservations: {slice_reservations}")
         logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
         self.slice_id = slice_reservations[0].slice_id
 
         time.sleep(1)
         self.update()
 
-        if progress and wait_jupyter == 'text' and self.fablib_manager.is_jupyter_notebook():
+        if (
+            progress
+            and wait_jupyter == "text"
+            and self.fablib_manager.is_jupyter_notebook()
+        ):
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 
         if wait:
-            self.wait_ssh(timeout=wait_timeout, interval=wait_interval, progress=progress)
+            self.wait_ssh(
+                timeout=wait_timeout, interval=wait_interval, progress=progress
+            )
 
             if progress:
                 print("Running post boot config ... ", end="")
@@ -1844,13 +2049,18 @@ class Slice:
         Submits a accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
-        return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(slice_id=self.slice_id)
+        return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(
+            slice_id=self.slice_id
+        )
         if return_status != Status.OK:
-            raise Exception("Failed to accept the last modify slice: {}, {}".format(return_status, topology))
+            raise Exception(
+                "Failed to accept the last modify slice: {}, {}".format(
+                    return_status, topology
+                )
+            )
         else:
             self.topology = topology
 
-        logging.debug(f'modified topology: {topology}')
+        logging.debug(f"modified topology: {topology}")
 
         self.update_slice()
-

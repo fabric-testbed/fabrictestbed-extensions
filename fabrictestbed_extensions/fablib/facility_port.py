@@ -69,15 +69,14 @@ class FacilityPort:
 
     def get_pretty_name_dict(self):
         return {
-                "name": "Name",
-                }
+            "name": "Name",
+        }
 
     def toDict(self, skip=[]):
-        return {'name': str(self.get_name())}
+        return {"name": str(self.get_name())}
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
-
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
@@ -85,26 +84,30 @@ class FacilityPort:
         output_string = template.render(self.get_template_context())
 
         return output_string
-    def show(self, fields=None, output=None, quiet=False, colors=False, pretty_names=True):
+
+    def show(
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+    ):
         data = self.toDict(pretty_names=True)
-    
-        #fields = ["Name",
+
+        # fields = ["Name",
         #         ]
 
         if pretty_names:
             pretty_names_dict = self.get_pretty_name_dict()
         else:
             pretty_names_dict = {}
-    
-        table = self.get_fablib_manager().show_table(data, 
-                        fields=fields,
-                        title='Facility Port', 
-                        output=output, 
-                        quiet=quiet, pretty_names_dict=pretty_names_dict)
-            
-            
-        return table
 
+        table = self.get_fablib_manager().show_table(
+            data,
+            fields=fields,
+            title="Facility Port",
+            output=output,
+            quiet=quiet,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+        return table
 
     def get_fim_interface(self) -> FimInterface:
         return self.fim_interface
@@ -124,12 +127,20 @@ class FacilityPort:
         return self.fim_interface.site
 
     @staticmethod
-    def new_facility_port(slice: Slice = None, name: str = None, site: str = None, vlan: str = None,
-                          bandwidth: int = 10):
+    def new_facility_port(
+        slice: Slice = None,
+        name: str = None,
+        site: str = None,
+        vlan: str = None,
+        bandwidth: int = 10,
+    ):
 
-        fim_facility_port = slice.get_fim_topology().add_facility(name=name, site=site,
-                                                                  capacities=Capacities(bw=bandwidth),
-                                                                  labels=Labels(vlan=vlan))
+        fim_facility_port = slice.get_fim_topology().add_facility(
+            name=name,
+            site=site,
+            capacities=Capacities(bw=bandwidth),
+            labels=Labels(vlan=vlan),
+        )
         return FacilityPort(slice, fim_facility_port)
 
     @staticmethod

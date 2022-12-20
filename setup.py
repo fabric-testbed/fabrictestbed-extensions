@@ -43,11 +43,11 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
-                  "Programming Language :: Python :: 3",
-                  "License :: OSI Approved :: MIT License",
-                  "Operating System :: OS Independent",
-              ],
-    python_requires='>=3.9',
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    python_requires=">=3.9",
     install_requires=requirements,
     setup_requires=requirements,
 )

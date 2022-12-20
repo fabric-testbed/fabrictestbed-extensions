@@ -137,7 +137,9 @@ class fablib:
         :return: list of random site names.
         :rtype: List[Sting]
         """
-        return fablib.get_default_fablib_manager().get_random_sites(count=count, avoid=avoid)
+        return fablib.get_default_fablib_manager().get_random_sites(
+            count=count, avoid=avoid
+        )
 
     @staticmethod
     def init_fablib():
@@ -227,7 +229,9 @@ class fablib:
         :return: the passphrase to the slice private key on this fablib object
         :rtype: String
         """
-        return fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
+        return (
+            fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
+        )
 
     @staticmethod
     def get_credmgr_host() -> str:
@@ -363,10 +367,14 @@ class fablib:
         :return: Availalbe Resources object
         :rtype: Resources
         """
-        return fablib.get_default_fablib_manager().get_available_resources(update=update)
+        return fablib.get_default_fablib_manager().get_available_resources(
+            update=update
+        )
 
     @staticmethod
-    def get_fim_slice(excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]) -> List[OrchestratorSlice]:
+    def get_fim_slice(
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+    ) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
 
@@ -384,7 +392,9 @@ class fablib:
         return fablib.get_default_fablib_manager().get_fim_slice(excludes=excludes)
 
     @staticmethod
-    def get_slices(excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]) -> List[Slice]:
+    def get_slices(
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+    ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -417,7 +427,9 @@ class fablib:
         :return: the slice, if found
         :rtype: Slice
         """
-        return fablib.get_default_fablib_manager().get_slice(name=name, slice_id=slice_id)
+        return fablib.get_default_fablib_manager().get_slice(
+            name=name, slice_id=slice_id
+        )
 
     @staticmethod
     def delete_slice(slice_name: str = None):
@@ -477,50 +489,50 @@ class FablibManager:
     FABRIC_SLICE_PUBLIC_KEY_FILE = "FABRIC_SLICE_PUBLIC_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_FILE = "FABRIC_SLICE_PRIVATE_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
-    FABRIC_LOG_FILE = 'FABRIC_LOG_FILE'
-    FABRIC_LOG_LEVEL = 'FABRIC_LOG_LEVEL'
-    FABRIC_AVOID = 'FABRIC_AVOID'
-    FABRIC_SSH_COMMAND_LINE = 'FABRIC_SSH_COMMAND_LINE'
+    FABRIC_LOG_FILE = "FABRIC_LOG_FILE"
+    FABRIC_LOG_LEVEL = "FABRIC_LOG_LEVEL"
+    FABRIC_AVOID = "FABRIC_AVOID"
+    FABRIC_SSH_COMMAND_LINE = "FABRIC_SSH_COMMAND_LINE"
 
-    FABRIC_PRIMARY = '#27aae1'
-    FABRIC_PRIMARY_LIGHT = '#cde4ef'
-    FABRIC_PRIMARY_DARK = '#078ac1'
-    FABRIC_SECONDARY = '#f26522'
-    FABRIC_SECONDARY_LIGHT = '#ff8542'
-    FABRIC_SECONDARY_DARK = '#d24502'
-    FABRIC_BLACK = '#231f20'
-    FABRIC_DARK = '#433f40'
-    FABRIC_GREY = '#666677'
-    FABRIC_LIGHT = '#f3f3f9'
-    FABRIC_WHITE = '#ffffff'
+    FABRIC_PRIMARY = "#27aae1"
+    FABRIC_PRIMARY_LIGHT = "#cde4ef"
+    FABRIC_PRIMARY_DARK = "#078ac1"
+    FABRIC_SECONDARY = "#f26522"
+    FABRIC_SECONDARY_LIGHT = "#ff8542"
+    FABRIC_SECONDARY_DARK = "#d24502"
+    FABRIC_BLACK = "#231f20"
+    FABRIC_DARK = "#433f40"
+    FABRIC_GREY = "#666677"
+    FABRIC_LIGHT = "#f3f3f9"
+    FABRIC_WHITE = "#ffffff"
     FABRIC_LOGO = "fabric_logo.png"
 
-    FABRIC_PRIMARY_EXTRA_LIGHT = '#dbf3ff'
+    FABRIC_PRIMARY_EXTRA_LIGHT = "#dbf3ff"
 
-    SUCCESS_COLOR = '#8eff92'
-    SUCCESS_LIGHT_COLOR = '#c3ffc4'
-    SUCCESS_DARK_COLOR = '#59cb63'
+    SUCCESS_COLOR = "#8eff92"
+    SUCCESS_LIGHT_COLOR = "#c3ffc4"
+    SUCCESS_DARK_COLOR = "#59cb63"
 
-    ERROR_COLOR = '#ff8589'
-    ERROR_LIGHT_COLOR = '#ffb7b9'
-    ERROR_DARK_COLOR = '#b34140'
+    ERROR_COLOR = "#ff8589"
+    ERROR_LIGHT_COLOR = "#ffb7b9"
+    ERROR_DARK_COLOR = "#b34140"
 
-    IN_PROGRESS_COLOR = '#ffff8c'
-    IN_PROGRESS_LIGHT_COLOR = '#ffffbe'
-    IN_PROGRESS_DARK_COLOR = '#c8555c'
+    IN_PROGRESS_COLOR = "#ffff8c"
+    IN_PROGRESS_LIGHT_COLOR = "#ffffbe"
+    IN_PROGRESS_DARK_COLOR = "#c8555c"
 
     LOG_LEVELS = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
     }
 
-    default_fabric_rc = os.environ['HOME'] + '/work/fabric_config/fabric_rc'
-    default_log_level = 'DEBUG'
-    default_log_file = '/tmp/fablib/fablib.log'
-    default_data_dir = '/tmp/fablib'
+    default_fabric_rc = os.environ["HOME"] + "/work/fabric_config/fabric_rc"
+    default_log_level = "DEBUG"
+    default_log_file = "/tmp/fablib/fablib.log"
+    default_data_dir = "/tmp/fablib"
 
     fablib_object = None
 
@@ -531,27 +543,29 @@ class FablibManager:
 
         # file_path = os.environ['HOME']+ "/work/fabric_config/fabric_rc"
         if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 for line in f:
-                    if line.startswith('export'):
-                        var_name = line.split('=')[0].split('export')[1].strip()
-                        var_value = line.split('=')[1].strip()
+                    if line.startswith("export"):
+                        var_name = line.split("=")[0].split("export")[1].strip()
+                        var_value = line.split("=")[1].strip()
                         vars[var_name] = var_value
         return vars
 
-    def __init__(self,
-                 fabric_rc: str = None,
-                 credmgr_host: str = None,
-                 orchestrator_host: str = None,
-                 fabric_token: str = None,
-                 project_id: str = None,
-                 bastion_username: str = None,
-                 bastion_key_filename: str = None,
-                 log_level: int = None,
-                 log_file: str = None,
-                 data_dir: str = None,
-                 output: str = None,
-                 execute_thread_pool_size: int = 64):
+    def __init__(
+        self,
+        fabric_rc: str = None,
+        credmgr_host: str = None,
+        orchestrator_host: str = None,
+        fabric_token: str = None,
+        project_id: str = None,
+        bastion_username: str = None,
+        bastion_key_filename: str = None,
+        log_level: int = None,
+        log_file: str = None,
+        data_dir: str = None,
+        output: str = None,
+        execute_thread_pool_size: int = 64,
+    ):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -565,13 +579,12 @@ class FablibManager:
         if output != None:
             self.output = output
         else:
-            if (self.is_jupyter_notebook()):
-                self.output = 'pandas'
+            if self.is_jupyter_notebook():
+                self.output = "pandas"
             else:
-                self.output = 'text'
+                self.output = "text"
 
         self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
-
 
         # Hack to avoid sites in maintence.  TODO: Make dynamic call to FABRIC API
         self.sites_in_maintenance = []
@@ -583,8 +596,8 @@ class FablibManager:
         self.set_log_level(self.log_level)
         self.data_dir = None
         self.avoid = []
-        self.ssh_command_line = 'ssh ${Username}@${Management IP}'
-        self.ssh_config_file = ''
+        self.ssh_command_line = "ssh ${Username}@${Management IP}"
+        self.ssh_config_file = ""
 
         # Setup slice key dict
         # self.slice_keys = {}
@@ -617,16 +630,21 @@ class FablibManager:
 
         # Slice Keys
         if self.FABRIC_SLICE_PUBLIC_KEY_FILE in os.environ:
-            self.default_slice_key['slice_public_key_file'] = os.environ[self.FABRIC_SLICE_PUBLIC_KEY_FILE]
+            self.default_slice_key["slice_public_key_file"] = os.environ[
+                self.FABRIC_SLICE_PUBLIC_KEY_FILE
+            ]
             with open(os.environ[self.FABRIC_SLICE_PUBLIC_KEY_FILE], "r") as fd:
-                self.default_slice_key['slice_public_key'] = fd.read().strip()
+                self.default_slice_key["slice_public_key"] = fd.read().strip()
         if self.FABRIC_SLICE_PRIVATE_KEY_FILE in os.environ:
             # self.slice_private_key_file=os.environ['FABRIC_SLICE_PRIVATE_KEY_FILE']
-            self.default_slice_key['slice_private_key_file'] = os.environ[self.FABRIC_SLICE_PRIVATE_KEY_FILE]
+            self.default_slice_key["slice_private_key_file"] = os.environ[
+                self.FABRIC_SLICE_PRIVATE_KEY_FILE
+            ]
         if "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE" in os.environ:
             # self.slice_private_key_passphrase = os.environ['FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE']
-            self.default_slice_key['slice_private_key_passphrase'] = os.environ[
-                self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+            self.default_slice_key["slice_private_key_passphrase"] = os.environ[
+                self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE
+            ]
 
         # Set config values from fabric_rc file
         if fabric_rc is None:
@@ -640,43 +658,65 @@ class FablibManager:
         if Constants.FABRIC_ORCHESTRATOR_HOST in fabric_rc_dict:
             self.orchestrator_host = fabric_rc_dict[Constants.FABRIC_ORCHESTRATOR_HOST]
 
-        if 'FABRIC_TOKEN_LOCATION' in fabric_rc_dict:
-            self.fabric_token = fabric_rc_dict['FABRIC_TOKEN_LOCATION']
+        if "FABRIC_TOKEN_LOCATION" in fabric_rc_dict:
+            self.fabric_token = fabric_rc_dict["FABRIC_TOKEN_LOCATION"]
             os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.fabric_token
 
-        if 'FABRIC_PROJECT_ID' in fabric_rc_dict:
-            self.project_id = fabric_rc_dict['FABRIC_PROJECT_ID']
-            os.environ['FABRIC_PROJECT_ID'] = self.project_id
+        if "FABRIC_PROJECT_ID" in fabric_rc_dict:
+            self.project_id = fabric_rc_dict["FABRIC_PROJECT_ID"]
+            os.environ["FABRIC_PROJECT_ID"] = self.project_id
 
         # Basstion host setup
         if self.FABRIC_BASTION_HOST in fabric_rc_dict:
-            self.bastion_public_addr = fabric_rc_dict[self.FABRIC_BASTION_HOST].strip().strip('\"')
+            self.bastion_public_addr = (
+                fabric_rc_dict[self.FABRIC_BASTION_HOST].strip().strip('"')
+            )
         if self.FABRIC_BASTION_USERNAME in fabric_rc_dict:
-            self.bastion_username = fabric_rc_dict[self.FABRIC_BASTION_USERNAME].strip().strip('\"')
+            self.bastion_username = (
+                fabric_rc_dict[self.FABRIC_BASTION_USERNAME].strip().strip('"')
+            )
         if self.FABRIC_BASTION_KEY_LOCATION in fabric_rc_dict:
-            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_BASTION_KEY_LOCATION].strip().strip('\"')
+            self.bastion_key_filename = (
+                fabric_rc_dict[self.FABRIC_BASTION_KEY_LOCATION].strip().strip('"')
+            )
         if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
-            self.bastion_key_filename = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE].strip().strip('\"')
+            self.bastion_key_filename = (
+                fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+                .strip()
+                .strip('"')
+            )
 
         # Slice keys
         if self.FABRIC_SLICE_PRIVATE_KEY_FILE in fabric_rc_dict:
-            self.default_slice_key['slice_private_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_FILE].strip().strip('\"')
+            self.default_slice_key["slice_private_key_file"] = (
+                fabric_rc_dict[self.FABRIC_SLICE_PRIVATE_KEY_FILE].strip().strip('"')
+            )
         if self.FABRIC_SLICE_PUBLIC_KEY_FILE in fabric_rc_dict:
-            self.default_slice_key['slice_public_key_file'] = fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE].strip().strip('\"')
+            self.default_slice_key["slice_public_key_file"] = (
+                fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE].strip().strip('"')
+            )
             with open(fabric_rc_dict[self.FABRIC_SLICE_PUBLIC_KEY_FILE], "r") as fd:
-                self.default_slice_key['slice_public_key'] = fd.read().strip()
+                self.default_slice_key["slice_public_key"] = fd.read().strip()
         if self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE in fabric_rc_dict:
-            self.default_slice_key['slice_private_key_passphrase'] = fabric_rc_dict[
-                self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE]
+            self.default_slice_key["slice_private_key_passphrase"] = fabric_rc_dict[
+                self.FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE
+            ]
 
         if self.FABRIC_LOG_FILE in fabric_rc_dict:
-            self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE].strip().strip('\"'))
+            self.set_log_file(fabric_rc_dict[self.FABRIC_LOG_FILE].strip().strip('"'))
         if self.FABRIC_LOG_LEVEL in fabric_rc_dict:
-            self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL].strip().strip('\"'))
+            self.set_log_level(fabric_rc_dict[self.FABRIC_LOG_LEVEL].strip().strip('"'))
         if self.FABRIC_AVOID in fabric_rc_dict:
-            self.set_avoid_csv(fabric_rc_dict[self.FABRIC_AVOID].strip().strip('\"').strip("'"))
+            self.set_avoid_csv(
+                fabric_rc_dict[self.FABRIC_AVOID].strip().strip('"').strip("'")
+            )
         if self.FABRIC_SSH_COMMAND_LINE in fabric_rc_dict:
-            self.set_ssh_command_line(fabric_rc_dict[self.FABRIC_SSH_COMMAND_LINE].strip().strip('\"').strip("'"))
+            self.set_ssh_command_line(
+                fabric_rc_dict[self.FABRIC_SSH_COMMAND_LINE]
+                .strip()
+                .strip('"')
+                .strip("'")
+            )
 
         # Set config values from constructor arguments
         if credmgr_host is not None:
@@ -705,8 +745,8 @@ class FablibManager:
         #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
         #                        datefmt='%H:%M:%S')
 
-        self.bastion_private_ipv4_addr = '0.0.0.0'
-        self.bastion_private_ipv6_addr = '0:0:0:0:0:0'
+        self.bastion_private_ipv4_addr = "0.0.0.0"
+        self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
 
         # Create slice manager
         self.slice_manager = None
@@ -737,12 +777,12 @@ class FablibManager:
     def set_ssh_command_line(self, command):
         self.ssh_command_line = command
 
-    def set_avoid_csv(self, avoid_csv: str = ''):
+    def set_avoid_csv(self, avoid_csv: str = ""):
 
-        avoid_csv = avoid_csv.strip().strip('\"').strip("'")
+        avoid_csv = avoid_csv.strip().strip('"').strip("'")
 
         avoid = []
-        for site in avoid_csv.split(','):
+        for site in avoid_csv.split(","):
             avoid.append(site.strip())
 
         self.set_avoid(avoid)
@@ -754,7 +794,7 @@ class FablibManager:
     def get_avoid(self):
         return self.avoid
 
-    def set_log_level(self, log_level: str = 'INFO'):
+    def set_log_level(self, log_level: str = "INFO"):
         """
         Sets the current log level for logging
 
@@ -784,9 +824,12 @@ class FablibManager:
             # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
 
         if self.log_file and self.log_level:
-            logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                                format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                                datefmt='%H:%M:%S')
+            logging.basicConfig(
+                filename=self.log_file,
+                level=self.LOG_LEVELS[self.log_level],
+                format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+                datefmt="%H:%M:%S",
+            )
 
     def get_log_level(self):
         """
@@ -830,9 +873,12 @@ class FablibManager:
         except:
             pass
 
-        logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-                            format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                            datefmt='%H:%M:%S')
+        logging.basicConfig(
+            filename=self.log_file,
+            level=self.LOG_LEVELS[self.log_level],
+            format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+            datefmt="%H:%M:%S",
+        )
 
     def build_slice_manager(self) -> SliceManager:
         """
@@ -844,19 +890,23 @@ class FablibManager:
         :rtype: SliceManager
         """
         try:
-            logging.info(f"oc_host={self.orchestrator_host},"
-                         f"cm_host={self.credmgr_host},"
-                         f"project_id={self.project_id},"
-                         f"token_location={self.fabric_token},"
-                         f"initialize=True,"
-                         f"scope='all'")
+            logging.info(
+                f"oc_host={self.orchestrator_host},"
+                f"cm_host={self.credmgr_host},"
+                f"project_id={self.project_id},"
+                f"token_location={self.fabric_token},"
+                f"initialize=True,"
+                f"scope='all'"
+            )
 
-            self.slice_manager = SliceManager(oc_host=self.orchestrator_host,
-                                              cm_host=self.credmgr_host,
-                                              project_id=self.project_id,
-                                              token_location=self.fabric_token,
-                                              initialize=True,
-                                              scope='all')
+            self.slice_manager = SliceManager(
+                oc_host=self.orchestrator_host,
+                cm_host=self.credmgr_host,
+                project_id=self.project_id,
+                token_location=self.fabric_token,
+                initialize=True,
+                scope="all",
+            )
 
             # Initialize the slice manager
             self.slice_manager.initialize()
@@ -876,20 +926,22 @@ class FablibManager:
         :return: list of image names as strings
         :rtype: list[str]
         """
-        return ['default_centos8_stream',
-                'default_centos9_stream',
-                'default_centos_7',
-                'default_centos_8',
-                'default_cirros',
-                'default_debian_10',
-                'default_fedora_35',
-                'default_freebsd_13_zfs',
-                'default_openbsd_7',
-                'default_rocky_8',
-                'default_ubuntu_18',
-                'default_ubuntu_20',
-                'default_ubuntu_21',
-                'default_ubuntu_22']
+        return [
+            "default_centos8_stream",
+            "default_centos9_stream",
+            "default_centos_7",
+            "default_centos_8",
+            "default_cirros",
+            "default_debian_10",
+            "default_fedora_35",
+            "default_freebsd_13_zfs",
+            "default_openbsd_7",
+            "default_rocky_8",
+            "default_ubuntu_18",
+            "default_ubuntu_20",
+            "default_ubuntu_21",
+            "default_ubuntu_22",
+        ]
 
     def get_site_names(self) -> List[str]:
         """
@@ -900,13 +952,15 @@ class FablibManager:
         """
         return self.get_resources().get_site_names()
 
-    def list_sites(self,
-                   output: str = None,
-                   fields: str = None,
-                   quiet: bool = False,
-                   filter_function=None,
-                   update: bool = True,
-                   pretty_names=True) -> object:
+    def list_sites(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names=True,
+    ) -> object:
         """
         Lists all the sites and their attributes.
 
@@ -936,10 +990,21 @@ class FablibManager:
         :return: table in format specified by output parameter
         :rtype: Object
         """
-        return self.get_resources(update=update).list_sites(output=output, fields=fields, quiet=quiet,
-                                               filter_function=filter_function, pretty_names=pretty_names)
+        return self.get_resources(update=update).list_sites(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
+        )
 
-    def show_config(self, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True):
+    def show_config(
+        self,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
+    ):
         """
         Show a table containing the current FABlib configuration parameters.
 
@@ -969,14 +1034,23 @@ class FablibManager:
         else:
             pretty_names_dict = {}
 
-        return self.show_table(self.get_config(),
-                               fields=fields,
-                               title='FABlib Config',
-                               output=output,
-                               quiet=quiet,
-                               pretty_names_dict=pretty_names_dict)
+        return self.show_table(
+            self.get_config(),
+            fields=fields,
+            title="FABlib Config",
+            output=output,
+            quiet=quiet,
+            pretty_names_dict=pretty_names_dict,
+        )
 
-    def show_site(self, site_name: str, output: str = None, fields: list[str] = None, quiet: bool = False, pretty_names=True):
+    def show_site(
+        self,
+        site_name: str,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
+    ):
         """
         Show a table with all the properties of a specific site
 
@@ -1002,11 +1076,15 @@ class FablibManager:
         :return: table in format specified by output parameter
         :rtype: Object
         """
-        return str(self.get_resources().show_site(site_name,
-                                                  fields=fields,
-                                                  output=output,
-                                                  quiet=quiet,
-                                                  pretty_names=pretty_names))
+        return str(
+            self.get_resources().show_site(
+                site_name,
+                fields=fields,
+                output=output,
+                quiet=quiet,
+                pretty_names=pretty_names,
+            )
+        )
 
     def get_resources(self, update: bool = True) -> Resources:
         """
@@ -1021,7 +1099,9 @@ class FablibManager:
 
         return self.resources
 
-    def get_random_site(self, avoid: List[str] = [], filter_function=None, update: bool = True) -> str:
+    def get_random_site(
+        self, avoid: List[str] = [], filter_function=None, update: bool = True
+    ) -> str:
         """
         Get a random site.
 
@@ -1030,9 +1110,17 @@ class FablibManager:
         :return: one site name
         :rtype: String
         """
-        return self.get_random_sites(count=1, avoid=avoid, filter_function=filter_function, update=update)[0]
+        return self.get_random_sites(
+            count=1, avoid=avoid, filter_function=filter_function, update=update
+        )[0]
 
-    def get_random_sites(self, count: int = 1, avoid: List[str] = [], filter_function=None, update: bool = True) -> List[str]:
+    def get_random_sites(
+        self,
+        count: int = 1,
+        avoid: List[str] = [],
+        filter_function=None,
+        update: bool = True,
+    ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
@@ -1046,10 +1134,14 @@ class FablibManager:
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
             if filter_function == None:
-                if site['name'] not in self.sites_in_maintenance and site['hosts'] > 0:
+                if site["name"] not in self.sites_in_maintenance and site["hosts"] > 0:
                     return True
             else:
-                if filter_function(site) and site['name'] not in self.sites_in_maintenance and site['hosts'] > 0:
+                if (
+                    filter_function(site)
+                    and site["name"] not in self.sites_in_maintenance
+                    and site["hosts"] > 0
+                ):
                     return True
 
             return False
@@ -1058,12 +1150,16 @@ class FablibManager:
             if site not in avoid:
                 avoid.append(site)
 
-        site_list = self.list_sites(output='list', quiet=True,
-                                    filter_function=combined_filter_function, update=update)
+        site_list = self.list_sites(
+            output="list",
+            quiet=True,
+            filter_function=combined_filter_function,
+            update=update,
+        )
 
-        sites = list(map(lambda x: x['name'], site_list))
+        sites = list(map(lambda x: x["name"], site_list))
 
-        #sites = self.get_resources().get_site_list()
+        # sites = self.get_resources().get_site_list()
         for site in avoid:
             if site in sites:
                 sites.remove(site)
@@ -1091,23 +1187,22 @@ class FablibManager:
         """
         return self.default_slice_key
 
-
     def get_config_pretty_names_dict(self):
-        return {'credmgr_host': 'Credential Manager',
-                'orchestrator_host': 'Orchestrator',
-                'fabric_token': 'Token File',
-                'project_id': 'Project ID',
-                'bastion_username': 'Bastion Username',
-                'bastion_private_key_file':  'Bastion Private Key File',
-                'bastion_host': 'Bastion Host',
-                'bastion_private_key_passphrase': 'Bastion Private Key Passphrase',
-                'slice_public_key_file': 'Slice Public Key File',
-                'slice_private_key_file': 'Slice Private Key File',
-                'fabric_slice_private_key_passphrase':  'Slice Private Key Passphrase',
-                'fablib_log_file': 'Log File',
-                'fablib_log_level':  'Log Level',
-
-                }
+        return {
+            "credmgr_host": "Credential Manager",
+            "orchestrator_host": "Orchestrator",
+            "fabric_token": "Token File",
+            "project_id": "Project ID",
+            "bastion_username": "Bastion Username",
+            "bastion_private_key_file": "Bastion Private Key File",
+            "bastion_host": "Bastion Host",
+            "bastion_private_key_passphrase": "Bastion Private Key Passphrase",
+            "slice_public_key_file": "Slice Public Key File",
+            "slice_private_key_file": "Slice Private Key File",
+            "fabric_slice_private_key_passphrase": "Slice Private Key Passphrase",
+            "fablib_log_file": "Log File",
+            "fablib_log_level": "Log Level",
+        }
 
     def get_config(self) -> Dict[str, Dict[str, str]]:
         """
@@ -1117,21 +1212,21 @@ class FablibManager:
         :return: dictionary mapping keywords to FABRIC values
         :rtype: Dict[String, String]
         """
-        return { 'credmgr_host': self.credmgr_host,
-                'orchestrator_host': self.orchestrator_host,
-                'fabric_token':  self.fabric_token,
-                'project_id': self.project_id,
-                'bastion_username': self.bastion_username,
-                'bastion_private_key_file': self.bastion_key_filename,
-                'bastion_host': self.bastion_public_addr,
-                'bastion_private_key_passphrase':  self.bastion_passphrase,
-                'slice_public_key_file': self.get_default_slice_public_key_file(),
-                'slice_private_key_file':  self.get_default_slice_private_key_file(),
-                'fabric_slice_private_key_passphrase': self.get_default_slice_private_key_passphrase(),
-                'fablib_log_file':  self.get_log_file(),
-                'fablib_log_level':  self.get_log_level()
-
-                 }
+        return {
+            "credmgr_host": self.credmgr_host,
+            "orchestrator_host": self.orchestrator_host,
+            "fabric_token": self.fabric_token,
+            "project_id": self.project_id,
+            "bastion_username": self.bastion_username,
+            "bastion_private_key_file": self.bastion_key_filename,
+            "bastion_host": self.bastion_public_addr,
+            "bastion_private_key_passphrase": self.bastion_passphrase,
+            "slice_public_key_file": self.get_default_slice_public_key_file(),
+            "slice_private_key_file": self.get_default_slice_private_key_file(),
+            "fabric_slice_private_key_passphrase": self.get_default_slice_private_key_passphrase(),
+            "fablib_log_file": self.get_log_file(),
+            "fablib_log_level": self.get_log_level(),
+        }
 
     def get_configXXX(self) -> Dict[str, Dict[str, str]]:
         """
@@ -1141,21 +1236,54 @@ class FablibManager:
         :return: dictionary mapping keywords to FABRIC values
         :rtype: Dict[String, String]
         """
-        return { 'credmgr_host': { 'pretty_name': 'Credential Manager', 'value': self.credmgr_host},
-                'orchestrator_host':  { 'pretty_name': 'Orchestrator', 'value': self.orchestrator_host},
-                'fabric_token':  { 'pretty_name': 'Token File', 'value':self.fabric_token},
-                'project_id':  { 'pretty_name': 'Project ID', 'value':self.project_id},
-                'bastion_username':  { 'pretty_name': 'Bastion Username', 'value':self.bastion_username},
-                'bastion_private_key_file':  { 'pretty_name': 'Bastion Private Key File', 'value':self.bastion_key_filename},
-                'bastion_host':  { 'pretty_name': 'Bastion Host', 'value':self.bastion_public_addr},
-                'bastion_private_key_passphrase':  { 'pretty_name': 'Bastion Private Key Passphrase', 'value':self.bastion_passphrase},
-                'slice_public_key_file':  { 'pretty_name': 'Slice Public Key File', 'value':self.get_default_slice_public_key_file()},
-                'slice_private_key_file':  { 'pretty_name': 'Slice Private Key File', 'value':self.get_default_slice_private_key_file()},
-                'fabric_slice_private_key_passphrase':  { 'pretty_name': 'Slice Private Key Passphrase', 'value':self.get_default_slice_private_key_passphrase()},
-                'fablib_log_file': { 'pretty_name': 'Log File', 'value': self.get_log_file()},
-                'fablib_log_level':  { 'pretty_name': 'Log Level', 'value':self.get_log_level()}
-
-                 }
+        return {
+            "credmgr_host": {
+                "pretty_name": "Credential Manager",
+                "value": self.credmgr_host,
+            },
+            "orchestrator_host": {
+                "pretty_name": "Orchestrator",
+                "value": self.orchestrator_host,
+            },
+            "fabric_token": {"pretty_name": "Token File", "value": self.fabric_token},
+            "project_id": {"pretty_name": "Project ID", "value": self.project_id},
+            "bastion_username": {
+                "pretty_name": "Bastion Username",
+                "value": self.bastion_username,
+            },
+            "bastion_private_key_file": {
+                "pretty_name": "Bastion Private Key File",
+                "value": self.bastion_key_filename,
+            },
+            "bastion_host": {
+                "pretty_name": "Bastion Host",
+                "value": self.bastion_public_addr,
+            },
+            "bastion_private_key_passphrase": {
+                "pretty_name": "Bastion Private Key Passphrase",
+                "value": self.bastion_passphrase,
+            },
+            "slice_public_key_file": {
+                "pretty_name": "Slice Public Key File",
+                "value": self.get_default_slice_public_key_file(),
+            },
+            "slice_private_key_file": {
+                "pretty_name": "Slice Private Key File",
+                "value": self.get_default_slice_private_key_file(),
+            },
+            "fabric_slice_private_key_passphrase": {
+                "pretty_name": "Slice Private Key Passphrase",
+                "value": self.get_default_slice_private_key_passphrase(),
+            },
+            "fablib_log_file": {
+                "pretty_name": "Log File",
+                "value": self.get_log_file(),
+            },
+            "fablib_log_level": {
+                "pretty_name": "Log Level",
+                "value": self.get_log_level(),
+            },
+        }
 
     def get_default_slice_public_key(self) -> str:
         """
@@ -1167,8 +1295,8 @@ class FablibManager:
         :return: the slice public key on this fablib object
         :rtype: String
         """
-        if 'slice_public_key' in self.default_slice_key.keys():
-            return self.default_slice_key['slice_public_key']
+        if "slice_public_key" in self.default_slice_key.keys():
+            return self.default_slice_key["slice_public_key"]
         else:
             return None
 
@@ -1182,8 +1310,8 @@ class FablibManager:
         :return: the path to the slice public key on this fablib object
         :rtype: String
         """
-        if 'slice_public_key_file' in self.default_slice_key.keys():
-            return self.default_slice_key['slice_public_key_file']
+        if "slice_public_key_file" in self.default_slice_key.keys():
+            return self.default_slice_key["slice_public_key_file"]
         else:
             return None
 
@@ -1197,8 +1325,8 @@ class FablibManager:
         :return: the path to the slice private key on this fablib object
         :rtype: String
         """
-        if 'slice_private_key_file' in self.default_slice_key.keys():
-            return self.default_slice_key['slice_private_key_file']
+        if "slice_private_key_file" in self.default_slice_key.keys():
+            return self.default_slice_key["slice_private_key_file"]
         else:
             return None
 
@@ -1212,8 +1340,8 @@ class FablibManager:
         :return: the passphrase to the slice private key on this fablib object
         :rtype: String
         """
-        if 'slice_private_key_passphrase' in self.default_slice_key.keys():
-            return self.default_slice_key['slice_private_key_passphrase']
+        if "slice_private_key_passphrase" in self.default_slice_key.keys():
+            return self.default_slice_key["slice_private_key_passphrase"]
         else:
             return None
 
@@ -1340,7 +1468,11 @@ class FablibManager:
         logging.info(f"Updating get_site_advertisement")
         return_status, topology = self.get_slice_manager().resources()
         if return_status != Status.OK:
-            raise Exception("Failed to get advertised_topology: {}, {}".format(return_status, topology))
+            raise Exception(
+                "Failed to get advertised_topology: {}, {}".format(
+                    return_status, topology
+                )
+            )
 
         return topology.sites[site]
 
@@ -1363,8 +1495,9 @@ class FablibManager:
 
         return self.resources
 
-    def get_fim_slices(self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]) -> List[
-        OrchestratorSlice]:
+    def get_fim_slices(
+        self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+    ) -> List[OrchestratorSlice]:
         """
         Gets a list of fim slices from the slice manager.
 
@@ -1380,7 +1513,9 @@ class FablibManager:
         :return: a list of fim models of slices
         :rtype: List[Slice]
         """
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes, limit=200)
+        return_status, slices = self.get_slice_manager().slices(
+            excludes=excludes, limit=200
+        )
 
         return_slices = []
         if return_status == Status.OK:
@@ -1401,13 +1536,15 @@ class FablibManager:
     #
     #     return tabulate(table, headers=["ID", "Name", "Lease Expiration (UTC)", "State"])
 
-    def list_slices(self,
-                    excludes=[SliceState.Dead, SliceState.Closing],
-                    output=None,
-                    fields=None,
-                    quiet=False,
-                    filter_function=None,
-                    pretty_names=True):
+    def list_slices(
+        self,
+        excludes=[SliceState.Dead, SliceState.Closing],
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
         """
         Lists all the slices created by a user.
 
@@ -1442,7 +1579,7 @@ class FablibManager:
         table = []
         for slice in self.get_slices(excludes=excludes):
             table.append(slice.toDict())
-            #table.append({"ID": slice.get_slice_id(),
+            # table.append({"ID": slice.get_slice_id(),
             #              "Name": slice.get_name(),
             #              "Lease Expiration (UTC)": slice.get_lease_end(),
             #              "Lease Start (UTC)": slice.get_lease_start(),
@@ -1458,16 +1595,25 @@ class FablibManager:
         else:
             pretty_names_dict = {}
 
-        return self.list_table(table,
-                               fields=fields,
-                               title='Slices',
-                               output=output,
-                               quiet=quiet,
-                               filter_function=filter_function,
-                               pretty_names_dict=pretty_names_dict
-                               )
+        return self.list_table(
+            table,
+            fields=fields,
+            title="Slices",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
-    def show_slice(self, name: str = None, id: str = None, output=None, fields=None, quiet=False,  pretty_names=True):
+    def show_slice(
+        self,
+        name: str = None,
+        id: str = None,
+        output=None,
+        fields=None,
+        quiet=False,
+        pretty_names=True,
+    ):
         """
         Show a table with all the properties of a specific site
 
@@ -1496,10 +1642,16 @@ class FablibManager:
 
         slice = self.get_slice(name=name, slice_id=id)
 
-        return slice.show(output=output, fields=fields, quiet=quiet, pretty_names=pretty_names)
+        return slice.show(
+            output=output, fields=fields, quiet=quiet, pretty_names=pretty_names
+        )
 
-    def get_slices(self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-                   slice_name: str = None, slice_id: str = None) -> List[Slice]:
+    def get_slices(
+        self,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        slice_name: str = None,
+        slice_id: str = None,
+    ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -1519,12 +1671,15 @@ class FablibManager:
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.get_slice_manager().slices(excludes=excludes, name=slice_name, slice_id=slice_id,
-                                                                limit=200)
+        return_status, slices = self.get_slice_manager().slices(
+            excludes=excludes, name=slice_name, slice_id=slice_id, limit=200
+        )
 
         if self.get_log_level() == logging.DEBUG:
             end = time.time()
-            logging.debug(f"Running self.get_slice_manager().slices(): elapsed time: {end - start} seconds")
+            logging.debug(
+                f"Running self.get_slice_manager().slices(): elapsed time: {end - start} seconds"
+            )
 
         return_slices = []
         if return_status == Status.OK:
@@ -1562,11 +1717,15 @@ class FablibManager:
                 raise Exception(f"More than 1 slice found with slice_id: {slice_id}")
         elif name:
             # if getting by name then only consider active slices
-            slices = self.get_slices(excludes=[SliceState.Dead, SliceState.Closing], slice_name=name)
+            slices = self.get_slices(
+                excludes=[SliceState.Dead, SliceState.Closing], slice_name=name
+            )
 
             return slices[0]
         else:
-            raise Exception("get_slice requires slice name (name) or slice id (slice_id)")
+            raise Exception(
+                "get_slice requires slice name (name) or slice id (slice_id)"
+            )
 
     def delete_slice(self, slice_name: str = None):
         """
@@ -1589,11 +1748,14 @@ class FablibManager:
 
         for slice in slices:
             try:
-                if progress: print(f"Deleting slice {slice.get_name()}", end='')
+                if progress:
+                    print(f"Deleting slice {slice.get_name()}", end="")
                 slice.delete()
-                if progress: print(f", Success!")
+                if progress:
+                    print(f", Success!")
             except Exception as e:
-                if progress: print(f", Failed!")
+                if progress:
+                    print(f", Failed!")
 
     def is_jupyter_notebook(self) -> bool:
         """
@@ -1604,9 +1766,9 @@ class FablibManager:
         """
         try:
             shell = get_ipython().__class__.__name__
-            if shell == 'ZMQInteractiveShell':
+            if shell == "ZMQInteractiveShell":
                 return True  # Jupyter notebook or qtconsole
-            elif shell == 'TerminalInteractiveShell':
+            elif shell == "TerminalInteractiveShell":
                 return False  # Terminal running IPython
             else:
                 return False  # Other type (?)
@@ -1621,46 +1783,60 @@ class FablibManager:
 
         return printable_table
 
-    def show_table_jupyter(self,
-                           table,
-                           headers=None,
-                           title='',
-                           title_font_size='1.25em',
-                           quiet=False):
+    def show_table_jupyter(
+        self, table, headers=None, title="", title_font_size="1.25em", quiet=False
+    ):
 
         printable_table = pd.DataFrame(table)
 
         properties = {  # 'background-color': f'{FablibManager.FABRIC_LIGHT}',
-            'text-align': 'left',
-            'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
+            "text-align": "left",
+            "border": f"1px {FablibManager.FABRIC_BLACK} solid !important",
+        }
 
         printable_table = printable_table.style.set_caption(title)
         printable_table = printable_table.set_properties(**properties, overwrite=False)
-        printable_table = printable_table.hide(axis='index')
-        printable_table = printable_table.hide(axis='columns')
+        printable_table = printable_table.hide(axis="index")
+        printable_table = printable_table.hide(axis="columns")
 
-        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(even)',
-                                                             'props': [('background',
-                                                                        f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
-                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
-                                                           overwrite=False)
-        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(odd)',
-                                                             'props': [('background', f'{FablibManager.FABRIC_WHITE}'),
-                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
-                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles(
+            [
+                {
+                    "selector": "tr:nth-child(even)",
+                    "props": [
+                        ("background", f"{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}"),
+                        ("color", f"{FablibManager.FABRIC_BLACK}"),
+                    ],
+                }
+            ],
+            overwrite=False,
+        )
+        printable_table = printable_table.set_table_styles(
+            [
+                {
+                    "selector": "tr:nth-child(odd)",
+                    "props": [
+                        ("background", f"{FablibManager.FABRIC_WHITE}"),
+                        ("color", f"{FablibManager.FABRIC_BLACK}"),
+                    ],
+                }
+            ],
+            overwrite=False,
+        )
 
-        caption_props = [("text-align", "center"),
-                         ("font-size", "150%"),
-                         # ("color", f'{FablibManager.FABRIC_BLACK}'),
-                         # ("background-color", f'{FablibManager.FABRIC_WHITE}'),
-                         # ("font-family", "courier"),
-                         # ("font-family", "montserrat"),
-                         # ("font-family", "IBM plex sans")'
-                         ]
+        caption_props = [
+            ("text-align", "center"),
+            ("font-size", "150%"),
+            # ("color", f'{FablibManager.FABRIC_BLACK}'),
+            # ("background-color", f'{FablibManager.FABRIC_WHITE}'),
+            # ("font-family", "courier"),
+            # ("font-family", "montserrat"),
+            # ("font-family", "IBM plex sans")'
+        ]
 
-        printable_table = printable_table.set_table_styles([{'selector': 'caption',
-                                                             'props': caption_props}],
-                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles(
+            [{"selector": "caption", "props": caption_props}], overwrite=False
+        )
 
         if not quiet:
             display(printable_table)
@@ -1681,32 +1857,38 @@ class FablibManager:
 
         return data
 
-    def show_table(self,
-                   data,
-                   fields=None,
-                   title='',
-                   title_font_size='1.25em',
-                   output=None,
-                   quiet=False,
-                   pretty_names_dict={}):
+    def show_table(
+        self,
+        data,
+        fields=None,
+        title="",
+        title_font_size="1.25em",
+        output=None,
+        quiet=False,
+        pretty_names_dict={},
+    ):
 
         if output == None:
             output = self.output.lower()
 
-        table = self.create_show_table(data, fields=fields, pretty_names_dict=pretty_names_dict)
+        table = self.create_show_table(
+            data, fields=fields, pretty_names_dict=pretty_names_dict
+        )
 
-        if (output == 'text' or output == 'default'):
+        if output == "text" or output == "default":
             return self.show_table_text(table, quiet=quiet)
-        elif (output == 'json'):
+        elif output == "json":
             return self.show_table_json(data, quiet=quiet)
-        elif (output == 'dict'):
+        elif output == "dict":
             return self.show_table_dict(data, quiet=quiet)
-        elif (output == 'pandas' or output == 'jupyter_default'):
-            return self.show_table_jupyter(table,
-                                           headers=fields,
-                                           title=title,
-                                           title_font_size=title_font_size,
-                                           quiet=quiet)
+        elif output == "pandas" or output == "jupyter_default":
+            return self.show_table_jupyter(
+                table,
+                headers=fields,
+                title=title,
+                title_font_size=title_font_size,
+                quiet=quiet,
+            )
         else:
             logging.error(f"Unknown output type: {output}")
 
@@ -1721,13 +1903,15 @@ class FablibManager:
 
         return printable_table
 
-    def list_table_jupyter(self,
-                           table,
-                           headers=None,
-                           title='',
-                           title_font_size='1.25em',
-                           output=None,
-                           quiet=False):
+    def list_table_jupyter(
+        self,
+        table,
+        headers=None,
+        title="",
+        title_font_size="1.25em",
+        output=None,
+        quiet=False,
+    ):
 
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
@@ -1739,49 +1923,73 @@ class FablibManager:
         #                   'color': 'green'})
 
         properties = {  # 'background-color': f'{FablibManager.FABRIC_LIGHT}',
-            'text-align': 'left',
-            'border': f'1px {FablibManager.FABRIC_BLACK} solid !important'}
+            "text-align": "left",
+            "border": f"1px {FablibManager.FABRIC_BLACK} solid !important",
+        }
 
         printable_table = printable_table.style.set_caption(title)
         printable_table = printable_table.hide(axis="index")
         # printable_table = printable_table.set_properties(**{'text-align': 'left'}, overwrite=False)
         printable_table = printable_table.set_properties(**properties, overwrite=False)
 
-        caption_props = [("text-align", "center"),
-                         ("font-size", "150%"),
-                         ('caption-side', 'top'),
-                         # ("color", f'{FablibManager.FABRIC_BLACK}'),
-                         # ("background-color", f'{FablibManager.FABRIC_WHITE}'),
-                         # ("font-family", "courier"),
-                         # ("font-family", "montserrat"),
-                         # ("font-family", "IBM plex sans")'
-                         ]
+        caption_props = [
+            ("text-align", "center"),
+            ("font-size", "150%"),
+            ("caption-side", "top"),
+            # ("color", f'{FablibManager.FABRIC_BLACK}'),
+            # ("background-color", f'{FablibManager.FABRIC_WHITE}'),
+            # ("font-family", "courier"),
+            # ("font-family", "montserrat"),
+            # ("font-family", "IBM plex sans")'
+        ]
 
-        printable_table = printable_table.set_table_styles([{'selector': 'caption',
-                                                             'props': caption_props}],
-                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles(
+            [{"selector": "caption", "props": caption_props}], overwrite=False
+        )
 
-        printable_table = printable_table.set_table_styles([dict(selector='th',
-                                                                 props=[('text-align', 'left')])],
-                                                           overwrite=False)
-        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(even)',
-                                                             'props': [('background',
-                                                                        f'{FablibManager.FABRIC_WHITE}'),
-                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
-                                                           overwrite=False)
-        printable_table = printable_table.set_table_styles([{'selector': 'tr:nth-child(odd)',
-                                                             'props': [('background', f'{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}'),
-                                                                       ('color', f'{FablibManager.FABRIC_BLACK}')]}],
-                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles(
+            [dict(selector="th", props=[("text-align", "left")])], overwrite=False
+        )
+        printable_table = printable_table.set_table_styles(
+            [
+                {
+                    "selector": "tr:nth-child(even)",
+                    "props": [
+                        ("background", f"{FablibManager.FABRIC_WHITE}"),
+                        ("color", f"{FablibManager.FABRIC_BLACK}"),
+                    ],
+                }
+            ],
+            overwrite=False,
+        )
+        printable_table = printable_table.set_table_styles(
+            [
+                {
+                    "selector": "tr:nth-child(odd)",
+                    "props": [
+                        ("background", f"{FablibManager.FABRIC_PRIMARY_EXTRA_LIGHT}"),
+                        ("color", f"{FablibManager.FABRIC_BLACK}"),
+                    ],
+                }
+            ],
+            overwrite=False,
+        )
 
-        printable_table = printable_table.set_table_styles([dict(selector='.level0',
-                                                                 props=[('border', '1px black solid !important'),
-                                                                        ('background',f'{FablibManager.FABRIC_WHITE}'),
-                                                                        ('color', f'{FablibManager.FABRIC_BLACK}')
-                                                                        ])],
-                                                           overwrite=False)
+        printable_table = printable_table.set_table_styles(
+            [
+                dict(
+                    selector=".level0",
+                    props=[
+                        ("border", "1px black solid !important"),
+                        ("background", f"{FablibManager.FABRIC_WHITE}"),
+                        ("color", f"{FablibManager.FABRIC_BLACK}"),
+                    ],
+                )
+            ],
+            overwrite=False,
+        )
 
-        #printable_table = printable_table.set_table_styles([dict(selector='.level0',
+        # printable_table = printable_table.set_table_styles([dict(selector='.level0',
         #                                                         props=[('border', '1px black solid !important')])],
         #                                                   overwrite=False)
 
@@ -1790,7 +1998,7 @@ class FablibManager:
 
         return printable_table
 
-    def list_table_json(self, data,  quiet=False):
+    def list_table_json(self, data, quiet=False):
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
@@ -1804,15 +2012,17 @@ class FablibManager:
 
         return data
 
-    def list_table(self,
-                   data,
-                   fields=None,
-                   title='',
-                   title_font_size='1.25em',
-                   output=None,
-                   quiet=False,
-                   filter_function=None,
-                   pretty_names_dict={}):
+    def list_table(
+        self,
+        data,
+        fields=None,
+        title="",
+        title_font_size="1.25em",
+        output=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names_dict={},
+    ):
 
         if filter_function:
             data = list(filter(filter_function, data))
@@ -1839,23 +2049,24 @@ class FablibManager:
 
         logging.debug(f"headers: {headers}\n\n")
 
-
-        if output == 'text':
+        if output == "text":
             table = self.create_list_table(data, fields=fields)
             return self.list_table_text(table, headers=headers, quiet=quiet)
-        elif output == 'json':
+        elif output == "json":
             return self.list_table_json(data, quiet=quiet)
-        elif output == 'list':
+        elif output == "list":
             return self.list_table_list(data, quiet=quiet)
-        elif output == 'pandas':
+        elif output == "pandas":
             table = self.create_list_table(data, fields=fields)
 
-            return self.list_table_jupyter(table,
-                                           headers=headers,
-                                           title=title,
-                                           title_font_size=title_font_size,
-                                           output=output,
-                                           quiet=quiet)
+            return self.list_table_jupyter(
+                table,
+                headers=headers,
+                title=title,
+                title_font_size=title_font_size,
+                output=output,
+                quiet=quiet,
+            )
         else:
             logging.error(f"Unknown output type: {output}")
 
@@ -1890,7 +2101,7 @@ class FablibManager:
         else:
             for field in fields:
                 value = data[field]
-                if field in  pretty_names_dict:
+                if field in pretty_names_dict:
                     table.append([pretty_names_dict[field], value])
                 else:
                     table.append([field, value])
@@ -1907,8 +2118,8 @@ class FablibManager:
                 table.append([field, data[field]])
         return table
 
-    #@staticmethod
-    #def remove_dict_pretty_names(dict):
+    # @staticmethod
+    # def remove_dict_pretty_names(dict):
     #    rtn_dict = {}
     #    for key, value in dict.items():
     #        rtn_dict[key] = value['value']

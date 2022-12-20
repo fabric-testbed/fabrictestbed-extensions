@@ -31,22 +31,29 @@ from typing import List
 
 from fabric_cf.orchestrator.orchestrator_proxy import SliceState
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities, ComponentType, ComponentModelType, ServiceType, ComponentCatalog
+from fabrictestbed.slice_editor import (
+    ExperimentTopology,
+    Capacities,
+    ComponentType,
+    ComponentModelType,
+    ServiceType,
+    ComponentCatalog,
+)
 from fabrictestbed.util.constants import Constants
 
 
 class AbcUtils(ABC):
-    bastion_username = os.environ['FABRIC_BASTION_USERNAME']
+    bastion_username = os.environ["FABRIC_BASTION_USERNAME"]
 
-    bastion_public_addr = os.environ['FABRIC_BASTION_HOST']
-    bastion_private_ipv4_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV4']
-    bastion_private_ipv6_addr = os.environ['FABRIC_BASTION_HOST_PRIVATE_IPV6']
-    bastion_key_filename = os.environ['HOME'] + "/.ssh/pruth_fabric_rsa"
+    bastion_public_addr = os.environ["FABRIC_BASTION_HOST"]
+    bastion_private_ipv4_addr = os.environ["FABRIC_BASTION_HOST_PRIVATE_IPV4"]
+    bastion_private_ipv6_addr = os.environ["FABRIC_BASTION_HOST_PRIVATE_IPV6"]
+    bastion_key_filename = os.environ["HOME"] + "/.ssh/pruth_fabric_rsa"
 
     node_ssh_key = None
-    with open(os.environ['HOME'] + "/.ssh/id_rsa.pub", "r") as fd:
+    with open(os.environ["HOME"] + "/.ssh/id_rsa.pub", "r") as fd:
         node_ssh_key = fd.read().strip()
-    node_ssh_key_priv_file=os.environ['HOME'] + "/.ssh/id_rsa"
+    node_ssh_key_priv_file = os.environ["HOME"] + "/.ssh/id_rsa"
 
     @staticmethod
     def create_slice_manager():
@@ -58,10 +65,12 @@ class AbcUtils(ABC):
         print(f"FABRIC Orchestrator         : {orchestrator_host}")
         print(f"FABRIC Project Id           : {project_id}")
 
-        slice_manager = SliceManager(oc_host=orchestrator_host,
-                                     cm_host=credmgr_host,
-                                     project_id=project_id,
-                                     scope='all')
+        slice_manager = SliceManager(
+            oc_host=orchestrator_host,
+            cm_host=credmgr_host,
+            project_id=project_id,
+            scope="all",
+        )
 
         # Initialize the slice manager
         slice_manager.initialize()
