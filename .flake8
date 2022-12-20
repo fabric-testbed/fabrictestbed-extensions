@@ -1,6 +1,7 @@
 # -*- conf -*-
 
 [flake8]
+statistics = True
 exclude =
     .git,
     .eggs,
