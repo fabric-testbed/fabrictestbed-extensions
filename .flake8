@@ -1,6 +1,9 @@
 # -*- conf -*-
 
 [flake8]
+# Use black's default line length of 88, rather than using the
+# flake8's default line length of 79.
+max-line-length = 88
 statistics = True
 exclude =
     .git,
