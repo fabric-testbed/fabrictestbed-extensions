@@ -203,7 +203,7 @@ class GPUTeslaT4Benchmark(AbcTest):
 
                 # print("------------------------- Test Output ---------------------------")
                 script = "#!/bin/bash  \n" """lspci | grep Tesla \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )

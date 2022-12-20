@@ -381,7 +381,7 @@ class LinkBenchmark(AbcTest):
             "sudo apt-get update && sudo apt-get install -y iperf iperf3"
         )
 
-        ################################Setting up the IP addresses and activating the interfaces
+        # Setting up the IP addresses and activating the interfaces
         stdin, stdout, stderr = clientn1.exec_command("ip a")
         interface_n1 = get_interface_before_last(stdout)
         ip_of_interface_on_n1 = "192.168.10.51"
