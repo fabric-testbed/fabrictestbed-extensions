@@ -8,6 +8,9 @@ max-line-length = 88
 ignore =
     # ignore lines black couldn't handle.
     E501,
+    # W503 and W504 contradict each other.
+    W503,
+    W504,
 
 statistics = True
 exclude =
