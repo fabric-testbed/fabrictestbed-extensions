@@ -296,7 +296,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         coordinates = kwargs["coordinates"]
 
         # Toggle Site detail for current experiment
-        if self.site_detail == False:
+        if self.site_detail is False:
             self.site_detail = True
         else:
             self.site_detail = False

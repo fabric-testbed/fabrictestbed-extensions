@@ -189,7 +189,7 @@ class Slice:
             )
             slice_table.applymap(state_color)
 
-            if quiet == False:
+            if quiet is False:
                 display(slice_table)
         else:
             slice_table = self.get_fablib_manager().show_table(

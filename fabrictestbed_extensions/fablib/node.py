@@ -353,7 +353,7 @@ class Node:
             )
             table.applymap(state_color)
 
-            if quiet == False:
+            if quiet is False:
                 display(table)
         else:
             table = self.get_fablib_manager().show_table(
@@ -1266,7 +1266,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(), "utf-8").replace("\\n", "\n")
                     rtn_stderr = str(stderr.read(), "utf-8").replace("\\n", "\n")
-                    if quiet == False:
+                    if quiet is False:
                         print(rtn_stdout, rtn_stderr)
 
                 else:
@@ -1289,7 +1289,7 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if quiet == False:
+                                if quiet is False:
                                     print(
                                         str(stdoutbytes, "utf-8").replace("\\n", "\n"),
                                         end="",
@@ -1307,7 +1307,7 @@ class Node:
                                 stderrbytes = stderr.channel.recv_stderr(
                                     len(c.in_stderr_buffer)
                                 )
-                                if quiet == False:
+                                if quiet is False:
                                     print(
                                         "\x1b[31m",
                                         str(stderrbytes, "utf-8").replace("\\n", "\n"),
@@ -1932,7 +1932,7 @@ class Node:
     def ip_addr_list(self, output="json", update=False):
 
         try:
-            if self.ip_addr_list_json is not None and update == False:
+            if self.ip_addr_list_json is not None and update is False:
                 return self.ip_addr_list_json
             else:
                 if output == "json":
