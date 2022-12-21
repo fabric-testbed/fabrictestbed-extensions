@@ -26,10 +26,7 @@
 import time
 import traceback
 
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ExperimentTopology,
-)
+from fabrictestbed.slice_editor import Capacities, ExperimentTopology
 from fabrictestbed.slice_manager import SliceState, Status
 
 from .abc_test import AbcTest

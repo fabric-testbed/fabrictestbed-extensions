@@ -30,9 +30,7 @@ import traceback
 from typing import List
 
 import ipywidgets as widgets
-from fabrictestbed.slice_editor import (
-    ComponentModelType,
-)
+from fabrictestbed.slice_editor import ComponentModelType
 from fabrictestbed.slice_manager import SliceState
 from ipyleaflet import (
     AntPath,
