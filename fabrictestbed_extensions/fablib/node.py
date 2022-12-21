@@ -411,7 +411,7 @@ class Node:
             components.append(component.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"] in set(components):
                     return True
             else:
@@ -476,7 +476,7 @@ class Node:
             ifaces.append(iface.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"]["value"] in set(ifaces):
                     return True
             else:
@@ -545,7 +545,7 @@ class Node:
             networks.append(iface.get_network().get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"]["value"] in set(networks):
                     return True
             else:
@@ -1201,17 +1201,17 @@ class Node:
         bastion_username = self.get_fablib_manager().get_bastion_username()
         bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
 
-        if username != None:
+        if username is not None:
             node_username = username
         else:
             node_username = self.username
 
-        if private_key_file != None:
+        if private_key_file is not None:
             node_key_file = private_key_file
         else:
             node_key_file = self.get_private_key_file()
 
-        if private_key_passphrase != None:
+        if private_key_passphrase is not None:
             node_key_passphrase = private_key_passphrase
         else:
             node_key_passphrase = self.get_private_key_file()
@@ -2120,12 +2120,12 @@ class Node:
         :type interface: Interface
         """
 
-        if interface == None:
+        if interface is None:
             return
 
         try:
             network = interface.get_network()
-            if network == None:
+            if network is None:
                 return
             elif network.get_layer() == NSLayer.L3:
                 if network.get_type() == ServiceType.FABNetv6:
@@ -2230,7 +2230,7 @@ class Node:
             # bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
             command = f"{ip_command} link set dev {os_iface} up"
-            if mtu != None:
+            if mtu is not None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command, quiet=True)
 
@@ -2329,7 +2329,7 @@ class Node:
         command = f"{ip_command} link set dev {os_iface}.{vlan} up"
         stdout, stderr = self.execute(command, quiet=True)
 
-        if ip != None and cidr != None:
+        if ip is not None and cidr is not None:
             self.set_ip_os_interface(
                 os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu
             )

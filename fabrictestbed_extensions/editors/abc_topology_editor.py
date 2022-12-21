@@ -108,7 +108,7 @@ class AbcTopologyEditor(ABC):
 
         experiment = self.get_experiment_by_name(slice_name)
 
-        if experiment != None:
+        if experiment is not None:
             # TODO: should raise Exception
             print(
                 "Failed to create new slice. Error: Name not unique or invalid "
@@ -197,7 +197,7 @@ class AbcTopologyEditor(ABC):
         print("save_node:  image {}".format(image))
         print("save_node:  image_type {}".format(image_type))
 
-        if experiment == None:
+        if experiment is None:
             experiment = self.current_experiment
 
         try:
@@ -261,9 +261,9 @@ class AbcTopologyEditor(ABC):
         return capacities
 
     def add_component(self, component_name, model_type, node=None):
-        if node == None:
+        if node is None:
             node = self.current_node
-        if component_name == None:
+        if component_name is None:
             component_name = self.get_unique_component_name()
 
         print("abc.add_component  component_name {}".format(component_name))
@@ -332,7 +332,7 @@ class AbcTopologyEditor(ABC):
         for slice in existing_slices:
             experiment = self.get_experiment_by_name(slice.name)
 
-            if experiment == None:
+            if experiment is None:
                 # New experiment
                 print("Getting topology for new slice")
                 experiment = {
@@ -503,7 +503,7 @@ class AbcTopologyEditor(ABC):
         Get unique component name
         :return:
         """
-        if node == None:
+        if node is None:
             node = self.current_node
 
         num = 1

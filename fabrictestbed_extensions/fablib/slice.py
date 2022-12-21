@@ -725,7 +725,7 @@ class Slice:
         :rtype: str
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             state = None
         else:
             try:
@@ -764,7 +764,7 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             lease_end_time = None
         else:
             try:
@@ -785,7 +785,7 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             lease_start_time = None
         else:
             try:
@@ -1566,7 +1566,7 @@ class Slice:
 
             if (
                 node.get_reservation_state() == "Active"
-                and node.get_management_ip() == None
+                and node.get_management_ip() is None
             ):
                 logging.warning(
                     f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
@@ -1576,7 +1576,7 @@ class Slice:
         for net in self.get_networks():
             if net.get_type() == "FABNetv4" or net.get_type() == "FABNetv6":
                 try:
-                    if net.get_subnet() == None or net.get_available_ips() == None:
+                    if net.get_subnet() is None or net.get_available_ips() is None:
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
                         )
@@ -1676,7 +1676,7 @@ class Slice:
         :return: slice_id
         """
 
-        if self.get_state() == None:
+        if self.get_state() is None:
             modify = False
         else:
             modify = True

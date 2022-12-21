@@ -182,7 +182,7 @@ class NetworkService:
                 for interface in interfaces:
                     node = interface.get_node()
                     if interface.get_model() == "NIC_Basic":
-                        if node.get_host() == None:
+                        if node.get_host() is None:
                             exception_list.append(
                                 f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing on the same host. Please see Node.set_host(host_nane) to explicitily bind a nodes to a specific host. Node {node.get_name()} is unbound."
                             )
@@ -265,15 +265,15 @@ class NetworkService:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
-            if vlan1 == None and vlan2 == None:
+            if vlan1 is None and vlan2 is None:
                 # TODO: Long term we might have multiple vlan on one property
                 # and will need to make sure they are unique.  For now this okay
                 interfaces[0].set_vlan("100")
                 interfaces[1].set_vlan("100")
-            elif vlan1 == None and vlan2 != None:
+            elif vlan1 is None and vlan2 is not None:
                 # Match VLANs if one is set.
                 interfaces[0].set_vlan(vlan2)
-            elif vlan1 != None and vlan2 == None:
+            elif vlan1 is not None and vlan2 is None:
                 # Match VLANs if one is set.
                 interfaces[1].set_vlan(vlan1)
 

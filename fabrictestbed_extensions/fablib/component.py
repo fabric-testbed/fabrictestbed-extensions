@@ -210,7 +210,7 @@ class Component:
             ifaces.append(iface.get_name())
 
         name_filter = lambda s: s["Name"] in set(ifaces)
-        if filter_function != None:
+        if filter_function is not None:
             filter_function = lambda x: filter_function(x) + name_filter(x)
         else:
             filter_function = name_filter

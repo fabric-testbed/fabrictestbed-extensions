@@ -1269,7 +1269,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.dashboards["node_dashboard"]["select_node_widget"].options = sorted(
                 self.get_node_name_list()
             )
-            if node_name == None:
+            if node_name is None:
                 node_name = sorted(self.get_node_name_list())[0]
 
             self.update_select_node_widget_option_name(node_name)
@@ -1604,7 +1604,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
             #               image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
         # Display new node selection
         new_node_name = change["new"]
-        if new_node_name != None and new_node_name != self.DEFAULT_NODE_SELECT_VALUE:
+        if new_node_name is not None and new_node_name != self.DEFAULT_NODE_SELECT_VALUE:
             self.load_node(new_node_name)
 
         # Re-draw node dashboard
