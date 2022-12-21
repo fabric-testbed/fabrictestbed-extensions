@@ -24,7 +24,6 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import time
@@ -46,7 +45,7 @@ from ipaddress import IPv4Address, ip_address
 from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
-from fabrictestbed.slice_manager import SliceState, Status
+from fabrictestbed.slice_manager import Status
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.component import Component

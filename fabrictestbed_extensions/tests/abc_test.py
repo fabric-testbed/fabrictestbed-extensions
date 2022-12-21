@@ -311,8 +311,6 @@ class AbcTest(ABC):
         return client
 
     def close_ssh_client(self, ssh_client):
-        import paramiko
-
         ssh_client.close()
 
     def execute_script(self, node_username, node, script):

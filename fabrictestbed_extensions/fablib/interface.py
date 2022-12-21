@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import json
 import logging
-from ipaddress import IPv4Address
 from typing import TYPE_CHECKING, Any
 
 from fabrictestbed.slice_editor import Flags

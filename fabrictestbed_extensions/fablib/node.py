@@ -29,8 +29,7 @@ import logging
 import select
 import threading
 import time
-from string import Template
-from typing import TYPE_CHECKING, List, Tuple, Union
+from typing import TYPE_CHECKING, List, Union
 
 import jinja2
 import paramiko

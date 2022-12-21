@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
 
-import logging
 from typing import List
 
 from fabrictestbed.slice_editor import Component as FimComponent

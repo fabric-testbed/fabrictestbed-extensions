@@ -22,22 +22,11 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
-import os
-import time
-import traceback
-from abc import ABC, abstractmethod
-from typing import List
 
-from fabric_cf.orchestrator.orchestrator_proxy import SliceState
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentCatalog,
-    ComponentModelType,
-    ComponentType,
-    ExperimentTopology,
-    ServiceType,
-)
-from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+import os
+from abc import ABC, abstractmethod
+
+from fabrictestbed.slice_manager import SliceManager
 from fabrictestbed.util.constants import Constants
 
 
