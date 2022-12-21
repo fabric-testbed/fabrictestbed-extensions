@@ -20,3 +20,9 @@ exclude =
     build/,
     dist/,
     archive/
+
+# ignore some specific regular expressions within shell subcommands.
+per-file-ignores =
+    fabrictestbed_extensions/tests/link_benchmark.py:W605
+    fabrictestbed_extensions/tests/local_network_benchmark.py:W605
+    fabrictestbed_extensions/tests/network_benchmark_tests.py:W605
