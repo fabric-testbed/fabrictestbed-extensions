@@ -1784,7 +1784,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
                 color = ""
@@ -1899,7 +1899,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
                 color = ""
