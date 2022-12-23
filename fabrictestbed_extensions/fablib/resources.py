@@ -469,7 +469,7 @@ class Resources:
         Update the available resources by querying the FABRIC services
 
         """
-        logging.info(f"Updating available resources")
+        logging.info("Updating available resources")
         return_status, topology = (
             self.get_fablib_manager().get_slice_manager().resources()
         )

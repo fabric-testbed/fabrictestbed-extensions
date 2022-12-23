@@ -1461,7 +1461,7 @@ class FablibManager:
         :return: fim object for this site
         :rtype: Node
         """
-        logging.info(f"Updating get_site_advertisement")
+        logging.info("Updating get_site_advertisement")
         return_status, topology = self.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception(
@@ -1748,10 +1748,10 @@ class FablibManager:
                     print(f"Deleting slice {slice.get_name()}", end="")
                 slice.delete()
                 if progress:
-                    print(f", Success!")
+                    print(", Success!")
             except Exception as e:
                 if progress:
-                    print(f", Failed!")
+                    print(", Failed!")
 
     def is_jupyter_notebook(self) -> bool:
         """

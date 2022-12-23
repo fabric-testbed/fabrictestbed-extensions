@@ -1073,7 +1073,7 @@ class Node:
             except:
                 pass
 
-        raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+        raise Exception("ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
     def execute_thread(
         self,
@@ -1936,11 +1936,11 @@ class Node:
                 return self.ip_addr_list_json
             else:
                 if output == "json":
-                    stdout, stderr = self.execute(f"sudo  ip -j addr list", quiet=True)
+                    stdout, stderr = self.execute("sudo  ip -j addr list", quiet=True)
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
                 else:
-                    stdout, stderr = self.execute(f"sudo ip list", quiet=True)
+                    stdout, stderr = self.execute("sudo ip list", quiet=True)
                     return stdout
         except Exception as e:
             logging.warning(f"Failed to get ip addr list: {e}")
@@ -1976,7 +1976,7 @@ class Node:
         """
         try:
             stdout, stderr = self.execute(
-                f"sudo systemctl stop NetworkManager", quiet=True
+                "sudo systemctl stop NetworkManager", quiet=True
             )
             logging.info(
                 f"Stopped NetworkManager with 'sudo systemctl stop "
@@ -1992,7 +1992,7 @@ class Node:
         """
         try:
             stdout, stderr = self.execute(
-                f"sudo systemctl restart NetworkManager", quiet=True
+                "sudo systemctl restart NetworkManager", quiet=True
             )
             logging.info(
                 f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}"
