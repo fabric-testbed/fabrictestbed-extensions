@@ -51,7 +51,7 @@ class NetworkService:
 
     # Type names used in fim network services
     fim_l2network_service_types = ["L2Bridge", "L2PTP", "L2STS"]
-    fim_l3network_service_types = ["FABNetv4", "FABNetv6"]
+    fim_l3network_service_types = ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext", "L3VPN"]
 
     @staticmethod
     def get_fim_l2network_service_types() -> List[str]:
@@ -212,8 +212,14 @@ class NetworkService:
         """
         if type == "IPv6":
             nstype = ServiceType.FABNetv6
-        else:
+        elif type == "IPv4":
             nstype = ServiceType.FABNetv4
+        elif type == "IPv4Ext":
+            nstype = ServiceType.FABNetv4Ext
+        elif type == "IPv6Ext":
+            nstype = ServiceType.FABNetv6Ext
+        else:
+            raise Exception("Invalid L3 Network Type: Allowed values [IPv4, IPv4Ext, IPv6, IPv6Ext]")
 
         # TODO: need a fabnet version of this
         # validate nstype and interface List
@@ -674,9 +680,9 @@ class NetworkService:
         try:
             gateway = None
             if self.get_layer() == NSLayer.L3:
-                if self.get_type() == ServiceType.FABNetv6:
+                if self.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
                     gateway = IPv6Address(self.get_sliver().fim_sliver.gateway.gateway)
-                elif self.get_type() == ServiceType.FABNetv4:
+                elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
                     gateway = IPv4Address(self.get_sliver().fim_sliver.gateway.gateway)
 
             return gateway
@@ -720,9 +726,9 @@ class NetworkService:
         try:
             subnet = None
             if self.get_layer() == NSLayer.L3:
-                if self.get_type() == ServiceType.FABNetv6:
+                if self.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
                     subnet = IPv6Network(self.get_sliver().fim_sliver.gateway.subnet)
-                elif self.get_type() == ServiceType.FABNetv4:
+                elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
                     subnet = IPv4Network(self.get_sliver().fim_sliver.gateway.subnet)
             return subnet
         except Exception as e:

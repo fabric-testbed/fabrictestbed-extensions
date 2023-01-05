@@ -1577,7 +1577,7 @@ class Slice:
                 return False
 
         for net in self.get_networks():
-            if net.get_type() == "FABNetv4" or net.get_type() == "FABNetv6":
+            if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
                     if net.get_subnet() == None or net.get_available_ips() == None:
                         logging.warning(
