@@ -218,8 +218,10 @@ class NetworkService:
             nstype = ServiceType.FABNetv4Ext
         elif type == "IPv6Ext":
             nstype = ServiceType.FABNetv6Ext
+        elif type == "L3VPN":
+            nstype = ServiceType.L3VPN
         else:
-            raise Exception("Invalid L3 Network Type: Allowed values [IPv4, IPv4Ext, IPv6, IPv6Ext]")
+            raise Exception("Invalid L3 Network Type: Allowed values [IPv4, IPv4Ext, IPv6, IPv6Ext, L3VPN]")
 
         # TODO: need a fabnet version of this
         # validate nstype and interface List
