@@ -1538,19 +1538,19 @@ class Node:
             finally:
                 try:
                     ftp_client.close()
-                except:
-                    logging.debug("Exception in ftp_client.close()")
+                except Exception as e:
+                    logging.debug(f"Exception in ftp_client.close(): {e}")
 
                 try:
                     client.close()
-                except:
-                    logging.debug("Exception in client.close")
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
                     pass
 
                 try:
                     bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
+                except Exception as e:
+                    logging.debug("Exception in bastion_channel.close(): {e}")
                     pass
 
         raise Exception("scp upload failed")
