@@ -1395,6 +1395,12 @@ class Node:
                     pass
 
                 try:
+                    bastion.close()
+                except:
+                    logging.debug("Exception in bastion.close()")
+                    pass
+
+                try:
                     if output_file:
                         file.close()
                 except:
