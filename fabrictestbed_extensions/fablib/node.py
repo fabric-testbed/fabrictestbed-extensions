@@ -1361,7 +1361,9 @@ class Node:
                 break
 
             except Exception as e:
-                logging.warning(f"{e}")
+                logging.warning(
+                    f"Exception in upload_file() (attempt #{attempt} of {retry}): {e}"
+                )
 
                 if attempt + 1 == retry:
                     raise e
@@ -1668,7 +1670,7 @@ class Node:
 
             except Exception as e:
                 logging.warning(
-                    f"Exception in download_file() attempt #{attempt} of #{retry}: {e}"
+                    f"Exception in download_file() (attempt #{attempt} of {retry}): {e}"
                 )
 
                 if attempt + 1 == retry:
