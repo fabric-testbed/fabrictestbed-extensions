@@ -1668,17 +1668,8 @@ class Node:
                     )
 
                 return file_attributes
+
             except Exception as e:
-                try:
-                    client.close()
-                except:
-                    logging.debug("Exception in client.close")
-                    pass
-                try:
-                    bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
-                    pass
 
                 if attempt + 1 == retry:
                     raise e
@@ -1690,6 +1681,18 @@ class Node:
                 # traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
+
+            finally:
+                try:
+                    client.close()
+                except:
+                    logging.debug("Exception in client.close")
+                    pass
+                try:
+                    bastion_channel.close()
+                except:
+                    logging.debug("Exception in bastion_channel.close()")
+                    pass
 
         raise Exception("scp download failed")
 
