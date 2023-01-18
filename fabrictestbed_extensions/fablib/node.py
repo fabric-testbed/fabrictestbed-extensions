@@ -1364,23 +1364,6 @@ class Node:
                 break
             except Exception as e:
                 logging.warning(f"{e}")
-                try:
-                    client.close()
-                except:
-                    logging.debug("Exception in client.close")
-                    pass
-                try:
-                    bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
-                    pass
-
-                try:
-                    if output_file:
-                        file.close()
-                except:
-                    logging.debug("Exception in output_file close()")
-                    pass
 
                 if attempt + 1 == retry:
                     raise e
@@ -1394,6 +1377,27 @@ class Node:
 
                 time.sleep(retry_interval)
                 pass
+
+            # Clean-up of open connections and files.
+            finally:
+                try:
+                    client.close()
+                except:
+                    logging.debug("Exception in client.close")
+                    pass
+
+                try:
+                    bastion_channel.close()
+                except:
+                    logging.debug("Exception in bastion_channel.close()")
+                    pass
+
+                try:
+                    if output_file:
+                        file.close()
+                except:
+                    logging.debug("Exception in output_file close()")
+                    pass
 
         raise Exception("ssh failed: Should not get here")
 
