@@ -1543,13 +1543,11 @@ class Node:
                     client.close()
                 except Exception as e:
                     logging.debug(f"Exception in client.close(): {e}")
-                    pass
 
                 try:
                     bastion_channel.close()
                 except Exception as e:
                     logging.debug("Exception in bastion_channel.close(): {e}")
-                    pass
 
                 try:
                     bastion.close()
