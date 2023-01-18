@@ -1510,8 +1510,6 @@ class Node:
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
 
-                bastion_channel.close()
-
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(
