@@ -1522,7 +1522,8 @@ class Node:
                 return file_attributes
 
             except Exception as e:
-
+                logging.warning(f"Exception on upload_file() attempt #{attempt}: {e}")
+                
                 if attempt + 1 == retry:
                     raise e
 
