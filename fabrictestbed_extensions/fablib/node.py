@@ -1517,7 +1517,7 @@ class Node:
 
             except Exception as e:
                 logging.warning(f"Exception on upload_file() attempt #{attempt}: {e}")
-                
+
                 if attempt + 1 == retry:
                     raise e
 
@@ -1667,8 +1667,10 @@ class Node:
                 return file_attributes
 
             except Exception as e:
-                logging.warning(f"Exception in download_file() attempt #{attempt} of #{retry}: {e}")
-                
+                logging.warning(
+                    f"Exception in download_file() attempt #{attempt} of #{retry}: {e}"
+                )
+
                 if attempt + 1 == retry:
                     raise e
 
@@ -1685,7 +1687,7 @@ class Node:
                     ftp_client.close()
                 except Exception as e:
                     logging.debug(f"Exception in ftp_client.close(): {e}")
-                
+
                 try:
                     client.close()
                 except Exception as e:
