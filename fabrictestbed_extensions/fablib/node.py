@@ -1359,6 +1359,7 @@ class Node:
                 return rtn_stdout, rtn_stderr
                 # success, skip other tries
                 break
+
             except Exception as e:
                 logging.warning(f"{e}")
 
