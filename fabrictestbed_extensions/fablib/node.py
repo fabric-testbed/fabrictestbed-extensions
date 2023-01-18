@@ -1685,13 +1685,13 @@ class Node:
             finally:
                 try:
                     client.close()
-                except:
-                    logging.debug("Exception in client.close")
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
 
                 try:
                     bastion_channel.close()
                 except:
-                    logging.debug("Exception in bastion_channel.close()")
+                    logging.debug(f"Exception in bastion_channel.close(): {e}")
 
         raise Exception("scp download failed")
 
