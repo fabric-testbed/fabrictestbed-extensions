@@ -1691,7 +1691,7 @@ class Node:
 
                 try:
                     bastion_channel.close()
-                except:
+                except Exception as e:
                     logging.debug(f"Exception in bastion_channel.close(): {e}")
 
                 try:
