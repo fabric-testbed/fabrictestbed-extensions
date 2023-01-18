@@ -1384,27 +1384,27 @@ class Node:
             finally:
                 try:
                     client.close()
-                except:
-                    logging.debug("Exception in client.close")
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
                     pass
 
                 try:
                     bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
+                except Exception as e:
+                    logging.debug(f"Exception in bastion_channel.close(): {e}")
                     pass
 
                 try:
                     bastion.close()
-                except:
-                    logging.debug("Exception in bastion.close()")
+                except Exception as e:
+                    logging.debug(f"Exception in bastion.close(): {e}")
                     pass
 
                 try:
                     if output_file:
                         file.close()
-                except:
-                    logging.debug("Exception in output_file close()")
+                except Exception as e:
+                    logging.debug(f"Exception in output_file close(): {e}")
                     pass
 
         raise Exception("ssh failed: Should not get here")
