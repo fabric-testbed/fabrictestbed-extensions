@@ -1670,13 +1670,14 @@ class Node:
                 return file_attributes
 
             except Exception as e:
-
+                logging.warning(f"Exception in download_file() attempt #{attempt} of #{retry}: {e}")
+                
                 if attempt + 1 == retry:
                     raise e
 
                 # Fail, try again
                 logging.warning(
-                    f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
+                    f"SCP download fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
                 )
                 # traceback.print_exc()
                 time.sleep(retry_interval)
