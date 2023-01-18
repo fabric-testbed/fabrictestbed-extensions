@@ -1553,6 +1553,11 @@ class Node:
                     logging.debug("Exception in bastion_channel.close(): {e}")
                     pass
 
+                try:
+                    bastion.close()
+                except Exception as e:
+                    logging.debug("Exception in bastion.close(): {e}")
+
         raise Exception("scp upload failed")
 
     def download_file_thread(
