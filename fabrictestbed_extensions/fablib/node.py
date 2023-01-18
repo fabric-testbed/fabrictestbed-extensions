@@ -1509,7 +1509,6 @@ class Node:
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
-                ftp_client.close()
 
                 bastion_channel.close()
 
@@ -1536,6 +1535,11 @@ class Node:
                 pass
 
             finally:
+                try:
+                    ftp_client.close()
+                except:
+                    logging.debug("Exception in ftp_client.close()")
+
                 try:
                     client.close()
                 except:
