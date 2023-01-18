@@ -1344,6 +1344,8 @@ class Node:
                     rtn_stdout = b"".join(stdout_chunks).decode("utf-8")
                     rtn_stderr = b"".join(stderr_chunks).decode("utf-8")
 
+                # TODO: this is probably unnecessary because of the
+                # finally block.
                 client.close()
                 bastion_channel.close()
 
