@@ -1180,9 +1180,6 @@ class Node:
             f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
         )
 
-        if output_file:
-            file = open(output_file, "a")
-
         # if not quiet:
         chunking = True
 
@@ -1251,13 +1248,16 @@ class Node:
                     sock=bastion_channel,
                 )
 
+                if output_file:
+                    file = open(output_file, "a")
+                
                 # stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
 
                 if timeout is not None:
                     command = (
                         f"sudo timeout --foreground -k 10 {timeout} " + command + "\n"
                     )
-
+                    
                 stdin, stdout, stderr = client.exec_command(command)
                 channel = stdout.channel
 
