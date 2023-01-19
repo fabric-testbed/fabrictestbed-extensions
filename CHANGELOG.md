@@ -2,7 +2,7 @@
 
 FABRIC testbed extensions changlog
 
-## [1.3.4] - 
+## [1.3.4] - 2023-01-19
 
 ### Fixed
 
