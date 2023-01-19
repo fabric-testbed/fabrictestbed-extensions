@@ -1250,14 +1250,14 @@ class Node:
 
                 if output_file:
                     file = open(output_file, "a")
-                
+
                 # stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
 
                 if timeout is not None:
                     command = (
                         f"sudo timeout --foreground -k 10 {timeout} " + command + "\n"
                     )
-                    
+
                 stdin, stdout, stderr = client.exec_command(command)
                 channel = stdout.channel
 
