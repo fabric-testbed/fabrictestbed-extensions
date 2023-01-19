@@ -1532,7 +1532,8 @@ class Slice:
             try:
                 # iface_threads.append(executor.submit(interface.ip_link_toggle))
                 interface.get_node().execute(
-                    f"sudo nmcli device set {interface.get_device_name()} managed no", quiet=True
+                    f"sudo nmcli device set {interface.get_device_name()} managed no",
+                    quiet=True,
                 )
             except Exception as e:
                 logging.error(
