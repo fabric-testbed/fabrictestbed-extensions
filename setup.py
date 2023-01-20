@@ -50,4 +50,7 @@ setup(
     python_requires=">=3.9",
     install_requires=requirements,
     setup_requires=requirements,
+    extras_require={
+        "test": ["pytest"],
+    },
 )
