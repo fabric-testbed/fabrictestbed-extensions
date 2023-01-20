@@ -55,6 +55,15 @@ If you want to interact with FABRIC from Jupyter installed on your
 computer, see: [Install the FABRIC Python API][fablib-install].
 
 
+## Testing FABlib
+
+Run tests with [pytest]:
+
+```console
+$ pip install -e .[test]
+$ pytest
+```
+
 ## Building Python packages
 
 Do not do `python setup.py sdist bdist_wheel`. Instead, do:
@@ -90,3 +99,5 @@ $ twine upload dist/*
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
+
+[pytest]: https://pypi.org/project/pytest/
