@@ -23,7 +23,9 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 from tabulate import tabulate
+import json
 
 from fabrictestbed.slice_editor import Labels, Capacities
 from fabrictestbed_extensions.fablib.interface import Interface
@@ -61,26 +63,51 @@ class FacilityPort:
         table = [["name", self.get_name()]]
 
         return tabulate(table)
-    
-    def toJson(self):
-        return {     "Name": self.get_name()
-                }
-    
-    def show(self, fields=None, output=None, quiet=False, colors=False):
-        data = self.toJson()
-    
-        fields = ["Name",
-                 ]
-    
-        table = self.get_fablib_manager().show_table(data, 
-                        fields=fields,
-                        title='Facility Port', 
-                        output=output, 
-                        quiet=quiet)
-            
-            
-        return table
 
+    def toJson(self):
+        return json.dumps(self.toDict(), indent=4)
+
+    def get_pretty_name_dict(self):
+        return {
+            "name": "Name",
+        }
+
+    def toDict(self, skip=[]):
+        return {"name": str(self.get_name())}
+
+    def get_template_context(self):
+        return self.get_slice().get_template_context(self)
+
+    def render_template(self, input_string):
+        environment = jinja2.Environment()
+        template = environment.from_string(input_string)
+        output_string = template.render(self.get_template_context())
+
+        return output_string
+
+    def show(
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+    ):
+        data = self.toDict(pretty_names=True)
+
+        # fields = ["Name",
+        #         ]
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
+        table = self.get_fablib_manager().show_table(
+            data,
+            fields=fields,
+            title="Facility Port",
+            output=output,
+            quiet=quiet,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+        return table
 
     def get_fim_interface(self) -> FimInterface:
         return self.fim_interface
@@ -100,12 +127,20 @@ class FacilityPort:
         return self.fim_interface.site
 
     @staticmethod
-    def new_facility_port(slice: Slice = None, name: str = None, site: str = None, vlan: str = None,
-                          bandwidth: int = 10):
+    def new_facility_port(
+        slice: Slice = None,
+        name: str = None,
+        site: str = None,
+        vlan: str = None,
+        bandwidth: int = 10,
+    ):
 
-        fim_facility_port = slice.get_fim_topology().add_facility(name=name, site=site,
-                                                                  capacities=Capacities(bw=bandwidth),
-                                                                  labels=Labels(vlan=vlan))
+        fim_facility_port = slice.get_fim_topology().add_facility(
+            name=name,
+            site=site,
+            capacities=Capacities(bw=bandwidth),
+            labels=Labels(vlan=vlan),
+        )
         return FacilityPort(slice, fim_facility_port)
 
     @staticmethod

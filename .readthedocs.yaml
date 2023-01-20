@@ -1,0 +1,23 @@
+# Configuration for readthedocs.org.
+# See https://docs.readthedocs.io/en/latest/config-file/v2.html
+
+version: 2
+
+# readthedocs.org uses Python 3.7 by default; fablib has to use Python
+# 3.9 or greater.  This incantation seems to work.
+build:
+  os: ubuntu-20.04
+  tools:
+    python: "3.9"
+
+# Tell RTD location of our Sphinx configuration.  Seems to work
+# without this too, although default is docs/conf.py.
+sphinx:
+  configuration: docs/source/conf.py
+
+# To be able to build API documentation, we need to install both docs
+# requirements and package requirements, it seems.
+python:
+  install:
+    - requirements: docs/requirements.txt
+    - requirements: requirements.txt
