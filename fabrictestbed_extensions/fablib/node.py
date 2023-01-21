@@ -1178,9 +1178,6 @@ class Node:
             f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
         )
 
-        if output_file:
-            file = open(output_file, "a")
-
         # if not quiet:
         chunking = True
 
@@ -1248,6 +1245,9 @@ class Node:
                     pkey=key,
                     sock=bastion_channel,
                 )
+
+                if output_file:
+                    file = open(output_file, "a")
 
                 # stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
 
@@ -1342,9 +1342,6 @@ class Node:
                     rtn_stdout = b"".join(stdout_chunks).decode("utf-8")
                     rtn_stderr = b"".join(stderr_chunks).decode("utf-8")
 
-                client.close()
-                bastion_channel.close()
-
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
                     logging.debug(
@@ -1360,25 +1357,11 @@ class Node:
                 return rtn_stdout, rtn_stderr
                 # success, skip other tries
                 break
-            except Exception as e:
-                logging.warning(f"{e}")
-                try:
-                    client.close()
-                except:
-                    logging.debug("Exception in client.close")
-                    pass
-                try:
-                    bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
-                    pass
 
-                try:
-                    if output_file:
-                        file.close()
-                except:
-                    logging.debug("Exception in output_file close()")
-                    pass
+            except Exception as e:
+                logging.warning(
+                    f"Exception in upload_file() (attempt #{attempt} of {retry}): {e}"
+                )
 
                 if attempt + 1 == retry:
                     raise e
@@ -1392,6 +1375,29 @@ class Node:
 
                 time.sleep(retry_interval)
                 pass
+
+            # Clean-up of open connections and files.
+            finally:
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
+
+                try:
+                    bastion_channel.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion_channel.close(): {e}")
+
+                try:
+                    bastion.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion.close(): {e}")
+
+                try:
+                    if output_file:
+                        file.close()
+                except Exception as e:
+                    logging.debug(f"Exception in output_file.close(): {e}")
 
         raise Exception("ssh failed: Should not get here")
 
@@ -1499,9 +1505,6 @@ class Node:
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
-                ftp_client.close()
-
-                bastion_channel.close()
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
@@ -1511,17 +1514,9 @@ class Node:
                     )
 
                 return file_attributes
+
             except Exception as e:
-                try:
-                    client.close()
-                except:
-                    logging.debug("Exception in client.close")
-                    pass
-                try:
-                    bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
-                    pass
+                logging.warning(f"Exception on upload_file() attempt #{attempt}: {e}")
 
                 if attempt + 1 == retry:
                     raise e
@@ -1533,6 +1528,27 @@ class Node:
                 # traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
+
+            finally:
+                try:
+                    ftp_client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in ftp_client.close(): {e}")
+
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
+
+                try:
+                    bastion_channel.close()
+                except Exception as e:
+                    logging.debug("Exception in bastion_channel.close(): {e}")
+
+                try:
+                    bastion.close()
+                except Exception as e:
+                    logging.debug("Exception in bastion.close(): {e}")
 
         raise Exception("scp upload failed")
 
@@ -1640,9 +1656,6 @@ class Node:
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.get(remote_file_path, local_file_path)
-                ftp_client.close()
-
-                bastion_channel.close()
 
                 if self.get_fablib_manager().get_log_level() == logging.DEBUG:
                     end = time.time()
@@ -1652,28 +1665,43 @@ class Node:
                     )
 
                 return file_attributes
+
             except Exception as e:
-                try:
-                    client.close()
-                except:
-                    logging.debug("Exception in client.close")
-                    pass
-                try:
-                    bastion_channel.close()
-                except:
-                    logging.debug("Exception in bastion_channel.close()")
-                    pass
+                logging.warning(
+                    f"Exception in download_file() (attempt #{attempt} of {retry}): {e}"
+                )
 
                 if attempt + 1 == retry:
                     raise e
 
                 # Fail, try again
                 logging.warning(
-                    f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
+                    f"SCP download fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
                 )
                 # traceback.print_exc()
                 time.sleep(retry_interval)
                 pass
+
+            finally:
+                try:
+                    ftp_client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in ftp_client.close(): {e}")
+
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
+
+                try:
+                    bastion_channel.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion_channel.close(): {e}")
+
+                try:
+                    bastion.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion.close(): {e}")
 
         raise Exception("scp download failed")
 
