@@ -51,7 +51,13 @@ class NetworkService:
 
     # Type names used in fim network services
     fim_l2network_service_types = ["L2Bridge", "L2PTP", "L2STS"]
-    fim_l3network_service_types = ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext", "L3VPN"]
+    fim_l3network_service_types = [
+        "FABNetv4",
+        "FABNetv6",
+        "FABNetv4Ext",
+        "FABNetv6Ext",
+        "L3VPN",
+    ]
 
     @staticmethod
     def get_fim_l2network_service_types() -> List[str]:
@@ -221,7 +227,9 @@ class NetworkService:
         elif type == "L3VPN":
             nstype = ServiceType.L3VPN
         else:
-            raise Exception("Invalid L3 Network Type: Allowed values [IPv4, IPv4Ext, IPv6, IPv6Ext, L3VPN]")
+            raise Exception(
+                "Invalid L3 Network Type: Allowed values [IPv4, IPv4Ext, IPv6, IPv6Ext, L3VPN]"
+            )
 
         # TODO: need a fabnet version of this
         # validate nstype and interface List

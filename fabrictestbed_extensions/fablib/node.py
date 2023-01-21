@@ -2158,9 +2158,15 @@ class Node:
             if network == None:
                 return
             elif network.get_layer() == NSLayer.L3:
-                if network.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
+                if network.get_type() in [
+                    ServiceType.FABNetv6,
+                    ServiceType.FABNetv6Ext,
+                ]:
                     ip_command = "sudo ip -6"
-                elif interface.get_network().get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
+                elif interface.get_network().get_type() in [
+                    ServiceType.FABNetv4,
+                    ServiceType.FABNetv4Ext,
+                ]:
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"
@@ -2198,9 +2204,15 @@ class Node:
         """
         try:
             if interface.get_network().get_layer() == NSLayer.L3:
-                if interface.get_network().get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
+                if interface.get_network().get_type() in [
+                    ServiceType.FABNetv6,
+                    ServiceType.FABNetv6Ext,
+                ]:
                     ip_command = "sudo ip -6"
-                elif interface.get_network().get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
+                elif interface.get_network().get_type() in [
+                    ServiceType.FABNetv4,
+                    ServiceType.FABNetv4Ext,
+                ]:
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"
@@ -2340,9 +2352,15 @@ class Node:
         try:
             gateway = None
             if interface.get_network().get_layer() == NSLayer.L3:
-                if interface.get_network().get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
+                if interface.get_network().get_type() in [
+                    ServiceType.FABNetv6,
+                    ServiceType.FABNetv6Ext,
+                ]:
                     ip_command = "sudo ip -6"
-                elif interface.get_network().get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
+                elif interface.get_network().get_type() in [
+                    ServiceType.FABNetv4,
+                    ServiceType.FABNetv4Ext,
+                ]:
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"
