@@ -51,3 +51,24 @@ jobs:
       run: |
         coverage run -m pytest
         coverage report
+
+    - name: Send coverage data to coveralls.io
+      run: |
+        python -m coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
+        COVERALLS_PARALLEL: true
+
+  finalize:
+    name: finalize
+    needs: test
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+      - name: Indicate completion to coveralls.io
+        run: |
+          pip --no-cache-dir install --upgrade coveralls
+          python -m coveralls --service=github --finish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
