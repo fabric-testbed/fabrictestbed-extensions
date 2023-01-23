@@ -51,9 +51,6 @@ setup(
     install_requires=requirements,
     setup_requires=requirements,
     extras_require={
-        "test": [
-            "pytest",
-            "coverage[toml]"
-        ],
+        "test": ["pytest", "coverage[toml]"],
     },
 )
