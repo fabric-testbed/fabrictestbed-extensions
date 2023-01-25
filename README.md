@@ -70,6 +70,17 @@ Following that, upload to PyPi using:
 $ twine upload dist/*
 ```
 
+## Building API documentation
+
+FABlib API documentation is generated from Python docstrings using
+[Sphinx][sphinx].  In order to build API docs locally, install
+`[docs]` extra, and run the shell script wrapper:
+
+```console
+$ pip install -e .[docs]
+$ ./sphinx.sh
+```
+
 <!-- URLs -->
 
 [pypy]: https://pypi.org/project/fabrictestbed-extensions/
@@ -90,3 +101,5 @@ $ twine upload dist/*
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
+
+[sphinx]: https://www.sphinx-doc.org/
