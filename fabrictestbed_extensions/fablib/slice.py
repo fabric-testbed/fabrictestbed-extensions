@@ -945,8 +945,8 @@ class Slice:
         :type disk: int
         :param image: (Optional) The image to uese for the node. Default: default_rocky_8
         :type image: String
-        :param instance_type
-        :param docker_image
+        :param instance_type:
+        :param docker_image:
         :param host: (Optional) The physical host to deploy the node. Each site
             has worker nodes numbered 1, 2, 3, etc. Host names follow the pattern
             in this example of STAR worker number 1: "star-w1.fabric-testbed.net".
