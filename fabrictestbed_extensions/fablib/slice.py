@@ -1892,31 +1892,39 @@ class Slice:
         """
         Lists all the nodes in the slice.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        :param output: Output format.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+            There are several output format options that determine the
+            format of the output that is returned and (optionally)
+            displayed/printed, and it could be one of:
 
-        fields: json output will include all available fields/columns.
+                - "text": string formatted with tabular
 
-        Example: fields=['Name','State']
+                - "pandas": pandas dataframe
 
-        filter_function:  A lambda function to filter data by field values.
+                - "json": string in json format
 
-        Example: filter_function=lambda s: s['State'] == 'Active'
-
-        :param output: output format
         :type output: str
-        :param fields: list of fields (table columns) to show
+
+        :param fields: List of fields (table columns) to show.
+
+            Example: :code:`fields=['Name','State']`
+
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param filter_function: lambda function
+
+        :param filter_function: A lambda function to filter data by
+            field values.
+
+            Example: :code:`filter_function=lambda s: s['State'] == 'Active'`
+
         :type filter_function: lambda
+
         :param colors: True to add colors to the table when possible
         :type colors: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
