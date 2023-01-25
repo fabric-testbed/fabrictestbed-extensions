@@ -189,8 +189,6 @@
 
   .. automethod:: list_networks
 
-  .. automethod:: list_nodes
-
 
 ``Node``
 ----------------
