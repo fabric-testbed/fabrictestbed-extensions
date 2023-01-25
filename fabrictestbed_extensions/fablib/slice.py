@@ -955,8 +955,16 @@ class Slice:
             Default: default_rocky_8
         :type image: String
 
-        :param instance_type:
-        :param docker_image:
+        :param instance_type: (Optional) An instance type, selected
+            from FABRIC InformationModel `catalog`_.
+
+        .. _catalog: https://github.com/fabric-testbed/InformationModel/blob/master/fim/slivers/data/instance_sizes.json
+
+        :type instance_type: String
+
+        :param docker_image: (Optional)
+        :type docker_image: String
+
         :param host: (Optional) The physical host to deploy the node.
             Each site has worker nodes numbered 1, 2, 3, etc.  Host
             names follow the pattern in this example of STAR worker
