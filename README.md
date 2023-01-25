@@ -77,7 +77,7 @@ FABlib API documentation is generated from Python docstrings using
 `[docs]` extra, and run the shell script wrapper:
 
 ```console
-$ pip install -e .[docs]
+$ pip install .[docs]
 $ ./sphinx.sh
 ```
 
