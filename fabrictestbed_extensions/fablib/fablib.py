@@ -1655,14 +1655,18 @@ class FablibManager:
         """
         Gets a list of slices from the slice manager.
 
-        By default this method ignores Dead and Closing slices. Optional,
-        parameter allows excluding a different list of slice states.  Pass
-        an empty list (i.e. excludes=[]) to get a list of all slices.
+        By default this method ignores Dead and Closing slices.
+        Optional, parameter allows excluding a different list of slice
+        states.  Pass an empty list (i.e. :code:`excludes=[]`) to get
+        a list of all slices.
 
-        :param excludes: A list of slice states to exclude from the output list
+        :param excludes: A list of slice states to exclude from the
+            output list
         :type excludes: List[SliceState]
+
         :param slice_name:
         :param slice_id:
+
         :return: a list of slices
         :rtype: List[Slice]
         """
