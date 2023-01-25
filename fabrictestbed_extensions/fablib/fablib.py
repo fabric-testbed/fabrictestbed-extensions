@@ -1661,8 +1661,8 @@ class FablibManager:
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
-        :param slice_name
-        :param slice_id
+        :param slice_name:
+        :param slice_id:
         :return: a list of slices
         :rtype: List[Slice]
         """
