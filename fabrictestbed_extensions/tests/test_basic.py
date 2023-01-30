@@ -45,7 +45,7 @@ class FablibManagerTests(unittest.TestCase):
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        with self.assertRaises(AttributeError):            
+        with self.assertRaises(AttributeError):
             FablibManager()
 
     def test_fablib_manager_test_only_cm_host(self):
@@ -70,17 +70,17 @@ class FablibManagerTests(unittest.TestCase):
 
     def test_fablib_manager_test_with_no_token_file(self):
         # Should fail when token location is not a valid path.
+
+        # set all required env vars.
+        for var in self.required_env_vars:
+            os.environ[var] = "dummy"
+
+        os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
+
+        # FablibManager() without a valid token or token location
+        # should raise a "ValueError: Invalid value for
+        # `refresh_token`, must not be `None`"
         with self.assertRaises(ValueError):
-            # FablibManager() without a valid token or token location
-            # should raise a "ValueError: Invalid value for
-            # `refresh_token`, must not be `None`"
-            os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
-            os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
-            os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
-            os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
-            os.environ[FablibManager.FABRIC_BASTION_HOST] = "dummy"
-            os.environ[FablibManager.FABRIC_BASTION_USERNAME] = "dummy"
-            os.environ[FablibManager.FABRIC_BASTION_KEY_LOCATION] = "dummy"            
             FablibManager()
 
     def test_fablib_manager_test_with_dummy_token(self):
@@ -89,18 +89,16 @@ class FablibManagerTests(unittest.TestCase):
         # network call to credential manager API, but it is not right
         # for a unit test to do such a thing.  We could probably
         # somehow mock a CM here?
+
+        # set all required env vars.
+        for var in self.required_env_vars:
+            os.environ[var] = "dummy"
+
+        # '.invalid' is an invalid host per RFC 6761, so this test
+        # must fail without ever making a successful network call.
+        os.environ[Constants.FABRIC_CREDMGR_HOST] = ".invalid"
+        path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
+        os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
+
         with self.assertRaises(Exception):
-            # '.invalid' is an invalid host per RFC 6761, so this test
-            # must fail without ever making a successful network call.
-            os.environ[Constants.FABRIC_CREDMGR_HOST] = ".test"
-            os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
-            os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
-
-            path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
-            os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
-
-            os.environ[FablibManager.FABRIC_BASTION_HOST] = "dummy"
-            os.environ[FablibManager.FABRIC_BASTION_USERNAME] = "dummy"
-            os.environ[FablibManager.FABRIC_BASTION_KEY_LOCATION] = "dummy"            
-
             FablibManager()
