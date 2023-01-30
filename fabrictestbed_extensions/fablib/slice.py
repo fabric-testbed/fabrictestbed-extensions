@@ -1529,7 +1529,8 @@ class Slice:
             try:
                 # iface_threads.append(executor.submit(interface.ip_link_toggle))
                 interface.get_node().execute(
-                    f"sudo nmcli device set {interface.get_device_name()} managed no"
+                    f"sudo nmcli device set {interface.get_device_name()} managed no",
+                    quiet=True,
                 )
             except Exception as e:
                 logging.error(
@@ -1574,7 +1575,7 @@ class Slice:
                 return False
 
         for net in self.get_networks():
-            if net.get_type() == "FABNetv4" or net.get_type() == "FABNetv6":
+            if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
                     if net.get_subnet() == None or net.get_available_ips() == None:
                         logging.warning(
