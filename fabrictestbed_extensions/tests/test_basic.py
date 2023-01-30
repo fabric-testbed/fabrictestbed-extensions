@@ -29,14 +29,24 @@ class FablibManagerTests(unittest.TestCase):
         os.environ.clear()
 
     def test_fablib_manager_no_env_vars(self):
+        # Test with no required env vars set.
         with self.assertRaises(AttributeError):
             FablibManager()
 
     def test_fablib_manager_one_env_var(self):
+        # Test with some required env vars set.
         for var in self.required_env_vars:
             with self.assertRaises(AttributeError):
                 os.environ[var] = "dummy"
                 FablibManager()
+
+    def test_fablib_manager_all_env_vars(self):
+        # Test with all required_env_vars except token location set.
+        for var in self.required_env_vars:
+            os.environ[var] = "dummy"
+
+        with self.assertRaises(AttributeError):            
+            FablibManager()
 
     def test_fablib_manager_test_only_cm_host(self):
         with self.assertRaises(AttributeError):
@@ -59,6 +69,7 @@ class FablibManagerTests(unittest.TestCase):
             FablibManager()
 
     def test_fablib_manager_test_with_no_token_file(self):
+        # Should fail when token location is not a valid path.
         with self.assertRaises(ValueError):
             # FablibManager() without a valid token or token location
             # should raise a "ValueError: Invalid value for
