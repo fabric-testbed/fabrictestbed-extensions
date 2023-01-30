@@ -58,7 +58,7 @@ class FablibManagerTests(unittest.TestCase):
             os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
             FablibManager()
 
-    def test_fablib_manager_test_with_bad_token(self):
+    def test_fablib_manager_test_with_no_token_file(self):
         with self.assertRaises(ValueError):
             # FablibManager() without a valid token or token location
             # should raise a "ValueError: Invalid value for
