@@ -79,13 +79,17 @@ class FablibManagerTests(unittest.TestCase):
         # for a unit test to do such a thing.  We could probably
         # somehow mock a CM here?
         with self.assertRaises(Exception):
-            # The real exception is urllib3.exceptions.MaxRetryError,
-            # since 'dummy' is an invalid host.
-            os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
+            # '.invalid' is an invalid host per RFC 6761, so this test
+            # must fail without ever making a successful network call.
+            os.environ[Constants.FABRIC_CREDMGR_HOST] = ".test"
             os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
             os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
 
             path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
             os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
+
+            os.environ[FablibManager.FABRIC_BASTION_HOST] = "dummy"
+            os.environ[FablibManager.FABRIC_BASTION_USERNAME] = "dummy"
+            os.environ[FablibManager.FABRIC_BASTION_KEY_LOCATION] = "dummy"            
 
             FablibManager()
