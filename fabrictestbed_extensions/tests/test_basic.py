@@ -67,6 +67,9 @@ class FablibManagerTests(unittest.TestCase):
             os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
             os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
             os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
+            os.environ[FablibManager.FABRIC_BASTION_HOST] = "dummy"
+            os.environ[FablibManager.FABRIC_BASTION_USERNAME] = "dummy"
+            os.environ[FablibManager.FABRIC_BASTION_KEY_LOCATION] = "dummy"            
             FablibManager()
 
     def test_fablib_manager_test_with_dummy_token(self):
