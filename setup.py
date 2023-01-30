@@ -49,4 +49,7 @@ setup(
     ],
     python_requires=">=3.9",
     install_requires=requirements,
+    extras_require={
+        "test": ["pytest", "coverage[toml]"],
+    },
 )
