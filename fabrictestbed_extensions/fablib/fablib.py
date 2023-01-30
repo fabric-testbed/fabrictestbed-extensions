@@ -748,10 +748,42 @@ class FablibManager:
         self.bastion_private_ipv4_addr = "0.0.0.0"
         self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
 
+        self._validate_configuration()
+
         # Create slice manager
         self.slice_manager = None
         self.resources = None
         self.build_slice_manager()
+
+    def _validate_configuration(self):
+        """
+        Check that fablib has the required configuration.
+        """
+        errors = []
+
+        if self.orchestrator_host is None:
+            errors.append("Orchestrator host is not set")
+
+        if self.credmgr_host is None:
+            errors.append("Credential Manager host is not set")
+
+        if self.fabric_token is None:
+            errors.append("Fabric token location is not set")
+
+        if self.project_id is None:
+            errors.append("Project ID is not set")
+
+        if self.bastion_username is None:
+            errors.append("Bastion username is not set")
+
+        if self.bastion_key_filename is None:
+            errors.append("Bastion key filename is not set")
+
+        if self.bastion_public_addr is None:
+            errors.append("Bastion host is not set")
+
+        if errors:
+            raise ValueError(f"Errors found: {errors}")
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
