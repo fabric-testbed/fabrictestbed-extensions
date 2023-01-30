@@ -776,7 +776,9 @@ class FablibManager:
                 errors.append(f"{attr} is not known")
 
         if errors:
-            # TODO: define custom exception class to report errors.
+            # TODO: define custom exception class to report errors,
+            # and emit a more helpful error message with hints about
+            # setting up environment variables or configuration file.
             raise AttributeError(f"Errors found: {errors}")
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
