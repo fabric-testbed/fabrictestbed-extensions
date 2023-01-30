@@ -768,7 +768,7 @@ class FablibManager:
             "project_id",
             "bastion_username",
             "bastion_key_filename",
-            "bastion_public_addr"
+            "bastion_public_addr",
         ]
 
         for attr in required_attrs:
