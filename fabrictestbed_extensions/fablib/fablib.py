@@ -761,28 +761,22 @@ class FablibManager:
         """
         errors = []
 
-        if self.orchestrator_host is None:
-            errors.append("Orchestrator host is not set")
+        required_attrs = [
+            "orchestrator_host",
+            "credmgr_host",
+            "fabric_token",
+            "project_id",
+            "bastion_username",
+            "bastion_key_filename",
+            "bastion_public_addr"
+        ]
 
-        if self.credmgr_host is None:
-            errors.append("Credential Manager host is not set")
-
-        if self.fabric_token is None:
-            errors.append("Fabric token location is not set")
-
-        if self.project_id is None:
-            errors.append("Project ID is not set")
-
-        if self.bastion_username is None:
-            errors.append("Bastion username is not set")
-
-        if self.bastion_key_filename is None:
-            errors.append("Bastion key filename is not set")
-
-        if self.bastion_public_addr is None:
-            errors.append("Bastion host is not set")
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                errors.append(f"{attr} is not known")
 
         if errors:
+            # TODO: define custom exception class to report errors.
             raise ValueError(f"Errors found: {errors}")
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
