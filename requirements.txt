@@ -4,7 +4,7 @@ ipywidgets
 ipyleaflet
 ipycytoscape
 tabulate
-fabrictestbed==1.4.3
+fabrictestbed==1.4.4
 paramiko
 jinja2>=3.0.0
 pandas
