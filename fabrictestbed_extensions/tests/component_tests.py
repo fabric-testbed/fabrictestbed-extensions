@@ -52,7 +52,6 @@ from .. import images
 
 
 class ComponentTest(AbcTest):
-
     COMPONENT_MODELS = {
         "GPU_Tesla_T4": ComponentModelType.GPU_Tesla_T4,
         "GPU_RTX6000": ComponentModelType.GPU_RTX6000,
@@ -136,7 +135,6 @@ class ComponentTest(AbcTest):
         # print("Lease End  : {}".format(self.slice.lease_end))
 
     def config_test_GPU_RTX6000(self, node):
-
         node_name = node.name
         try:
             name = node_name
@@ -210,7 +208,6 @@ class ComponentTest(AbcTest):
                 traceback.print_exc()
 
     def config_test_NVME_P4510(self, node):
-
         node_name = node.name
         try:
             name = node_name
@@ -285,7 +282,6 @@ class ComponentTest(AbcTest):
                 traceback.print_exc()
 
     def config_test_SmartNIC_ConnectX_5(self, node):
-
         node_name = node.name
         try:
             name = node_name
@@ -359,7 +355,6 @@ class ComponentTest(AbcTest):
                 traceback.print_exc()
 
     def config_test_SmartNIC_ConnectX_6(self, node):
-
         node_name = node.name
         try:
             name = node_name
@@ -435,7 +430,6 @@ class ComponentTest(AbcTest):
                 traceback.print_exc()
 
     def config_test_SharedNIC_ConnectX_6(self, node):
-
         node_name = node.name
         try:
             name = node_name
@@ -509,7 +503,6 @@ class ComponentTest(AbcTest):
                 traceback.print_exc()
 
     def config_test_GPU_Tesla_T4(self, node):
-
         node_name = node.name
         # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
         # print("Node:")

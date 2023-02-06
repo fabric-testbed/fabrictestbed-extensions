@@ -778,7 +778,6 @@ class FablibManager:
         self.ssh_command_line = command
 
     def set_avoid_csv(self, avoid_csv: str = ""):
-
         avoid_csv = avoid_csv.strip().strip('"').strip("'")
 
         avoid = []
@@ -1131,6 +1130,7 @@ class FablibManager:
         :return: list of random site names.
         :rtype: List[Sting]
         """
+
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
             if filter_function == None:
@@ -1786,7 +1786,6 @@ class FablibManager:
     def show_table_jupyter(
         self, table, headers=None, title="", title_font_size="1.25em", quiet=False
     ):
-
         printable_table = pd.DataFrame(table)
 
         properties = {  # 'background-color': f'{FablibManager.FABRIC_LIGHT}',
@@ -1867,7 +1866,6 @@ class FablibManager:
         quiet=False,
         pretty_names_dict={},
     ):
-
         if output == None:
             output = self.output.lower()
 
@@ -1912,7 +1910,6 @@ class FablibManager:
         output=None,
         quiet=False,
     ):
-
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
         else:
@@ -2023,7 +2020,6 @@ class FablibManager:
         filter_function=None,
         pretty_names_dict={},
     ):
-
         if filter_function:
             data = list(filter(filter_function, data))
 
