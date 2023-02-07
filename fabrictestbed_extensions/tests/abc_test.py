@@ -77,7 +77,6 @@ class AbcTest(ABC):
         if return_status != Status.OK:
             raise Exception("Failed to get slices: {}".format(slices))
         try:
-
             if slice_id:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
             elif slice_name:
@@ -148,7 +147,6 @@ class AbcTest(ABC):
             return "Invalid"
 
     def run_ssh_test(self, slice):
-
         return_status, topology = self.slice_manager.get_slice_topology(
             slice_object=slice
         )
@@ -241,7 +239,6 @@ class AbcTest(ABC):
         if progress:
             print("Waiting for ssh client connection {} .".format(node.name), end="")
         while time.time() < timeout_start + timeout:
-
             try:
                 management_ip = str(node.get_property(pname="management_ip"))
                 # print("Node {0} IP {1}".format(node.name, management_ip))

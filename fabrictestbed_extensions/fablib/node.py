@@ -178,7 +178,6 @@ class Node:
 
     @staticmethod
     def get_pretty_name_dict():
-
         return {
             "id": "ID",
             "name": "Name",
@@ -345,7 +344,6 @@ class Node:
             pretty_names_dict = {}
 
         if colors and self.get_fablib_manager().is_jupyter_notebook():
-
             table = self.get_fablib_manager().show_table(
                 data,
                 fields=fields,
@@ -1961,7 +1959,6 @@ class Node:
         )
 
     def ip_addr_list(self, output="json", update=False):
-
         try:
             if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
@@ -2033,7 +2030,6 @@ class Node:
             raise e
 
     def get_ip_routes(self):
-
         """
         Get a list of routes from the node.
         """
