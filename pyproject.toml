@@ -4,6 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed-extensions"
+# Bump version up in top-level __init.py__.
 dynamic = ["version"]
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
