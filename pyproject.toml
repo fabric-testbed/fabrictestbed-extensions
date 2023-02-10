@@ -19,7 +19,7 @@ dependencies = [
     "ipyleaflet",
     "ipycytoscape",
     "tabulate",
-    "fabrictestbed==1.3.3",
+    "fabrictestbed==1.4.4",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
