@@ -35,6 +35,10 @@ jobs:
         run: |
           python -m flit build
 
+      - name: Try installing the package
+        run: |
+          python -m pip install dist/fabrictestbed_extensions-*.whl
+
       # See https://github.com/actions/upload-artifact
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
