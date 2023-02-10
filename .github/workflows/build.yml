@@ -24,15 +24,20 @@ jobs:
         with:
           python-version: "3.9"
           cache: 'pip'  # cache pip dependencies
+          cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build
+          python -m pip install flit
 
       - name: Build the package
         run: |
-          python -m build
+          python -m flit build
+
+      - name: Try installing the package
+        run: |
+          python -m pip install dist/fabrictestbed_extensions-*.whl
 
       # See https://github.com/actions/upload-artifact
       - name: Upload build artifacts
