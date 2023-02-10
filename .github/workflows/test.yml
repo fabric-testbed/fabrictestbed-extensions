@@ -35,7 +35,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install wheel pytest coverage coveralls
+        python -m pip install wheel coveralls
 
     # # TODO: we can't use flake8 right now, because there isn't a
     # # version of flake8 that can use pycodestyle==2.6.0, and fim has
