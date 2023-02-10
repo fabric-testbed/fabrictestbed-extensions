@@ -55,7 +55,16 @@ If you want to interact with FABRIC from Jupyter installed on your
 computer, see: [Install the FABRIC Python API][fablib-install].
 
 
-## Building FABlib
+## Testing FABlib
+
+Run tests with [pytest]:
+
+```console
+$ pip install -e .[test]
+$ pytest
+```
+
+## Packaging FABlib
 
 FABlib uses [flit] as the build backend.  To build source and wheel
 packages, do this:
@@ -119,3 +128,5 @@ For details about publishing to PyPI, see flit documentation about
 [package uploads]: https://flit.pypa.io/en/latest/upload.html
 
 [build]: https://pypi.org/project/build/
+[pytest]: https://pypi.org/project/pytest/
+

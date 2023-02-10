@@ -31,8 +31,6 @@ import logging
 
 from tabulate import tabulate
 import select
-from string import Template
-
 import jinja2
 
 
@@ -180,7 +178,6 @@ class Node:
 
     @staticmethod
     def get_pretty_name_dict():
-
         return {
             "id": "ID",
             "name": "Name",
@@ -347,7 +344,6 @@ class Node:
             pretty_names_dict = {}
 
         if colors and self.get_fablib_manager().is_jupyter_notebook():
-
             table = self.get_fablib_manager().show_table(
                 data,
                 fields=fields,
@@ -1963,7 +1959,6 @@ class Node:
         )
 
     def ip_addr_list(self, output="json", update=False):
-
         try:
             if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
@@ -2035,7 +2030,6 @@ class Node:
             raise e
 
     def get_ip_routes(self):
-
         """
         Get a list of routes from the node.
         """
@@ -2160,9 +2154,15 @@ class Node:
             if network == None:
                 return
             elif network.get_layer() == NSLayer.L3:
-                if network.get_type() == ServiceType.FABNetv6:
+                if network.get_type() in [
+                    ServiceType.FABNetv6,
+                    ServiceType.FABNetv6Ext,
+                ]:
                     ip_command = "sudo ip -6"
-                elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                elif interface.get_network().get_type() in [
+                    ServiceType.FABNetv4,
+                    ServiceType.FABNetv4Ext,
+                ]:
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"
@@ -2200,9 +2200,15 @@ class Node:
         """
         try:
             if interface.get_network().get_layer() == NSLayer.L3:
-                if interface.get_network().get_type() == ServiceType.FABNetv6:
+                if interface.get_network().get_type() in [
+                    ServiceType.FABNetv6,
+                    ServiceType.FABNetv6Ext,
+                ]:
                     ip_command = "sudo ip -6"
-                elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                elif interface.get_network().get_type() in [
+                    ServiceType.FABNetv4,
+                    ServiceType.FABNetv4Ext,
+                ]:
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"
@@ -2342,9 +2348,15 @@ class Node:
         try:
             gateway = None
             if interface.get_network().get_layer() == NSLayer.L3:
-                if interface.get_network().get_type() == ServiceType.FABNetv6:
+                if interface.get_network().get_type() in [
+                    ServiceType.FABNetv6,
+                    ServiceType.FABNetv6Ext,
+                ]:
                     ip_command = "sudo ip -6"
-                elif interface.get_network().get_type() == ServiceType.FABNetv4:
+                elif interface.get_network().get_type() in [
+                    ServiceType.FABNetv4,
+                    ServiceType.FABNetv4Ext,
+                ]:
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"

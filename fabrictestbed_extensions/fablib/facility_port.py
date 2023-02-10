@@ -134,7 +134,6 @@ class FacilityPort:
         vlan: str = None,
         bandwidth: int = 10,
     ):
-
         fim_facility_port = slice.get_fim_topology().add_facility(
             name=name,
             site=site,

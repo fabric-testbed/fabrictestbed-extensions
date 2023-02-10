@@ -99,7 +99,6 @@ class SliceUtils(AbcUtils):
         if return_status != Status.OK:
             raise Exception("Failed to get slices: {}".format(slices))
         try:
-
             if slice_id:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
             elif slice_name:
@@ -154,7 +153,6 @@ class SliceUtils(AbcUtils):
         if return_status != Status.OK:
             raise Exception("Failed to get slices: {}".format(slices))
         try:
-
             if slice_id:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
             else:

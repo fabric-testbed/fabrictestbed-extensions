@@ -35,7 +35,6 @@ from fabrictestbed.slice_manager import Status
 
 
 class Resources:
-
     site_pretty_names = {
         "name": "Name",
         "address": "Address",
@@ -143,7 +142,6 @@ class Resources:
         quiet: bool = False,
         pretty_names=True,
     ) -> str:
-
         """
         Creates a tabulated string of all the available resources at a specific site.
 
