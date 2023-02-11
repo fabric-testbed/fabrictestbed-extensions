@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
 
+from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
 
 
@@ -677,3 +678,15 @@ class Interface:
             print(f"Exception: {e}")
 
         return return_ips
+
+    def get_fim(self):
+        return self.get_fim_interface()
+
+    def set_user_data(self, user_data: dict):
+        self.get_fim().set_property(pname='user_data', pval=UserData(json.dumps(user_data)))
+
+    def get_user_data(self):
+        try:
+            return json.loads(str(self.get_fim().get_property(pname='user_data')))
+        except:
+            return {}

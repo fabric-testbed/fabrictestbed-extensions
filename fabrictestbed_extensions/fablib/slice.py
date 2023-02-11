@@ -1704,6 +1704,8 @@ class Slice:
                 slice_graph=slice_graph,
                 ssh_key=self.get_slice_public_key(),
             )
+            self.slice_id = slice_reservations[0].slice_id
+
         if return_status != Status.OK:
             raise Exception(
                 "Failed to submit slice: {}, {}".format(
@@ -1712,8 +1714,8 @@ class Slice:
             )
 
         logging.debug(f"slice_reservations: {slice_reservations}")
-        logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        self.slice_id = slice_reservations[0].slice_id
+        #logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        #self.slice_id = slice_reservations[0].slice_id
 
         time.sleep(1)
         self.update()

@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_editor import ServiceType, NetworkService as FimNetworkService
 from fim.slivers.network_service import ServiceType, NSLayer
 
+from fabrictestbed.slice_editor import UserData
+
+
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 import json
 
@@ -276,7 +279,7 @@ class NetworkService:
         # validate nstype and interface List
         NetworkService.validate_nstype(nstype, interfaces)
 
-        # Set default VLANs for P2P networks that did not assing VLANs
+        # Set default VLANs for P2P networks that did not pass in VLANs
         if nstype == ServiceType.L2PTP:  # or nstype == ServiceType.L2STS:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
@@ -310,7 +313,7 @@ class NetworkService:
         interfaces: List[Interface] = [],
     ):
         """
-        Not inteded for API use. See slice.add_l2network
+        Not intended for API use. See slice.add_l2network
 
 
         Creates a new FABRIC network service and returns the fablib instance.
@@ -341,7 +344,7 @@ class NetworkService:
     @staticmethod
     def get_l3network_services(slice: Slice = None) -> list:
         """
-        Not inteded for API use.
+        Not intended for API use.
         """
         topology = slice.get_fim_topology()
 
@@ -832,3 +835,15 @@ class NetworkService:
                 return True
 
         return False
+
+    def get_fim(self):
+        return self.get_fim_network_service()
+
+    def set_user_data(self, user_data: dict):
+        self.get_fim().set_property(pname='user_data', pval=UserData(json.dumps(user_data)))
+
+    def get_user_data(self):
+        try:
+            return json.loads(str(self.get_fim().get_property(pname='user_data')))
+        except:
+            return {}
