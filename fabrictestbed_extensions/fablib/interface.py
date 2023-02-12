@@ -241,12 +241,22 @@ class Interface:
         :rtype: String
         """
         try:
-            # logging.debug(f"iface: {self}")
-            os_iface = self.get_physical_os_interface_name()
-            vlan = self.get_vlan()
+            fablib_data = self.get_fablib_data()
+            if 'dev' in fablib_data:
+                return fablib_data['dev']
+            else:
+                # logging.debug(f"iface: {self}")
+                os_iface = self.get_physical_os_interface_name()
+                vlan = self.get_vlan()
 
-            if vlan is not None:
-                os_iface = f"{os_iface}.{vlan}"
+                fablib_data['base_dev'] = os_iface
+                if vlan is not None:
+                    os_iface = f"{os_iface}.{vlan}"
+
+                fablib_data['dev'] = os_iface
+
+                self.set_fablib_data(fablib_data)
+
         except:
             os_iface = None
 
@@ -710,13 +720,39 @@ class Interface:
         if addr:
             fablib_data['addr'] = str(self.get_network().allocate_ip(addr))
         elif auto:
-            fablib_data['addr'] = str(self.get_network().allocate_ip())
+            if self.get_network():
+                fablib_data['addr'] = str(self.get_network().allocate_ip())
         self.set_fablib_data(fablib_data)
 
     def config(self):
         fablib_data = self.get_fablib_data()
 
-        addr = fablib_data['addr']
+        if 'addr' in fablib_data:
+            addr = fablib_data['addr']
+        else:
+            addr = None
+
+        if 'auto' in fablib_data:
+            auto = fablib_data['auto']
+        else:
+            auto = False
+
         subnet = self.get_network().get_subnet()
 
-        self.ip_addr_add(addr=addr, subnet=ipaddress.IPv4Network(subnet))
+
+
+        #print(f"addr: {addr}")
+        #print(f"auto: {auto}")
+        #print(f"subnet: {subnet}")
+
+        if subnet and not addr and auto:
+            fablib_data['addr'] = str(self.get_network().allocate_ip())
+            addr = fablib_data['addr']
+
+            # print(f"auto allocated addr: {addr}")
+
+            self.set_fablib_data(fablib_data)
+
+        if addr:
+            self.ip_addr_add(addr=addr, subnet=ipaddress.IPv4Network(subnet))
+

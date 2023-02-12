@@ -49,6 +49,9 @@ from ipaddress import ip_address, IPv4Address
 
 from typing import List, Union, Dict
 
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import Status, SliceState
 
@@ -927,9 +930,13 @@ class Slice:
         disk: int = 10,
         image: str = None,
         instance_type: str = None,
+        docker_enable: bool = False,
         docker_image: str = None,
+        docker_container_name='fabric',
+        docker_extra_args='',
         host: str = None,
         user_data: dict = {},
+
         avoid: List[str] = [],
     ) -> Node:
         """
@@ -976,8 +983,14 @@ class Slice:
         if host:
             node.set_host(host)
 
+        if docker_enable:
+            node.docker(enable=True)
+
         if docker_image:
-            node.set_docker_image(docker_image)
+            node.docker(enable=True,
+                            docker_image=docker_image,
+                            docker_container_name=docker_container_name,
+                            docker_extra_args=docker_extra_args)
 
         return node
 
@@ -1509,7 +1522,6 @@ class Slice:
                 f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
             )
             return
-        executor = ThreadPoolExecutor(64)
 
         logging.info(
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
@@ -1524,6 +1536,9 @@ class Slice:
 
         # for node_thread in node_threads:
         #    node_thread.result()
+
+        for network in self.get_networks():
+            network.config()
 
         for interface in self.get_interfaces():
             try:
@@ -1541,10 +1556,11 @@ class Slice:
                     quiet=True,
                 )
 
-                interface.config()
+                #interfaces are config in nodes (below)
+                #interface.config()
             except Exception as e:
                 logging.error(
-                    f"Interface: {interface.get_name()} failed to become unmanged"
+                    f"Interface: {interface.get_name()} failed to become unmanaged"
                 )
                 logging.error(e, exc_info=True)
 
@@ -1553,6 +1569,29 @@ class Slice:
 
         # if self.get_state() == "ModifyOK":
         #    self.modify_accept()
+
+
+        import time
+        start = time.time()
+
+        #from concurrent.futures import ThreadPoolExecutor
+        my_thread_pool_executor = ThreadPoolExecutor(32)
+        threads = {}
+
+        for node in self.get_nodes():
+            print(f"Starting thread {node.get_name()}")
+            thread = my_thread_pool_executor.submit(node.config)
+            threads[thread] = node
+
+        print(f"ALL Threads Created! ({time.time() - start:.0f} sec)")
+
+        for thread in concurrent.futures.as_completed(threads.keys()):
+            node = threads[thread]
+            result = thread.result()
+            #print(result)
+            print(f"{node.get_name()}, Done! ({time.time() - start:.0f} sec)")
+
+        print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
     def validIPAddress(self, IP: str) -> str:
         """

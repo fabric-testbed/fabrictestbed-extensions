@@ -33,6 +33,9 @@ from tabulate import tabulate
 import select
 import jinja2
 
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+
 
 from typing import List, Union, Tuple
 
@@ -2432,3 +2435,178 @@ class Node:
 
     def delete(self):
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
+
+    def get_fablib_data(self):
+        try:
+            return self.get_user_data()['fablib_data']
+        except:
+            return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        user_data = self.get_user_data()
+        user_data['fablib_data'] = fablib_data
+        self.set_user_data(user_data)
+
+    def add_route(self, subnet: IPv4Network  or IPv6Network, next_hop: IPv4Address or IPv6Address or str):
+        fablib_data = self.get_fablib_data()
+        if 'routes' not in fablib_data:
+            fablib_data['routes'] = []
+        fablib_data['routes'].append({ 'subnet': str(subnet), 'next_hop': str(next_hop)})
+        self.set_fablib_data(fablib_data)
+
+    def get_routes(self):
+        try:
+            return self.get_fablib_data()['routes']
+        except Exception as e:
+            return []
+
+    def docker(self, enable: bool = False,
+                   docker_image: str = None,
+                   docker_container_name: str = 'fabric',
+                   docker_extra_args: str = ''):
+        fablib_data = self.get_fablib_data()
+        fablib_data['docker'] = {}
+        fablib_data['docker']['enable'] = str(enable)
+        fablib_data['docker']['image'] = str(docker_image)
+        fablib_data['docker']['container_name'] = str(docker_container_name)
+        fablib_data['docker']['docker_extra_args'] = str(docker_extra_args)
+
+        self.set_fablib_data(fablib_data)
+
+    def docker_enabled(self ):
+        fablib_data = self.get_fablib_data()
+        try:
+            return fablib_data['docker']['enable']
+        except Exception as e:
+            return False
+
+    def get_docker_image(self):
+        fablib_data = self.get_fablib_data()
+        try:
+            image = fablib_data['docker']['image']
+            if image == 'None':
+                image = None
+            return image
+        except Exception as e:
+            return None
+
+    def get_docker_container_name(self):
+        fablib_data = self.get_fablib_data()
+        try:
+            return fablib_data['docker']['container_name']
+        except Exception as e:
+            return 'fabric'
+
+    def get_docker_extra_args(self):
+        fablib_data = self.get_fablib_data()
+        try:
+            return fablib_data['docker']['docker_extra_args']
+        except Exception as e:
+            return ''
+
+    def config_routes(self):
+        routes = self.get_routes()
+
+        for route in routes:
+
+            try:
+                next_hop = IPv4Address(route['next_hop'])
+            except Exception as e:
+                next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
+
+            self.ip_route_add(subnet=IPv4Network(route['subnet']), gateway=next_hop)
+
+
+    def config(self, log_dir='.'):
+        self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
+
+        for iface in self.get_interfaces():
+            iface.config()
+
+        self.config_routes()
+
+        if self.docker_enabled():
+            self.enable_docker()
+
+        if self.get_docker_image():
+            docker_image = self.get_docker_image()
+            container_name = self.get_docker_container_name()
+            extra_args = self.get_docker_extra_args()
+
+            if type(self.get_management_ip()) is IPv6Address:
+                registry = 'registry.ipv6.docker.com'
+            else:
+                registry = 'registry.ipv4.docker.com'
+
+
+            self.execute(
+                f"docker run -d -t --cap-add=NET_ADMIN --privileged  --net=host {extra_args} -v /home/{self.get_username()}:/home/fabric/host_share --name {container_name} {registry}/{docker_image} "
+                , quiet=True,
+                output_file=f"{log_dir}/{self.get_name()}.log")
+
+
+        return 'Done'
+
+
+
+    def enable_docker(self, log_dir='.'):
+        if self.get_image() == 'default_rocky_8':
+            self.execute("echo Hello, FABRIC from node `hostname -s` ; "
+                                         f"sudo hostnamectl set-hostname {self.get_name()} ; "
+                                         f"sudo dnf install -y epel-release ; "
+                                         f"sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo ; "
+                                         f"sudo dnf install -y docker-ce docker-ce-cli containerd.io ; "
+                                         f"sudo mkdir /etc/docker ; "
+                                         f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         f"sudo systemctl enable docker ; "
+                                         f"sudo systemctl start docker ; "
+                                         f"sudo usermod -aG docker {self.get_username()} ; "
+                                         f"sudo dnf install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm ; "
+                                         f'sudo dnf install -y openvswitch libibverbs tcpdump net-tools python3.9 vim iftop ; '
+                                         f"pip3.9 install docker rpyc --user ; " 
+                                         f'sudo systemctl enable --now openvswitch ; '
+                                         f'sudo sysctl --system ; '
+                                         , quiet=True,
+                                         output_file=f"{log_dir}/{self.get_name()}.log")
+
+        elif self.get_image() == 'default_ubuntu_20':
+            self.execute("echo Hello, FABRIC from node `hostname -s` ; "
+                                         f"sudo hostnamectl set-hostname {self.get_name()} ; "
+                                         f"sudo apt-get update; "
+                                         f"sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common ; "
+                                         f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - ; "
+                                         f'sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" ; '
+                                         f"sudo apt-get update ; "
+                                         f"sudo mkdir /etc/docker ; "
+                                         f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         f"sudo apt-get install -y docker-ce ; "
+                                         f"sudo usermod -aG docker {self.get_username()} ; "
+                                         f"sudo apt-get install openvswitch-switch -y ; "
+                                         f"sudo systemctl start openvswitch-switch ; "
+                                         f"sudo systemctl status openvswitch-switch ; "
+                                         f"sudo systemctl enable --now openvswitch-switch ; "
+                                         f"sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget python3.9 python3.9-full tcpdump iftop python3-pip ; "
+                                         f"python3.9 -m pip install docker rpyc --user ; "
+                                         , quiet=True,
+                                         output_file=f"{log_dir}/{self.get_name()}.log")
+        elif self.get_image() == 'default_ubuntu_22':
+            self.execute("echo Hello, FABRIC from node `hostname -s` ; "
+                                         f"sudo hostnamectl set-hostname {self.get_name()} ; "
+                                         f"sudo apt-get update; "
+                                         f"sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common ; "
+                                         f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - ; "
+                                         f'sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" ; '
+                                         f"sudo apt-get update ; "
+                                         f"sudo mkdir /etc/docker ; "
+                                         f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io ; "
+                                         f"sudo usermod -aG docker {self.get_username()} ; "
+                                         f"sudo apt-get install openvswitch-switch -y ; "
+                                         f"sudo systemctl start openvswitch-switch ; "
+                                         f"sudo systemctl status openvswitch-switch ; "
+                                         f"sudo systemctl enable --now openvswitch-switch ; "
+                                         f"sudo apt-get install -y  build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev wget tcpdump iftop python3-pip ; "
+                                         f"python3 -m pip install docker rpyc --user ; "
+                                         , quiet=True,
+                                         output_file=f"{log_dir}/{self.get_name()}.log")
+

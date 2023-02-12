@@ -865,6 +865,26 @@ class NetworkService:
 
 
     def add_interface(self, interface: Interface):
+        iface_fablib_data = interface.get_fablib_data()
+
+        if 'addr' in iface_fablib_data:
+            addr = iface_fablib_data['addr']
+        else:
+            addr = None
+
+        if 'auto' in iface_fablib_data:
+            auto = iface_fablib_data['auto']
+        else:
+            auto = False
+
+        if self.get_subnet():
+            if addr:
+                iface_fablib_data['addr'] = str(self.allocate_ip(addr))
+            elif auto:
+                iface_fablib_data['addr'] = str(self.allocate_ip())
+
+        interface.set_fablib_data(iface_fablib_data)
+
         self.get_fim().connect_interface(interface=interface.get_fim())
 
     def remove_interface(self, interface: Interface):
@@ -903,7 +923,7 @@ class NetworkService:
 
     def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
         fablib_data = self.get_fablib_data()
-        allocated_ips = fablib_data['subnet'] ['allocated_ips']
+        allocated_ips = fablib_data['subnet']['allocated_ips']
         allocated_ips.append(str(addr))
         self.set_fablib_data(fablib_data)
 
@@ -922,5 +942,12 @@ class NetworkService:
                     return host
 
         return None
+
+    def config(self):
+
+        #init fablib data for fabnet networks
+        self.set_subnet(self.get_subnet())
+        self.set_allocated_ip(self.get_gateway())
+
 
 
