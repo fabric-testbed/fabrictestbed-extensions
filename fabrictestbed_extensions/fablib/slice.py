@@ -807,9 +807,7 @@ class Slice:
         """
         return self.sm_slice.project_id
 
-    def add_l2network(
-        self, name: str = None, interfaces: List[Interface] = [], type: str = None
-    ) -> NetworkService:
+    def add_l2network(self, name: str = None, interfaces: List[Interface] = [], type: str = None, user_data: dict = {}) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
 
@@ -843,11 +841,11 @@ class Slice:
         :rtype: NetworkService
         """
         return NetworkService.new_l2network(
-            slice=self, name=name, interfaces=interfaces, type=type
+            slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
         )
 
     def add_l3network(
-        self, name: str = None, interfaces: List[Interface] = [], type: str = "IPv4"
+        self, name: str = None, interfaces: List[Interface] = [], type: str = "IPv4",  user_data: dict = {},
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -891,7 +889,7 @@ class Slice:
         :rtype: NetworkService
         """
         return NetworkService.new_l3network(
-            slice=self, name=name, interfaces=interfaces, type=type
+            slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data,
         )
 
     def add_facility_port(
@@ -924,6 +922,7 @@ class Slice:
         instance_type: str = None,
         docker_image: str = None,
         host: str = None,
+        user_data: dict = {},
         avoid: List[str] = [],
     ) -> Node:
         """
@@ -956,6 +955,8 @@ class Slice:
         :rtype: Node
         """
         node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
+
+        node.set_user_data(user_data)
 
         if instance_type:
             node.set_instance_type(instance_type)

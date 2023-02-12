@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
+    from fabrictestbed_extensions.fablib.interface import Interface
 
 from tabulate import tabulate
 from typing import List
@@ -258,7 +259,7 @@ class Component:
         return f"{node.get_name()}-{name}"
 
     @staticmethod
-    def new_component(node: Node = None, model: str = None, name: str = None):
+    def new_component(node: Node = None, model: str = None, name: str = None, user_data: dict = {}):
         """
         Not intended for API use
 
@@ -276,12 +277,14 @@ class Component:
         # Hack to make it possile to find interfaces
         name = Component.calculate_name(node=node, name=name)
 
-        return Component(
+        component = Component(
             node=node,
             fim_component=node.fim_node.add_component(
                 model_type=Component.component_model_map[model], name=name
             ),
         )
+        component.set_user_data(user_data)
+        return component
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
         """

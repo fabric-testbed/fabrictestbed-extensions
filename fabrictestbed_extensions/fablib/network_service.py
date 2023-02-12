@@ -115,7 +115,7 @@ class NetworkService:
                 basic_nic_count += 1
 
         rtn_nstype = None
-        if len(sites) == 1:
+        if len(sites) <= 1 and  len(sites) >= 0 :
             rtn_nstype = NetworkService.network_service_map["L2Bridge"]
         # elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
         #    #TODO: remove this when STS works on all links.
@@ -165,9 +165,9 @@ class NetworkService:
 
         # models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
         if type == NetworkService.network_service_map["L2Bridge"]:
-            if not len(sites) == 1:
+            if not len(sites) <= 0 or len(sites) >= 1 :
                 raise Exception(
-                    f"Network type {type} must include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
+                    f"Network type {type} must be empty or include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
                 )
 
         elif type == NetworkService.network_service_map["L2PTP"]:
@@ -215,6 +215,7 @@ class NetworkService:
         name: str = None,
         interfaces: List[Interface] = [],
         type: str = None,
+        user_data={}
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -239,7 +240,7 @@ class NetworkService:
         # NetworkService.validate_nstype(nstype, interfaces)
 
         return NetworkService.new_network_service(
-            slice=slice, name=name, nstype=nstype, interfaces=interfaces
+            slice=slice, name=name, nstype=nstype, interfaces=interfaces, user_data=user_data
         )
 
     @staticmethod
@@ -248,6 +249,7 @@ class NetworkService:
         name: str = None,
         interfaces: List[Interface] = [],
         type: str = None,
+        user_data: dict = {}
     ):
         """
         Not inteded for API use. See slice.add_l2network
@@ -302,7 +304,7 @@ class NetworkService:
             #        interface.set_vlan("100")
 
         return NetworkService.new_network_service(
-            slice=slice, name=name, nstype=nstype, interfaces=interfaces
+            slice=slice, name=name, nstype=nstype, interfaces=interfaces, user_data=user_data
         )
 
     @staticmethod
@@ -311,6 +313,7 @@ class NetworkService:
         name: str = None,
         nstype: ServiceType = None,
         interfaces: List[Interface] = [],
+        user_data: dict = {}
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -339,7 +342,12 @@ class NetworkService:
             name=name, nstype=nstype, interfaces=fim_interfaces
         )
 
-        return NetworkService(slice=slice, fim_network_service=fim_network_service)
+        network_service = NetworkService(slice=slice, fim_network_service=fim_network_service)
+        network_service.set_user_data(user_data)
+
+        return network_service
+
+
 
     @staticmethod
     def get_l3network_services(slice: Slice = None) -> list:
@@ -847,3 +855,13 @@ class NetworkService:
             return json.loads(str(self.get_fim().get_property(pname='user_data')))
         except:
             return {}
+
+
+    def add_interface(self, interface):
+        self.get_fim().connect_interface(interface=interface.get_fim())
+
+    def remove_interface(self, interface):
+        self.get_fim().disconnect_interface(interface=interface.get_fim())
+
+    def delete(self):
+        self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())

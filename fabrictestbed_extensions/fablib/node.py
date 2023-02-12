@@ -939,7 +939,7 @@ class Node:
         """
         return self.get_slice().get_private_key_passphrase()
 
-    def add_component(self, model: str = None, name: str = None) -> Component:
+    def add_component(self, model: str = None, name: str = None, user_data: dict = {}) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
         Example model include:
@@ -956,7 +956,7 @@ class Node:
         :return: the new component
         :rtype: Component
         """
-        return Component.new_component(node=self, model=model, name=name)
+        return Component.new_component(node=self, model=model, name=name, user_data=user_data)
 
     def get_components(self) -> List[Component]:
         """
@@ -2429,3 +2429,6 @@ class Node:
             return json.loads(str(self.get_fim().get_property(pname='user_data')))
         except:
             return {}
+
+    def delete(self):
+        self.get_slice().get_fim_topology().remove_node(name=self.get_name())
