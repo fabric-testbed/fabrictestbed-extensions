@@ -23,13 +23,15 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
+import ipaddress
+
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
 import json
 
 import logging
-
 
 from typing import TYPE_CHECKING, Any
 
@@ -161,7 +163,7 @@ class Interface:
         return output_string
 
     def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+            self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
         """
         Show a table containing the current interface attributes.
@@ -473,8 +475,8 @@ class Interface:
             # print(f"{self.get_fim_interface()}")
             return (
                 self.get_fim_interface()
-                .get_property(pname="reservation_info")
-                .reservation_id
+                    .get_property(pname="reservation_info")
+                    .reservation_id
             )
         except:
             return None
@@ -489,8 +491,8 @@ class Interface:
         try:
             return (
                 self.get_fim_interface()
-                .get_property(pname="reservation_info")
-                .reservation_state
+                    .get_property(pname="reservation_info")
+                    .reservation_state
             )
         except:
             return None
@@ -505,8 +507,8 @@ class Interface:
         try:
             return (
                 self.get_fim_interface()
-                .get_property(pname="reservation_info")
-                .error_message
+                    .get_property(pname="reservation_info")
+                    .error_message
             )
         except:
             return ""
@@ -688,5 +690,33 @@ class Interface:
     def get_user_data(self):
         try:
             return json.loads(str(self.get_fim().get_property(pname='user_data')))
+        except Exception as e:
+            return {}
+
+    def get_fablib_data(self):
+        try:
+            return self.get_user_data()['fablib_data']
         except:
             return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        user_data = self.get_user_data()
+        user_data['fablib_data'] = fablib_data
+        self.set_user_data(user_data)
+
+    def set_ip_addr(self, addr: ipaddress = None, auto: bool = False):
+        fablib_data = self.get_fablib_data()
+        fablib_data['auto'] = str(auto)
+        if addr:
+            fablib_data['addr'] = str(self.get_network().allocate_ip(addr))
+        elif auto:
+            fablib_data['addr'] = str(self.get_network().allocate_ip())
+        self.set_fablib_data(fablib_data)
+
+    def config(self):
+        fablib_data = self.get_fablib_data()
+
+        addr = fablib_data['addr']
+        subnet = self.get_network().get_subnet()
+
+        self.ip_addr_add(addr=addr, subnet=ipaddress.IPv4Network(subnet))

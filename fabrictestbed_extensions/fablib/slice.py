@@ -807,7 +807,11 @@ class Slice:
         """
         return self.sm_slice.project_id
 
-    def add_l2network(self, name: str = None, interfaces: List[Interface] = [], type: str = None, user_data: dict = {}) -> NetworkService:
+    def add_l2network(self, name: str = None,
+                      interfaces: List[Interface] = [],
+                      type: str = None,
+                      subnet: ipaddress = None,
+                      user_data: dict = {}) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
 
@@ -840,9 +844,12 @@ class Slice:
         :return: a new L2 network service
         :rtype: NetworkService
         """
-        return NetworkService.new_l2network(
+        network_service = NetworkService.new_l2network(
             slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
         )
+        if subnet:
+            network_service.set_subnet(subnet)
+        return network_service
 
     def add_l3network(
         self, name: str = None, interfaces: List[Interface] = [], type: str = "IPv4",  user_data: dict = {},
@@ -1533,6 +1540,8 @@ class Slice:
                     f"sudo nmcli device set {interface.get_device_name()} managed no",
                     quiet=True,
                 )
+
+                interface.config()
             except Exception as e:
                 logging.error(
                     f"Interface: {interface.get_name()} failed to become unmanged"

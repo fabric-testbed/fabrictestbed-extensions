@@ -40,8 +40,8 @@ from fim.slivers.network_service import ServiceType, NSLayer
 
 from fabrictestbed.slice_editor import UserData
 
-
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
+import ipaddress
 import json
 
 
@@ -738,7 +738,7 @@ class NetworkService:
 
     def get_subnet(self) -> IPv4Network or IPv6Network or None:
         """
-        Gets the assigend subnet for a FABnetv L3 IPv6 or IPv4 network
+        Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network
 
         :return: gateway IP
         :rtype: IPv4Network or IPv6Network
@@ -750,7 +750,14 @@ class NetworkService:
                     subnet = IPv6Network(self.get_sliver().fim_sliver.gateway.subnet)
                 elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
                     subnet = IPv4Network(self.get_sliver().fim_sliver.gateway.subnet)
-            return subnet
+            else:
+                # L2 Network
+                fablib_data = self.get_fablib_data()
+                try:
+                    subnet = fablib_data['subnet']['subnet']
+                except Exception as e:
+                    subnet = None
+            return IPv4Network(subnet)
         except Exception as e:
             logging.warning(f"Failed to get subnet: {e}")
             return None
@@ -857,11 +864,63 @@ class NetworkService:
             return {}
 
 
-    def add_interface(self, interface):
+    def add_interface(self, interface: Interface):
         self.get_fim().connect_interface(interface=interface.get_fim())
 
-    def remove_interface(self, interface):
+    def remove_interface(self, interface: Interface):
         self.get_fim().disconnect_interface(interface=interface.get_fim())
 
     def delete(self):
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
+
+    def get_fablib_data(self):
+        try:
+            return self.get_user_data()['fablib_data']
+        except:
+            return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        user_data = self.get_user_data()
+        user_data['fablib_data'] = fablib_data
+        self.set_user_data(user_data)
+
+    def set_subnet(self, subnet:  IPv4Network or IPv6Network):
+        fablib_data = self.get_fablib_data()
+        fablib_data['subnet'] = { 'subnet': str(subnet),
+                                  'allocated_ips': []
+                                }
+        self.set_fablib_data(fablib_data)
+
+    def get_allocated_ips(self):
+        try:
+            allocated_ips = []
+            for addr in self.get_fablib_data()['subnet']['allocated_ips']:
+                allocated_ips.append(IPv4Address(addr))
+
+            return allocated_ips
+        except Exception as e:
+            return []
+
+    def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
+        fablib_data = self.get_fablib_data()
+        allocated_ips = fablib_data['subnet'] ['allocated_ips']
+        allocated_ips.append(str(addr))
+        self.set_fablib_data(fablib_data)
+
+    def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
+        subnet = self.get_subnet()
+        allocated_ips = self.get_allocated_ips()
+
+        if addr:
+            if addr != subnet.network_address and addr not in allocated_ips:
+                self.set_allocated_ip(addr)
+                return addr
+        else:
+            for host in subnet:
+                if host != subnet.network_address and host not in allocated_ips:
+                    self.set_allocated_ip(host)
+                    return host
+
+        return None
+
+
