@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
 import pandas as pd
+from ipaddress import IPv4Network, IPv6Network
 from tabulate import tabulate
 import json
 
@@ -480,6 +481,9 @@ class fablib:
 
 
 class FablibManager:
+    FABNETV4_SUBNET = IPv4Network('10.128.0.0/10')
+    FABNETV6_SUBNET = IPv6Network('2602:FCFB:00::/40')
+
     FABRIC_BASTION_USERNAME = "FABRIC_BASTION_USERNAME"
     FABRIC_BASTION_KEY_LOCATION = "FABRIC_BASTION_KEY_LOCATION"
     FABRIC_BASTION_HOST = "FABRIC_BASTION_HOST"

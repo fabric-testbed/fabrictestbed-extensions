@@ -23,12 +23,15 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
+import ipaddress
 import json
 import threading
 import time
 import paramiko
 import logging
 
+from fabrictestbed_extensions.fablib.network_service import NetworkService
 from tabulate import tabulate
 import select
 import jinja2
@@ -2447,7 +2450,10 @@ class Node:
         user_data['fablib_data'] = fablib_data
         self.set_user_data(user_data)
 
-    def add_route(self, subnet: IPv4Network  or IPv6Network, next_hop: IPv4Address or IPv6Address or str):
+    def add_route(self, subnet: IPv4Network or IPv6Network, next_hop: IPv4Address or IPv6Address or NetworkService):
+        if type(next_hop) == NetworkService:
+            next_hop = next_hop.get_name()
+
         fablib_data = self.get_fablib_data()
         if 'routes' not in fablib_data:
             fablib_data['routes'] = []
@@ -2510,11 +2516,11 @@ class Node:
         for route in routes:
 
             try:
-                next_hop = IPv4Address(route['next_hop'])
+                next_hop = ipaddress.ip_network(route['next_hop'])
             except Exception as e:
                 next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
 
-            self.ip_route_add(subnet=IPv4Network(route['subnet']), gateway=next_hop)
+            self.ip_route_add(subnet=ipaddress.ip_network(route['subnet']), gateway=next_hop)
 
 
     def config(self, log_dir='.'):

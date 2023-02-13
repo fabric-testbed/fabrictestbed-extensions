@@ -1579,19 +1579,19 @@ class Slice:
         threads = {}
 
         for node in self.get_nodes():
-            print(f"Starting thread {node.get_name()}")
+            #print(f"Configuring {node.get_name()}")
             thread = my_thread_pool_executor.submit(node.config)
             threads[thread] = node
 
-        print(f"ALL Threads Created! ({time.time() - start:.0f} sec)")
+        print(f"Node config threads created! ({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
             node = threads[thread]
             result = thread.result()
             #print(result)
-            print(f"{node.get_name()}, Done! ({time.time() - start:.0f} sec)")
+            print(f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)")
 
-        print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
+        #print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -1691,7 +1691,7 @@ class Slice:
 
         print(f"\nTime to stable {time.time() - start:.0f} seconds")
 
-        print("Running post_boot_config ... ", end="")
+        print("Running post_boot_config ... ")
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
@@ -1753,6 +1753,12 @@ class Slice:
                 slice_graph=slice_graph,
                 ssh_key=self.get_slice_public_key(),
             )
+            if return_status == Status.OK:
+                logging.info(f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}")
+            else:
+                logging.error(f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}")
+                raise Exception(f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}")
+
             self.slice_id = slice_reservations[0].slice_id
 
         if return_status != Status.OK:
@@ -1768,6 +1774,9 @@ class Slice:
 
         time.sleep(1)
         self.update()
+
+        if not wait:
+            return self.slice_id
 
         if (
             progress
@@ -1790,6 +1799,8 @@ class Slice:
 
         if progress:
             print("Done!")
+
+        self.submit(wait=False)
 
         return self.slice_id
 
