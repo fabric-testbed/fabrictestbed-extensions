@@ -532,6 +532,8 @@ class Slice:
 
         :raises Exception: if slice manager slice no longer exists
         """
+        logging.info(f"update_slice: {self.get_name()}")
+
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
@@ -562,6 +564,8 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        logging.info(f"update_topology: {self.get_name()}")
+
         # Update topology
         if self.sm_slice.model is not None and self.sm_slice.model != "":
             self.topology = ExperimentTopology()
@@ -590,6 +594,8 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        logging.info(f"update_slivers: {self.get_name()}")
+
         if self.sm_slice is None:
             return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(
@@ -618,6 +624,8 @@ class Slice:
 
         :raises Exception: if updating topology fails
         """
+        logging.info(f"update : {self.get_name()}")
+
         try:
             self.update_slice()
         except Exception as e:
@@ -970,7 +978,12 @@ class Slice:
         """
         node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
 
-        node.set_user_data(user_data)
+        node.init_fablib_data()
+
+        user_data_working = node.get_user_data()
+        for k,v in user_data.items():
+            user_data_working[k] = v
+        node.set_user_data(user_data_working)
 
         if instance_type:
             node.set_instance_type(instance_type)
@@ -1583,7 +1596,7 @@ class Slice:
             thread = my_thread_pool_executor.submit(node.config)
             threads[thread] = node
 
-        print(f"Node config threads created! ({time.time() - start:.0f} sec)")
+        print(f"Post boot config threads created") #({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
             node = threads[thread]
@@ -1592,6 +1605,13 @@ class Slice:
             print(f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)")
 
         #print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
+
+        # Push updates to user_data
+        print("Saving fablib data... ", end='')
+        self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
+        self.update()
+        print(" Done!")
+
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -1626,7 +1646,9 @@ class Slice:
         for net in self.get_networks():
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
-                    if net.get_subnet() == None or net.get_available_ips() == None:
+                    if not type(net.get_subnet()) in [ipaddress.IPv4Network, ipaddress.IPv6Network] or \
+                       not type(net.get_gateway()) in [ipaddress.IPv4Address, ipaddress.IPv46ddress] or \
+                       net.get_available_ips() == None:
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
                         )
@@ -1695,6 +1717,26 @@ class Slice:
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
+        # Last update to get final data for display
+        self.update()
+
+        slice_show_table = self.show(colors=True, quiet=True)
+        node_table = self.list_nodes(colors=True, quiet=True)
+        if hasNetworks:
+            network_table = self.list_networks(colors=True, quiet=True)
+
+        time_string = f"{time.time() - start:.0f} sec"
+
+        # Clear screen
+        clear_output(wait=True)
+
+        print(f"\nRetry: {count}, Time: {time_string}")
+
+        display(slice_show_table)
+        display(node_table)
+        if hasNetworks:
+            display(network_table)
+
         if hasNetworks:
             self.list_interfaces()
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
@@ -1706,6 +1748,8 @@ class Slice:
         wait_interval: int = 20,
         progress: bool = True,
         wait_jupyter: str = "text",
+        post_boot_config: bool = True,
+        wait_ssh: bool = True,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1787,20 +1831,24 @@ class Slice:
             return self.slice_id
 
         if wait:
-            self.wait_ssh(
-                timeout=wait_timeout, interval=wait_interval, progress=progress
-            )
+
+            self.wait()
+
+            if (wait_ssh):
+                self.wait_ssh(
+                    timeout=wait_timeout, interval=wait_interval, progress=progress
+                )
 
             if progress:
                 print("Running post boot config ... ", end="")
 
             self.update()
-            self.post_boot_config()
+            if post_boot_config:
+                self.post_boot_config()
 
         if progress:
             print("Done!")
 
-        self.submit(wait=False)
 
         return self.slice_id
 
@@ -1872,6 +1920,10 @@ class Slice:
             if val == "Active":
                 color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
             elif val == "Ticketed":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "ActiveTicketed":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "Closed":
                 color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             else:
                 color = ""
@@ -2105,7 +2157,7 @@ class Slice:
 
     def modify_accept(self):
         """
-        Submits a accept to accept the last modify slice request to FABRIC.
+        Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
         return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(
@@ -2123,3 +2175,21 @@ class Slice:
         logging.debug(f"modified topology: {topology}")
 
         self.update_slice()
+
+    def get_user_data(self):
+        user_data = {}
+        for node in self.get_nodes():
+            user_data[node.get_name()] = node.get_user_data()
+
+        for network in self.get_networks():
+            user_data[network.get_name()] = network.get_user_data()
+
+        for iface in self.get_interfaces():
+            user_data[iface.get_name()] = iface.get_user_data()
+
+
+        for componenet in self.get_components():
+            user_data[componenet.get_name()] = componenet.get_user_data()
+
+
+        return user_data

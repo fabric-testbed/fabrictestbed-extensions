@@ -81,10 +81,12 @@ class Interface:
             ["Name", self.get_name()],
             ["Network", network_name],
             ["Bandwidth", self.get_bandwidth()],
+            ["Mode", self.get_mode()],
             ["VLAN", self.get_vlan()],
             ["MAC", self.get_mac()],
             ["Physical Device", self.get_physical_os_interface_name()],
             ["Device", self.get_os_interface()],
+            ["Address", self.get_ip_addr()],
         ]
 
         return tabulate(table)
@@ -116,6 +118,9 @@ class Interface:
             "ssh_command": "SSH Command",
             "public_ssh_key_file": "Public SSH Key File",
             "private_ssh_key_file": "Private SSH Key File",
+            "mode": "Mode",
+            "ip_addr": "IP Address",
+
         }
 
     def toDict(self, skip=[]):
@@ -146,10 +151,13 @@ class Interface:
             "node": str(node_name),
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
-            "vlan": str(self.get_vlan()),
+            "mode": str(self.get_mode()),
+            "vlan": str(self.get_vlan()) if self.get_vlan() else "", #str(self.get_vlan()),
             "mac": str(self.get_mac()),
             "physical_dev": str(self.get_physical_os_interface_name()),
             "dev": str(self.get_os_interface()),
+            "ip_addr": str(self.get_ip_addr()),
+
         }
 
     def get_template_context(self):
@@ -658,7 +666,7 @@ class Interface:
 
             for addr in addrs:
                 if addr["ifname"] == dev:
-                    return addr["addr_info"][0]["local"]
+                    return ipaddress.ip_address(addr["addr_info"][0]["local"])
 
             return None
         except Exception as e:
@@ -714,38 +722,50 @@ class Interface:
         user_data['fablib_data'] = fablib_data
         self.set_user_data(user_data)
 
-    def set_ip_addr(self, addr: ipaddress = None, auto: bool = False):
+    def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
         fablib_data = self.get_fablib_data()
-        fablib_data['auto'] = str(auto)
+        if mode:
+            fablib_data['mode'] = str(mode)
+
+        mode = fablib_data['mode']
         if addr:
             fablib_data['addr'] = str(self.get_network().allocate_ip(addr))
-        elif auto:
+        elif mode == 'auto':
             if self.get_network():
                 fablib_data['addr'] = str(self.get_network().allocate_ip())
         self.set_fablib_data(fablib_data)
 
+    def get_ip_addr(self):
+        fablib_data = self.get_fablib_data()
+        if 'addr' in fablib_data:
+            try:
+                addr = ipaddress.ip_address(fablib_data['addr'])
+            except:
+                addr = fablib_data['addr']
+            return addr
+        else:
+            return None
+
+    def set_mode(self, mode: str = 'user'):
+        fablib_data = self.get_fablib_data()
+        fablib_data['mode']=mode
+        self.set_fablib_data(fablib_data)
+
+    def get_mode(self):
+        fablib_data = self.get_fablib_data()
+        return fablib_data['mode']
+
     def config(self):
         fablib_data = self.get_fablib_data()
 
-        if 'addr' in fablib_data:
-            addr = fablib_data['addr']
+
+
+        if 'mode' in fablib_data:
+            mode = fablib_data['mode']
         else:
-            addr = None
+            mode = 'manual'
 
-        if 'auto' in fablib_data:
-            auto = fablib_data['auto']
-        else:
-            auto = False
-
-        subnet = self.get_network().get_subnet()
-
-
-
-        #print(f"addr: {addr}")
-        #print(f"auto: {auto}")
-        #print(f"subnet: {subnet}")
-
-        if subnet and not addr and auto:
+        if mode == 'auto':
             fablib_data['addr'] = str(self.get_network().allocate_ip())
             addr = fablib_data['addr']
 
@@ -753,6 +773,21 @@ class Interface:
 
             self.set_fablib_data(fablib_data)
 
-        if addr:
-            self.ip_addr_add(addr=addr, subnet=ipaddress.IPv4Network(subnet))
+
+        if mode == 'fablib' or mode == 'auto':
+            subnet = self.get_network().get_subnet()
+            if 'addr' in fablib_data:
+                addr = fablib_data['addr']
+                if addr and subnet:
+                    self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+        else:
+            # manual mode... do nothing
+            pass
+
+
+
+    def delete(self):
+        net = self.get_network()
+
+        net.remove_interface(self)
 

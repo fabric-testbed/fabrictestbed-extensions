@@ -157,6 +157,8 @@ class Node:
         )
         node.set_image(Node.default_image)
 
+        node.init_fablib_data()
+
         return node
 
     @staticmethod
@@ -233,7 +235,7 @@ class Node:
         if "username" not in skip:
             rtn_dict["username"] = str(self.get_username())
         if "management_ip" not in skip:
-            rtn_dict["management_ip"] = str(self.get_management_ip())
+            rtn_dict["management_ip"] = str(self.get_management_ip()) if self.get_management_ip() else '' #str(self.get_management_ip())
         if "state" not in skip:
             rtn_dict["state"] = str(self.get_reservation_state())
         if "error" not in skip:
@@ -2437,7 +2439,21 @@ class Node:
             return {}
 
     def delete(self):
+
+        for component in self.get_components():
+            component.delete()
+
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
+
+    def init_fablib_data(self):
+        fablib_data = { 'instantiated': 'False',
+                        'run_update_commands': 'False',
+                        'post_boot_commands': [],
+                        'post_update_commands': [],
+                        }
+        self.set_fablib_data(fablib_data)
+
+
 
     def get_fablib_data(self):
         try:
@@ -2460,6 +2476,37 @@ class Node:
         fablib_data['routes'].append({ 'subnet': str(subnet), 'next_hop': str(next_hop)})
         self.set_fablib_data(fablib_data)
 
+    def add_post_update_command(self, command: str):
+        fablib_data = self.get_fablib_data()
+        if 'post_update_commands' not in fablib_data:
+            fablib_data['post_update_commands'] = []
+
+        fablib_data['post_update_commands'].append(command)
+        self.set_fablib_data(fablib_data)
+
+    def get_post_update_commands(self):
+        fablib_data = self.get_fablib_data()
+
+        if 'post_update_commands' in fablib_data:
+            return fablib_data['post_update_commands']
+        else:
+            return []
+
+    def add_post_boot_command(self, command: str):
+        fablib_data = self.get_fablib_data()
+        if 'post_boot_commands' not in fablib_data:
+            fablib_data['post_boot_commands'] = []
+        fablib_data['post_boot_commands'].append(command)
+        self.set_fablib_data(fablib_data)
+
+    def get_post_boot_commands(self):
+        fablib_data = self.get_fablib_data()
+
+        if 'post_boot_commands' in fablib_data:
+            return fablib_data['post_boot_commands']
+        else:
+            return []
+
     def get_routes(self):
         try:
             return self.get_fablib_data()['routes']
@@ -2472,6 +2519,7 @@ class Node:
                    docker_extra_args: str = ''):
         fablib_data = self.get_fablib_data()
         fablib_data['docker'] = {}
+        fablib_data['docker']['installed'] = 'False'
         fablib_data['docker']['enable'] = str(enable)
         fablib_data['docker']['image'] = str(docker_image)
         fablib_data['docker']['container_name'] = str(docker_container_name)
@@ -2514,13 +2562,86 @@ class Node:
         routes = self.get_routes()
 
         for route in routes:
-
             try:
                 next_hop = ipaddress.ip_network(route['next_hop'])
             except Exception as e:
-                next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
+                net_name = route['next_hop'].split('.')[0]
+                #funct = getattr(NetworkService,funct_name)
+                #next_hop = funct(self.get_slice().get_network(net_name))
+                next_hop = self.get_slice().get_network(name=str(net_name)).get_gateway()
+                #next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
 
-            self.ip_route_add(subnet=ipaddress.ip_network(route['subnet']), gateway=next_hop)
+
+            try:
+                subnet = ipaddress.ip_network(route['subnet'])
+            except Exception as e:
+                net_name = route['subnet'].split('.')[0]
+                subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
+
+            #print(f"subnet: {subnet} ({type(subnet)}, next_hop: {next_hop} ({type(next_hop)}")
+
+            self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
+
+    def docker_installed(self):
+        fablib_data = self.get_fablib_data()
+        docker_data = fablib_data['docker']
+
+        if 'installed' in docker_data and docker_data['installed'] == 'True':
+            return True
+        else:
+            return False
+
+    def set_docker_installed(self, installed: bool = True):
+        fablib_data = self.get_fablib_data()
+        docker_data = fablib_data['docker']
+        docker_data['installed'] = 'True'
+
+        self.set_fablib_data(fablib_data)
+
+    def run_post_boot_commands(self, log_dir: str = '.'):
+        fablib_data = self.get_fablib_data()
+        if 'post_boot_commands' in fablib_data:
+            commands = fablib_data['post_boot_commands']
+        else:
+            commands = []
+
+        for command in commands:
+            self.execute(command, quiet=True, output_file=f"{log_dir}/{self.get_name()}.log")
+
+    def run_post_update_commands(self, log_dir: str = '.'):
+        fablib_data = self.get_fablib_data()
+        if 'post_update_commands' in fablib_data:
+            commands = fablib_data['post_update_commands']
+        else:
+            commands = []
+
+        for command in commands:
+            self.execute(command, quiet=True, output_file=f"{log_dir}/{self.get_name()}.log")
+
+    def is_instantiated(self):
+        fablib_data = self.get_fablib_data()
+        if fablib_data['instantiated'] == 'True':
+            return True
+        else:
+            return False
+
+    def set_instantiated(self, instantiated: bool = True):
+        fablib_data = self.get_fablib_data()
+        fablib_data['instantiated'] = str(instantiated)
+        self.set_fablib_data(fablib_data)
+
+
+    def run_update_commands(self):
+        fablib_data = self.get_fablib_data()
+        if fablib_data['run_update_commands'] == 'True':
+            return True
+        else:
+            return False
+
+    def set_run_update_commands(self, run_update_commands: bool = True):
+        fablib_data = self.get_fablib_data()
+        fablib_data['run_update_commands'] = str(run_update_commands)
+        self.set_fablib_data(fablib_data)
 
 
     def config(self, log_dir='.'):
@@ -2528,13 +2649,21 @@ class Node:
 
         for iface in self.get_interfaces():
             iface.config()
-
         self.config_routes()
 
-        if self.docker_enabled():
-            self.enable_docker()
+        if not self.is_instantiated():
+            self.run_post_boot_commands()
+            self.set_instantiated(True)
+
+        if self.run_update_commands():
+            self.run_post_update_commands()
+
 
         if self.get_docker_image():
+            if not self.docker_installed() and self.docker_enabled():
+                self.enable_docker()
+                self.set_docker_installed()
+
             docker_image = self.get_docker_image()
             container_name = self.get_docker_container_name()
             extra_args = self.get_docker_extra_args()

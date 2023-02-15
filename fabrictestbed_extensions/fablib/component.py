@@ -586,3 +586,9 @@ class Component:
             return json.loads(str(self.get_fim().get_property(pname='user_data')))
         except:
             return {}
+
+    def delete(self):
+        for interface in self.get_interfaces():
+            interface.delete()
+
+        self.get_slice().get_fim_topology().nodes[self.get_node().get_name()].remove_component(name=self.get_name())
