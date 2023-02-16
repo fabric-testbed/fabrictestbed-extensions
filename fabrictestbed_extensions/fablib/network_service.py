@@ -511,7 +511,6 @@ class NetworkService:
 
     @staticmethod
     def get_pretty_name_dict():
-
         return {
             "id": "ID",
             "name": "Name",

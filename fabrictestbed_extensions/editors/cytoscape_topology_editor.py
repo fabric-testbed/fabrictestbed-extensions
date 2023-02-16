@@ -77,7 +77,6 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         self.style = "secondary"
 
     def toggle_style(self):
-
         if self.style == "primary":
             self.style = "secondary"
             color = self.FABRIC_SECONDARY

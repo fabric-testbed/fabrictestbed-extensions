@@ -1,8 +1,51 @@
-[tool.isort]
-profile = "black"
-src_paths = ["fabrictestbed_extensions", "setup.py", "docs"]
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "fabrictestbed-extensions"
+# Bump version up in top-level __init.py__.
+dynamic = ["version"]
+description = "FABRIC Python Client Library and CLI Extensions"
+authors = [
+    {name="Paul Ruth", email="pruth@renci.org"},
+    {name="Komal Thareja", email="kthare10@renci.org"}
+]
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = [
+    "ipycytoscape",
+    "ipywidgets",
+    "ipyleaflet",
+    "ipycytoscape",
+    "tabulate",
+    "fabrictestbed==1.4.4",
+    "paramiko",
+    "jinja2>=3.0.0",
+    "pandas",
+    "numpy",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://fabric-testbed.net/"
+Sources = "https://github.com/fabric-testbed/fabrictestbed-extensions"
+Documentation = "https://fabric-fablib.readthedocs.io/"
+ChangeLog = "https://github.com/fabric-testbed/fabrictestbed-extensions/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+doc = ["sphinx", "furo"]
+test = ["pytest", "coverage[toml]"]
 
 [tool.coverage.run]
 branch = true
 omit = [ "fabrictestbed_extensions/tests/*" ]
 
+[tool.isort]
+profile = "black"
+src_paths = ["fabrictestbed_extensions", "setup.py", "docs"]

@@ -2,9 +2,9 @@
 
 [![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
 
-This repository contains implementation of a Python API for
-intereacting with [FABRIC][fabric] testbed, otherwise known as
-"FABlib".
+This repository contains implementation of a Python API, otherwise
+known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
+
 
 ## Installing FABlib
 
@@ -64,20 +64,44 @@ $ pip install -e .[test]
 $ pytest
 ```
 
-## Building Python packages
+## Packaging FABlib
 
-Do not do `python setup.py sdist bdist_wheel`. Instead, do:
+FABlib uses [flit] as the build backend.  To build source and wheel
+packages, do this:
 
 ```console
+$ pip install flit
+$ flit build
+```
+
+While using flit as the build backend, continuing to use [build] as
+the build frontend should work too:
+
+```
 $ pip install build
 $ python -m build
 ```
 
-Following that, upload to PyPi using:
+
+## Releasing FABlib
+
+When it is time to release a new version of FABlib, remember to: (1)
+update the package version in top-level `__init__.py`, (2) build the
+source and wheel packages, and (3) upload packages to PyPI:
+
+```console
+$ flit publish
+```
+
+Continuing to use twine to publish packages is an option too:
 
 ```console
 $ twine upload dist/*
 ```
+
+For details about publishing to PyPI, see flit documentation about
+[package uploads].
+
 
 <!-- URLs -->
 
@@ -100,4 +124,9 @@ $ twine upload dist/*
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
 
+[flit]: https://flit.pypa.io/en/stable/
+[package uploads]: https://flit.pypa.io/en/latest/upload.html
+
+[build]: https://pypi.org/project/build/
 [pytest]: https://pypi.org/project/pytest/
+

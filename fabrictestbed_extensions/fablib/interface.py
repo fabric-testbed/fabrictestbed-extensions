@@ -608,7 +608,6 @@ class Interface:
             print(f"Exception: {e}")
 
     def get_ip_addr_show(self, dev=None):
-
         try:
             if not dev:
                 dev = self.get_os_interface()

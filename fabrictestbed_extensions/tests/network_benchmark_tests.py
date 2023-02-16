@@ -133,7 +133,6 @@ class NetworkBencharks(AbcTest):
             max_success = -1
 
         while max_success < min_fail - 1:
-
             current_size = int((min_fail + max_success) / 2)
             # print("min_fail: {}, max_success: {}, current_size: {}".format(str(min_fail),str(max_success), str(current_size)))
 
@@ -200,7 +199,6 @@ class NetworkBencharks(AbcTest):
             max_success = -1
 
         while max_success < min_fail - 1:
-
             current_size = int((min_fail + max_success) / 2)
             # print("min_fail: {}, max_success: {}, current_size: {}".format(str(min_fail),str(max_success), str(current_size)))
 
@@ -425,7 +423,6 @@ class NetworkBencharks(AbcTest):
         return {"ProcessorInformation": output}
 
     def create_ptp_test_slice(self, test=None, verbose=True):
-
         slice_name = test["test_name"]
         site1 = test["src"]["site"]
         site2 = test["dst"]["site"]
@@ -514,7 +511,6 @@ class NetworkBencharks(AbcTest):
         return slice
 
     def configure_test_node(self, node, dataplane_ip=None, vlan=None, verbose=True):
-
         node_ip = node.management_ip
 
         if verbose:
@@ -597,7 +593,6 @@ class NetworkBencharks(AbcTest):
         test_list,
         verbose=True,
     ):
-
         # Configure
         ssh_client_n1 = self.open_ssh_client("ubuntu", node1)
         ssh_client_n2 = self.open_ssh_client("ubuntu", node2)
@@ -766,7 +761,6 @@ class NetworkBencharks(AbcTest):
         return all_results
 
     def print_summary(self, all_results):
-
         print(
             "{:<60} | {:>9} | {:>9} | {:>11} | {:>11} | {:>10} | {:>10}".format(
                 " ", "rtt", "rtt_rev", "mtu", "mtu_rev", "bw", "bw_rev"
@@ -982,7 +976,6 @@ class NetworkBencharks(AbcTest):
         interface_list.append(node.interface_list[0])
 
         for client in test["clients"]:
-
             # Node2
             cap = Capacities(
                 core=client["core"], ram=client["ram"], disk=client["disk"]
@@ -1105,7 +1098,6 @@ class NetworkBencharks(AbcTest):
             self.configure_test_node(node, dataplane_ip)
 
         for node in nodes:
-
             result_name = "{}_{}_{}".format(test_name, server_name, node["node"].name)
             # self.run_tests(site1, site2, [self.latency_test])
             # self.run_tests(test_name, site1, site2, [self.latency_test, self.mtu_test, self.bandwidth_test, self.network_card_information, self.processor_information])

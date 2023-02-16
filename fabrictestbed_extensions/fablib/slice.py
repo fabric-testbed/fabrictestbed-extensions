@@ -179,7 +179,6 @@ class Slice:
             pretty_names_dict = {}
 
         if colors and self.get_fablib_manager().is_jupyter_notebook():
-
             slice_table = self.get_fablib_manager().show_table(
                 data,
                 fields=fields,
@@ -212,7 +211,6 @@ class Slice:
         filter_function=None,
         pretty_names=True,
     ):
-
         """
         Lists all the components in the slice with their attributes.
 
@@ -344,7 +342,6 @@ class Slice:
 
         table = []
         for iface in self.get_interfaces():
-
             if iface.get_network():
                 # network_name = iface.get_network().get_name()
                 logging.info(
@@ -1795,7 +1792,6 @@ class Slice:
             return "background-color: %s" % color
 
         def highlight(x):
-
             print(f"x: {x}")
 
             if x.State == "Closed":

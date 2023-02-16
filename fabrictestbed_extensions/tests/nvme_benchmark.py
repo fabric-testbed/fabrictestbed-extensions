@@ -115,7 +115,6 @@ class NVMEBenchmark(AbcTest):
         pass
 
     def run_test(self):
-
         for node_name, node in self.topology.nodes.items():
             # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
             # print("Node:")
