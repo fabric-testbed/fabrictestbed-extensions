@@ -1,0 +1,48 @@
+# Build the package
+
+name: Build
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache: 'pip'  # cache pip dependencies
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flit
+
+      - name: Build the package
+        run: |
+          python -m flit build
+
+      - name: Try installing the package
+        run: |
+          python -m pip install dist/fabrictestbed_extensions-*.whl
+
+      # See https://github.com/actions/upload-artifact
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages
+          path: dist/
+          if-no-files-found: error
