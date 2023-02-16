@@ -102,7 +102,8 @@ Continuing to use twine to publish packages is an option too:
 $ twine upload dist/*
 ```
 
-## Building API documentation
+
+## Building FABLib API documentation
 
 FABlib API documentation is generated from Python docstrings using
 [Sphinx][sphinx].  In order to build API docs locally, install
