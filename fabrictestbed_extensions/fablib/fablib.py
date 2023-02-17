@@ -779,7 +779,9 @@ class FablibManager:
             # TODO: define custom exception class to report errors,
             # and emit a more helpful error message with hints about
             # setting up environment variables or configuration file.
-            raise AttributeError(f"Errors found: {errors}")
+            raise AttributeError(
+                f"Error initializing {self.__class__.__name__}: {errors}"
+            )
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
