@@ -297,6 +297,11 @@ class Node:
 
         return output_string
 
+
+    def delete(self):
+        self.get_slice().get_fim_topology().remove_node(name=self.get_name())
+
+
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
@@ -2473,7 +2478,7 @@ class Node:
         fablib_data = self.get_fablib_data()
         if 'routes' not in fablib_data:
             fablib_data['routes'] = []
-        fablib_data['routes'].append({ 'subnet': str(subnet), 'next_hop': str(next_hop)})
+        fablib_data['routes'].append({'subnet': str(subnet), 'next_hop': str(next_hop)})
         self.set_fablib_data(fablib_data)
 
     def add_post_update_command(self, command: str):
@@ -2652,8 +2657,11 @@ class Node:
         self.config_routes()
 
         if not self.is_instantiated():
-            self.run_post_boot_commands()
             self.set_instantiated(True)
+            if self.get_enable_docker():
+                self.enable_docker()
+            self.run_post_boot_commands()
+
 
         if self.run_update_commands():
             self.run_post_update_commands()
@@ -2682,9 +2690,34 @@ class Node:
 
         return 'Done'
 
+    def set_enable_docker(self, enable: bool = True):
+        fablib_data = self.get_fablib_data()
+        if 'docker' not in fablib_data:
+            fablib_data['docker'] = {}
+        fablib_data['docker']['enable'] = True
+        self.set_fablib_data(fablib_data)
 
+    def get_enable_docker(self):
+        fablib_data = self.get_fablib_data()
+        if 'docker' in fablib_data:
+            if 'enable' in fablib_data['docker']:
+                return bool(fablib_data['docker']['enable'])
+        return False
 
     def enable_docker(self, log_dir='.'):
+
+        self.set_enable_docker()
+        if not self.is_instantiated():
+            return
+
+        if type(self.get_management_ip()) is IPv6Address:
+            registry = 'registry.ipv6.docker.com'
+        else:
+            registry = 'registry.ipv4.docker.com'
+
+        # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+        #f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
+        #{ "bridge": "none" , "registry-mirrors": ["https://registry.ipv4.docker.com"] }
         if self.get_image() == 'default_rocky_8':
             self.execute("echo Hello, FABRIC from node `hostname -s` ; "
                                          f"sudo hostnamectl set-hostname {self.get_name()} ; "
@@ -2692,8 +2725,7 @@ class Node:
                                          f"sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo ; "
                                          f"sudo dnf install -y docker-ce docker-ce-cli containerd.io ; "
                                          f"sudo mkdir /etc/docker ; "
-                                         f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
-                                         f"sudo systemctl enable docker ; "
+                                         f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": [\\\"https://{registry}\\\"] }} > /etc/docker/daemon.json' ; "                                         f"sudo systemctl enable docker ; "
                                          f"sudo systemctl start docker ; "
                                          f"sudo usermod -aG docker {self.get_username()} ; "
                                          f"sudo dnf install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm ; "
@@ -2713,7 +2745,8 @@ class Node:
                                          f'sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" ; '
                                          f"sudo apt-get update ; "
                                          f"sudo mkdir /etc/docker ; "
-                                         f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         #f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
                                          f"sudo apt-get install -y docker-ce ; "
                                          f"sudo usermod -aG docker {self.get_username()} ; "
                                          f"sudo apt-get install openvswitch-switch -y ; "
@@ -2733,7 +2766,8 @@ class Node:
                                          f'sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" ; '
                                          f"sudo apt-get update ; "
                                          f"sudo mkdir /etc/docker ; "
-                                         f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         #f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
+                                         f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
                                          f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io ; "
                                          f"sudo usermod -aG docker {self.get_username()} ; "
                                          f"sudo apt-get install openvswitch-switch -y ; "

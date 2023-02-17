@@ -1596,7 +1596,7 @@ class Slice:
             thread = my_thread_pool_executor.submit(node.config)
             threads[thread] = node
 
-        print(f"Post boot config threads created") #({time.time() - start:.0f} sec)")
+        print(f"Running post boot config threads ...") #({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
             node = threads[thread]
