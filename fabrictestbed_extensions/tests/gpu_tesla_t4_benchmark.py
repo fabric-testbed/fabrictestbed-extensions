@@ -23,32 +23,17 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
 import time
-
-import importlib.resources as pkg_resources
-from typing import List
+import traceback
 
 from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
     Capacities,
-    ComponentType,
     ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
+    ExperimentTopology,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
+from fabrictestbed.slice_manager import SliceState, Status
 
 from .abc_test import AbcTest
-
-from .. import images
 
 
 class GPUTeslaT4Benchmark(AbcTest):
@@ -208,7 +193,7 @@ class GPUTeslaT4Benchmark(AbcTest):
 
                 # print("------------------------- Test Output ---------------------------")
                 script = "#!/bin/bash  \n" """lspci | grep Tesla \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )

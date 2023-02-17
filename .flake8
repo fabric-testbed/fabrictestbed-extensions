@@ -1,0 +1,31 @@
+# -*- conf -*-
+
+[flake8]
+# Use black's default line length of 88, rather than using the
+# flake8's default line length of 79.
+max-line-length = 88
+
+ignore =
+    # ignore lines black couldn't handle.
+    E501,
+    # W503 and W504 contradict each other.
+    W503,
+    W504,
+
+statistics = True
+exclude =
+    .git,
+    .eggs,
+    __pycache__,
+    venv/
+    doc/,
+    docs/,
+    build/,
+    dist/,
+    archive/
+
+# ignore some specific regular expressions within shell subcommands.
+per-file-ignores =
+    fabrictestbed_extensions/tests/link_benchmark.py:W605
+    fabrictestbed_extensions/tests/local_network_benchmark.py:W605
+    fabrictestbed_extensions/tests/network_benchmark_tests.py:W605

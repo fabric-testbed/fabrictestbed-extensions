@@ -26,7 +26,8 @@
 
 import time
 
-from fabrictestbed.slice_manager import Status, SliceState
+from fabrictestbed.slice_manager import SliceState, Status
+
 from .abc_utils import AbcUtils
 
 

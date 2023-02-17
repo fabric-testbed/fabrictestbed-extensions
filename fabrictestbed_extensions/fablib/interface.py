@@ -23,15 +23,13 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
+import json
+import logging
+from typing import TYPE_CHECKING, Any
+
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
-from ipaddress import IPv4Address
-import json
-
-import logging
-
-
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -394,7 +392,7 @@ class Interface:
         Bring up the link on the interface.
 
         """
-        if self.get_network() == None:
+        if self.get_network() is None:
             return
 
         self.get_node().ip_link_up(None, self)
@@ -598,7 +596,7 @@ class Interface:
             links = json.loads(stdout)
 
             dev = self.get_os_interface()
-            if dev == None:
+            if dev is None:
                 return links
 
             for link in links:
@@ -640,7 +638,7 @@ class Interface:
             dev = self.get_os_interface()
             # print(f"dev: {dev}")
 
-            if dev == None:
+            if dev is None:
                 return addrs
 
             for addr in addrs:
@@ -668,7 +666,7 @@ class Interface:
             # print(f"{ip_addr}")
 
             for addr_info in ip_addr["addr_info"]:
-                if family == None:
+                if family is None:
                     return_ips.append(addr_info["local"])
                 else:
                     if addr_info["family"] == family:

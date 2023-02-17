@@ -23,32 +23,17 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
 import time
-
-import importlib.resources as pkg_resources
-from typing import List
+import traceback
 
 from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
     Capacities,
-    ComponentType,
     ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
+    ExperimentTopology,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
+from fabrictestbed.slice_manager import SliceState, Status
 
 from .abc_test import AbcTest
-
-from .. import images
 
 
 class NVMEBenchmark(AbcTest):

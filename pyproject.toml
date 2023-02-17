@@ -45,3 +45,7 @@ test = ["pytest", "coverage[toml]"]
 [tool.coverage.run]
 branch = true
 omit = [ "fabrictestbed_extensions/tests/*" ]
+
+[tool.isort]
+profile = "black"
+src_paths = ["fabrictestbed_extensions", "setup.py", "docs"]

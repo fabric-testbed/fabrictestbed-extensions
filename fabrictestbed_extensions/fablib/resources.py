@@ -23,15 +23,14 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import logging
-from tabulate import tabulate
-import json
 
+import json
+import logging
 from typing import List, Tuple
 
-from fabrictestbed.slice_editor import AdvertisedTopology
-from fabrictestbed.slice_editor import Capacities
+from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
+from tabulate import tabulate
 
 
 class Resources:
@@ -468,7 +467,7 @@ class Resources:
         Update the available resources by querying the FABRIC services
 
         """
-        logging.info(f"Updating available resources")
+        logging.info("Updating available resources")
         return_status, topology = (
             self.get_fablib_manager().get_slice_manager().resources()
         )

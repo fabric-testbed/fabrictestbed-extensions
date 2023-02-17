@@ -23,34 +23,31 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import json
+import logging
+import select
 import threading
 import time
-import paramiko
-import logging
+from typing import TYPE_CHECKING, List, Union
 
-from tabulate import tabulate
-import select
 import jinja2
-
-
-from typing import List, Union, Tuple
-
-from typing import TYPE_CHECKING
+import paramiko
+from tabulate import tabulate
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fim.slivers.network_service import NSLayer
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
-from fabrictestbed.slice_editor import Labels, CapacityHints, ServiceType
-from fabrictestbed.slice_editor import Capacities
-from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
+from fabrictestbed.slice_editor import Capacities, CapacityHints, Labels
+from fabrictestbed.slice_editor import Node as FimNode
+from fabrictestbed.slice_editor import ServiceType
+from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
-from fabrictestbed.slice_editor import Node as FimNode
 
 
 class Node:
@@ -354,7 +351,7 @@ class Node:
             )
             table.applymap(state_color)
 
-            if quiet == False:
+            if quiet is False:
                 display(table)
         else:
             table = self.get_fablib_manager().show_table(
@@ -411,7 +408,7 @@ class Node:
             components.append(component.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"] in set(components):
                     return True
             else:
@@ -476,7 +473,7 @@ class Node:
             ifaces.append(iface.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"]["value"] in set(ifaces):
                     return True
             else:
@@ -545,7 +542,7 @@ class Node:
             networks.append(iface.get_network().get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"]["value"] in set(networks):
                     return True
             else:
@@ -1074,7 +1071,7 @@ class Node:
             except:
                 pass
 
-        raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+        raise Exception("ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
     def execute_thread(
         self,
@@ -1198,17 +1195,17 @@ class Node:
         bastion_username = self.get_fablib_manager().get_bastion_username()
         bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
 
-        if username != None:
+        if username is not None:
             node_username = username
         else:
             node_username = self.username
 
-        if private_key_file != None:
+        if private_key_file is not None:
             node_key_file = private_key_file
         else:
             node_key_file = self.get_private_key_file()
 
-        if private_key_passphrase != None:
+        if private_key_passphrase is not None:
             node_key_passphrase = private_key_passphrase
         else:
             node_key_passphrase = self.get_private_key_file()
@@ -1267,7 +1264,7 @@ class Node:
                     # The old way
                     rtn_stdout = str(stdout.read(), "utf-8").replace("\\n", "\n")
                     rtn_stderr = str(stderr.read(), "utf-8").replace("\\n", "\n")
-                    if quiet == False:
+                    if quiet is False:
                         print(rtn_stdout, rtn_stderr)
 
                 else:
@@ -1290,7 +1287,7 @@ class Node:
                         for c in readq:
                             if c.recv_ready():
                                 stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if quiet == False:
+                                if quiet is False:
                                     print(
                                         str(stdoutbytes, "utf-8").replace("\\n", "\n"),
                                         end="",
@@ -1308,7 +1305,7 @@ class Node:
                                 stderrbytes = stderr.channel.recv_stderr(
                                     len(c.in_stderr_buffer)
                                 )
-                                if quiet == False:
+                                if quiet is False:
                                     print(
                                         "\x1b[31m",
                                         str(stderrbytes, "utf-8").replace("\\n", "\n"),
@@ -1758,8 +1755,8 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import tarfile
         import os
+        import tarfile
         import tempfile
 
         logging.debug(
@@ -1851,8 +1848,8 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import tarfile
         import os
+        import tarfile
 
         logging.debug(
             f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}"
@@ -1960,15 +1957,15 @@ class Node:
 
     def ip_addr_list(self, output="json", update=False):
         try:
-            if self.ip_addr_list_json is not None and update == False:
+            if self.ip_addr_list_json is not None and update is False:
                 return self.ip_addr_list_json
             else:
                 if output == "json":
-                    stdout, stderr = self.execute(f"sudo  ip -j addr list", quiet=True)
+                    stdout, stderr = self.execute("sudo  ip -j addr list", quiet=True)
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
                 else:
-                    stdout, stderr = self.execute(f"sudo ip list", quiet=True)
+                    stdout, stderr = self.execute("sudo ip list", quiet=True)
                     return stdout
         except Exception as e:
             logging.warning(f"Failed to get ip addr list: {e}")
@@ -2004,7 +2001,7 @@ class Node:
         """
         try:
             stdout, stderr = self.execute(
-                f"sudo systemctl stop NetworkManager", quiet=True
+                "sudo systemctl stop NetworkManager", quiet=True
             )
             logging.info(
                 f"Stopped NetworkManager with 'sudo systemctl stop "
@@ -2020,7 +2017,7 @@ class Node:
         """
         try:
             stdout, stderr = self.execute(
-                f"sudo systemctl restart NetworkManager", quiet=True
+                "sudo systemctl restart NetworkManager", quiet=True
             )
             logging.info(
                 f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}"
@@ -2146,12 +2143,12 @@ class Node:
         :type interface: Interface
         """
 
-        if interface == None:
+        if interface is None:
             return
 
         try:
             network = interface.get_network()
-            if network == None:
+            if network is None:
                 return
             elif network.get_layer() == NSLayer.L3:
                 if network.get_type() in [
@@ -2268,7 +2265,7 @@ class Node:
             # bring up vlan iface
             os_iface = f"{os_iface}.{vlan}"
             command = f"{ip_command} link set dev {os_iface} up"
-            if mtu != None:
+            if mtu is not None:
                 command += f" mtu {mtu}"
             stdout, stderr = self.execute(command, quiet=True)
 
@@ -2373,7 +2370,7 @@ class Node:
         command = f"{ip_command} link set dev {os_iface}.{vlan} up"
         stdout, stderr = self.execute(command, quiet=True)
 
-        if ip != None and cidr != None:
+        if ip is not None and cidr is not None:
             self.set_ip_os_interface(
                 os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu
             )

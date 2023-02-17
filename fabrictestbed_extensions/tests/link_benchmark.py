@@ -24,30 +24,20 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 import os
-import traceback
 import re
-import json
-import paramiko
 import time
 
-import importlib.resources as pkg_resources
-from typing import List
-
+import paramiko
 from fabrictestbed.slice_editor import (
-    ExperimentTopology,
     Capacities,
-    ComponentType,
     ComponentModelType,
+    ExperimentTopology,
     ServiceType,
-    ComponentCatalog,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fabrictestbed.util.constants import Constants
 
 from .abc_test import AbcTest
-
-from .. import images
 
 
 class LinkBenchmark(AbcTest):
@@ -376,7 +366,7 @@ class LinkBenchmark(AbcTest):
             "sudo apt-get update && sudo apt-get install -y iperf iperf3"
         )
 
-        ################################Setting up the IP addresses and activating the interfaces
+        # Setting up the IP addresses and activating the interfaces
         stdin, stdout, stderr = clientn1.exec_command("ip a")
         interface_n1 = get_interface_before_last(stdout)
         ip_of_interface_on_n1 = "192.168.10.51"

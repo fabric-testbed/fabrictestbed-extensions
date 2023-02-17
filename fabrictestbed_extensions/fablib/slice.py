@@ -23,16 +23,14 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import ipaddress
 
-import time
+import json
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING
 
 import pandas as pd
-import json
-
-from typing import TYPE_CHECKING
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
@@ -43,19 +41,17 @@ if TYPE_CHECKING:
     )
     from fabrictestbed_extensions.fablib.fablib import FablibManager
 
-from tabulate import tabulate
-
-from ipaddress import ip_address, IPv4Address
-
-from typing import List, Union, Dict
+from ipaddress import IPv4Address, ip_address
+from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
-from fabrictestbed.slice_manager import Status, SliceState
+from fabrictestbed.slice_manager import Status
+from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.network_service import NetworkService
-from fabrictestbed_extensions.fablib.node import Node
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_extensions.fablib.node import Node
 
 
 class Slice:
@@ -192,7 +188,7 @@ class Slice:
             )
             slice_table.applymap(state_color)
 
-            if quiet == False:
+            if quiet is False:
                 display(slice_table)
         else:
             slice_table = self.get_fablib_manager().show_table(
@@ -725,7 +721,7 @@ class Slice:
         :rtype: str
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             state = None
         else:
             try:
@@ -764,7 +760,7 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             lease_end_time = None
         else:
             try:
@@ -785,7 +781,7 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             lease_start_time = None
         else:
             try:
@@ -1567,7 +1563,7 @@ class Slice:
 
             if (
                 node.get_reservation_state() == "Active"
-                and node.get_management_ip() == None
+                and node.get_management_ip() is None
             ):
                 logging.warning(
                     f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
@@ -1577,7 +1573,7 @@ class Slice:
         for net in self.get_networks():
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
-                    if net.get_subnet() == None or net.get_available_ips() == None:
+                    if net.get_subnet() is None or net.get_available_ips() is None:
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
                         )
@@ -1602,8 +1598,9 @@ class Slice:
         :rtype: SMSlice
         """
 
-        from IPython.display import clear_output
         import time
+
+        from IPython.display import clear_output
 
         start = time.time()
 
@@ -1676,7 +1673,7 @@ class Slice:
         :return: slice_id
         """
 
-        if self.get_state() == None:
+        if self.get_state() is None:
             modify = False
         else:
             modify = True
@@ -1785,7 +1782,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
                 color = ""
@@ -1899,7 +1896,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
                 color = ""

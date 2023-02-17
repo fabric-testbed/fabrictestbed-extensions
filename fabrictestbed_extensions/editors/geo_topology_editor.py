@@ -23,45 +23,33 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
 import functools
-
 import importlib.resources as pkg_resources
+import re
+import traceback
 from typing import List
 
 import ipywidgets as widgets
-from ipywidgets import HTML, Layout
+from fabrictestbed.slice_editor import ComponentModelType
+from fabrictestbed.slice_manager import SliceState
 from ipyleaflet import (
+    AntPath,
+    CircleMarker,
+    DrawControl,
+    FullScreenControl,
+    Icon,
+    LayerGroup,
     Map,
     Marker,
     Rectangle,
     WidgetControl,
-    basemaps,
-    Icon,
-    LayerGroup,
     ZoomControl,
-    AntPath,
-    DrawControl,
-    CircleMarker,
-    FullScreenControl,
+    basemaps,
 )
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
-)
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
-from .abc_topology_editor import AbcTopologyEditor
+from ipywidgets import HTML, Layout
 
 from .. import images
+from .abc_topology_editor import AbcTopologyEditor
 
 
 class GeoTopologyEditor(AbcTopologyEditor):
@@ -306,7 +294,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         coordinates = kwargs["coordinates"]
 
         # Toggle Site detail for current experiment
-        if self.site_detail == False:
+        if self.site_detail is False:
             self.site_detail = True
         else:
             self.site_detail = False
@@ -1272,7 +1260,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.dashboards["node_dashboard"]["select_node_widget"].options = sorted(
                 self.get_node_name_list()
             )
-            if node_name == None:
+            if node_name is None:
                 node_name = sorted(self.get_node_name_list())[0]
 
             self.update_select_node_widget_option_name(node_name)
@@ -1607,7 +1595,10 @@ class GeoTopologyEditor(AbcTopologyEditor):
             #               image_type=self.dashboards['node_dashboard']['image_type_widget'].value)
         # Display new node selection
         new_node_name = change["new"]
-        if new_node_name != None and new_node_name != self.DEFAULT_NODE_SELECT_VALUE:
+        if (
+            new_node_name is not None
+            and new_node_name != self.DEFAULT_NODE_SELECT_VALUE
+        ):
             self.load_node(new_node_name)
 
         # Re-draw node dashboard

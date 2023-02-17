@@ -23,27 +23,23 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import os
+
+import json
 import logging
+import os
 import random
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Dict, List
 
-from IPython import get_ipython
-
-from typing import List, Dict
-
-from typing import TYPE_CHECKING
-
-from fabrictestbed.util.constants import Constants
 import pandas as pd
+from fabrictestbed.util.constants import Constants
+from IPython import get_ipython
 from tabulate import tabulate
-import json
-
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
 
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
 from fabrictestbed_extensions.fablib.resources import Resources
@@ -576,7 +572,7 @@ class FablibManager:
 
         """
 
-        if output != None:
+        if output is not None:
             self.output = output
         else:
             if self.is_jupyter_notebook():
@@ -1133,7 +1129,7 @@ class FablibManager:
 
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
-            if filter_function == None:
+            if filter_function is None:
                 if site["name"] not in self.sites_in_maintenance and site["hosts"] > 0:
                     return True
             else:
@@ -1465,7 +1461,7 @@ class FablibManager:
         :return: fim object for this site
         :rtype: Node
         """
-        logging.info(f"Updating get_site_advertisement")
+        logging.info("Updating get_site_advertisement")
         return_status, topology = self.get_slice_manager().resources()
         if return_status != Status.OK:
             raise Exception(
@@ -1752,10 +1748,10 @@ class FablibManager:
                     print(f"Deleting slice {slice.get_name()}", end="")
                 slice.delete()
                 if progress:
-                    print(f", Success!")
+                    print(", Success!")
             except Exception as e:
                 if progress:
-                    print(f", Failed!")
+                    print(", Failed!")
 
     def is_jupyter_notebook(self) -> bool:
         """
@@ -1866,7 +1862,7 @@ class FablibManager:
         quiet=False,
         pretty_names_dict={},
     ):
-        if output == None:
+        if output is None:
             output = self.output.lower()
 
         table = self.create_show_table(
@@ -2025,13 +2021,13 @@ class FablibManager:
 
         logging.debug(f"data: {data}\n\n")
 
-        if output == None:
+        if output is None:
             output = self.output.lower()
 
-        if fields == None and len(data) > 0:
+        if fields is None and len(data) > 0:
             fields = list(data[0].keys())
 
-        if fields == None:
+        if fields is None:
             fields = []
 
         logging.debug(f"fields: {fields}\n\n")
@@ -2088,7 +2084,7 @@ class FablibManager:
 
     def create_show_table(self, data, fields=None, pretty_names_dict={}):
         table = []
-        if fields == None:
+        if fields is None:
             for key, value in data.items():
                 if key in pretty_names_dict:
                     table.append([pretty_names_dict[key], value])
@@ -2106,7 +2102,7 @@ class FablibManager:
 
     def create_show_tableXXX(self, data, fields=None):
         table = []
-        if fields == None:
+        if fields is None:
             for key, value in data.items():
                 table.append([key, value])
         else:

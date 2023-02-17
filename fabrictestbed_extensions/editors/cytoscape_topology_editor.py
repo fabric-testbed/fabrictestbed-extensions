@@ -23,33 +23,11 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
-
-import importlib.resources as pkg_resources
-from typing import List
-
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
-)
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
 import ipycytoscape as cy
 from IPython.display import display
 from ipywidgets import Output
 
 from .abc_topology_editor import AbcTopologyEditor
-
-from .. import images
 
 
 class CytoscapeTopologyEditor(AbcTopologyEditor):

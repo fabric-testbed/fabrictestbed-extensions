@@ -23,32 +23,17 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
 import time
-
-import importlib.resources as pkg_resources
-from typing import List
+import traceback
 
 from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
     Capacities,
-    ComponentType,
     ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
+    ExperimentTopology,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
+from fabrictestbed.slice_manager import SliceState, Status
 
 from .abc_test import AbcTest
-
-from .. import images
 
 
 class ComponentTest(AbcTest):
@@ -193,7 +178,7 @@ class ComponentTest(AbcTest):
                 expected_stdout = "3D controller: NVIDIA Corporation TU102GL [Quadro RTX 6000/8000] (rev a1)"
 
                 script = "#!/bin/bash  \n" """lspci | grep NVIDIA \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
@@ -267,7 +252,7 @@ class ComponentTest(AbcTest):
                 expected_stdout1 = "Non-Volatile memory controller: Intel Corporation NVMe Datacenter SSD [3DNAND, Beta Rock Controller]"
                 expected_stdout2 = "Non-Volatile memory controller: Toshiba Corporation NVMe SSD Controller Cx5 (rev 01)"
                 script = "#!/bin/bash  \n" """lspci | grep NVMe \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
@@ -340,7 +325,7 @@ class ComponentTest(AbcTest):
                 expected_stdout = "Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5]"
 
                 script = "#!/bin/bash  \n" """lspci | grep ConnectX \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
@@ -415,7 +400,7 @@ class ComponentTest(AbcTest):
                 expected_stdout = "Ethernet controller: Mellanox Technologies MT28908 Family [ConnectX-6]"
 
                 script = "#!/bin/bash  \n" """lspci | grep ConnectX-6 \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
@@ -488,7 +473,7 @@ class ComponentTest(AbcTest):
                 expected_stdout = "Ethernet controller: Mellanox Technologies MT28908 Family [ConnectX-6 Virtual Function]"
 
                 script = "#!/bin/bash  \n" """lspci | grep ConnectX-6 \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
@@ -609,7 +594,7 @@ class ComponentTest(AbcTest):
 
                 # print("------------------------- Test Output ---------------------------")
                 script = "#!/bin/bash  \n" """lspci | grep Tesla \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                # 'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )

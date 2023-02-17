@@ -23,23 +23,23 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, List
 
 from tabulate import tabulate
-from typing import List
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fabrictestbed.slice_editor import ServiceType, NetworkService as FimNetworkService
-from fim.slivers.network_service import ServiceType, NSLayer
-
-from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 import json
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+
+from fabrictestbed.slice_editor import NetworkService as FimNetworkService
+from fabrictestbed.slice_editor import ServiceType
+from fim.slivers.network_service import NSLayer, ServiceType
 
 
 class NetworkService:
@@ -188,7 +188,7 @@ class NetworkService:
                 for interface in interfaces:
                     node = interface.get_node()
                     if interface.get_model() == "NIC_Basic":
-                        if node.get_host() == None:
+                        if node.get_host() is None:
                             exception_list.append(
                                 f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing on the same host. Please see Node.set_host(host_nane) to explicitily bind a nodes to a specific host. Node {node.get_name()} is unbound."
                             )
@@ -281,15 +281,15 @@ class NetworkService:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
-            if vlan1 == None and vlan2 == None:
+            if vlan1 is None and vlan2 is None:
                 # TODO: Long term we might have multiple vlan on one property
                 # and will need to make sure they are unique.  For now this okay
                 interfaces[0].set_vlan("100")
                 interfaces[1].set_vlan("100")
-            elif vlan1 == None and vlan2 != None:
+            elif vlan1 is None and vlan2 is not None:
                 # Match VLANs if one is set.
                 interfaces[0].set_vlan(vlan2)
-            elif vlan1 != None and vlan2 == None:
+            elif vlan1 is not None and vlan2 is None:
                 # Match VLANs if one is set.
                 interfaces[1].set_vlan(vlan1)
 

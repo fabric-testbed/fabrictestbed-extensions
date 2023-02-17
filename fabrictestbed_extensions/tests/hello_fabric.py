@@ -23,32 +23,13 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
-import functools
 import time
+import traceback
 
-import importlib.resources as pkg_resources
-from typing import List
-
-from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
-    Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
-)
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-
+from fabrictestbed.slice_editor import Capacities, ExperimentTopology
+from fabrictestbed.slice_manager import SliceState, Status
 
 from .abc_test import AbcTest
-
-from .. import images
 
 
 class HelloFABRIC(AbcTest):
