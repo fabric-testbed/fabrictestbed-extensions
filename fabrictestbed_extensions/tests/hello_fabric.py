@@ -52,7 +52,6 @@ class HelloFABRIC(AbcTest):
         cap = Capacities(core=cores, ram=ram, disk=disk)
 
         for site in sites:
-
             for node_num in range(0, node_count):
                 node_name = "hello-" + str(site) + "-" + str(node_num)
                 site_name = site
@@ -100,11 +99,9 @@ class HelloFABRIC(AbcTest):
         # print("Lease End  : {}".format(self.slice.lease_end))
 
     def config_test(self):
-
         pass
 
     def run_test(self):
-
         for node_name, node in self.topology.nodes.items():
             # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
             # print("Node:")

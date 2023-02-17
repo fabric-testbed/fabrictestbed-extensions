@@ -1138,7 +1138,6 @@ class GeoTopologyEditor(AbcTopologyEditor):
                     .to_latlon()
                 )
                 if site not in slice_rack_markers:
-
                     # print("CREATING RECTANGLE " + str(location[0]) + ", " + str(location[1]))
 
                     self.rectangle = Rectangle(

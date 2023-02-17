@@ -47,6 +47,9 @@ class Component:
         "NVME_P4510": ComponentModelType.NVME_P4510,
         "GPU_TeslaT4": ComponentModelType.GPU_Tesla_T4,
         "GPU_RTX6000": ComponentModelType.GPU_RTX6000,
+        "GPU_A40": ComponentModelType.GPU_A40,
+        "GPU_A30": ComponentModelType.GPU_A30,
+        "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
     }
 
     def __str__(self):

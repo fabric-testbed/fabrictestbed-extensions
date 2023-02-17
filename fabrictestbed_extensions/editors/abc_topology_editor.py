@@ -229,7 +229,6 @@ class AbcTopologyEditor(ABC):
         capacities = {}
 
         for t in self.advertised_topology.sites.values():
-
             # name
             site_name = t.name
             # available capacities total vs. currently allocated ones
@@ -404,7 +403,6 @@ class AbcTopologyEditor(ABC):
                     experiment["slice"] = found_experiment
 
     def submit_slice(self, experiment):
-
         slice_name = self.current_experiment["slice_name"]
         # ssh_key = self.current_experiment['ssh_key']
         slice_graph = self.current_experiment["topology"].serialize()

@@ -178,7 +178,6 @@ class Slice:
             pretty_names_dict = {}
 
         if colors and self.get_fablib_manager().is_jupyter_notebook():
-
             slice_table = self.get_fablib_manager().show_table(
                 data,
                 fields=fields,
@@ -211,7 +210,6 @@ class Slice:
         filter_function=None,
         pretty_names=True,
     ):
-
         """
         Lists all the components in the slice with their attributes.
 
@@ -343,7 +341,6 @@ class Slice:
 
         table = []
         for iface in self.get_interfaces():
-
             if iface.get_network():
                 # network_name = iface.get_network().get_name()
                 logging.info(
@@ -1528,7 +1525,8 @@ class Slice:
             try:
                 # iface_threads.append(executor.submit(interface.ip_link_toggle))
                 interface.get_node().execute(
-                    f"sudo nmcli device set {interface.get_device_name()} managed no"
+                    f"sudo nmcli device set {interface.get_device_name()} managed no",
+                    quiet=True,
                 )
             except Exception as e:
                 logging.error(
@@ -1573,7 +1571,7 @@ class Slice:
                 return False
 
         for net in self.get_networks():
-            if net.get_type() == "FABNetv4" or net.get_type() == "FABNetv6":
+            if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
                     if net.get_subnet() is None or net.get_available_ips() is None:
                         logging.warning(
@@ -1793,7 +1791,6 @@ class Slice:
             return "background-color: %s" % color
 
         def highlight(x):
-
             print(f"x: {x}")
 
             if x.State == "Closed":
