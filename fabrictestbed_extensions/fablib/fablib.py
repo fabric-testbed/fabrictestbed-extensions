@@ -757,7 +757,7 @@ class FablibManager:
 
     def _validate_configuration(self):
         """
-        Check that fablib has the required configuration.
+        Raise an error if we don't have the required configuration.
         """
         errors = []
 
