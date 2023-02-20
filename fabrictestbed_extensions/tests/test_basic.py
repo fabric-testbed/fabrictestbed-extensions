@@ -26,6 +26,7 @@ class FablibManagerTests(unittest.TestCase):
     ]
 
     def setUp(self):
+        # Run each test with an empty environment.
         os.environ.clear()
 
     def test_fablib_manager_no_env_vars(self):
