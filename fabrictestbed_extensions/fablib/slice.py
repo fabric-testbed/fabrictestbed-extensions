@@ -822,6 +822,7 @@ class Slice:
                       interfaces: List[Interface] = [],
                       type: str = None,
                       subnet: ipaddress = None,
+                      gateway: ipaddress = None,
                       user_data: dict = {}) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
@@ -860,6 +861,9 @@ class Slice:
         )
         if subnet:
             network_service.set_subnet(subnet)
+
+        if gateway:
+            network_service.set_gateway(gateway)
         return network_service
 
     def add_l3network(

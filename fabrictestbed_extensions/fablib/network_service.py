@@ -970,9 +970,17 @@ class NetworkService:
 
     def set_subnet(self, subnet:  IPv4Network or IPv6Network):
         fablib_data = self.get_fablib_data()
-        fablib_data['subnet'] = { 'subnet': str(subnet),
-                                  'allocated_ips': []
-                                }
+        if 'subnet' not in fablib_data:
+            fablib_data['subnet'] = {}
+        fablib_data['subnet']['subnet'] =  str(subnet)
+        fablib_data['subnet']['allocated_ips'] = []
+        self.set_fablib_data(fablib_data)
+
+    def set_gateway(self, gateway: IPv4Address or IPv6Address):
+        fablib_data = self.get_fablib_data()
+        if 'subnet' not in fablib_data:
+            fablib_data['subnet'] = {}
+        fablib_data['subnet']['gateway'] = str(gateway)
         self.set_fablib_data(fablib_data)
 
     def get_allocated_ips(self):
@@ -996,7 +1004,8 @@ class NetworkService:
         allocated_ips = self.get_allocated_ips()
 
         if addr:
-            if addr != subnet.network_address and addr not in allocated_ips:
+            #if addr != subnet.network_address and addr not in allocated_ips:
+            if addr not in allocated_ips:
                 self.set_allocated_ip(addr)
                 return addr
         elif type(subnet) == ipaddress.IPv4Network or type(subnet) == ipaddress.IPv6Network:

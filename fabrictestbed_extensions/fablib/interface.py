@@ -758,7 +758,11 @@ class Interface:
     def config(self):
         fablib_data = self.get_fablib_data()
 
-
+        fablib_data = self.get_fablib_data()
+        if 'configured' in fablib_data and not bool(fablib_data['configured']):
+            return
+        fablib_data['configured'] = str(True)
+        self.set_fablib_data(fablib_data)
 
         if 'mode' in fablib_data:
             mode = fablib_data['mode']

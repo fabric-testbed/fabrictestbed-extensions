@@ -2662,6 +2662,11 @@ class Node:
                 self.enable_docker()
             self.run_post_boot_commands()
 
+            if self.get_enable_node_exporter():
+                fablib_data = self.get_fablib_data()
+                if 'node_exporter' in fablib_data:
+                    if 'monitoring_network' in fablib_data['node_exporter']:
+                        self.enable_node_exporter(self.get_slice().get_network(fablib_data['node_exporter']['monitoring_network']))
 
         if self.run_update_commands():
             self.run_post_update_commands()
@@ -2703,6 +2708,40 @@ class Node:
             if 'enable' in fablib_data['docker']:
                 return bool(fablib_data['docker']['enable'])
         return False
+
+    def enable_node_exporter(self, net: NetworkService, log_dir: str = '.'):
+        self.set_enable_docker()
+        self.set_enable_node_exporter(net)
+        if not self.is_instantiated():
+            return
+
+        fablib_data = self.get_fablib_data()
+        if 'node_exporter' in fablib_data:
+            if 'monitoring_network' in fablib_data['node_exporter']:
+                fablib_data['node_exporter']['monitoring_ip'] = str(self.get_interface(network_name=fablib_data['node_exporter']['monitoring_network']).get_ip_addr())
+        self.set_fablib_data(fablib_data)
+
+        cmd = f"docker pull prom/node-exporter:latest ;" \
+              f"docker run -d -t --cap-add=NET_ADMIN --privileged --net=host --name node-exporter prom/node-exporter:latest"
+
+        self.execute(cmd, quiet=True, output_file=f"{log_dir}/{self.get_name()}.log")
+
+    def get_enable_node_exporter(self):
+        fablib_data = self.get_fablib_data()
+        if 'node_exporter' in fablib_data:
+            if 'enable' in fablib_data['node_exporter']:
+                return bool(fablib_data['node_exporter']['enable'])
+        return False
+
+    def set_enable_node_exporter(self, net: NetworkService):
+        fablib_data = self.get_fablib_data()
+        if 'node_exporter' not in fablib_data:
+            fablib_data['node_exporter'] = {}
+        fablib_data['node_exporter']['enable'] = True
+        fablib_data['node_exporter']['monitoring_network'] = net.get_name()
+        self.set_fablib_data(fablib_data)
+
+
 
     def enable_docker(self, log_dir='.'):
 
