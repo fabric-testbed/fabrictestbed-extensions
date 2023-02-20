@@ -772,7 +772,7 @@ class FablibManager:
         }
 
         for attr, value in required_attrs.items():
-            if not hasattr(self, attr):
+            if not hasattr(self, attr) or getattr(self, attr) is None:
                 errors.append(f"{value} is not set")
 
         if errors:
