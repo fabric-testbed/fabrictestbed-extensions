@@ -761,19 +761,19 @@ class FablibManager:
         """
         errors = []
 
-        required_attrs = [
-            "orchestrator_host",
-            "credmgr_host",
-            "fabric_token",
-            "project_id",
-            "bastion_username",
-            "bastion_key_filename",
-            "bastion_public_addr",
-        ]
+        required_attrs = {
+            "orchestrator_host": "orchestrator host",
+            "credmgr_host": "credmanager host",
+            "fabric_token": "FABRIC token",
+            "project_id": "project ID",
+            "bastion_username": "bastion username",
+            "bastion_key_filename": "bastion key file",
+            "bastion_public_addr": "bastion host address",
+        }
 
-        for attr in required_attrs:
+        for attr, value in required_attrs.items():
             if not hasattr(self, attr):
-                errors.append(f"{attr} is not known")
+                errors.append(f"{value} is not set")
 
         if errors:
             # TODO: define custom exception class to report errors,
