@@ -52,6 +52,12 @@ from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed.slice_editor import Node as FimNode
 
+from fabrictestbed_extensions.fablib.socket import SocketHandler
+from fabrictestbed_extensions.fablib.socket import SocketConstants
+import socket
+import ssl
+import multiprocessing
+
 
 class Node:
     default_cores = 2
@@ -72,6 +78,8 @@ class Node:
         self.slice = slice
         self.host = None
         self.ip_addr_list_json = None
+
+        self.tunnel_connections = []
 
         # Try to set the username.
         try:
@@ -2417,3 +2425,683 @@ class Node:
         :rtype: Component
         """
         return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
+
+    def create_socket(self, port=SocketConstants.NEXT_LOCAL_PORT, quiet=False) -> Tuple[SocketHandler, SocketHandler]:
+        """
+        Low-level method that creates a socket between the local JupyterHub or
+        Python kernel and the remote Node. Unless you are building custom socket
+        functionality, you probably want to use the abstractions instead:
+        `node.receive()`, `node.receive_file()`, `node.send()`, or
+        `node.send_file()`.
+        :param port: the port to bind to, should match the local_port used when
+        creating the tunnel
+        :type port: int
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :raise Exception: if the socket could not be created
+        :return: a tuple of (listening socket[SocketHandler], connection socket[SocketHandler])
+        :rtype: Tuple
+        """
+        try:
+            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listener.bind(('localhost', port))
+            listener.listen()
+            if not quiet:
+                print('Listening...')
+            connection, address = listener.accept()
+            if not quiet:
+                print(f'Established connection with {address}')
+            listener_handler = SocketHandler(listener)
+            connection_handler = SocketHandler(connection)
+            return listener_handler, connection_handler
+        
+        except KeyboardInterrupt:
+            try:
+                connection.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the connected socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            try:
+                listener.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+
+        except Exception as e:
+            print("Exception encountered:", e)
+            try:
+                connection.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the connected socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            
+            try:
+                listener.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            
+        RuntimeError(f"Could not create the socket.")
+
+    def create_encrypted_socket(self, cert_file, key_file, port=SocketConstants.NEXT_LOCAL_PORT, quiet=False):
+        """
+        Low-level method that creates a socket between the local JupyterHub or
+        Python kernel and the remote Node with an additional TLS/SSL encryption
+        layer. Unless you are building custom socket functionality, you probably
+        want to use the abstractions instead: `node.encrypted_receive()`,
+        `node.encrypted_receive_file()`, `node.encrypted_send()`, or
+        `node.encrypted_send_file()`.
+        :param cert_file: Path to the TLS/SSL certificate
+        :type cert_file: String
+        :param key_file: Path to the TLS/SSL key file
+        :type key_file: String
+        :param port: the port to bind to, should match the local_port used when
+        creating the tunnel
+        :type port: int
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :raise Exception: if the socket could not be created
+        :return: a tuple of (listening socket[SocketHandler], SSL listener
+        layer[SocketHandler], connection socket[SocketHandler])
+        :rtype: Tuple
+        """
+        try:
+            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listener.bind(('localhost', port))
+            listener.listen()
+            if not quiet:
+                print('Listening...')
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+
+            secure_listener = context.wrap_socket(listener, server_side=True)
+            connection, address = secure_listener.accept()
+            if not quiet:
+                print(f'Established secure connection with {address}')
+            listener_handler = SocketHandler(secure_listener)
+            listener_handler = SocketHandler(listener)
+            connection_handler = SocketHandler(connection)
+            return listener_handler, secure_listener, connection_handler
+        
+        except KeyboardInterrupt:
+            try:
+                connection.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the connected socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            try:
+                listener.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            try:
+                secure_listener.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the secure_listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+
+        except Exception as e:
+            print("Exception encountered:", e)
+            try:
+                connection.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the connected socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            try:
+                listener.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            try:
+                secure_listener.close()
+            except Exception as e:
+                print("Exception encountered when trying to close the secure_listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            
+        RuntimeError(f"Could not create the socket.")
+
+    def close_socket(self, sock_handle: SocketHandler, quiet=False):
+        """
+        Close the socket managed by the SocketHandler.
+        :param sock_handle: SocketHandler object to close
+        :type sock_handle: SocketHandler
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :raise Exception: if the socket could not be closed
+        """
+        try:
+            if not isinstance(sock_handle, SocketHandler):
+                raise TypeError
+            sock_handle.sock.close()
+
+        except Exception as e:
+            try:
+                ip = sock_handle.sock.getsockname()[0]
+                port = sock_handle.sock.getsockname()[1]
+                remote_ip = sock_handle.sock.getpeername()[0]
+                remote_port = sock_handle.sock.getpeername()[1]
+                raise RuntimeError(f"Could not close the socket {ip}:{port} connected to {remote_ip}:{remote_port}. These ports may remain open!") from e
+            except:
+                raise
+
+    def _tunnel_data_forwarding(self, channel, remote_host, remote_port):
+        """
+        Low-level method used in `node.reverse_forward_tunnel()` to forward data
+        bidirectionally between the local and remote ports.
+        :param channel: Channel object created implementing the Transport
+        connection from the local computer through the FABRIC bastion
+        :type channel: paramiko Channel object
+        :param remote_host: Hostname of remote computer, usually 'localhost'
+        :type remote_host: String
+        :param remote_port: the remote port to connect to
+        :type remote_port: int
+        :raise Exception: if the tunnel could not be closed
+        """
+        sock = socket.socket()
+        try:
+            sock.connect((remote_host, remote_port))
+        except Exception as e:
+            print("Forwarding request to %s:%d failed: %r" % (remote_host, remote_port, e))
+            return
+
+        print(
+            "Connected!  Tunnel open %r -> %r -> %r"
+            % (channel.origin_addr, channel.getpeername(), (remote_host, remote_port))
+        )
+        try:
+            while True:
+                r, w, x = select.select([sock, channel], [], [])
+                if sock in r:
+                    data = sock.recv(1024)
+                    if len(data) == 0:
+                        break
+                    channel.send(data)
+                if channel in r:
+                    data = channel.recv(1024)
+                    if len(data) == 0:
+                        break
+                    sock.send(data)
+        except KeyboardInterrupt:
+            print('Stopping tunnel...')
+            raise
+        except Exception as e:
+            raise
+        finally:
+            try:
+                channel.close()
+            except Exception as e:
+                print("TUNNEL Exception encountered when trying to close the connected socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            try:
+                sock.close()
+            except Exception as e:
+                print("TUNNEL Exception encountered when trying to close the listener socket:", e, "This might be okay if the socket hadn't been created yet.")
+                pass
+            print('Tunnel thread closed.')
+
+    def reverse_forward_tunnel(self, transport, remote_host, remote_port):
+        """
+        Waits for a client to connect and then creates a reverse tunnel,
+        forwarding all data bidirectionally between the local and remote ports.
+        :param transport: Transport object representing the connection from the
+        local computer through the FABRIC bastion
+        :type transport: paramiko Transport object
+        :param remote_host: Hostname of remote computer, usually 'localhost'
+        :type remote_host: String
+        :param remote_port: the remote port to connect to
+        :type remote_port: int
+        :raise Exception: if the tunnel could not be created or closed
+        :return: a tuple of (listening socket[SocketHandler], SSL listener
+        layer[SocketHandler], connection socket[SocketHandler])
+        :rtype: Tuple
+        """
+        try:
+            print('Listening...')
+            chan = transport.accept()
+            print('Connected')
+            self._tunnel_data_forwarding(chan, remote_host, remote_port)            
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            raise
+
+    def _tunnel_process(
+        self,
+        local_port,
+        remote_port,
+        retry,
+        retry_interval,
+        username,
+        private_key_file,
+        private_key_passphrase,
+        quiet,
+        persistent
+    ):
+        """
+        Creates a reverse tunnel instance between the local JupyterHub or Python
+        kernel and the remote FABRIC node. Each tunnel process spawned by
+        `node.create_tunnel()` runs this code until the tunnel is closed or
+        killed.
+        :param local_port: The local port to forward
+        :type local_port: int
+        :param remote_port: The remote port to forward
+        :type remote_port: String
+        :param retry: the number of times to retry SSH upon failure
+        :type retry: int
+        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+        :type retry_interval: int
+        :param username: username
+        :type username: str
+        :param private_key_file: path to private key file
+        :type private_key_file: str
+        :param private_key_passphrase: pass phrase
+        :type private_key_passphrase: str
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param persistent: False to close tunnel after data stops (one command)
+        :type persistent: bool
+        :raise Exception: if the tunnel could not be created
+        """
+        if self.get_fablib_manager().get_log_level() == logging.DEBUG:
+            start = time.time()
+
+        # Get and test src and management_ips
+        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+
+        if self.validIPAddress(management_ip) == "IPv4":
+            src_addr = ("0.0.0.0", 22)
+
+        elif self.validIPAddress(management_ip) == "IPv6":
+            src_addr = ("0:0:0:0:0:0:0:0", 22)
+        else:
+            raise Exception(f"create_tunnel: Management IP Invalid: {management_ip}")
+        dest_addr = (management_ip, 22)
+
+        if username != None:
+            node_username = username
+        else:
+            node_username = self.username
+
+        if private_key_file != None:
+            node_key_file = private_key_file
+        else:
+            node_key_file = self.get_private_key_file()
+
+        if private_key_passphrase != None:
+            node_key_passphrase = private_key_passphrase
+        else:
+            node_key_passphrase = self.get_private_key_file()
+
+        for attempt in range(int(retry)):
+            try:
+                key = self.get_paramiko_key(
+                    private_key_file=node_key_file,
+                    get_private_key_passphrase=node_key_passphrase,
+                )
+
+                bastion = paramiko.SSHClient()
+                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                bastion.connect(
+                    self.get_fablib_manager().get_bastion_public_addr(),
+                    username=self.get_fablib_manager().get_bastion_username(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                )
+
+                bastion_transport = bastion.get_transport()
+                bastion_channel = bastion_transport.open_channel(
+                    "direct-tcpip", dest_addr, src_addr
+                )
+
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+                client.connect(
+                    management_ip,
+                    username=node_username,
+                    pkey=key,
+                    sock=bastion_channel,
+                )
+                
+                client.get_transport().request_port_forward('localhost', remote_port)
+
+                if not quiet:
+                    print(f'Creating tunnel: {local_port}==[localhost]=={remote_port}')
+                
+                try:
+                    if persistent:
+                        # Re-open tunnel when one command finishes
+                        while True:
+                            self.reverse_forward_tunnel(client.get_transport(), 'localhost', remote_port)
+                    else:
+                        # Open the tunnel for only one command
+                        self.reverse_forward_tunnel(client.get_transport(), 'localhost', remote_port)
+                except KeyboardInterrupt:
+                    try:
+                        client.close()
+                    except Exception as e:
+                        logging.debug(f"Exception in client.close(): {e}")
+
+                    try:
+                        bastion_channel.close()
+                    except Exception as e:
+                        logging.debug(f"Exception in bastion_channel.close(): {e}")
+
+                    try:
+                        bastion.close()
+                    except Exception as e:
+                        logging.debug(f"Exception in bastion.close(): {e}")
+                finally:
+                    if self.get_fablib_manager().get_log_level() == logging.DEBUG:
+                        end = time.time()
+                        logging.debug(
+                            f"Running node._tunnel_process(): tunnel: {local_port}==[localhost]=={remote_port}, elapsed time: {end - start} seconds"
+                        )
+                    return
+
+            except Exception as e:
+                logging.warning(
+                    f"Exception in create_tunnel() (attempt #{attempt} of {retry}): {e}"
+                )
+                if not quiet:
+                    print(f"Exception in create_tunnel() (attempt #{attempt} of {retry}): {e}")
+
+                if attempt + 1 == retry:
+                    raise e
+
+                # Fail, try again
+                logging.warning(
+                    f"Tunnel creation failed. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
+                )
+                if not quiet:
+                    print(f"Tunnel creation failed. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}")
+                # traceback.print_exc()
+                time.sleep(retry_interval)
+                pass
+
+            finally:
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
+
+                try:
+                    bastion_channel.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion_channel.close(): {e}")
+
+                try:
+                    bastion.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion.close(): {e}")
+
+    def create_tunnel(
+        self,
+        local_port=SocketConstants.NEXT_LOCAL_PORT,
+        remote_port=SocketConstants.NEXT_REMOTE_PORT,
+        retry=3,
+        retry_interval=10,
+        username=None,
+        private_key_file=None,
+        private_key_passphrase=None,
+        quiet=False,
+        persistent=True,
+    ):
+        """
+        Creates a reverse tunnel with port forwarding between the local
+        JupyterHub or Python kernel and the remote Node.
+        :param local_port: Local port to forward
+        :type local_port: int
+        :param remote_port: Remote port to forward
+        :type remote_port: int
+        :param port: the port to bind to
+        :type port: int
+        :param retry: the number of times to retry SSH upon failure
+        :type retry: int
+        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+        :type retry_interval: int
+        :param username: username
+        :type username: str
+        :param private_key_file: path to private key file
+        :type private_key_file: str
+        :param private_key_passphrase: pass phrase
+        :type private_key_passphrase: str
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param persistent: False to close tunnel after data stops (one command)
+        :type persistent: bool
+        :raise Exception: if the tunnel could not be created
+        :return: a multiprocessing Process for the tunnel
+        :rtype: Process object
+        """
+        try:
+            process = multiprocessing.Process(target=self._tunnel_process, args=(local_port,
+                                        remote_port,
+                                        retry,
+                                        retry_interval,
+                                        username,
+                                        private_key_file,
+                                        private_key_passphrase,
+                                        quiet,
+                                        persistent,
+                                        ))
+            self.tunnel_connections.append(process)
+            process.start()
+            return process
+        except Exception as e:
+            raise
+
+    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates a socket, receives data until no new data is sent or the
+        (remote) client connection is closed, then closes the socket.
+        :param output_file: Path to file to write received data to
+        :type output_file: String
+        :param append: True to append data to the output_file
+        :type append: bool
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param newlines: True to add an additional newline character after each
+        data is received
+        :type newlines: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        connection.receive(output_file=output_file, append=append, quiet=quiet, newlines=newlines)
+        self.close_socket(connection)
+        self.close_socket(listener)
+
+    def receive_file(self, output_file=None, append=False, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates a socket, receives a file, then closes the socket.
+        :param output_file: Path to file to write the file to. Use None to
+        keep the existing filename
+        :type output_file: String
+        :param append: True to append data to the output_file
+        :type append: bool
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        connection.receive_file(output_file=output_file, append=append, quiet=quiet)
+        self.close_socket(connection)
+        self.close_socket(listener)
+        
+    def send(self, data, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates a socket, sends data, then closes the socket.
+        :param data: Unencoded String to send
+        :type data: String
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :type newlines: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        connection.send(data, quiet=quiet)
+        self.close_socket(connection)
+        self.close_socket(listener)
+        
+    def send_file(self, file, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates a socket, sends a file, then closes the socket.
+        :param file: Path to file to send
+        :type file: String
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        connection.send_file(file, quiet=quiet)
+        self.close_socket(connection)
+        self.close_socket(listener)
+
+        
+    def encrypted_receive(self, cert_file, key_file, output_file='received_data.txt', append=False, quiet=False, newlines=True, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates an encrypted socket, receives data until no new data is sent or
+        the (remote) client connection is closed, then closes the socket.
+        :param cert_file: Path to the TLS/SSL certificate
+        :type cert_file: String
+        :param key_file: Path to the TLS/SSL key file
+        :type key_file: String
+        :param output_file: Path to file to write received data to
+        :type output_file: String
+        :param append: True to append data to the output_file
+        :type append: bool
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param newlines: True to add an additional newline character after each
+        data is received
+        :type newlines: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        connection.receive(output_file=output_file, append=append, quiet=quiet, newlines=newlines)
+        self.close_socket(connection)
+        #close_socket(encrypted_listener)
+        self.close_socket(listener)
+
+    def encrypted_receive_file(self, cert_file, key_file, output_file=None, append=False, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates an encrypted socket, receives a file, then closes the socket.
+        :param cert_file: Path to the TLS/SSL certificate
+        :type cert_file: String
+        :param key_file: Path to the TLS/SSL key file
+        :type key_file: String
+        :param output_file: Path to file to write the file to. Use None to
+        keep the existing filename
+        :type output_file: String
+        :param append: True to append data to the output_file
+        :type append: bool
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        connection.receive_file(output_file=output_file, append=append, quiet=quiet)
+        self.close_socket(connection)
+        self.close_socket(encrypted_listener)
+        self.close_socket(listener)
+        
+    def encrypted_send(self, cert_file, key_file, data, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates an encrypted socket, sends data, then closes the socket.
+        :param cert_file: Path to the TLS/SSL certificate
+        :type cert_file: String
+        :param key_file: Path to the TLS/SSL key file
+        :type key_file: String
+        :param data: Unencoded String to send
+        :type data: String
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :type newlines: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        connection.send(data, quiet=quiet)
+        self.close_socket(connection)
+        self.close_socket(encrypted_listener)
+        self.close_socket(listener)
+        
+    def encrypted_send_file(self, cert_file, key_file, file, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+        """
+        Creates an encrypted socket, sends a file, then closes the socket.
+        :param cert_file: Path to the TLS/SSL certificate
+        :type cert_file: String
+        :param key_file: Path to the TLS/SSL key file
+        :type key_file: String
+        :param file: Path to file to send
+        :type file: String
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param local_port: The port to create the socket on, should match the
+        tunnel's local forwarded port
+        :type local_port: int
+        """
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        connection.send_file(file, quiet=quiet)
+        self.close_socket(connection)
+        self.close_socket(encrypted_listener)
+        self.close_socket(listener)
+            
+    def close_tunnel(self, process: multiprocessing.Process, quiet=False):
+        """
+        Closes a tunnel from a tunnel Process created by `node.create_tunnel()`.
+        :param process: Tunnel Process object
+        :type process: multiprocessing.Process
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :raise Exception: if the tunnel could not be closed
+        """
+        try:
+            if not isinstance(process, multiprocessing.Process):
+                raise TypeError
+            process.terminate()
+            if process in self.tunnel_connections:
+                self.tunnel_connections.remove(process)
+            if not quiet:
+                print(f'Tunnel closed.')
+        except Exception as e:
+            raise
+        
+    def close_all_tunnels(self, quiet=False):
+        """
+        Closes a tunnel from a tunnel Process created by `node.create_tunnel()`.
+        :param process: Tunnel Process object
+        :type process: multiprocessing.Process
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :raise Exception: if a tunnel could not be closed
+        """
+        if not self.tunnel_connections:
+            if not quiet:
+                print('No tunnels are open.')
+        else:
+            num = 0
+            try:
+                while self.tunnel_connections:
+                    process = self.tunnel_connections.pop()
+                    process.terminate()
+                    num = num + 1
+                if not quiet:
+                    print(f'Stopped {num} tunnel processes.')
+            except Exception as e:
+                print(f'Stopped {num} tunnel processes.')
+                raise
