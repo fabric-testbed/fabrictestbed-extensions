@@ -603,26 +603,17 @@ class FablibManager:
         # self.slice_keys = {}
         self.default_slice_key = {}
 
-        # Set config values from env vars
-        if Constants.FABRIC_CREDMGR_HOST in os.environ:
-            self.credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
+        # Set config values from env vars.
+        self.credmgr_host = os.environ.get(Constants.FABRIC_CREDMGR_HOST)
+        self.orchestrator_host = os.environ.get(Constants.FABRIC_ORCHESTRATOR_HOST)
+        self.fabric_token = os.environ.get(Constants.FABRIC_TOKEN_LOCATION)
+        self.project_id = os.environ.get(Constants.FABRIC_PROJECT_ID)
 
-        if Constants.FABRIC_ORCHESTRATOR_HOST in os.environ:
-            self.orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
+        # Bastion host setup.
+        self.bastion_username = os.environ.get(self.FABRIC_BASTION_USERNAME)
+        self.bastion_key_filename = os.environ.get(self.FABRIC_BASTION_KEY_LOCATION)
+        self.bastion_public_addr = os.environ.get(self.FABRIC_BASTION_HOST)
 
-        if Constants.FABRIC_TOKEN_LOCATION in os.environ:
-            self.fabric_token = os.environ[Constants.FABRIC_TOKEN_LOCATION]
-
-        if Constants.FABRIC_PROJECT_ID in os.environ:
-            self.project_id = os.environ[Constants.FABRIC_PROJECT_ID]
-
-        # Basstion host setup
-        if self.FABRIC_BASTION_USERNAME in os.environ:
-            self.bastion_username = os.environ[self.FABRIC_BASTION_USERNAME]
-        if self.FABRIC_BASTION_KEY_LOCATION in os.environ:
-            self.bastion_key_filename = os.environ[self.FABRIC_BASTION_KEY_LOCATION]
-        if self.FABRIC_BASTION_HOST in os.environ:
-            self.bastion_public_addr = os.environ[self.FABRIC_BASTION_HOST]
         # if self.FABRIC_BASTION_HOST_PRIVATE_IPV4 in os.environ:
         #    self.bastion_private_ipv4_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV4]
         # if self.FABRIC_BASTION_HOST_PRIVATE_IPV6 in os.environ:
