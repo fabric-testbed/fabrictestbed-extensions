@@ -505,41 +505,62 @@ class Component:
         output = []
         try:
             device_pci_id = self.get_pci_addr()[0]
-            stdout,stderr = self.node.execute('basename `sudo ls -l /sys/block/nvme*|grep "'+str(device_pci_id)+'"|awk \'{print $9}\'`',quiet=True)
-            if (stderr != ''):
-                output.append('Cannot find NVME device name for PCI ID : '+device_pci_id)
+            stdout, stderr = self.node.execute(
+                'basename `sudo ls -l /sys/block/nvme*|grep "'
+                + str(device_pci_id)
+                + "\"|awk '{print $9}'`",
+                quiet=True,
+            )
+            if stderr != "":
+                output.append(
+                    "Cannot find NVME device name for PCI ID : " + device_pci_id
+                )
                 raise Exception
             device_name = stdout.strip()
-            block_device_name = "/dev/"+device_name
-            output.append(self.node.execute("sudo fdisk -l "+block_device_name))
-            output.append(
-                self.node.execute("sudo parted -s "+block_device_name+" mklabel gpt")
-            )
-            output.append(
-                self.node.execute("sudo parted -s "+block_device_name+" print" )
-            )
-            output.append(
-                self.node.execute("sudo parted -s "+block_device_name+" print unit MB print free")
-            )
-            output.append(
-                self.node.execute("sudo parted -s --align optimal "+block_device_name+" mkpart primary ext4 0% 100%")
-            )
-            output.append(self.node.execute("lsblk "+block_device_name))
-            output.append(
-                self.node.execute("sudo mkfs.ext4 "+block_device_name+"p1")
-            )
-            # This is to use a unique mountpoint when it is not provided by the user
-            if (mount_point == ""):
-                mount_point = "/mnt/"+device_name
+            block_device_name = "/dev/" + device_name
+            output.append(self.node.execute("sudo fdisk -l " + block_device_name))
             output.append(
                 self.node.execute(
-                    "sudo mkdir -p "+mount_point+" && sudo mount "+block_device_name+"p1 "+mount_point)
+                    "sudo parted -s " + block_device_name + " mklabel gpt"
+                )
             )
-            output.append(self.node.execute("df -h "+mount_point))
+            output.append(
+                self.node.execute("sudo parted -s " + block_device_name + " print")
+            )
+            output.append(
+                self.node.execute(
+                    "sudo parted -s " + block_device_name + " print unit MB print free"
+                )
+            )
+            output.append(
+                self.node.execute(
+                    "sudo parted -s --align optimal "
+                    + block_device_name
+                    + " mkpart primary ext4 0% 100%"
+                )
+            )
+            output.append(self.node.execute("lsblk " + block_device_name))
+            output.append(
+                self.node.execute("sudo mkfs.ext4 " + block_device_name + "p1")
+            )
+            # This is to use a unique mountpoint when it is not provided by the user
+            if mount_point == "":
+                mount_point = "/mnt/" + device_name
+            output.append(
+                self.node.execute(
+                    "sudo mkdir -p "
+                    + mount_point
+                    + " && sudo mount "
+                    + block_device_name
+                    + "p1 "
+                    + mount_point
+                )
+            )
+            output.append(self.node.execute("df -h " + mount_point))
         except Exception as e:
             print(f"config_nvme Fail: {self.get_name()}")
-            #traceback.print_exc()
-            raise Exception(str(output)+str(e))
+            # traceback.print_exc()
+            raise Exception(str(output) + str(e))
 
         return output
 
