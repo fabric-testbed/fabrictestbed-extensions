@@ -649,13 +649,13 @@ class FablibManager:
         if Constants.FABRIC_ORCHESTRATOR_HOST in fabric_rc_dict:
             self.orchestrator_host = fabric_rc_dict[Constants.FABRIC_ORCHESTRATOR_HOST]
 
-        if "FABRIC_TOKEN_LOCATION" in fabric_rc_dict:
-            self.fabric_token = fabric_rc_dict["FABRIC_TOKEN_LOCATION"]
+        if Constants.FABRIC_TOKEN_LOCATION in fabric_rc_dict:
+            self.fabric_token = fabric_rc_dict[Constants.FABRIC_TOKEN_LOCATION]
             os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.fabric_token
 
-        if "FABRIC_PROJECT_ID" in fabric_rc_dict:
-            self.project_id = fabric_rc_dict["FABRIC_PROJECT_ID"]
-            os.environ["FABRIC_PROJECT_ID"] = self.project_id
+        if Constants.FABRIC_PROJECT_ID in fabric_rc_dict:
+            self.project_id = fabric_rc_dict[Constants.FABRIC_PROJECT_ID]
+            os.environ[Constants.FABRIC_PROJECT_ID] = self.project_id
 
         # Basstion host setup
         if self.FABRIC_BASTION_HOST in fabric_rc_dict:
