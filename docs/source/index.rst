@@ -46,8 +46,10 @@ From the configuration, FABlib will need to know these things:
 - And, optionally, the passphrases to the private keys
 
 In FABRIC project's JupyterLab, this configuration is usually done by
-running a "Configure your Jupyter Environment" notebook you will run.
-If you are running your code from your laptop, you must set these
+running a "Configure your Jupyter Environment" notebook that you will
+need to run, when you sign in there for the first time.
+
+If you are running code in another machine, you must set some
 environment variables, like so:
 
 .. code-block:: bash  
