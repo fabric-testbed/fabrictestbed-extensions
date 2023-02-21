@@ -13,12 +13,15 @@ Welcome to fabrictestbed-extensions documentation!
 
 fabrictestbed-extensions, otherwise known as "FABlib", is an
 implementation of a Python API for interacting with `FABRIC testbed`_.
-You would typically call FABlib APIs from your `JupyterLab`_ notebooks
-or from your Python code.  FABRIC project runs an instance of
-JupyterLab at https://jupyter.fabric-testbed.net.
+You would typically call FABlib APIs from your `Jupyter`_ notebooks or
+from your Python code.  FABRIC project runs an instance of
+`JupyterHub`_ at https://jupyter.fabric-testbed.net.
 
 If you are new to FABRIC, it would be helpful to begin by reading the
-articles at https://learn.fabric-testbed.net.
+articles at https://learn.fabric-testbed.net.  If you have questions
+or run into trouble, you can discuss them at FABRIC forums:
+https://learn.fabric-testbed.net/forums/.
+
 
 Installing FABlib
 -----------------
@@ -116,7 +119,8 @@ values set using environment variables.
 
 
 .. _FABRIC testbed: https://fabric-testbed.net/
-.. _JupyterLab: https://jupyter.org/
+.. _Jupyter: https://jupyter.org/
+.. _JupyterHub: https://jupyter.org/hub
 
 Indices and tables
 ==================
