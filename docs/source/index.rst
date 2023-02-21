@@ -75,9 +75,12 @@ environment variables, like so:
   export FABRIC_SLICE_PUBLIC_KEY_FILE=/home/fabric/work/fabric_config/slice_key.pub
   export FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE=maj0rs3kr3t
 
+The `fabric_rc` configuration file also follows the same format as
+above.  Currently contents of the configuration file will override
+values set using environment variables.
+
 
 .. _FABRIC testbed: https://fabric-testbed.net/
-
 .. _JupyterLab: https://jupyter.org/
 
 Indices and tables
