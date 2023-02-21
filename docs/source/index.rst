@@ -40,6 +40,10 @@ box. Some configuration is required for the code above to work as
 expected. Configuration can come from either environment variables or
 from a file, usually placed at ``~/work/fabric_config/fabric_rc``.
 
+More examples of FABlib usage can be found in the notebooks available
+at FABRIC project's JupyterLab instance, which are also maintained at
+https://github.com/fabric-testbed/jupyter-examples.
+
 Configuring FABlib
 ------------------
 
