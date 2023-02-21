@@ -2426,14 +2426,14 @@ class Node:
         """
         return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
 
-    def create_socket(self, port=SocketConstants.NEXT_LOCAL_PORT, quiet=False) -> Tuple[SocketHandler, SocketHandler]:
+    def create_socket(self, port=SocketConstants.NEXT_REMOTE_PORT, quiet=False) -> Tuple[SocketHandler, SocketHandler]:
         """
         Low-level method that creates a socket between the local JupyterHub or
         Python kernel and the remote Node. Unless you are building custom socket
         functionality, you probably want to use the abstractions instead:
         `node.receive()`, `node.receive_file()`, `node.send()`, or
         `node.send_file()`.
-        :param port: the port to bind to, should match the local_port used when
+        :param port: the port to bind to, should match the remote_port used when
         creating the tunnel
         :type port: int
         :param quiet: True to specify printing/display
@@ -2444,6 +2444,7 @@ class Node:
         """
         try:
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind(('localhost', port))
             listener.listen()
             if not quiet:
@@ -2507,6 +2508,7 @@ class Node:
         """
         try:
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind(('localhost', port))
             listener.listen()
             if not quiet:
@@ -2573,6 +2575,8 @@ class Node:
             if not isinstance(sock_handle, SocketHandler):
                 raise TypeError
             sock_handle.sock.close()
+            if not quiet:
+                print('Closed socket.')
 
         except Exception as e:
             try:
@@ -2892,7 +2896,7 @@ class Node:
         except Exception as e:
             raise
 
-    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates a socket, receives data until no new data is sent or the
         (remote) client connection is closed, then closes the socket.
@@ -2905,16 +2909,16 @@ class Node:
         :param newlines: True to add an additional newline character after each
         data is received
         :type newlines: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        listener, connection = self.create_socket(port=remote_port, quiet=quiet)
         connection.receive(output_file=output_file, append=append, quiet=quiet, newlines=newlines)
-        self.close_socket(connection)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        self.close_socket(listener, quiet=True)
 
-    def receive_file(self, output_file=None, append=False, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def receive_file(self, output_file=None, append=False, quiet=False, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates a socket, receives a file, then closes the socket.
         :param output_file: Path to file to write the file to. Use None to
@@ -2925,15 +2929,15 @@ class Node:
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
+        tunnel's remote forwarded port
         :type local_port: int
         """
-        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        listener, connection = self.create_socket(port=remote_port, quiet=quiet)
         connection.receive_file(output_file=output_file, append=append, quiet=quiet)
-        self.close_socket(connection)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        self.close_socket(listener, quiet=True)
         
-    def send(self, data, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def send(self, data, quiet=False, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates a socket, sends data, then closes the socket.
         :param data: Unencoded String to send
@@ -2941,33 +2945,33 @@ class Node:
         :param quiet: True to specify printing/display
         :type quiet: bool
         :type newlines: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        listener, connection = self.create_socket(port=remote_port, quiet=quiet)
         connection.send(data, quiet=quiet)
-        self.close_socket(connection)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        self.close_socket(listener, quiet=True)
         
-    def send_file(self, file, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def send_file(self, file, quiet=False, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates a socket, sends a file, then closes the socket.
         :param file: Path to file to send
         :type file: String
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, connection = self.create_socket(port=local_port, quiet=quiet)
+        listener, connection = self.create_socket(port=remote_port, quiet=quiet)
         connection.send_file(file, quiet=quiet)
-        self.close_socket(connection)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        self.close_socket(listener, quiet=True)
 
         
-    def encrypted_receive(self, cert_file, key_file, output_file='received_data.txt', append=False, quiet=False, newlines=True, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def encrypted_receive(self, cert_file, key_file, output_file='received_data.txt', append=False, quiet=False, newlines=True, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates an encrypted socket, receives data until no new data is sent or
         the (remote) client connection is closed, then closes the socket.
@@ -2984,17 +2988,17 @@ class Node:
         :param newlines: True to add an additional newline character after each
         data is received
         :type newlines: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=remote_port, quiet=quiet)
         connection.receive(output_file=output_file, append=append, quiet=quiet, newlines=newlines)
-        self.close_socket(connection)
-        #close_socket(encrypted_listener)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        #close_socket(encrypted_listener, quiet=True)
+        self.close_socket(listener, quiet=True)
 
-    def encrypted_receive_file(self, cert_file, key_file, output_file=None, append=False, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def encrypted_receive_file(self, cert_file, key_file, output_file=None, append=False, quiet=False, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates an encrypted socket, receives a file, then closes the socket.
         :param cert_file: Path to the TLS/SSL certificate
@@ -3008,17 +3012,17 @@ class Node:
         :type append: bool
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=remote_port, quiet=quiet)
         connection.receive_file(output_file=output_file, append=append, quiet=quiet)
-        self.close_socket(connection)
-        self.close_socket(encrypted_listener)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        #self.close_socket(encrypted_listener, quiet=True)
+        self.close_socket(listener, quiet=True)
         
-    def encrypted_send(self, cert_file, key_file, data, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def encrypted_send(self, cert_file, key_file, data, quiet=False, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates an encrypted socket, sends data, then closes the socket.
         :param cert_file: Path to the TLS/SSL certificate
@@ -3030,17 +3034,17 @@ class Node:
         :param quiet: True to specify printing/display
         :type quiet: bool
         :type newlines: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=remote_port, quiet=quiet)
         connection.send(data, quiet=quiet)
-        self.close_socket(connection)
-        self.close_socket(encrypted_listener)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        #self.close_socket(encrypted_listener, quiet=True)
+        self.close_socket(listener, quiet=True)
         
-    def encrypted_send_file(self, cert_file, key_file, file, quiet=False, local_port=SocketConstants.NEXT_LOCAL_PORT):
+    def encrypted_send_file(self, cert_file, key_file, file, quiet=False, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates an encrypted socket, sends a file, then closes the socket.
         :param cert_file: Path to the TLS/SSL certificate
@@ -3051,15 +3055,15 @@ class Node:
         :type file: String
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param local_port: The port to create the socket on, should match the
-        tunnel's local forwarded port
-        :type local_port: int
+        :param remote_port: The port to create the socket on, should match the
+        tunnel's remote forwarded port
+        :type remote_port: int
         """
-        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=local_port, quiet=quiet)
+        listener, encrypted_listener, connection = self.create_encrypted_socket(cert_file, key_file, port=remote_port, quiet=quiet)
         connection.send_file(file, quiet=quiet)
-        self.close_socket(connection)
-        self.close_socket(encrypted_listener)
-        self.close_socket(listener)
+        self.close_socket(connection, quiet=True)
+        #self.close_socket(encrypted_listener, quiet=True)
+        self.close_socket(listener, quiet=True)
             
     def close_tunnel(self, process: multiprocessing.Process, quiet=False):
         """
