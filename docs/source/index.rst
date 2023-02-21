@@ -18,7 +18,7 @@ or from your Python code.  FABRIC project runs an instance of
 JupyterLab at https://jupyter.fabric-testbed.net.
 
 If you are new to FABRIC, it would be helpful to begin by reading the
-articles at https://learn.fabric-testbed.net/.
+articles at https://learn.fabric-testbed.net.
 
 FABlib's "hello world"
 ----------------------
