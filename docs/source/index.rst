@@ -13,9 +13,9 @@ Welcome to fabrictestbed-extensions documentation!
 
 fabrictestbed-extensions, otherwise known as "FABlib", is an
 implementation of a Python API for interacting with `FABRIC testbed`_.
-You would typically use FABlib APIs in your `JupyterLab`_ notebooks or
-from your Python code.  FABRIC project runs an instance of Jupyter at
-https://jupyter.fabric-testbed.net.
+You would typically call FABlib APIs from your `JupyterLab`_ notebooks
+or from your Python code.  FABRIC project runs an instance of
+JupyterLab at https://jupyter.fabric-testbed.net.
 
 If you are new to FABRIC, it would be helpful to begin by reading the
 articles at https://learn.fabric-testbed.net/.
