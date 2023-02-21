@@ -20,6 +20,26 @@ JupyterLab at https://jupyter.fabric-testbed.net.
 If you are new to FABRIC, it would be helpful to begin by reading the
 articles at https://learn.fabric-testbed.net.
 
+Installing FABlib
+-----------------
+
+You can install released versions of FABlib from PyPI:
+
+.. code-block:: bash
+
+   $ pip install fabrictestbed-extensions
+
+If you need the current development version of FABlib, install it from
+the git repository:
+
+.. code-block:: bash
+
+   $ pip install git+https://github.com/fabric-testbed/fabrictestbed-extensions@main
+
+Installing FABlib will also install a number of dependencies, so you
+might want to install FABlib in a virtual environment.
+
+
 FABlib's "hello world"
 ----------------------
 
