@@ -67,14 +67,14 @@ need to run, when you sign in there for the first time.
 If you are running code in another machine, you must set some
 environment variables, like so:
 
-.. code-block:: bash  
-  
+.. code-block:: bash
+
   export FABRIC_CREDMGR_HOST=cm.fabric-testbed.net
   export FABRIC_ORCHESTRATOR_HOST=orchestrator.fabric-testbed.net
 
   # Find your real project ID from FABRIC portal: https://portal.fabric-testbed.net/.
   export FABRIC_PROJECT_ID=a429da84-20cd-449d-bcb6-5e2c4ac269c0
-  
+
   # Download FABRIC token from FABRIC credential manager: https://cm.fabric-testbed.net/.
   export FABRIC_TOKEN_LOCATION=/path/to/token.json
 
