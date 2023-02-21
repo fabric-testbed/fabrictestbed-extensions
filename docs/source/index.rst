@@ -17,6 +17,12 @@ You would typically use FABlib APIs in your `JupyterLab`_ notebooks or
 from your Python code.  FABRIC project runs an instance of Jupyter at
 https://jupyter.fabric-testbed.net.
 
+If you are new to FABRIC, it would be helpful to begin by reading the
+articles at https://learn.fabric-testbed.net/.
+
+FABlib's "hello world"
+----------------------
+
 Here's a quick example of some code that uses FABlib:
 
 .. code-block:: python
@@ -29,11 +35,16 @@ Here's a quick example of some code that uses FABlib:
    except Exception as e:
        print(f"Exception: {e}")
 
-Some configuration is required for the code above to work as expected.
-Configuration can come from either environment variables or from a
-file, usually placed at ``~/work/fabric_config/fabric_rc``.
+However, please note that the above example will `not` work out of the
+box. Some configuration is required for the code above to work as
+expected. Configuration can come from either environment variables or
+from a file, usually placed at ``~/work/fabric_config/fabric_rc``.
 
-From the configuration, FABlib will need to know these things:
+Configuring FABlib
+------------------
+
+In order to interact with FABRIC testbed, FABlib will need to know
+these things:
 
 - FABRIC orchestrator host's address
 - FABRIC credential manager host's address
@@ -75,8 +86,8 @@ environment variables, like so:
   export FABRIC_SLICE_PUBLIC_KEY_FILE=/home/fabric/work/fabric_config/slice_key.pub
   export FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE=maj0rs3kr3t
 
-The `fabric_rc` configuration file also follows the same format as
-above.  Currently contents of the configuration file will override
+The ``fabric_rc`` configuration file also follows the same format as
+above.  Currently, contents of the configuration file will override
 values set using environment variables.
 
 
