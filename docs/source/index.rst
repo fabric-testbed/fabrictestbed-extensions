@@ -3,16 +3,80 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to fabrictestbed-extensions's documentation!
-====================================================
+Welcome to fabrictestbed-extensions documentation!
+==================================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
 
-This is the tesxt to introduce you to FABlib!
+fabrictestbed-extensions, otherwise known as "FABlib", is an
+implementation of a Python API for interacting with `FABRIC testbed`_.
+You would typically use FABlib APIs in your `JupyterLab`_ notebooks or
+from your Python code.  FABRIC project runs an instance of Jupyter at
+https://jupyter.fabric-testbed.net.
 
+Here's a quick example of some code that uses FABlib:
+
+.. code-block:: python
+
+   from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+   try:
+       fablib = FablibManager()
+       fablib.show_config()
+   except Exception as e:
+       print(f"Exception: {e}")
+
+Some configuration is required for the code above to work as expected.
+Configuration can come from either environment variables or from a
+file, usually placed at ``~/work/fabric_config/fabric_rc``.
+
+From the configuration, FABlib will need to know these things:
+
+- FABRIC orchestrator host's address
+- FABRIC credential manager host's address
+- FABRIC bastion host's address
+- Your FABRIC project ID
+- Path to your FABRIC token
+- Your username for FABRIC bastion host
+- Your ssh private key to use with FABRIC bastion host
+- Your ssh public and private keys to use with FABRIC slices
+- And, optionally, the passphrases to the private keys
+
+In FABRIC project's JupyterLab, this configuration is usually done by
+running a "Configure your Jupyter Environment" notebook you will run.
+If you are running your code from your laptop, you must set these
+environment variables, like so:
+
+.. code-block:: bash  
+  
+  export FABRIC_CREDMGR_HOST=cm.fabric-testbed.net
+  export FABRIC_ORCHESTRATOR_HOST=orchestrator.fabric-testbed.net
+
+  # Find your real project ID from FABRIC portal: https://portal.fabric-testbed.net/.
+  export FABRIC_PROJECT_ID=a429da84-20cd-449d-bcb6-5e2c4ac269c0
+  
+  # Download FABRIC token from FABRIC credential manager: https://cm.fabric-testbed.net/.
+  export FABRIC_TOKEN_LOCATION=/path/to/token.json
+
+  export FABRIC_BASTION_HOST=bastion.fabric-testbed.net
+  # Find your real FABRIC bastion host username at https://portal.fabric-testbed.net/user.
+  export FABRIC_BASTION_USERNAME=you_0000010534
+
+  export FABRIC_BASTION_KEY_LOCATION=/home/fabric/work/fabric_config/fabric_bastion_key
+  # If your bastion private key is protected, export its passphrase.
+  export FABRIC_BASTION_KEY_PASSPHRASE=s00p3rs3kr3t
+
+  export FABRIC_SLICE_PRIVATE_KEY_FILE=/home/fabric/work/fabric_config/slice_key
+  export FABRIC_SLICE_PUBLIC_KEY_FILE=/home/fabric/work/fabric_config/slice_key.pub
+  export FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE=maj0rs3kr3t
+
+
+.. _FABRIC testbed: https://fabric-testbed.net/
+
+.. _JupyterLab: https://jupyter.org/
 
 Indices and tables
 ==================
