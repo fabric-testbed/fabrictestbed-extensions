@@ -1,5 +1,6 @@
 import os
 import pathlib
+import tempfile
 import unittest
 
 from fabrictestbed.util.constants import Constants
@@ -103,3 +104,14 @@ class FablibManagerTests(unittest.TestCase):
 
         with self.assertRaises(Exception):
             FablibManager()
+
+    def test_fablib_manager_with_empty_config(self):
+        # Check that an empty configuration file will cause
+        # FablibManager to raise an error.
+        rcfile = tempfile.NamedTemporaryFile()
+        rcfile.flush()
+
+        with self.assertRaises(AttributeError):
+            FablibManager(fabric_rc=rcfile.name)
+
+        rcfile.close()
