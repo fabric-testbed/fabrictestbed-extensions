@@ -115,3 +115,33 @@ class FablibManagerTests(unittest.TestCase):
             FablibManager(fabric_rc=rcfile.name)
 
         rcfile.close()
+
+    def test_fablib_manager_with_some_config(self):
+        # Test with some configuration in the rc file.
+        rcfile = tempfile.NamedTemporaryFile()
+
+        # Write all configuration except FABRIC_TOKEN_LOCATION.  The
+        # token location is a special case because when it is set,
+        # Fablib will need network access to reach CredentialManager.
+        for var in self.required_env_vars:
+            rcfile.write(f"export {var} = dummy\n".encode())
+
+        rcfile.flush()
+
+        with self.assertRaises(AttributeError) as ctx:
+            FablibManager(fabric_rc=rcfile.name)
+
+        # Check that the error is what we expected.
+        self.assertIsInstance(
+            ctx.exception,
+            AttributeError
+        )
+
+        # Check that the error message is what we expected: the only
+        # error should be about missing token.
+        self.assertEqual(
+            str(ctx.exception),
+            "Error initializing FablibManager: ['FABRIC token is not set']"
+        )
+
+        rcfile.close()
