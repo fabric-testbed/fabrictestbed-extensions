@@ -114,8 +114,6 @@ class FablibManagerTests(unittest.TestCase):
         with self.assertRaises(AttributeError):
             FablibManager(fabric_rc=rcfile.name)
 
-        rcfile.close()
-
     def test_fablib_manager_with_some_config(self):
         # Test with some configuration in the rc file.
         rcfile = tempfile.NamedTemporaryFile()
@@ -140,5 +138,3 @@ class FablibManagerTests(unittest.TestCase):
             str(ctx.exception),
             "Error initializing FablibManager: ['FABRIC token is not set']",
         )
-
-        rcfile.close()
