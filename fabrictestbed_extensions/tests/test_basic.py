@@ -43,7 +43,8 @@ class FablibManagerTests(unittest.TestCase):
                 FablibManager()
 
     def test_fablib_manager_all_env_vars(self):
-        # Test with all required_env_vars except token location set.
+        # Test with all required configuration except
+        # FABRIC_TOKEN_LOCATION.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
