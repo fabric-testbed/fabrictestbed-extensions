@@ -1792,6 +1792,13 @@ class Node:
                     tar_handle.add(
                         os.path.join(root, file),
                         arcname=os.path.join(root, file)[root_size:],
+                        recursive=True,
+                    )
+                for directory in dirs:
+                    tar_handle.add(
+                        os.path.join(root, directory),
+                        arcname=os.path.join(root, directory)[root_size:],
+                        recursive=True,
                     )
 
         self.upload_file(temp_file, temp_file, retry, retry_interval)
@@ -2757,6 +2764,25 @@ class Node:
         # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
         #f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
         #{ "bridge": "none" , "registry-mirrors": ["https://registry.ipv4.docker.com"] }
+
+        ''' to enable ipv6 grafana in docker, put this in daemon.json 
+        
+        
+        {
+        "registry-mirrors": ["https://registry.ipv4.docker.com"],
+        "iptables": true,
+        "ip6tables": true,
+        "experimental": true,
+        "ip-forward": true,
+        "ip-masq": true,
+    	"ipv6": true,
+	    "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64"
+        }
+        
+        
+        '''
+
+
         if self.get_image() == 'default_rocky_8':
             self.execute("echo Hello, FABRIC from node `hostname -s` ; "
                                          f"sudo hostnamectl set-hostname {self.get_name()} ; "
