@@ -132,16 +132,13 @@ class FablibManagerTests(unittest.TestCase):
             FablibManager(fabric_rc=rcfile.name)
 
         # Check that the error is what we expected.
-        self.assertIsInstance(
-            ctx.exception,
-            AttributeError
-        )
+        self.assertIsInstance(ctx.exception, AttributeError)
 
         # Check that the error message is what we expected: the only
         # error should be about missing token.
         self.assertEqual(
             str(ctx.exception),
-            "Error initializing FablibManager: ['FABRIC token is not set']"
+            "Error initializing FablibManager: ['FABRIC token is not set']",
         )
 
         rcfile.close()
