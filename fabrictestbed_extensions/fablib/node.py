@@ -2756,7 +2756,7 @@ class Node:
 
         self.set_enable_docker()
         if not self.is_instantiated():
-            return
+            return self
 
         if type(self.get_management_ip()) is IPv6Address:
             registry = 'registry.ipv6.docker.com'
