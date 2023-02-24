@@ -1123,6 +1123,7 @@ class FablibManager:
         avoid: List[str] = [],
         filter_function=None,
         update: bool = True,
+        unique: bool = True,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
@@ -1137,13 +1138,17 @@ class FablibManager:
 
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
+
+            logging.debug(f"combined_filter_function: {site}")
+            logging.debug(f"combined_filter_function: type(site['state']): {type(site['state'])}")
+
             if filter_function == None:
-                if site["name"] not in self.sites_in_maintenance and site["hosts"] > 0:
+                if site['state'] == 'Active' and site["hosts"] > 0:
                     return True
             else:
                 if (
                     filter_function(site)
-                    and site["name"] not in self.sites_in_maintenance
+                    and site["state"] == 'Active'
                     and site["hosts"] > 0
                 ):
                     return True
