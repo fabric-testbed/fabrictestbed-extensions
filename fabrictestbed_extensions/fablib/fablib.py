@@ -1138,10 +1138,6 @@ class FablibManager:
 
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
-
-            logging.debug(f"combined_filter_function: {site}")
-            logging.debug(f"combined_filter_function: type(site['state']): {type(site['state'])}")
-
             if filter_function == None:
                 if site['state'] == 'Active' and site["hosts"] > 0:
                     return True
