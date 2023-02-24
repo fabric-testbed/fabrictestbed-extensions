@@ -66,7 +66,7 @@ class SocketHandler:
             buf.append(data)
 
 
-    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True):
+    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True, update_file=True):
         filename = output_file
         write = True
         if output_file is None:
@@ -77,24 +77,43 @@ class SocketHandler:
                 print('RECEIVED DATA BELOW:')
             if write:
                 if append:
-                    with open(filename, "ab") as out:
+                    if update_file:
                         while True:
-                            bytes_read = self.sock.recv(self.BUFFER_SIZE)
-                            if not bytes_read:
-                                # Transmitting is done
-                                break
-                            if not quiet:
-                                #if bytes_read != b'':
+                            with open(filename, "ab") as out:
+                                bytes_read = self.sock.recv(self.BUFFER_SIZE)
+                                if not bytes_read:
+                                    # Transmitting is done
+                                    break
+                                if not quiet:
+                                    #if bytes_read != b'':
+                                    if newlines:
+                                        print(f'{bytes_read.decode()}')
+                                    else:
+                                        print(f'{bytes_read.decode()}', end='')
+                                out.write(bytes_read)
                                 if newlines:
-                                    print(f'{bytes_read.decode()}')
-                                else:
-                                    print(f'{bytes_read.decode()}', end='')
-                            out.write(bytes_read)
-                            if newlines:
-                                out.write(b'\n')
+                                    out.write(b'\n')
+                    else:
+                        with open(filename, "ab") as out:
+                            while True:
+                                bytes_read = self.sock.recv(self.BUFFER_SIZE)
+                                if not bytes_read:
+                                    # Transmitting is done
+                                    break
+                                if not quiet:
+                                    #if bytes_read != b'':
+                                    if newlines:
+                                        print(f'{bytes_read.decode()}')
+                                    else:
+                                        print(f'{bytes_read.decode()}', end='')
+                                out.write(bytes_read)
+                                if newlines:
+                                    out.write(b'\n')
                 else:
-                    with open(filename, "wb") as out:
+                    if update_file:
                         while True:
+                            # with open(filename, "wb") as out:
+                            out = open(filename, "ab")
                             bytes_read = self.sock.recv(self.BUFFER_SIZE)
                             if not bytes_read:
                                 # Transmitting is done
@@ -108,6 +127,23 @@ class SocketHandler:
                             out.write(bytes_read)
                             if newlines:
                                 out.write(b'\n')
+                            out.close()
+                    else:
+                        with open(filename, "wb") as out:
+                            while True:
+                                bytes_read = self.sock.recv(self.BUFFER_SIZE)
+                                if not bytes_read:
+                                    # Transmitting is done
+                                    break
+                                if not quiet:
+                                    #if bytes_read != b'':
+                                    if newlines:
+                                        print(f'{bytes_read.decode()}')
+                                    else:
+                                        print(f'{bytes_read.decode()}', end='')
+                                out.write(bytes_read)
+                                if newlines:
+                                    out.write(b'\n')
             else: ## write == False
                 while True:
                     bytes_read = self.sock.recv(self.BUFFER_SIZE)

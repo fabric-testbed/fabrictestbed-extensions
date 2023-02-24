@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+# Author: Brandon Rice (brandon@retroengineer.com)
 from __future__ import annotations
 import json
 import threading
@@ -2896,7 +2897,7 @@ class Node:
         except Exception as e:
             raise
 
-    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True, remote_port=SocketConstants.NEXT_REMOTE_PORT):
+    def receive(self, output_file='received_data.txt', append=False, quiet=False, newlines=True, update_file=True, remote_port=SocketConstants.NEXT_REMOTE_PORT):
         """
         Creates a socket, receives data until no new data is sent or the
         (remote) client connection is closed, then closes the socket.
@@ -2914,7 +2915,7 @@ class Node:
         :type remote_port: int
         """
         listener, connection = self.create_socket(port=remote_port, quiet=quiet)
-        connection.receive(output_file=output_file, append=append, quiet=quiet, newlines=newlines)
+        connection.receive(output_file=output_file, append=append, quiet=quiet, newlines=newlines, update_file=update_file)
         self.close_socket(connection, quiet=True)
         self.close_socket(listener, quiet=True)
 
