@@ -235,7 +235,7 @@ class Node:
         if "username" not in skip:
             rtn_dict["username"] = str(self.get_username())
         if "management_ip" not in skip:
-            rtn_dict["management_ip"] = str(self.get_management_ip()) if self.get_management_ip() else '' #str(self.get_management_ip())
+            rtn_dict["management_ip"] = str(self.get_management_ip()).strip() if self.get_management_ip() else '' #str(self.get_management_ip())
         if "state" not in skip:
             rtn_dict["state"] = str(self.get_reservation_state())
         if "error" not in skip:
@@ -2709,6 +2709,8 @@ class Node:
         fablib_data['docker']['enable'] = True
         self.set_fablib_data(fablib_data)
 
+        return self
+
     def get_enable_docker(self):
         fablib_data = self.get_fablib_data()
         if 'docker' in fablib_data:
@@ -2843,4 +2845,6 @@ class Node:
                                          f"python3 -m pip install docker rpyc --user ; "
                                          , quiet=True,
                                          output_file=f"{log_dir}/{self.get_name()}.log")
+
+        return self
 

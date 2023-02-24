@@ -388,6 +388,7 @@ class Interface:
             mtu=mtu,
         )
 
+
     def ip_addr_add(self, addr, subnet):
         """
         Add an IP address to the interface in the node.
@@ -448,6 +449,8 @@ class Interface:
         if_labels = self.get_fim_interface().get_property(pname="labels")
         if_labels.vlan = str(vlan)
         self.get_fim_interface().set_properties(labels=if_labels)
+
+        return self
 
     def get_fim_interface(self) -> FimInterface:
         """
@@ -722,6 +725,16 @@ class Interface:
         user_data['fablib_data'] = fablib_data
         self.set_user_data(user_data)
 
+    def set_network(self, network: NetworkService):
+
+        current_network = self.get_network()
+        if current_network:
+            current_network.remove_interface(self)
+
+        network.add_interface(self)
+
+        return self
+
     def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
         fablib_data = self.get_fablib_data()
         if mode:
@@ -734,6 +747,8 @@ class Interface:
             if self.get_network():
                 fablib_data['addr'] = str(self.get_network().allocate_ip())
         self.set_fablib_data(fablib_data)
+
+        return self
 
     def get_ip_addr(self):
         fablib_data = self.get_fablib_data()
@@ -750,6 +765,8 @@ class Interface:
         fablib_data = self.get_fablib_data()
         fablib_data['mode']=mode
         self.set_fablib_data(fablib_data)
+
+        return self
 
     def get_mode(self):
         fablib_data = self.get_fablib_data()
