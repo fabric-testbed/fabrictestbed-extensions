@@ -2759,9 +2759,9 @@ class Node:
             return self
 
         if type(self.get_management_ip()) is IPv6Address:
-            registry = 'registry.ipv6.docker.com'
+            registry = 'https://registry.ipv6.docker.com'
         else:
-            registry = 'registry.ipv4.docker.com'
+            registry = 'https://registry.ipv4.docker.com'
 
         # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
         #f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
@@ -2825,24 +2825,29 @@ class Node:
                                          , quiet=True,
                                          output_file=f"{log_dir}/{self.get_name()}.log")
         elif self.get_image() == 'default_ubuntu_22':
+            print('Installing docker for ubuntu 22...')
             self.execute("echo Hello, FABRIC from node `hostname -s` ; "
                                          f"sudo hostnamectl set-hostname {self.get_name()} ; "
-                                         f"sudo apt-get update; "
-                                         f"sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common ; "
-                                         f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - ; "
-                                         f'sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" ; '
+                                         f"sudo apt-get update ;"
+                                         f"sudo apt-get install -y ca-certificates curl gnupg lsb-release ;"
+                                         f"sudo mkdir -m 0755 -p /etc/apt/keyrings ;"
+                                         f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg ; "
+                                         f'echo \
+                                            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+                                            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null ;'
                                          f"sudo apt-get update ; "
-                                         f"sudo mkdir /etc/docker ; "
+                                        #  f"sudo mkdir /etc/docker ; "
                                          #f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
-                                         f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
-                                         f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io ; "
+                                         f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": [\\\"{registry}\\\"] }} > /etc/docker/daemon.json' ; "
+                                         f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin ; "
+                                         f"sudo groupadd docker ;"
                                          f"sudo usermod -aG docker {self.get_username()} ; "
                                          f"sudo apt-get install openvswitch-switch -y ; "
                                          f"sudo systemctl start openvswitch-switch ; "
                                          f"sudo systemctl status openvswitch-switch ; "
                                          f"sudo systemctl enable --now openvswitch-switch ; "
                                          f"sudo apt-get install -y  build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev wget tcpdump iftop python3-pip ; "
-                                         f"python3 -m pip install docker rpyc --user ; "
+                                         f"pip install docker rpyc --user ; "
                                          , quiet=True,
                                          output_file=f"{log_dir}/{self.get_name()}.log")
 
