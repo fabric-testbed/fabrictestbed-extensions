@@ -2867,6 +2867,7 @@ class Node:
                 #  f"sudo mkdir /etc/docker ; "
                 # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
                 f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
+                f"cat /etc/docker/daemon.json ; "
                 f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin ; "
                 f"sudo groupadd docker ;"
                 f"sudo usermod -aG docker {self.get_username()} ; "
