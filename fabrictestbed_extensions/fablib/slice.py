@@ -818,12 +818,15 @@ class Slice:
         """
         return self.sm_slice.project_id
 
-    def add_l2network(self, name: str = None,
-                      interfaces: List[Interface] = [],
-                      type: str = None,
-                      subnet: ipaddress = None,
-                      gateway: ipaddress = None,
-                      user_data: dict = {}) -> NetworkService:
+    def add_l2network(
+        self,
+        name: str = None,
+        interfaces: List[Interface] = [],
+        type: str = None,
+        subnet: ipaddress = None,
+        gateway: ipaddress = None,
+        user_data: dict = {},
+    ) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
 
@@ -867,7 +870,11 @@ class Slice:
         return network_service
 
     def add_l3network(
-        self, name: str = None, interfaces: List[Interface] = [], type: str = "IPv4",  user_data: dict = {},
+        self,
+        name: str = None,
+        interfaces: List[Interface] = [],
+        type: str = "IPv4",
+        user_data: dict = {},
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -911,7 +918,11 @@ class Slice:
         :rtype: NetworkService
         """
         return NetworkService.new_l3network(
-            slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data,
+            slice=self,
+            name=name,
+            interfaces=interfaces,
+            type=type,
+            user_data=user_data,
         )
 
     def add_facility_port(
@@ -944,11 +955,10 @@ class Slice:
         instance_type: str = None,
         docker_enable: bool = False,
         docker_image: str = None,
-        docker_container_name='fabric',
-        docker_extra_args='',
+        docker_container_name="fabric",
+        docker_extra_args="",
         host: str = None,
         user_data: dict = {},
-
         avoid: List[str] = [],
     ) -> Node:
         """
@@ -985,7 +995,7 @@ class Slice:
         node.init_fablib_data()
 
         user_data_working = node.get_user_data()
-        for k,v in user_data.items():
+        for k, v in user_data.items():
             user_data_working[k] = v
         node.set_user_data(user_data_working)
 
@@ -1004,10 +1014,12 @@ class Slice:
             node.docker(enable=True)
 
         if docker_image:
-            node.docker(enable=True,
-                            docker_image=docker_image,
-                            docker_container_name=docker_container_name,
-                            docker_extra_args=docker_extra_args)
+            node.docker(
+                enable=True,
+                docker_image=docker_image,
+                docker_container_name=docker_container_name,
+                docker_extra_args=docker_extra_args,
+            )
 
         return node
 
@@ -1573,8 +1585,8 @@ class Slice:
                     quiet=True,
                 )
 
-                #interfaces are config in nodes (below)
-                #interface.config()
+                # interfaces are config in nodes (below)
+                # interface.config()
             except Exception as e:
                 logging.error(
                     f"Interface: {interface.get_name()} failed to become unmanaged"
@@ -1587,35 +1599,38 @@ class Slice:
         # if self.get_state() == "ModifyOK":
         #    self.modify_accept()
 
-
         import time
+
         start = time.time()
 
-        #from concurrent.futures import ThreadPoolExecutor
+        # from concurrent.futures import ThreadPoolExecutor
         my_thread_pool_executor = ThreadPoolExecutor(32)
         threads = {}
 
         for node in self.get_nodes():
-            #print(f"Configuring {node.get_name()}")
+            # print(f"Configuring {node.get_name()}")
             thread = my_thread_pool_executor.submit(node.config)
             threads[thread] = node
 
-        print(f"Running post boot config threads ...") #({time.time() - start:.0f} sec)")
+        print(
+            f"Running post boot config threads ..."
+        )  # ({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
             node = threads[thread]
             result = thread.result()
-            #print(result)
-            print(f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)")
+            # print(result)
+            print(
+                f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
+            )
 
-        #print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
+        # print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
         # Push updates to user_data
-        print("Saving fablib data... ", end='')
+        print("Saving fablib data... ", end="")
         self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
         self.update()
         print(" Done!")
-
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -1650,9 +1665,13 @@ class Slice:
         for net in self.get_networks():
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
-                    if not type(net.get_subnet()) in [ipaddress.IPv4Network, ipaddress.IPv6Network] or \
-                       not type(net.get_gateway()) in [ipaddress.IPv4Address, ipaddress.IPv46ddress] or \
-                       net.get_available_ips() == None:
+                    if (
+                        not type(net.get_subnet())
+                        in [ipaddress.IPv4Network, ipaddress.IPv6Network]
+                        or not type(net.get_gateway())
+                        in [ipaddress.IPv4Address, ipaddress.IPv46ddress]
+                        or net.get_available_ips() == None
+                    ):
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
                         )
@@ -1802,10 +1821,16 @@ class Slice:
                 ssh_key=self.get_slice_public_key(),
             )
             if return_status == Status.OK:
-                logging.info(f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}")
+                logging.info(
+                    f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
             else:
-                logging.error(f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}")
-                raise Exception(f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}")
+                logging.error(
+                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
+                raise Exception(
+                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
 
             self.slice_id = slice_reservations[0].slice_id
 
@@ -1817,8 +1842,8 @@ class Slice:
             )
 
         logging.debug(f"slice_reservations: {slice_reservations}")
-        #logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        #self.slice_id = slice_reservations[0].slice_id
+        # logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        # self.slice_id = slice_reservations[0].slice_id
 
         time.sleep(1)
         self.update()
@@ -1838,7 +1863,7 @@ class Slice:
 
             self.wait()
 
-            if (wait_ssh):
+            if wait_ssh:
                 self.wait_ssh(
                     timeout=wait_timeout, interval=wait_interval, progress=progress
                 )
@@ -1852,7 +1877,6 @@ class Slice:
 
         if progress:
             print("Done!")
-
 
         return self.slice_id
 
@@ -2191,9 +2215,7 @@ class Slice:
         for iface in self.get_interfaces():
             user_data[iface.get_name()] = iface.get_user_data()
 
-
         for componenet in self.get_components():
             user_data[componenet.get_name()] = componenet.get_user_data()
-
 
         return user_data

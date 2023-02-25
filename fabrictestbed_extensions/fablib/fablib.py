@@ -481,8 +481,8 @@ class fablib:
 
 
 class FablibManager:
-    FABNETV4_SUBNET = IPv4Network('10.128.0.0/10')
-    FABNETV6_SUBNET = IPv6Network('2602:FCFB:00::/40')
+    FABNETV4_SUBNET = IPv4Network("10.128.0.0/10")
+    FABNETV6_SUBNET = IPv6Network("2602:FCFB:00::/40")
 
     FABRIC_BASTION_USERNAME = "FABRIC_BASTION_USERNAME"
     FABRIC_BASTION_KEY_LOCATION = "FABRIC_BASTION_KEY_LOCATION"
@@ -1139,12 +1139,12 @@ class FablibManager:
         # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
             if filter_function == None:
-                if site['state'] == 'Active' and site["hosts"] > 0:
+                if site["state"] == "Active" and site["hosts"] > 0:
                     return True
             else:
                 if (
                     filter_function(site)
-                    and site["state"] == 'Active'
+                    and site["state"] == "Active"
                     and site["hosts"] > 0
                 ):
                     return True
