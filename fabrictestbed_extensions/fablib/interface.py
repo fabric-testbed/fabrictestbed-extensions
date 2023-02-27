@@ -727,7 +727,6 @@ class Interface:
         self.set_user_data(user_data)
 
     def set_network(self, network: NetworkService):
-
         current_network = self.get_network()
         if current_network:
             current_network.remove_interface(self)

@@ -1860,7 +1860,6 @@ class Slice:
             return self.slice_id
 
         if wait:
-
             self.wait()
 
             if wait_ssh:

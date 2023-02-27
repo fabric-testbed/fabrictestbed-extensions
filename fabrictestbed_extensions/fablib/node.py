@@ -2459,7 +2459,6 @@ class Node:
             return {}
 
     def delete(self):
-
         for component in self.get_components():
             component.delete()
 
@@ -2776,7 +2775,6 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def enable_docker(self, log_dir="."):
-
         self.set_enable_docker()
         if not self.is_instantiated():
             return self

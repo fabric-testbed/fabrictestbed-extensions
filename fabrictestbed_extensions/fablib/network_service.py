@@ -1068,7 +1068,6 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def config(self):
-
         if not self.is_instantiated():
             self.set_instantiated(True)
 
