@@ -42,4 +42,5 @@ jobs:
           git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md
           if [ $? -eq 0 ]; then
               echo "Please update CHANGELOG.md"
+              exit 1
           fi
