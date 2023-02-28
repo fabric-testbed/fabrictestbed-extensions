@@ -2655,6 +2655,21 @@ class Node:
         fablib_data['run_update_commands'] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
 
+    def config_rocky_repo(self, addr: IPv4Address):
+        directory = "/etc/yum.repos.d/"
+
+        string_to_comment = "mirrorlist"
+        cmd = f"sudo bash -c 'for file in {directory}*; do sed -i \"/^{string_to_comment}/s/^/# /g\" \"$file\"; done'"
+        self.execute(cmd)
+
+        string_to_uncomment = "#baseurl"
+        cmd = f"sudo bash -c 'for file in {directory}*; do sed -i \"/^{string_to_uncomment}/s/^#//g\" \"$file\"; done'"
+        self.execute(cmd)
+
+        old_string = "dl.rockylinux.org"
+        new_string = str(addr) # current fabnetv4 ip of my rocky repo mirror
+        cmd = f"sudo bash -c 'for file in \"{directory}\"*; do sed -i \"s/{old_string}/{new_string}/g\" \"$file\"; done'"
+        self.execute(cmd)
 
     def config(self, log_dir='.'):
         self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
@@ -2665,6 +2680,9 @@ class Node:
 
         if not self.is_instantiated():
             self.set_instantiated(True)
+            if self.get_rocky_repo():
+                self.config_rocky_repo(self.get_rocky_repo())
+
             if self.get_enable_docker():
                 self.enable_docker()
             self.run_post_boot_commands()
@@ -2751,6 +2769,21 @@ class Node:
         self.set_fablib_data(fablib_data)
 
 
+    def set_rocky_repo(self, ip: IPv4Address):
+        fablib_data = self.get_fablib_data()
+        if 'rocky_repo' not in fablib_data:
+            fablib_data['rocky_repo'] = {}
+        fablib_data['rocky_repo']['IP'] = str(ip)
+        self.set_fablib_data(fablib_data)
+
+    def get_rocky_repo(self):
+        fablib_data = self.get_fablib_data()
+        if 'rocky_repo' in fablib_data:
+            if 'IP' in fablib_data['rocky_repo']:
+                return IPv4Address(fablib_data['rocky_repo']['IP'])
+        return None
+
+
 
     def enable_docker(self, log_dir='.'):
 
@@ -2767,22 +2800,34 @@ class Node:
         #f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
         #{ "bridge": "none" , "registry-mirrors": ["https://registry.ipv4.docker.com"] }
 
-        ''' to enable ipv6 grafana in docker, put this in daemon.json 
-        
-        
-        {
-        "registry-mirrors": ["https://registry.ipv4.docker.com"],
-        "iptables": true,
-        "ip6tables": true,
-        "experimental": true,
-        "ip-forward": true,
-        "ip-masq": true,
-    	"ipv6": true,
-	    "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64"
+        #to enable ipv6 grafana in docker, put this in daemon.json
+        daemon_json = {
+            "registry-mirrors": [f"https://{registry}"],
+            "iptables": True,
+            "ip6tables": True,
+            "experimental": True,
+            "ip-forward": True,
+            "ip-masq": True,
+            "ipv6": True,
+            "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64",
+            ##"bridge": "none",
         }
-        
-        
-        '''
+
+        #daemon_json = {
+        #    "registry-mirrors": [f"https://{registry}"],
+        #    "iptables": False,
+        #    "ip6tables": False,
+        #    "experimental": False,
+        #    "ip-forward": False,
+        #    "ip-masq": False,
+        #    "ipv6": True,
+        #    "log-driver": "none",
+        #    #"userns-remap": False,
+        #    "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64",
+        #    "bridge": "none",
+        #}
+
+        daemon_json_str = json.dumps(daemon_json, indent=4).replace('"', '\\"')
 
 
         if self.get_image() == 'default_rocky_8':
@@ -2792,7 +2837,7 @@ class Node:
                                          f"sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo ; "
                                          f"sudo dnf install -y docker-ce docker-ce-cli containerd.io ; "
                                          f"sudo mkdir /etc/docker ; "
-                                         f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": [\\\"https://{registry}\\\"] }} > /etc/docker/daemon.json' ; "                                         f"sudo systemctl enable docker ; "
+                                         f"sudo sh -c \"echo '{daemon_json_str}' > /etc/docker/daemon.json \" ; "
                                          f"sudo systemctl start docker ; "
                                          f"sudo usermod -aG docker {self.get_username()} ; "
                                          f"sudo dnf install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm ; "

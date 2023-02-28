@@ -770,6 +770,10 @@ class Interface:
 
     def get_mode(self):
         fablib_data = self.get_fablib_data()
+        if 'mode' not in fablib_data:
+            self.set_mode('user')
+            fablib_data = self.get_fablib_data()
+
         return fablib_data['mode']
 
     def config(self):
