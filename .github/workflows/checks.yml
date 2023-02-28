@@ -37,4 +37,5 @@ jobs:
       # Remind PR authors to update CHANGELOG.md
       - name: Check that Changelog has been updated
         run: |
-          ! git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md
+          git remo
+          ! git diff --exit-code "${GITHUB_BASE_REF}" -- CHANGELOG.md
