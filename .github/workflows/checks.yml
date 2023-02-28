@@ -39,7 +39,4 @@ jobs:
       # Remind PR authors to update CHANGELOG.md
       - name: Check that Changelog has been updated
         run: |
-          git remote -v
-          git ls-remote --heads
-          echo "GITHUB_BASE_REF: ${GITHUB_BASE_REF}"
           ! git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md
