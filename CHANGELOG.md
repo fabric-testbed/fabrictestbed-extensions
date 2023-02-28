@@ -2,6 +2,20 @@
 
 FABRIC testbed extensions changlog
 
+## [Unreleased]
+
+### Added 
+
+- Support new GPU models has been added.
+
+### Changed
+
+- Fablib now uses pyproject.toml for specifying packaging metadata instead of setup.py and friends (issue #74).
+
+### Fixed
+
+- Fablib will now fail early when required configuration is missing  (issue #69).
+
 ## [1.3.4] - 2023-01-19
 
 ### Fixed
