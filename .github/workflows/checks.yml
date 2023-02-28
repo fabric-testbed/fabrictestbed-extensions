@@ -39,4 +39,5 @@ jobs:
         run: |
           git remote -v
           git ls-remote --heads
-          ! git diff --exit-code "${GITHUB_BASE_REF}" -- CHANGELOG.md
+          echo "GITHUB_BASE_REF: ${GITHUB_BASE_REF}"
+          ! git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md
