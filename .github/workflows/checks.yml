@@ -33,3 +33,8 @@ jobs:
       - name: Run "black --check"
         run: |
           python -m black --check --verbose .
+
+      # Remind PR authors to update CHANGELOG.md
+      - name: Check that Changelog has been updated
+        run: |
+          ! git diff --exit-code "origin/${BASE_REF}" -- CHANGELOG.md
