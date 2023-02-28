@@ -1,6 +1,6 @@
 # Change Log
 
-FABRIC testbed extensions changlog
+FABRIC testbed extensions changelog
 
 ## [Unreleased]
 
