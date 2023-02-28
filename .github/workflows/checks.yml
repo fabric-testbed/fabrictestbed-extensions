@@ -41,11 +41,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           # `git diff --exit-code` exits with 1 if there were
-          # differences and 0 means no differences.
-          if (git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md); then
-              echo "Seems that you've updated CHANGELOG.md. Nice!"
-          else
-              # If we're here, it means that there is no difference.
-              echo "Please update CHANGELOG.md."
-              exit 1
-          fi
+          # differences and 0 means no differences. Here we negate
+          # that, because we want to fail if changelog has not been
+          # updated.
+          ! git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md
