@@ -16,7 +16,8 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out sources
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0 # since we need to diff against origin/main.
 
