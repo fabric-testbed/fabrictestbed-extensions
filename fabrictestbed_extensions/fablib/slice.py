@@ -343,7 +343,7 @@ class Slice:
                 f"Starting get get_os_interface_threads for iface {iface.get_name()} "
             )
             os_interface_threads[iface.get_name()] = executor.submit(
-                iface.get_os_interface
+                iface.get_device_name
             )
 
         table = []

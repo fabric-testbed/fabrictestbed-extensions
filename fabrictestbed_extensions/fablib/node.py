@@ -2120,7 +2120,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_device_name()} ",
                 quiet=True,
             )
         except Exception as e:
@@ -2150,7 +2150,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_device_name()} ",
                 quiet=True,
             )
         except Exception as e:
@@ -2201,7 +2201,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_os_interface()} up",
+                f"{ip_command} link set dev {interface.get_device_name()} up",
                 quiet=True,
             )
         except Exception as e:
@@ -2238,7 +2238,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_os_interface()} down",
+                f"{ip_command} link set dev {interface.get_device_name()} down",
                 quiet=True,
             )
         except Exception as e:
