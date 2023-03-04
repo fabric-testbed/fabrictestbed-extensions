@@ -2126,7 +2126,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_device_name()} ",
                 quiet=True,
             )
         except Exception as e:
@@ -2156,7 +2156,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_device_name()} ",
                 quiet=True,
             )
         except Exception as e:
@@ -2207,7 +2207,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_os_interface()} up",
+                f"{ip_command} link set dev {interface.get_device_name()} up",
                 quiet=True,
             )
         except Exception as e:
@@ -2244,7 +2244,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_os_interface()} down",
+                f"{ip_command} link set dev {interface.get_device_name()} down",
                 quiet=True,
             )
         except Exception as e:
@@ -2672,6 +2672,22 @@ class Node:
         fablib_data["run_update_commands"] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
 
+    def config_rocky_repo(self, addr: IPv4Address):
+        directory = "/etc/yum.repos.d/"
+
+        string_to_comment = "mirrorlist"
+        cmd = f'sudo bash -c \'for file in {directory}*; do sed -i "/^{string_to_comment}/s/^/# /g" "$file"; done\''
+        self.execute(cmd)
+
+        string_to_uncomment = "#baseurl"
+        cmd = f'sudo bash -c \'for file in {directory}*; do sed -i "/^{string_to_uncomment}/s/^#//g" "$file"; done\''
+        self.execute(cmd)
+
+        old_string = "dl.rockylinux.org"
+        new_string = str(addr)  # current fabnetv4 ip of my rocky repo mirror
+        cmd = f'sudo bash -c \'for file in "{directory}"*; do sed -i "s/{old_string}/{new_string}/g" "$file"; done\''
+        self.execute(cmd)
+
     def config(self, log_dir="."):
         self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
 
@@ -2681,6 +2697,9 @@ class Node:
 
         if not self.is_instantiated():
             self.set_instantiated(True)
+            if self.get_rocky_repo():
+                self.config_rocky_repo(self.get_rocky_repo())
+
             if self.get_enable_docker():
                 self.enable_docker()
             self.run_post_boot_commands()
@@ -2774,6 +2793,20 @@ class Node:
         fablib_data["node_exporter"]["monitoring_network"] = net.get_name()
         self.set_fablib_data(fablib_data)
 
+    def set_rocky_repo(self, ip: IPv4Address):
+        fablib_data = self.get_fablib_data()
+        if "rocky_repo" not in fablib_data:
+            fablib_data["rocky_repo"] = {}
+        fablib_data["rocky_repo"]["IP"] = str(ip)
+        self.set_fablib_data(fablib_data)
+
+    def get_rocky_repo(self):
+        fablib_data = self.get_fablib_data()
+        if "rocky_repo" in fablib_data:
+            if "IP" in fablib_data["rocky_repo"]:
+                return IPv4Address(fablib_data["rocky_repo"]["IP"])
+        return None
+
     def enable_docker(self, log_dir="."):
         self.set_enable_docker()
         if not self.is_instantiated():
@@ -2788,22 +2821,34 @@ class Node:
         # f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
         # { "bridge": "none" , "registry-mirrors": ["https://registry.ipv4.docker.com"] }
 
-        """ to enable ipv6 grafana in docker, put this in daemon.json 
-        
-        
-        {
-        "registry-mirrors": ["https://registry.ipv4.docker.com"],
-        "iptables": true,
-        "ip6tables": true,
-        "experimental": true,
-        "ip-forward": true,
-        "ip-masq": true,
-    	"ipv6": true,
-	    "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64"
+        # to enable ipv6 grafana in docker, put this in daemon.json
+        daemon_json = {
+            "registry-mirrors": [f"{registry}"],
+            "iptables": True,
+            "ip6tables": True,
+            "experimental": True,
+            "ip-forward": True,
+            "ip-masq": True,
+            "ipv6": True,
+            "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64",
+            ##"bridge": "none",
         }
-        
-        
-        """
+
+        # daemon_json = {
+        #    "registry-mirrors": [f"https://{registry}"],
+        #    "iptables": False,
+        #    "ip6tables": False,
+        #    "experimental": False,
+        #    "ip-forward": False,
+        #    "ip-masq": False,
+        #    "ipv6": True,
+        #    "log-driver": "none",
+        #    #"userns-remap": False,
+        #    "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64",
+        #    "bridge": "none",
+        # }
+
+        daemon_json_str = json.dumps(daemon_json, indent=4).replace('"', '\\"')
 
         if self.get_image() == "default_rocky_8":
             print("Installing docker for rocky 8...")
