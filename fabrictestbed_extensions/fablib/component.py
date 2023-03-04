@@ -259,7 +259,9 @@ class Component:
         return f"{node.get_name()}-{name}"
 
     @staticmethod
-    def new_component(node: Node = None, model: str = None, name: str = None, user_data: dict = {}):
+    def new_component(
+        node: Node = None, model: str = None, name: str = None, user_data: dict = {}
+    ):
         """
         Not intended for API use
 
@@ -574,16 +576,17 @@ class Component:
         )
         return Component(node=node, fim_component=fim_component)
 
-
     def get_fim(self):
         return self.get_fim_component()
 
     def set_user_data(self, user_data: dict):
-        self.get_fim().set_property(pname='user_data', pval=UserData(json.dumps(user_data)))
+        self.get_fim().set_property(
+            pname="user_data", pval=UserData(json.dumps(user_data))
+        )
 
     def get_user_data(self):
         try:
-            return json.loads(str(self.get_fim().get_property(pname='user_data')))
+            return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except:
             return {}
 
@@ -591,4 +594,6 @@ class Component:
         for interface in self.get_interfaces():
             interface.delete()
 
-        self.get_slice().get_fim_topology().nodes[self.get_node().get_name()].remove_component(name=self.get_name())
+        self.get_slice().get_fim_topology().nodes[
+            self.get_node().get_name()
+        ].remove_component(name=self.get_name())
