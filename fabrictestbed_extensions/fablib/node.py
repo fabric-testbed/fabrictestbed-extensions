@@ -2806,6 +2806,7 @@ class Node:
         """
 
         if self.get_image() == "default_rocky_8":
+            print("Installing docker for rocky 8...")
             self.execute(
                 "echo Hello, FABRIC from node `hostname -s` ; "
                 f"sudo hostnamectl set-hostname {self.get_name()} ; "
@@ -2813,7 +2814,7 @@ class Node:
                 f"sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo ; "
                 f"sudo dnf install -y docker-ce docker-ce-cli containerd.io ; "
                 f"sudo mkdir /etc/docker ; "
-                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"https://{registry}\\"] }} > /etc/docker/daemon.json\' ; '
+                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
                 f"sudo systemctl enable docker ; "
                 f"sudo systemctl start docker ; "
                 f"sudo usermod -aG docker {self.get_username()} ; "
@@ -2827,6 +2828,7 @@ class Node:
             )
 
         elif self.get_image() == "default_ubuntu_20":
+            print("Installing docker for ubuntu 20...")
             self.execute(
                 "echo Hello, FABRIC from node `hostname -s` ; "
                 f"sudo hostnamectl set-hostname {self.get_name()} ; "
@@ -2837,7 +2839,7 @@ class Node:
                 f"sudo apt-get update ; "
                 f"sudo mkdir /etc/docker ; "
                 # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
-                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": \\"{registry}\\" }} > /etc/docker/daemon.json\' ; '
+                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
                 f"sudo apt-get install -y docker-ce ; "
                 f"sudo usermod -aG docker {self.get_username()} ; "
                 f"sudo apt-get install openvswitch-switch -y ; "
