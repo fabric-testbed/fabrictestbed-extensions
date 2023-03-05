@@ -790,24 +790,23 @@ class Links:
 
     def __str__(self):
         table = []
-        for key, item in self.topology.links.items():
-            if "to" in key:
-                linkType = item.type
-                linkLayer = item.layer
-                for inter in item.interface_list:
-                    pass
-                    table.append(
-                        [
-                            inter.name,
-                            inter.capacities.bw,
-                            linkType.name,
-                            linkLayer.name,
-                            inter.node_id,
-                            inter.type.name,
-                            inter.labels.ipv4,
-                            inter.labels.ipv6,
-                        ]
-                    )
+        for linkName, link in self.topology.links.items():
+            linkType = link.type
+            linkLayer = link.layer
+            for iface in link.interface_list:
+                table.append(
+                    [
+                        iface.name,
+                        iface.capacities.bw if iface.capacities is not None else None,
+                        linkType.name,
+                        linkLayer.name,
+                        iface.node_id,
+                        iface.type.name,
+                        iface.labels.ipv4,
+                        iface.labels.ipv6,
+                        iface.labels.vlan_range,
+                    ]
+                )
 
         return tabulate(
             table,
@@ -820,6 +819,7 @@ class Links:
                 "Interface Type",
                 "IPv4",
                 "IPv6",
+                "VLAN",
             ],
         )
 
@@ -847,13 +847,16 @@ class Links:
     def link_to_dict(self, link, iface):
         return {
             "Link Name": iface.name,
-            "Link Capacity": iface.capacities.bw,
+            "Link Capacity (Gbps)": iface.capacities.bw
+            if iface.capacities is not None
+            else "None",
             "Link Type": link.type.name,
             "Link Layer": link.layer.name,
             "Node ID": iface.node_id,
             "Interface Type": iface.type.name,
             "IPv4": iface.labels.ipv4,
             "IPv6": iface.labels.ipv6,
+            "VLAN": iface.labels.vlan_range,
         }
 
     def list_links(
@@ -866,9 +869,8 @@ class Links:
     ):
         table = []
         for linkName, link in self.topology.links.items():
-            if "to" in linkName:
-                for iface in link.interface_list:
-                    table.append(self.link_to_dict(link, iface))
+            for iface in link.interface_list:
+                table.append(self.link_to_dict(link, iface))
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names
