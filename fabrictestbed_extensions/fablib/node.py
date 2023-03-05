@@ -2913,9 +2913,11 @@ class Node:
                 # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
                 f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
                 f"cat /etc/docker/daemon.json ; "
-                f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin ; "
+                f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker-compose ; "
                 f"sudo groupadd docker ;"
                 f"sudo usermod -aG docker {self.get_username()} ; "
+                f"newgrp docker ;"
+                f"sudo systemctl enable docker.service && sudo systemctl enable containerd.service ;"
                 f"sudo apt-get install openvswitch-switch -y ; "
                 f"sudo systemctl start openvswitch-switch ; "
                 f"sudo systemctl status openvswitch-switch ; "
