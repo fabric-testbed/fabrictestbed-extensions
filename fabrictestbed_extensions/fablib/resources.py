@@ -856,7 +856,7 @@ class Links:
             "IPv6": iface.labels.ipv6,
         }
 
-    def list_sites(
+    def list_links(
         self,
         output=None,
         fields=None,
