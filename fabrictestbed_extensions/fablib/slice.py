@@ -486,7 +486,7 @@ class Slice:
         context = {}
 
         if base_object:
-            context["_self_"] = base_object.toDict(skip=skip)
+            context["_self_"] = base_object.generate_template_context()
         else:
             context["_self_"] = {}
 
@@ -495,15 +495,17 @@ class Slice:
 
         context["nodes"] = []
         for node in self.get_nodes():
-            context["nodes"].append(node.toDict(skip=["ssh_command"]))
+            node_context = node.generate_template_context()
+            context["nodes"].append(node_context)
 
-        context["components"] = []
-        for component in self.get_components():
-            context["components"].append(component.toDict())
 
-        context["interfaces"] = []
-        for interface in self.get_interfaces():
-            context["interfaces"].append(interface.toDict())
+        #context["components"] = []
+        #for component in self.get_components():
+        #    context["components"].append(component.toDict())
+
+        #context["interfaces"] = []
+        #for interface in self.get_interfaces():
+        #    context["interfaces"].append(interface.toDict())
 
         context["networks"] = []
         for network in self.get_networks():

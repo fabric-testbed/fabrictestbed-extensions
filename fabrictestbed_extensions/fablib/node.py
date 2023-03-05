@@ -266,24 +266,11 @@ class Node:
         #        "Private SSH Key File": str(self.get_private_key_file()),
         #         }
 
-    def get_template_contextXXX(self):
-        context = {}
-
-        context["node"] = self.toDict(skip=["ssh_command"])
-        context["slice"] = self.get_slice().toDict()
-        context["config"] = self.get_fablib_manager().get_config()
-
-        context["components"] = {}
+    def generate_template_context(self):
+        context = self.toDict(skip=["ssh_command"])
+        context['components'] = []
         for component in self.get_components():
-            context["components"][component.get_name()] = component.toDict()
-
-        context["interfaces"] = {}
-        for interface in self.get_interfaces():
-            context["interfaces"][interface.get_name()] = interface.toDict()
-
-        context["networks"] = {}
-        for network in self.get_networks():
-            context["networks"][network.get_name()] = network.toDict()
+            context['components'].append(component.generate_template_context())
 
         return context
 
@@ -292,6 +279,7 @@ class Node:
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        #environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
@@ -1139,16 +1127,16 @@ class Node:
 
     def execute(
         self,
-        command,
-        retry=3,
-        retry_interval=10,
-        username=None,
-        private_key_file=None,
-        private_key_passphrase=None,
-        quiet=False,
-        read_timeout=10,
+        command: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+        username: str =None,
+        private_key_file: str = None,
+        private_key_passphrase: str = None,
+        quiet: bool = False,
+        read_timeout: int = 10,
         timeout=None,
-        output_file=None,
+        output_file: str = None,
     ):
         """
         Runs a command on the FABRIC node.
@@ -1415,7 +1403,7 @@ class Node:
     def upload_file_thread(
         self,
         local_file_path: str,
-        remote_file_path: str,
+        remote_file_path: str = '.',
         retry: int = 3,
         retry_interval: int = 10,
     ):
@@ -1449,7 +1437,7 @@ class Node:
     def upload_file(
         self,
         local_file_path: str,
-        remote_file_path: str,
+        remote_file_path: str = '.',
         retry: int = 3,
         retry_interval: int = 10,
     ):
@@ -2460,7 +2448,7 @@ class Node:
     def init_fablib_data(self):
         fablib_data = { 'instantiated': 'False',
                         'run_update_commands': 'False',
-                        'post_boot_commands': [],
+                        'post_boot_tasks': [],
                         'post_update_commands': [],
                         }
         self.set_fablib_data(fablib_data)
@@ -2504,18 +2492,32 @@ class Node:
         else:
             return []
 
-    def add_post_boot_command(self, command: str):
+    def add_post_boot_upload_directory(self, local_directory_path: str, remote_directory_path: str = '.'):
         fablib_data = self.get_fablib_data()
-        if 'post_boot_commands' not in fablib_data:
-            fablib_data['post_boot_commands'] = []
-        fablib_data['post_boot_commands'].append(command)
+        if 'post_boot_tasks' not in fablib_data:
+            fablib_data['post_boot_tasks'] = []
+        fablib_data['post_boot_tasks'].append(('upload_directory',local_directory_path,remote_directory_path))
         self.set_fablib_data(fablib_data)
 
-    def get_post_boot_commands(self):
+    def add_post_boot_upload_file(self, local_file_path: str, remote_file_path: str = '.'):
+        fablib_data = self.get_fablib_data()
+        if 'post_boot_tasks' not in fablib_data:
+            fablib_data['post_boot_tasks'] = []
+        fablib_data['post_boot_tasks'].append(('upload_file',local_file_path,remote_file_path))
+        self.set_fablib_data(fablib_data)
+
+    def add_post_boot_execute(self, command: str):
+        fablib_data = self.get_fablib_data()
+        if 'post_boot_tasks' not in fablib_data:
+            fablib_data['post_boot_tasks'] = []
+        fablib_data['post_boot_tasks'].append(('execute',command))
+        self.set_fablib_data(fablib_data)
+
+    def post_boot_tasks(self):
         fablib_data = self.get_fablib_data()
 
-        if 'post_boot_commands' in fablib_data:
-            return fablib_data['post_boot_commands']
+        if 'post_boot_tasks' in fablib_data:
+            return fablib_data['post_boot_tasks']
         else:
             return []
 
@@ -2610,15 +2612,23 @@ class Node:
 
         self.set_fablib_data(fablib_data)
 
-    def run_post_boot_commands(self, log_dir: str = '.'):
+    def run_post_boot_tasks(self, log_dir: str = '.'):
         fablib_data = self.get_fablib_data()
-        if 'post_boot_commands' in fablib_data:
-            commands = fablib_data['post_boot_commands']
+        if 'post_boot_tasks' in fablib_data:
+            commands = fablib_data['post_boot_tasks']
         else:
             commands = []
 
         for command in commands:
-            self.execute(command, quiet=True, output_file=f"{log_dir}/{self.get_name()}.log")
+            if command[0] == 'execute':
+                self.execute(self.render_template(command[1]), quiet=True, output_file=f"{log_dir}/{self.get_name()}.log")
+            elif command[0] == 'upload_file':
+                self.upload_file(command[1], command[2])
+            elif command[0] == 'upload_directory':
+                self.upload_directory(command[1], command[2])
+            else:
+                logging.error(f"Invalid post boot command: {command}")
+
 
     def run_post_update_commands(self, log_dir: str = '.'):
         fablib_data = self.get_fablib_data()
@@ -2685,7 +2695,7 @@ class Node:
 
             if self.get_enable_docker():
                 self.enable_docker()
-            self.run_post_boot_commands()
+            self.run_post_boot_tasks()
 
             if self.get_enable_node_exporter():
                 fablib_data = self.get_fablib_data()

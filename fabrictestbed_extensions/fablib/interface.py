@@ -104,6 +104,7 @@ class Interface:
     def get_pretty_name_dict():
         return {
             "name": "Name",
+            "short_name": "Short Name",
             "node": "Node",
             "network": "Network",
             "bandwidth": "Bandwidth",
@@ -148,6 +149,7 @@ class Interface:
 
         return {
             "name": str(self.get_name()),
+            "short_name": str(self.get_short_name()),
             "node": str(node_name),
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
@@ -160,11 +162,17 @@ class Interface:
 
         }
 
+    def generate_template_context(self):
+        context = self.toDict()
+        return context
+
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        #environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
+
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
@@ -533,6 +541,10 @@ class Interface:
             )
         except:
             return ""
+
+    def get_short_name(self):
+        # strip of the extra parts of the name added by fim
+        return self.get_name()[len(f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"):]
 
     def get_name(self) -> str:
         """
