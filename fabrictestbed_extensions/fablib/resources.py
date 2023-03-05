@@ -25,7 +25,6 @@
 from __future__ import annotations
 import logging
 from tabulate import tabulate
-import json
 
 from typing import List, Tuple
 
@@ -114,7 +113,7 @@ class Resources:
                     f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}",
                 ]
             )
-
+        print("HERE")
         return tabulate(
             table,
             headers=[
@@ -768,6 +767,118 @@ class Resources:
             table,
             fields=fields,
             title="Sites",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+
+class Links:
+    def __init__(self, fablib_manager):
+        """
+        Constructor
+        :return:
+        """
+        super().__init__()
+
+        self.fablib_manager = fablib_manager
+
+        self.topology = None
+
+        self.update()
+
+    def __str__(self):
+        table = []
+        for key, item in self.topology.links.items():
+            if "to" in key:
+                linkType = item.type
+                linkLayer = item.layer
+                for inter in item.interface_list:
+                    pass
+                    table.append(
+                        [
+                            inter.name,
+                            inter.capacities.bw,
+                            linkType.name,
+                            linkLayer.name,
+                            inter.node_id,
+                            inter.type.name,
+                            inter.labels.ipv4,
+                            inter.labels.ipv6,
+                        ]
+                    )
+
+        return tabulate(
+            table,
+            headers=[
+                "Link Name",
+                "Capacities (Gbps)",
+                "Link Type",
+                "Link Layer",
+                "Node ID",
+                "Interface Type",
+                "IPv4",
+                "IPv6",
+            ],
+        )
+
+    def update(self):
+        """
+        Update the available resources by querying the FABRIC services
+
+        """
+        logging.info(f"Updating available resources")
+        return_status, topology = (
+            self.get_fablib_manager().get_slice_manager().resources()
+        )
+        if return_status != Status.OK:
+            raise Exception(
+                "Failed to get advertised_topology: {}, {}".format(
+                    return_status, topology
+                )
+            )
+
+        self.topology = topology
+
+    def get_fablib_manager(self):
+        return self.fablib_manager
+
+    def link_to_dict(self, link, iface):
+        return {
+            "Link Name": iface.name,
+            "Link Capacity": iface.capacities.bw,
+            "Link Type": link.type.name,
+            "Link Layer": link.layer.name,
+            "Node ID": iface.node_id,
+            "Interface Type": iface.type.name,
+            "IPv4": iface.labels.ipv4,
+            "IPv6": iface.labels.ipv6,
+        }
+
+    def list_sites(
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=False,
+    ):
+        table = []
+        for linkName, link in self.topology.links.items():
+            if "to" in linkName:
+                for iface in link.interface_list:
+                    table.append(self.link_to_dict(link, iface))
+
+        if pretty_names:
+            pretty_names_dict = self.site_pretty_names
+        else:
+            pretty_names_dict = {}
+
+        return self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Links",
             output=output,
             quiet=quiet,
             filter_function=filter_function,
