@@ -356,10 +356,10 @@ class NetworkService:
         )
         # Check service type for external connectivity:
         if isinstance(nstype, type(ServiceType.FABNetv4Ext)):
-            user_data["service type"] = "FABNetv4Ext"
+            user_data["service_type"] = "FABNetv4Ext"
             logging.debug(f"USER DATA -  {user_data}")
         elif isinstance(nstype, type(ServiceType.FABNetv6Ext)):
-            user_data["service type"] = "FABNetv6Ext"
+            user_data["service_type"] = "FABNetv6Ext"
             logging.debug(f"USER DATA -  {user_data}")
         network_service.set_user_data(user_data)
         network_service.init_fablib_data()
@@ -754,7 +754,7 @@ class NetworkService:
     #     logging.debug(f"NETWORK - changing public ip to: {ipv4} ")
     #     user_data = self.get_user_data()
     #     valid_service_types = {"FABNetv4Ext", "FABNetv6Ext"}
-    #     if user_data["service type"] in valid_service_types:
+    #     if user_data["service_type"] in valid_service_types:
     #         labels = self.fim_network_service.labels
     #         if labels is None:
     #             labels = Labels()
