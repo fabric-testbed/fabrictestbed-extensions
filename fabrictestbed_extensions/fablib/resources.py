@@ -114,7 +114,7 @@ class Resources:
                     f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}",
                 ]
             )
-        print("HERE")
+
         return tabulate(
             table,
             headers=[
