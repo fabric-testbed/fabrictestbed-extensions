@@ -31,6 +31,7 @@ from typing import List, Tuple
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_editor import Capacities
 from fabrictestbed.slice_manager import Status
+from fim.user import link, interface
 
 
 class Resources:
@@ -774,23 +775,25 @@ class Resources:
         )
 
 
-class Links:
+class Links(Resources):
     def __init__(self, fablib_manager):
         """
         Constructor
         :return:
         """
-        super().__init__()
+        super().__init__(fablib_manager)
 
-        self.fablib_manager = fablib_manager
+    def __str__(self) -> str:
+        """
+        Creates a tabulated string of all the links.
 
-        self.topology = None
+        Intended for printing available resources.
 
-        self.update()
-
-    def __str__(self):
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
         table = []
-        for linkName, link in self.topology.links.items():
+        for _, link in self.topology.links.items():
             linkType = link.type
             linkLayer = link.layer
             for iface in link.interface_list:
@@ -823,28 +826,15 @@ class Links:
             ],
         )
 
-    def update(self):
+    def link_to_dict(self, link: link.Link, iface: interface.Interface) -> dict:
         """
-        Update the available resources by querying the FABRIC services
+        Converts the link resources to a dictionary.
 
+        Intended for printing links in table format.
+
+        :return: collection of link properties
+        :rtype: dict
         """
-        logging.info(f"Updating available resources")
-        return_status, topology = (
-            self.get_fablib_manager().get_slice_manager().resources()
-        )
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to get advertised_topology: {}, {}".format(
-                    return_status, topology
-                )
-            )
-
-        self.topology = topology
-
-    def get_fablib_manager(self):
-        return self.fablib_manager
-
-    def link_to_dict(self, link, iface):
         return {
             "Link Name": iface.name,
             "Link Capacity (Gbps)": iface.capacities.bw
@@ -866,9 +856,15 @@ class Links:
         quiet=False,
         filter_function=None,
         pretty_names=False,
-    ):
+    ) -> object:
+        """
+        Print a table of link resources in pretty format.
+
+        :return: formatted table of resources
+        :rtype: object
+        """
         table = []
-        for linkName, link in self.topology.links.items():
+        for _, link in self.topology.links.items():
             for iface in link.interface_list:
                 table.append(self.link_to_dict(link, iface))
 
