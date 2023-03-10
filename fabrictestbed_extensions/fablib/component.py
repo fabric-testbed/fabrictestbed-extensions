@@ -493,47 +493,65 @@ class Component:
         """
         return self.get_fim_component().type
 
-    def configure_nvme(self, mount_point="/mnt/nvme_mount"):
+    def configure_nvme(self, mount_point=""):
         """
         Configure the NVMe drive.
 
         Note this works but may be reorganized.
 
-        :param mount_point: The mount point in the filesystem. Default = /mnt/nvme_mount
+        :param mount_point: The mount point in the filesystem. Default = "" later reassigned to /mnt/{linux device name}
         :type mount_point: String
         """
         output = []
         try:
-            output.append(self.node.execute("sudo fdisk -l /dev/nvme*"), quiet=True)
+            device_pci_id = self.get_pci_addr()[0]
+            stdout, stderr = self.node.execute(
+                f'basename `sudo ls -l /sys/block/nvme*|grep "'
+                f"{device_pci_id}\"|awk '{{print $9}}'`",
+                quiet=True,
+            )
+            if stderr != "":
+                output.append(
+                    f"Cannot find NVME device name for PCI ID : {device_pci_id}"
+                )
+                raise Exception
+            device_name = stdout.strip()
+            block_device_name = f"/dev/{device_name}"
+            output.append(self.node.execute(f"sudo fdisk -l {block_device_name}"))
             output.append(
-                self.node.execute("sudo parted -s /dev/nvme0n1 mklabel gpt"), quiet=True
+                self.node.execute(f"sudo parted -s {block_device_name} mklabel gpt")
             )
             output.append(
-                self.node.execute("sudo parted -s /dev/nvme0n1 print"), quiet=True
+                self.node.execute(f"sudo parted -s {block_device_name} print")
             )
             output.append(
                 self.node.execute(
-                    "sudo parted -s /dev/nvme0n1 print unit MB print free"
-                ),
-                quiet=True,
+                    f"sudo parted -s {block_device_name} print unit MB print free"
+                )
             )
             output.append(
                 self.node.execute(
-                    "sudo parted -s --align optimal /dev/nvme0n1 mkpart primary ext4 0% 960197MB"
-                ),
-                quiet=True,
+                    f"sudo parted -s --align optimal "
+                    f"{block_device_name} "
+                    f"mkpart primary ext4 0% 100%"
+                )
             )
-            output.append(self.node.execute("lsblk /dev/nvme0n1"), quiet=True)
-            output.append(
-                self.node.execute("sudo mkfs.ext4 /dev/nvme0n1p1"), quiet=True
-            )
+            output.append(self.node.execute(f"lsblk {block_device_name}"))
+            output.append(self.node.execute(f"sudo mkfs.ext4 {block_device_name}p1"))
+            # This is to use a unique mountpoint when it is not provided by the user
+            if mount_point == "":
+                mount_point = f"/mnt/{device_name}"
             output.append(
                 self.node.execute(
-                    f"sudo mkdir {mount_point} && sudo mount /dev/nvme0n1p1 {mount_point}"
-                ),
-                quiet=True,
+                    f"sudo mkdir -p "
+                    f"{mount_point}"
+                    f" && sudo mount "
+                    f"{block_device_name}"
+                    f"p1 "
+                    f"{mount_point}"
+                )
             )
-            output.append(self.node.execute(f"df -h {mount_point}"), quiet=True)
+            output.append(self.node.execute(f"df -h {mount_point}"))
         except Exception as e:
             print(f"config_nvme Fail: {self.get_name()}")
             # traceback.print_exc()

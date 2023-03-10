@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Fablib now uses pyproject.toml for specifying packaging metadata instead of setup.py and friends (issue [#74](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/74)).
+- Make configure_nvme() more generic (PR [#126](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/126)).
 
 ### Fixed
 
