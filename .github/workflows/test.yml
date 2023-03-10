@@ -13,7 +13,6 @@ on:
 jobs:
   test:
 
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -21,6 +20,12 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+        os:
+          - "ubuntu-22.04"
+          - "windows-2022"
+          - "macos-11"
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Check out sources
