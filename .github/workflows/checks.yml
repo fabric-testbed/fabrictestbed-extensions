@@ -16,7 +16,10 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out sources
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # since we need to diff against origin/main.
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
@@ -33,3 +36,13 @@ jobs:
       - name: Run "black --check"
         run: |
           python -m black --check --verbose .
+
+      # Remind PR authors to update CHANGELOG.md
+      - name: Check that Changelog has been updated
+        if: github.event_name == 'pull_request'
+        run: |
+          # `git diff --exit-code` exits with 1 if there were
+          # differences and 0 means no differences. Here we negate
+          # that, because we want to fail if changelog has not been
+          # updated.
+          ! git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md
