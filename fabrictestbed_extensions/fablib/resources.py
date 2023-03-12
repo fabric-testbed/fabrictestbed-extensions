@@ -27,6 +27,7 @@ import logging
 from tabulate import tabulate
 
 from typing import List, Tuple
+import json
 
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_editor import Capacities
@@ -776,6 +777,13 @@ class Resources:
 
 
 class Links(Resources):
+    link_pretty_names = {
+        "site_names": "Sites",
+        "node_id": "Link Name",
+        "link_capacity_Gbps": "Capacity (Gbps)",
+        "link_layer": "Link Layer",
+    }
+
     def __init__(self, fablib_manager):
         """
         Constructor
@@ -794,35 +802,20 @@ class Links(Resources):
         """
         table = []
         for _, link in self.topology.links.items():
-            linkType = link.type
-            linkLayer = link.layer
-            for iface in link.interface_list:
+            iface = link.interface_list[0]
+            site_names = iface.name.split("_")
+            if iface.type.name == "TrunkPort" and "HundredGig" not in site_names[0]:
                 table.append(
-                    [
-                        iface.name,
-                        iface.capacities.bw if iface.capacities is not None else None,
-                        linkType.name,
-                        linkLayer.name,
-                        iface.node_id,
-                        iface.type.name,
-                        iface.labels.ipv4,
-                        iface.labels.ipv6,
-                        iface.labels.vlan_range,
-                    ]
+                    [tuple(site_names), link.node_id, iface.capacities.bw, link.layer]
                 )
 
         return tabulate(
             table,
             headers=[
-                "Link Name",
-                "Capacities (Gbps)",
-                "Link Type",
-                "Link Layer",
-                "Node ID",
-                "Interface Type",
-                "IPv4",
-                "IPv6",
-                "VLAN",
+                "site_names",
+                "node_id",
+                "link_capacity_Gbps",
+                "link_layer",
             ],
         )
 
@@ -836,17 +829,10 @@ class Links(Resources):
         :rtype: dict
         """
         return {
-            "Link Name": iface.name,
-            "Link Capacity (Gbps)": iface.capacities.bw
-            if iface.capacities is not None
-            else "None",
-            "Link Type": link.type.name,
-            "Link Layer": link.layer.name,
-            "Node ID": iface.node_id,
-            "Interface Type": iface.type.name,
-            "IPv4": iface.labels.ipv4,
-            "IPv6": iface.labels.ipv6,
-            "VLAN": iface.labels.vlan_range,
+            "site_names": tuple(iface.name.split("_")),
+            "node_id": link.node_id,
+            "link_capacity_Gbps": iface.capacities.bw,
+            "link_layer": link.layer,
         }
 
     def list_links(
@@ -855,7 +841,7 @@ class Links(Resources):
         fields=None,
         quiet=False,
         filter_function=None,
-        pretty_names=False,
+        pretty_names=True,
     ) -> object:
         """
         Print a table of link resources in pretty format.
@@ -865,11 +851,13 @@ class Links(Resources):
         """
         table = []
         for _, link in self.topology.links.items():
-            for iface in link.interface_list:
+            iface = link.interface_list[0]
+            site_names = iface.name.split("_")
+            if iface.type.name == "TrunkPort" and "HundredGig" not in site_names[0]:
                 table.append(self.link_to_dict(link, iface))
 
         if pretty_names:
-            pretty_names_dict = self.site_pretty_names
+            pretty_names_dict = self.link_pretty_names
         else:
             pretty_names_dict = {}
 

@@ -354,13 +354,7 @@ class NetworkService:
         network_service = NetworkService(
             slice=slice, fim_network_service=fim_network_service
         )
-        # Check service type for external connectivity:
-        if isinstance(nstype, type(ServiceType.FABNetv4Ext)):
-            user_data["service_type"] = "FABNetv4Ext"
-            logging.debug(f"USER DATA -  {user_data}")
-        elif isinstance(nstype, type(ServiceType.FABNetv6Ext)):
-            user_data["service_type"] = "FABNetv6Ext"
-            logging.debug(f"USER DATA -  {user_data}")
+
         network_service.set_user_data(user_data)
         network_service.init_fablib_data()
 
@@ -743,30 +737,30 @@ class NetworkService:
             logging.warning(f"Failed to get gateway: {e}")
             return None
 
-    # def change_public_ip(self, ipv6: list[str] = None, ipv4: list[str] = None):
-    #     """
-    #     Changes the public IP of a FABNetExt network. Only works if one of these
-    #     network types.
+    def change_public_ip(self, ipv6: list[str] = None, ipv4: list[str] = None):
+        """
+        Changes the public IP of a FABNetExt network. Only works if one of these
+        network types.
 
-    #     :return: N/A
-    #     :rtype: N/A
-    #     """
-    #     logging.debug(f"NETWORK - changing public ip to: {ipv4} ")
-    #     user_data = self.get_user_data()
-    #     valid_service_types = {"FABNetv4Ext", "FABNetv6Ext"}
-    #     if user_data["service_type"] in valid_service_types:
-    #         labels = self.fim_network_service.labels
-    #         if labels is None:
-    #             labels = Labels()
-    #         if self.fim_network_service.type == ServiceType.FABNetv4Ext:
-    #             labels = Labels.update(labels, ipv4=ipv4)
+        :return: N/A
+        :rtype: N/A
+        """
+        logging.debug(f"NETWORK - changing public ip to: {ipv4} ")
+        user_data = self.get_user_data()
+        valid_service_types = {"FABNetv4Ext", "FABNetv6Ext"}
+        if user_data["service_type"] in valid_service_types:
+            labels = self.fim_network_service.labels
+            if labels is None:
+                labels = Labels()
+            if self.fim_network_service.type == ServiceType.FABNetv4Ext:
+                labels = Labels.update(labels, ipv4=ipv4)
 
-    #         elif self.fim_network_service.type == ServiceType.FABNetv6Ext:
-    #             labels = Labels.update(labels, ipv6=ipv6)
+            elif self.fim_network_service.type == ServiceType.FABNetv6Ext:
+                labels = Labels.update(labels, ipv6=ipv6)
 
-    #         self.fim_network_service.set_properties(labels=labels)
-    #     else:
-    #         print("Cannot change public IP of non-FABNetExt service type!")
+            self.fim_network_service.set_properties(labels=labels)
+        else:
+            print("Cannot change public IP of non-FABNetExt service type!")
 
     def get_available_ips(
         self, count: int = 256

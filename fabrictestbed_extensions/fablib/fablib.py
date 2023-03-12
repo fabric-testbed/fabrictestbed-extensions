@@ -1029,7 +1029,7 @@ class FablibManager:
         quiet: bool = False,
         filter_function=None,
         update: bool = True,
-        pretty_names=False,
+        pretty_names=True,
     ) -> object:
         """
         Lists all the links and their attributes.
@@ -1065,7 +1065,7 @@ class FablibManager:
             fields=fields,
             quiet=quiet,
             filter_function=filter_function,
-            pretty_names={},
+            pretty_names=pretty_names,
         )
 
     def show_config(
