@@ -822,6 +822,10 @@ class Interface:
             pass
 
 
+    def add_mirror(self, port_name: str, name: str='mirror'):
+        myinterface.get_slice().get_fim_topology().add_port_mirror_service(name=name, from_interface_name=port_name,
+                                  to_interface=self.get_fim_interface())
+
 
     def delete(self):
         net = self.get_network()

@@ -716,7 +716,7 @@ class NetworkService:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
                     try:
-                        gateway =  ipaddress.ip_address(fablib_data['subnet']['gateway'])
+                        gateway = ipaddress.ip_address(fablib_data['subnet']['gateway'])
                     except Exception as e:
                         gateway = None
             else:

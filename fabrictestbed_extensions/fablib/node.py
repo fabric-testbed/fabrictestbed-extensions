@@ -2577,7 +2577,7 @@ class Node:
 
         for route in routes:
             try:
-                next_hop = ipaddress.ip_network(route['next_hop'])
+                next_hop = ipaddress.ip_address(route['next_hop'])
             except Exception as e:
                 net_name = route['next_hop'].split('.')[0]
                 #funct = getattr(NetworkService,funct_name)

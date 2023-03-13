@@ -1605,10 +1605,14 @@ class Slice:
         print(f"Running post boot config threads ...") #({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
-            node = threads[thread]
-            result = thread.result()
-            #print(result)
-            print(f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)")
+            try:
+                node = threads[thread]
+                result = thread.result()
+                #print(result)
+                print(f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)")
+            except Exception as e:
+                print(f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)")
+                logging.error(f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}")
 
         #print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
@@ -2094,6 +2098,7 @@ class Slice:
         wait_interval: int = 10,
         progress: bool = True,
         wait_jupyter: str = "text",
+        post_boot_config: bool = True,
     ):
         """
         Submits a modify slice request to FABRIC.
@@ -2156,7 +2161,8 @@ class Slice:
                 print("Running post boot config ... ", end="")
 
             self.update()
-            self.post_boot_config()
+            if post_boot_config:
+                self.post_boot_config()
 
         if progress:
             print("Done!")

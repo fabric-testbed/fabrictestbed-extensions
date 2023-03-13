@@ -99,6 +99,7 @@ class Component:
             "pci_address": "PCI Address",
             "model": "Model",
             "type": "Type",
+            "dev": "Device",
         }
 
     def toDict(self, skip=[]):
@@ -117,6 +118,7 @@ class Component:
             "pci_address": str(self.get_pci_addr()),
             "model": str(self.get_model()),
             "type": str(self.get_type()),
+            "dev": str(self.get_device_name()),
         }
 
     def generate_template_context(self):
