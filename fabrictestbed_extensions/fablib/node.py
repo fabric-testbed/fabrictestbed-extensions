@@ -2545,54 +2545,6 @@ class Node:
         except Exception as e:
             return []
 
-    def docker(
-        self,
-        enable: bool = False,
-        docker_image: str = None,
-        docker_container_name: str = "fabric",
-        docker_extra_args: str = "",
-    ):
-        fablib_data = self.get_fablib_data()
-        fablib_data["docker"] = {}
-        fablib_data["docker"]["installed"] = "False"
-        fablib_data["docker"]["enable"] = str(enable)
-        fablib_data["docker"]["image"] = str(docker_image)
-        fablib_data["docker"]["container_name"] = str(docker_container_name)
-        fablib_data["docker"]["docker_extra_args"] = str(docker_extra_args)
-
-        self.set_fablib_data(fablib_data)
-
-    def docker_enabled(self):
-        fablib_data = self.get_fablib_data()
-        try:
-            return fablib_data["docker"]["enable"]
-        except Exception as e:
-            return False
-
-    def get_docker_image(self):
-        fablib_data = self.get_fablib_data()
-        try:
-            image = fablib_data["docker"]["image"]
-            if image == "None":
-                image = None
-            return image
-        except Exception as e:
-            return None
-
-    def get_docker_container_name(self):
-        fablib_data = self.get_fablib_data()
-        try:
-            return fablib_data["docker"]["container_name"]
-        except Exception as e:
-            return "fabric"
-
-    def get_docker_extra_args(self):
-        fablib_data = self.get_fablib_data()
-        try:
-            return fablib_data["docker"]["docker_extra_args"]
-        except Exception as e:
-            return ""
-
     def config_routes(self):
         routes = self.get_routes()
 
@@ -2618,21 +2570,7 @@ class Node:
 
             self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
 
-    def docker_installed(self):
-        fablib_data = self.get_fablib_data()
-        docker_data = fablib_data["docker"]
 
-        if "installed" in docker_data and docker_data["installed"] == "True":
-            return True
-        else:
-            return False
-
-    def set_docker_installed(self, installed: bool = True):
-        fablib_data = self.get_fablib_data()
-        docker_data = fablib_data["docker"]
-        docker_data["installed"] = "True"
-
-        self.set_fablib_data(fablib_data)
 
     def run_post_boot_tasks(self, log_dir: str = "."):
         fablib_data = self.get_fablib_data()
@@ -2670,8 +2608,10 @@ class Node:
     def is_instantiated(self):
         fablib_data = self.get_fablib_data()
         if fablib_data["instantiated"] == "True":
+            logging.debug(f"is_instantiated True, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}")
             return True
         else:
+            logging.debug(f"is_instantiated False, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}")
             return False
 
     def set_instantiated(self, instantiated: bool = True):
@@ -2691,21 +2631,6 @@ class Node:
         fablib_data["run_update_commands"] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
 
-    def config_rocky_repo(self, addr: IPv4Address):
-        directory = "/etc/yum.repos.d/"
-
-        string_to_comment = "mirrorlist"
-        cmd = f'sudo bash -c \'for file in {directory}*; do sed -i "/^{string_to_comment}/s/^/# /g" "$file"; done\''
-        self.execute(cmd)
-
-        string_to_uncomment = "#baseurl"
-        cmd = f'sudo bash -c \'for file in {directory}*; do sed -i "/^{string_to_uncomment}/s/^#//g" "$file"; done\''
-        self.execute(cmd)
-
-        old_string = "dl.rockylinux.org"
-        new_string = str(addr)  # current fabnetv4 ip of my rocky repo mirror
-        cmd = f'sudo bash -c \'for file in "{directory}"*; do sed -i "s/{old_string}/{new_string}/g" "$file"; done\''
-        self.execute(cmd)
 
     def config(self, log_dir="."):
         self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
@@ -2716,233 +2641,12 @@ class Node:
 
         if not self.is_instantiated():
             self.set_instantiated(True)
-            if self.get_rocky_repo():
-                self.config_rocky_repo(self.get_rocky_repo())
-
-            if self.get_enable_docker():
-                self.enable_docker()
             self.run_post_boot_tasks()
-
-            if self.get_enable_node_exporter():
-                fablib_data = self.get_fablib_data()
-                if "node_exporter" in fablib_data:
-                    if "monitoring_network" in fablib_data["node_exporter"]:
-                        self.enable_node_exporter(
-                            self.get_slice().get_network(
-                                fablib_data["node_exporter"]["monitoring_network"]
-                            )
-                        )
 
         if self.run_update_commands():
             self.run_post_update_commands()
 
-        if self.get_docker_image():
-            if not self.docker_installed() and self.docker_enabled():
-                self.enable_docker()
-                self.set_docker_installed()
-
-            docker_image = self.get_docker_image()
-            container_name = self.get_docker_container_name()
-            extra_args = self.get_docker_extra_args()
-
-            if type(self.get_management_ip()) is IPv6Address:
-                registry = "registry.ipv6.docker.com"
-            else:
-                registry = "registry.ipv4.docker.com"
-
-            self.execute(
-                f"docker run -d -t --cap-add=NET_ADMIN --privileged  --net=host {extra_args} -v /home/{self.get_username()}:/home/fabric/host_share --name {container_name} {registry}/{docker_image} ",
-                quiet=True,
-                output_file=f"{log_dir}/{self.get_name()}.log",
-            )
-
         return "Done"
 
-    def set_enable_docker(self, enable: bool = True):
-        fablib_data = self.get_fablib_data()
-        if "docker" not in fablib_data:
-            fablib_data["docker"] = {}
-        fablib_data["docker"]["enable"] = True
-        self.set_fablib_data(fablib_data)
 
-        return self
 
-    def get_enable_docker(self):
-        fablib_data = self.get_fablib_data()
-        if "docker" in fablib_data:
-            if "enable" in fablib_data["docker"]:
-                return bool(fablib_data["docker"]["enable"])
-        return False
-
-    def enable_node_exporter(self, net: NetworkService, log_dir: str = "."):
-        self.set_enable_docker()
-        self.set_enable_node_exporter(net)
-        if not self.is_instantiated():
-            return
-
-        fablib_data = self.get_fablib_data()
-        if "node_exporter" in fablib_data:
-            if "monitoring_network" in fablib_data["node_exporter"]:
-                fablib_data["node_exporter"]["monitoring_ip"] = str(
-                    self.get_interface(
-                        network_name=fablib_data["node_exporter"]["monitoring_network"]
-                    ).get_ip_addr()
-                )
-        self.set_fablib_data(fablib_data)
-
-        cmd = (
-            f"docker pull prom/node-exporter:latest ;"
-            f"docker run -d -t --cap-add=NET_ADMIN --privileged --net=host --name node-exporter prom/node-exporter:latest"
-        )
-
-        self.execute(cmd, quiet=True, output_file=f"{log_dir}/{self.get_name()}.log")
-
-    def get_enable_node_exporter(self):
-        fablib_data = self.get_fablib_data()
-        if "node_exporter" in fablib_data:
-            if "enable" in fablib_data["node_exporter"]:
-                return bool(fablib_data["node_exporter"]["enable"])
-        return False
-
-    def set_enable_node_exporter(self, net: NetworkService):
-        fablib_data = self.get_fablib_data()
-        if "node_exporter" not in fablib_data:
-            fablib_data["node_exporter"] = {}
-        fablib_data["node_exporter"]["enable"] = True
-        fablib_data["node_exporter"]["monitoring_network"] = net.get_name()
-        self.set_fablib_data(fablib_data)
-
-    def set_rocky_repo(self, ip: IPv4Address):
-        fablib_data = self.get_fablib_data()
-        if "rocky_repo" not in fablib_data:
-            fablib_data["rocky_repo"] = {}
-        fablib_data["rocky_repo"]["IP"] = str(ip)
-        self.set_fablib_data(fablib_data)
-
-    def get_rocky_repo(self):
-        fablib_data = self.get_fablib_data()
-        if "rocky_repo" in fablib_data:
-            if "IP" in fablib_data["rocky_repo"]:
-                return IPv4Address(fablib_data["rocky_repo"]["IP"])
-        return None
-
-    def enable_docker(self, log_dir="."):
-        self.set_enable_docker()
-        if not self.is_instantiated():
-            return self
-
-        if type(self.get_management_ip()) is IPv6Address:
-            registry = "https://registry.ipv6.docker.com"
-        else:
-            registry = "https://registry.ipv4.docker.com"
-
-        # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
-        # f"sudo sh -c 'echo {{ \\\"registry-mirrors\\\": \\\"{registry}\\\" }} > /etc/docker/daemon.json' ; "
-        # { "bridge": "none" , "registry-mirrors": ["https://registry.ipv4.docker.com"] }
-
-        # to enable ipv6 grafana in docker, put this in daemon.json
-        daemon_json = {
-            "registry-mirrors": [f"{registry}"],
-            "iptables": True,
-            "ip6tables": True,
-            "experimental": True,
-            "ip-forward": True,
-            "ip-masq": True,
-            "ipv6": True,
-            "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64",
-            ##"bridge": "none",
-        }
-
-        # daemon_json = {
-        #    "registry-mirrors": [f"https://{registry}"],
-        #    "iptables": False,
-        #    "ip6tables": False,
-        #    "experimental": False,
-        #    "ip-forward": False,
-        #    "ip-masq": False,
-        #    "ipv6": True,
-        #    "log-driver": "none",
-        #    #"userns-remap": False,
-        #    "fixed-cidr-v6": "fd8d:73ee:3857:7fab::/64",
-        #    "bridge": "none",
-        # }
-
-        daemon_json_str = json.dumps(daemon_json, indent=4).replace('"', '\\"')
-
-        if self.get_image() == "default_rocky_8":
-            print("Installing docker for rocky 8...")
-            self.execute(
-                "echo Hello, FABRIC from node `hostname -s` ; "
-                f"sudo hostnamectl set-hostname {self.get_name()} ; "
-                f"sudo dnf install -y epel-release ; "
-                f"sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo ; "
-                f"sudo dnf install -y docker-ce docker-ce-cli containerd.io ; "
-                f"sudo mkdir /etc/docker ; "
-                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
-                f"sudo systemctl enable docker ; "
-                f"sudo systemctl start docker ; "
-                f"sudo usermod -aG docker {self.get_username()} ; "
-                f"sudo dnf install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm ; "
-                f"sudo dnf install -y openvswitch libibverbs tcpdump net-tools python3.9 vim iftop ; "
-                f"pip3.9 install docker rpyc --user ; "
-                f"sudo systemctl enable --now openvswitch ; "
-                f"sudo sysctl --system ; ",
-                quiet=True,
-                output_file=f"{log_dir}/{self.get_name()}.log",
-            )
-
-        elif self.get_image() == "default_ubuntu_20":
-            print("Installing docker for ubuntu 20...")
-            self.execute(
-                "echo Hello, FABRIC from node `hostname -s` ; "
-                f"sudo hostnamectl set-hostname {self.get_name()} ; "
-                f"sudo apt-get update; "
-                f"sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common ; "
-                f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - ; "
-                f'sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" ; '
-                f"sudo apt-get update ; "
-                f"sudo mkdir /etc/docker ; "
-                # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
-                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
-                f"sudo apt-get install -y docker-ce ; "
-                f"sudo usermod -aG docker {self.get_username()} ; "
-                f"sudo apt-get install openvswitch-switch -y ; "
-                f"sudo systemctl start openvswitch-switch ; "
-                f"sudo systemctl status openvswitch-switch ; "
-                f"sudo systemctl enable --now openvswitch-switch ; "
-                f"sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget python3.9 python3.9-full tcpdump iftop python3-pip ; "
-                f"python3.9 -m pip install docker rpyc --user ; ",
-                quiet=True,
-                output_file=f"{log_dir}/{self.get_name()}.log",
-            )
-        elif self.get_image() == "default_ubuntu_22":
-            print("Installing docker for ubuntu 22...")
-            self.execute(
-                "echo Hello, FABRIC from node `hostname -s` ; "
-                f"sudo hostnamectl set-hostname {self.get_name()} ; "
-                f"sudo apt-get update ;"
-                f"sudo apt-get install -y ca-certificates curl gnupg lsb-release ;"
-                f"sudo mkdir -m 0755 -p /etc/apt/keyrings ;"
-                f"curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg ; "
-                f'echo \
-                                            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-                                            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null ;'
-                f"sudo apt-get update ; "
-                #  f"sudo mkdir /etc/docker ; "
-                # f"sudo sh -c 'echo {{ \\\"bridge\\\": \\\"none\\\" }} > /etc/docker/daemon.json' ; "
-                f'sudo sh -c \'echo {{ \\"registry-mirrors\\": [\\"{registry}\\"] }} > /etc/docker/daemon.json\' ; '
-                f"cat /etc/docker/daemon.json ; "
-                f"sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin ; "
-                f"sudo groupadd docker ;"
-                f"sudo usermod -aG docker {self.get_username()} ; "
-                f"sudo apt-get install openvswitch-switch -y ; "
-                f"sudo systemctl start openvswitch-switch ; "
-                f"sudo systemctl status openvswitch-switch ; "
-                f"sudo systemctl enable --now openvswitch-switch ; "
-                f"sudo apt-get install -y  build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev wget tcpdump iftop python3-pip ; "
-                f"pip install docker rpyc --user ; ",
-                quiet=True,
-                output_file=f"{log_dir}/{self.get_name()}.log",
-            )
-
-        return self

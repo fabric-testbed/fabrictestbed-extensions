@@ -954,10 +954,6 @@ class Slice:
         disk: int = 10,
         image: str = None,
         instance_type: str = None,
-        docker_enable: bool = False,
-        docker_image: str = None,
-        docker_container_name="fabric",
-        docker_extra_args="",
         host: str = None,
         user_data: dict = {},
         avoid: List[str] = [],
@@ -979,7 +975,6 @@ class Slice:
         :param image: (Optional) The image to uese for the node. Default: default_rocky_8
         :type image: String
         :param instance_type
-        :param docker_image
         :param host: (Optional) The physical host to deploy the node. Each site
             has worker nodes numbered 1, 2, 3, etc. Host names follow the pattern
             in this example of STAR worker number 1: "star-w1.fabric-testbed.net".
@@ -1010,17 +1005,6 @@ class Slice:
 
         if host:
             node.set_host(host)
-
-        if docker_enable:
-            node.docker(enable=True)
-
-        if docker_image:
-            node.docker(
-                enable=True,
-                docker_image=docker_image,
-                docker_container_name=docker_container_name,
-                docker_extra_args=docker_extra_args,
-            )
 
         return node
 
@@ -1505,39 +1489,6 @@ class Slice:
                 )
                 return False
         return True
-
-    # def link(self):
-    #     for node in self.get_nodes():
-    #         if node.get_image() in ["rocky", "centos", "fedora"]:
-    #             node.execute("sudo yum install -y -qq docker", quiet=True)
-    #
-    #         if node.get_image() in ["ubuntu", "debian"]:
-    #             node.execute("sudo apt-get install -y -q docker.io", quiet=True)
-    #
-    #         ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
-    #         node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}", quiet=True)
-    #
-    #         interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
-    #         NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
-    #
-    #         try:
-    #             if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools", quiet=True)
-    #             if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools", quiet=True)
-    #         except Exception as e:
-    #             logging.error(f"Error installing docker on node {node.get_name()}")
-    #             logging.error(e, exc_info=True)
-    #
-    #         for iface in interfaces:
-    #             try:
-    #                     node.execute(f'sudo ip link set dev {iface} promisc on', quiet=True)
-    #                     node.execute(f'sudo ip link set {iface} netns {NSPID}', quiet=True)
-    #                     node.execute(f'docker exec Docker ip link set dev {iface} up', quiet=True)
-    #                     node.execute(f'docker exec Docker ip link set dev {iface} promisc on', quiet=True)
-    #                     node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1', quiet=True)
-    #             except Exception as e:
-    #                     logging.error(f"Interface: {iface} failed to link")
-    #                     logging.error("--> Try installing docker or docker.io on container <--")
-    #                     logging.error(e, exc_info=True)
 
     def post_boot_config(self):
         """
