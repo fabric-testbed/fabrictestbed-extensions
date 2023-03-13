@@ -123,18 +123,17 @@ class Component:
 
     def generate_template_context(self):
         context = self.toDict()
-        context['interfaces'] = []
+        context["interfaces"] = []
         for interface in self.get_interfaces():
-            context['interfaces'].append(interface.generate_template_context())
+            context["interfaces"].append(interface.generate_template_context())
         return context
-
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
-        #environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
+        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
@@ -372,9 +371,8 @@ class Component:
         return self.node.get_site()
 
     def get_short_name(self):
-
         # strip of the extra parts of the name added by fim
-        return self.get_name()[len(f"{self.get_node().get_name()}-"):]
+        return self.get_name()[len(f"{self.get_node().get_name()}-") :]
 
     def get_name(self) -> str:
         """

@@ -171,7 +171,7 @@ class Interface:
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
-        #environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
+        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
 
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
@@ -543,7 +543,11 @@ class Interface:
 
     def get_short_name(self):
         # strip of the extra parts of the name added by fim
-        return self.get_name()[len(f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"):]
+        return self.get_name()[
+            len(
+                f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"
+            ) :
+        ]
 
     def get_name(self) -> str:
         """
@@ -820,9 +824,12 @@ class Interface:
             # manual mode... do nothing
             pass
 
-    def add_mirror(self, port_name: str, name: str='mirror'):
-        self.get_slice().get_fim_topology().add_port_mirror_service(name=name, from_interface_name=port_name,
-                                  to_interface=self.get_fim_interface())
+    def add_mirror(self, port_name: str, name: str = "mirror"):
+        self.get_slice().get_fim_topology().add_port_mirror_service(
+            name=name,
+            from_interface_name=port_name,
+            to_interface=self.get_fim_interface(),
+        )
 
     def delete(self):
         net = self.get_network()

@@ -498,13 +498,12 @@ class Slice:
             node_context = node.generate_template_context()
             context["nodes"].append(node_context)
 
-
-        #context["components"] = []
-        #for component in self.get_components():
+        # context["components"] = []
+        # for component in self.get_components():
         #    context["components"].append(component.toDict())
 
-        #context["interfaces"] = []
-        #for interface in self.get_interfaces():
+        # context["interfaces"] = []
+        # for interface in self.get_interfaces():
         #    context["interfaces"].append(interface.toDict())
 
         context["networks"] = []
@@ -1622,11 +1621,17 @@ class Slice:
             try:
                 node = threads[thread]
                 result = thread.result()
-                #print(result)
-                print(f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)")
+                # print(result)
+                print(
+                    f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
+                )
             except Exception as e:
-                print(f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)")
-                logging.error(f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}")
+                print(
+                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
+                )
+                logging.error(
+                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
+                )
 
         # print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
