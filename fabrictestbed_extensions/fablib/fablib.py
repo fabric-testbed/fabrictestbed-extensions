@@ -798,6 +798,14 @@ class FablibManager:
     def _check_key_and_cert(self, ssh_key_file, ssh_key_pass=None, ssh_cert_file=None):
         """
         Given an SSH key and cert, ensure that we can use them.
+
+        FABRIC accepts RSA keys of length 3072 bits or longer, and
+        ECDSA keys of length 256 bits or longer.
+
+        https://learn.fabric-testbed.net/knowledge-base/logging-into-fabric-vms/
+
+        This method checks that they keys and certs are usable, and
+        conforms to FABRIC policy.
         """
         errors = []
 
