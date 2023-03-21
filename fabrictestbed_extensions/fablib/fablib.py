@@ -34,6 +34,8 @@ from typing import List, Dict
 
 from typing import TYPE_CHECKING
 
+import paramiko
+
 from fabrictestbed.util.constants import Constants
 import pandas as pd
 from tabulate import tabulate
@@ -766,6 +768,25 @@ class FablibManager:
             if not hasattr(self, attr) or getattr(self, attr) is None:
                 errors.append(f"{value} is not set")
 
+        # Validate ssh keys and certs.  We should check that:
+        #
+        #
+        #  - Keys and certs exists, and they have the right permissions.
+        #  - Keys are of the right form.
+        #  - If keys are password protected, we must know the
+        #    passwords.
+        #
+        # https://learn.fabric-testbed.net/knowledge-base/logging-into-fabric-vms/
+        # says that FABRIC accepts RSA keys of length 3072 bits or
+        # longer and ECDSA keys of length 256 bits or longer.
+        error = self._check_bastion_key()
+        if error:
+            errors.append(error)
+        
+        self._check_bastion_cert()
+        self._check_sliver_key()
+        self._check_sliver_cert()
+
         if errors:
             # TODO: define custom exception class to report errors,
             # and emit a more helpful error message with hints about
@@ -773,6 +794,38 @@ class FablibManager:
             raise AttributeError(
                 f"Error initializing {self.__class__.__name__}: {errors}"
             )
+
+    def _check_bastion_key(self):
+        if hasattr(self, "bastion_key_filename"):
+            return "bastion key filename is not known"
+
+        if self.bastion_key_filename is None:
+            return "bastion key filename is set to None"
+
+        try:
+            if self.bastion_key_passphrase:
+                paramiko.RSAKey(
+                    filename=self.bastion_key_filename,
+                    passphrase=self.bastion_key_passphrase,
+                )
+            else:
+                paramiko.RSAKey(filename=self.bastion_key_filename)
+        except paramiko.PasswordRequiredException as e:
+            return f"Bastion SSH key passphrase is not set {e}"
+        except Exception as e:
+            return f"Error with bastion SSH key: {e}"
+
+    def _check_bastion_cert(self):
+        # TODO
+        pass
+
+    def _check_sliver_key(self):
+        # TODO
+        pass
+
+    def _check_sliver_cert(self):
+        # TODO
+        pass
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
