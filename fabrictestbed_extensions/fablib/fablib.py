@@ -808,40 +808,36 @@ class FablibManager:
         conforms to FABRIC policy.
         """
         errors = []
+        key = None
 
-        for klass in (paramiko.RSAKey, paramiko.ECDSAKey):
+        # Do we have an RSA key?
+        try:
+            # We depend on the fact passing the wrong type of key file
+            # to the wrong class or passing the wrong password will
+            # raise an exception.
+            key = paramiko.RSAKey.from_private_key_file(ssh_key_file, ssh_key_pass)
+            bits = key.get_bits()                
+            if bits < 3072:
+                errors.append(f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072")
+        except Exception as e:
+            errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
+
+        if key is None:
+            # Do we have an ECDSA key, then?
             try:
-                # We depend on the fact passing the wrong type of key
-                # file to the wrong class or passing the wrong
-                # password will raise an exception.
-                key = klass.from_private_key_file(ssh_key_file, ssh_key_pass)
-
+                key = paramiko.ECDSAKey.from_private_key_file(ssh_key_file, ssh_key_pass)
                 bits = key.get_bits()                
-                
-                if isinstance(key, paramiko.RSAKey) and bits < 3072:
-                    errors.append(f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072")
+            if bits < 256:
+                errors.append(f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256")
+        except Exception as e:
+            errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
 
-                if isinstance(key, paramiko.ECDSAKey) and bits < 256:
-                    errors.append(f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256")
-
-                if ssh_cert_file:
-                    try:
-                        key.load_certificate(ssh_cert_file)
-                    except Exception as e:
-                        errors.append(f"Error loading {ssh_cert_file}: {e}")
-
-            except paramiko.PasswordRequiredException as e:
-                errors.append(f"Can't read password-protected SSH key {ssh_key_file} (error: {e})")
-            except paramiko.SSHException as e:
-                if 'OpenSSH private key file checkints do not match' in e.args:
-                    errors.append(f"Can't read password-protected SSH key {ssh_key_file}: wrong password? (error: {e})"
-                else:
-                    # Likely not a key of the type we attempted to read,
-                    # so we'll try again.
-                    continue
+        if key and ssh_cert_file:
+            try:
+                key.load_certificate(ssh_cert_file)
             except Exception as e:
-                errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
-
+                errors.append(f"Error loading {ssh_cert_file}: {e}")
+                                  
         # Return all the errors we've accumulated so far.
         return errors
             
