@@ -770,7 +770,6 @@ class FablibManager:
 
         # Validate ssh keys and certs.  We should check that:
         #
-        #
         #  - Keys and certs exists, and they have the right permissions.
         #  - Keys are of the right form.
         #  - If keys are password protected, we must know the
