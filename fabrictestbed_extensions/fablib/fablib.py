@@ -774,17 +774,24 @@ class FablibManager:
         #  - Keys are of the right form.
         #  - If keys are password protected, we must know the
         #    passwords.
-        #
-        # https://learn.fabric-testbed.net/knowledge-base/logging-into-fabric-vms/
-        # says that FABRIC accepts RSA keys of length 3072 bits or
-        # longer and ECDSA keys of length 256 bits or longer.
-        error = self._check_bastion_key()
-        if error:
-            errors.append(error)
-        
-        self._check_bastion_cert()
-        self._check_sliver_key()
-        self._check_sliver_cert()
+        if not hasattr(self, "bastion_key_filename"):
+            errors.append("bastion key filename is not known")
+
+        if self.bastion_key_filename is None:
+            errors.append("bastion key filename is set to None")
+
+        bastion_key_errors = self._check_key_and_cert(self.bastion_key_filename,
+                                                      ssh_key_pass=self.bastion_passphrase,
+                                                      ssh_cert_file=None)
+
+        if bastion_key_errors:
+            errors.append(bastion_key_errors)
+
+        node_key_errors = self._check_key_and_cert(self.get_default_slice_private_key_file(),
+                                                   ssh_key_pass=self.get_default_slice_private_key_passphrase(),
+                                                   ssh_cert_file=self.get_default_slice_public_key_file())
+        if node_key_errors:
+            errors.append(node_key_errors)
 
         if errors:
             # TODO: define custom exception class to report errors,
