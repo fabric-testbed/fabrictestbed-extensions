@@ -826,10 +826,10 @@ class FablibManager:
             try:
                 key = paramiko.ECDSAKey.from_private_key_file(ssh_key_file, ssh_key_pass)
                 bits = key.get_bits()                
-            if bits < 256:
-                errors.append(f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256")
-        except Exception as e:
-            errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
+                if bits < 256:
+                    errors.append(f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256")
+            except Exception as e:
+                errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
 
         if key and ssh_cert_file:
             try:
