@@ -780,16 +780,20 @@ class FablibManager:
         if self.bastion_key_filename is None:
             errors.append("bastion key filename is set to None")
 
-        bastion_key_errors = self._check_key_and_cert(self.bastion_key_filename,
-                                                      ssh_key_pass=self.bastion_passphrase,
-                                                      ssh_cert_file=None)
+        bastion_key_errors = self._check_key_and_cert(
+            self.bastion_key_filename,
+            ssh_key_pass=self.bastion_passphrase,
+            ssh_cert_file=None,
+        )
 
         if bastion_key_errors:
             errors.append(bastion_key_errors)
 
-        node_key_errors = self._check_key_and_cert(self.get_default_slice_private_key_file(),
-                                                   ssh_key_pass=self.get_default_slice_private_key_passphrase(),
-                                                   ssh_cert_file=self.get_default_slice_public_key_file())
+        node_key_errors = self._check_key_and_cert(
+            self.get_default_slice_private_key_file(),
+            ssh_key_pass=self.get_default_slice_private_key_passphrase(),
+            ssh_cert_file=self.get_default_slice_public_key_file(),
+        )
         if node_key_errors:
             errors.append(node_key_errors)
 
@@ -822,19 +826,25 @@ class FablibManager:
             # to the wrong class or passing the wrong password will
             # raise an exception.
             key = paramiko.RSAKey.from_private_key_file(ssh_key_file, ssh_key_pass)
-            bits = key.get_bits()                
+            bits = key.get_bits()
             if bits < 3072:
-                errors.append(f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072")
+                errors.append(
+                    f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072"
+                )
         except Exception as e:
             errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
 
         if key is None:
             # Do we have an ECDSA key, then?
             try:
-                key = paramiko.ECDSAKey.from_private_key_file(ssh_key_file, ssh_key_pass)
-                bits = key.get_bits()                
+                key = paramiko.ECDSAKey.from_private_key_file(
+                    ssh_key_file, ssh_key_pass
+                )
+                bits = key.get_bits()
                 if bits < 256:
-                    errors.append(f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256")
+                    errors.append(
+                        f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256"
+                    )
             except Exception as e:
                 errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
 
@@ -843,10 +853,10 @@ class FablibManager:
                 key.load_certificate(ssh_cert_file)
             except Exception as e:
                 errors.append(f"Error loading {ssh_cert_file}: {e}")
-                                  
+
         # Return all the errors we've accumulated so far.
         return errors
-            
+
     def _check_bastion_key(self):
         if hasattr(self, "bastion_key_filename"):
             return "bastion key filename is not known"
