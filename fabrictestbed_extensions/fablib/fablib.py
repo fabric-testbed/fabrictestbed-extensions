@@ -795,6 +795,48 @@ class FablibManager:
                 f"Error initializing {self.__class__.__name__}: {errors}"
             )
 
+    def _check_key_and_cert(self, ssh_key_file, ssh_key_pass=None, ssh_cert_file=None):
+        """
+        Given an SSH key and cert, ensure that we can use them.
+        """
+        errors = []
+
+        for klass in (paramiko.RSAKey, paramiko.ECDSAKey):
+            try:
+                # We depend on the fact passing the wrong type of key
+                # file to the wrong class or passing the wrong
+                # password will raise an exception.
+                key = klass.from_private_key_file(ssh_key_file, ssh_key_pass)
+
+                bits = key.get_bits()                
+                
+                if isinstance(key, paramiko.RSAKey) and bits < 3072:
+                    errors.append(f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072")
+
+                if isinstance(key, paramiko.ECDSAKey) and bits < 256:
+                    errors.append(f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256")
+
+                if ssh_cert_file:
+                    try:
+                        key.load_certificate(ssh_cert_file)
+                    except Exception as e:
+                        errors.append(f"Error loading {ssh_cert_file}: {e}")
+
+            except paramiko.PasswordRequiredException as e:
+                errors.append(f"Can't read password-protected SSH key {ssh_key_file} (error: {e})")
+            except paramiko.SSHException as e:
+                if 'OpenSSH private key file checkints do not match' in e.args:
+                    errors.append(f"Can't read password-protected SSH key {ssh_key_file}: wrong password? (error: {e})"
+                else:
+                    # Likely not a key of the type we attempted to read,
+                    # so we'll try again.
+                    continue
+            except Exception as e:
+                errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
+
+        # Return all the errors we've accumulated so far.
+        return errors
+            
     def _check_bastion_key(self):
         if hasattr(self, "bastion_key_filename"):
             return "bastion key filename is not known"
