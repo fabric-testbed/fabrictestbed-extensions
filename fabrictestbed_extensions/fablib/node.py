@@ -2570,8 +2570,6 @@ class Node:
 
             self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
 
-
-
     def run_post_boot_tasks(self, log_dir: str = "."):
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" in fablib_data:
@@ -2608,10 +2606,14 @@ class Node:
     def is_instantiated(self):
         fablib_data = self.get_fablib_data()
         if fablib_data["instantiated"] == "True":
-            logging.debug(f"is_instantiated True, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}")
+            logging.debug(
+                f"is_instantiated True, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}"
+            )
             return True
         else:
-            logging.debug(f"is_instantiated False, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}")
+            logging.debug(
+                f"is_instantiated False, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}"
+            )
             return False
 
     def set_instantiated(self, instantiated: bool = True):
@@ -2631,7 +2633,6 @@ class Node:
         fablib_data["run_update_commands"] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
 
-
     def config(self, log_dir="."):
         self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
 
@@ -2647,6 +2648,3 @@ class Node:
             self.run_post_update_commands()
 
         return "Done"
-
-
-
