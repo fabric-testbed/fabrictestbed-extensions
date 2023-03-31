@@ -80,11 +80,18 @@ class FablibManagerTests(unittest.TestCase):
 
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
 
-        # FablibManager() without a valid token or token location
-        # should raise a "ValueError: Invalid value for
-        # `refresh_token`, must not be `None`"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AttributeError) as ctx:
             FablibManager()
+
+        expected_error = (
+            "Error initializing FablibManager: ["
+            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
+            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
+            + "'Error reading SSH key: None (error: Key object may not be empty)', "
+            + "\"Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')\"]"
+        )
+
+        self.assertEqual(f"{ctx.exception}", expected_error)
 
     def test_fablib_manager_test_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
@@ -133,9 +140,13 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, AttributeError)
 
-        # Check that the error message is what we expected: the only
-        # error should be about missing token.
-        self.assertEqual(
-            str(ctx.exception),
-            "Error initializing FablibManager: ['FABRIC token is not set']",
+        expected_error = (
+            "Error initializing FablibManager: "
+            + "['FABRIC token is not set', "
+            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
+            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
+            + "'Error reading SSH key: None (error: Key object may not be empty)', "
+            + "\"Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')\"]"
         )
+
+        self.assertEqual(f"{ctx.exception}", expected_error)
