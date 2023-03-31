@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support new GPU models has been added (PR [#122](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/122)).
+- FablibManager validates its configuration (PR [#121](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/121), [#136](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/136))
 
 ### Changed
 
