@@ -39,7 +39,7 @@ jobs:
 
       # Remind PR authors to update CHANGELOG.md
       - name: Check that Changelog has been updated
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no changelog')
         run: |
           # `git diff --exit-code` exits with 1 if there were
           # differences and 0 means no differences. Here we negate
