@@ -24,6 +24,7 @@ jobs:
         with:
           fetch-depth: 0 # since we need to diff against origin/main.
 
+      # https://github.com/marketplace/actions/check-signed-commits-in-pr
       - name: Check that commits are signed
         uses: 1Password/check-signed-commits-action@v1
 
