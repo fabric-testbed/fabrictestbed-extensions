@@ -787,7 +787,7 @@ class FablibManager:
         )
 
         if bastion_key_errors:
-            errors.append(bastion_key_errors)
+            errors += bastion_key_errors
 
         node_key_errors = self._check_key_and_cert(
             self.get_default_slice_private_key_file(),
@@ -795,7 +795,7 @@ class FablibManager:
             ssh_cert_file=self.get_default_slice_public_key_file(),
         )
         if node_key_errors:
-            errors.append(node_key_errors)
+            errors += node_key_errors
 
         if errors:
             # TODO: define custom exception class to report errors,
