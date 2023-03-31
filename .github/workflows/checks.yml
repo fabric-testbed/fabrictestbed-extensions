@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: read
+  # Allow 1Password/check-signed-commits-action to leave comments on
+  # pull requests.
+  pull-requests: write
 
 jobs:
 
