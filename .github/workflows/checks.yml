@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: read
+  # Allow 1Password/check-signed-commits-action to leave comments on
+  # pull requests.
+  pull-requests: write
 
 jobs:
 
@@ -20,6 +23,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # since we need to diff against origin/main.
+
+      # https://github.com/marketplace/actions/check-signed-commits-in-pr
+      - name: Check that commits are signed
+        uses: 1Password/check-signed-commits-action@v1
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
@@ -39,7 +46,7 @@ jobs:
 
       # Remind PR authors to update CHANGELOG.md
       - name: Check that Changelog has been updated
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no changelog')
         run: |
           # `git diff --exit-code` exits with 1 if there were
           # differences and 0 means no differences. Here we negate
