@@ -60,9 +60,14 @@ computer, see: [Install the FABRIC Python API][fablib-install].
 Contributions to FABlib are made with GitHub Pull Requests. When you
 submit a pull request, some tests will run against it:
 
-- Code formatting will be checked using [black].  Be sure that your
-  code is formatted with black, using its defaults.
-- CHANGELOG.md will be checked for updates.
+- FABRIC project policy requires signed commits, so there's a check to
+  ensure that commits are signed.
+- Code formatting will be checked using [black] and [isort].  Be sure
+  that your code is formatted using these tools. 
+- CHANGELOG.md will be checked for updates.  For minor changes (such
+  as typo fixes) or changes that are not directly visible to users of
+  the library (such as CI changes), use the "no changelog" label on
+  the PR, and this check will be skipped.
 - Packages will be built.
 - Unit tests will be run.
 
@@ -139,3 +144,4 @@ For details about publishing to PyPI, see flit documentation about
 [build]: https://pypi.org/project/build/
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
+[isort]: https://pypi.org/project/isort/
