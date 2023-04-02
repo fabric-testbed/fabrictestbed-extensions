@@ -55,9 +55,18 @@ If you want to interact with FABRIC from Jupyter installed on your
 computer, see: [Install the FABRIC Python API][fablib-install].
 
 
-## Testing FABlib
+## Contributing to FABlib
 
-Run tests with [pytest]:
+Contributions to FABlib are made with GitHub Pull Requests. When you
+submit a pull request, some tests will run against it:
+
+- Code formatting will be checked using [black].  Be sure that your
+  code is formatted with black, using its defaults.
+- CHANGELOG.md will be checked for updates.
+- Packages will be built.
+- Unit tests will be run.
+
+You can run tests in your environment, like so, using [pytest]:
 
 ```console
 $ pip install -e .[test]
@@ -129,4 +138,4 @@ For details about publishing to PyPI, see flit documentation about
 
 [build]: https://pypi.org/project/build/
 [pytest]: https://pypi.org/project/pytest/
-
+[black]: https://pypi.org/project/black/
