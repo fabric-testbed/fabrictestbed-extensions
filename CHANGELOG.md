@@ -10,16 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support new GPU models has been added (PR [#122](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/122)).
+- Support new GPU models has been added (PR
+  [#122](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/122)).
 
 ### Changed
 
-- Fablib now uses pyproject.toml for specifying packaging metadata instead of setup.py and friends (issue [#74](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/74)).
-- Make configure_nvme() more generic (PR [#126](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/126)).
+- Fablib now uses pyproject.toml for specifying packaging metadata
+  instead of setup.py and friends (issue
+  [#74](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/74)).
+- Make configure_nvme() more generic (PR
+  [#126](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/126)).
 
 ### Fixed
 
-- Fablib will now fail early when required configuration is missing (issue [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
+- Fablib will now fail early when required configuration is missing
+  (issue
+  [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
 
 ## [1.3.4] - 2023-01-19
 
@@ -41,8 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - FABLIB: node.upload_directory now uses correct temporary file names
-
-
 
 
 ## [1.3.2] - 2022-10-25
