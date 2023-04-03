@@ -870,3 +870,12 @@ class Links(Resources):
             filter_function=filter_function,
             pretty_names_dict=pretty_names_dict,
         )
+
+
+class FacilityPort(Resources):
+    def __init__(self, fablib_manager):
+        """
+        Constructor
+        :return:
+        """
+        super().__init__(fablib_manager)
