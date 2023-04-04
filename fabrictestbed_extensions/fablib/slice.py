@@ -49,6 +49,9 @@ from ipaddress import ip_address, IPv4Address
 
 from typing import List, Union, Dict
 
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import Status, SliceState
 
@@ -340,7 +343,7 @@ class Slice:
                 f"Starting get get_os_interface_threads for iface {iface.get_name()} "
             )
             os_interface_threads[iface.get_name()] = executor.submit(
-                iface.get_os_interface
+                iface.get_device_name
             )
 
         table = []
@@ -483,7 +486,7 @@ class Slice:
         context = {}
 
         if base_object:
-            context["_self_"] = base_object.toDict(skip=skip)
+            context["_self_"] = base_object.generate_template_context()
         else:
             context["_self_"] = {}
 
@@ -492,15 +495,16 @@ class Slice:
 
         context["nodes"] = []
         for node in self.get_nodes():
-            context["nodes"].append(node.toDict(skip=["ssh_command"]))
+            node_context = node.generate_template_context()
+            context["nodes"].append(node_context)
 
-        context["components"] = []
-        for component in self.get_components():
-            context["components"].append(component.toDict())
+        # context["components"] = []
+        # for component in self.get_components():
+        #    context["components"].append(component.toDict())
 
-        context["interfaces"] = []
-        for interface in self.get_interfaces():
-            context["interfaces"].append(interface.toDict())
+        # context["interfaces"] = []
+        # for interface in self.get_interfaces():
+        #    context["interfaces"].append(interface.toDict())
 
         context["networks"] = []
         for network in self.get_networks():
@@ -529,6 +533,8 @@ class Slice:
 
         :raises Exception: if slice manager slice no longer exists
         """
+        logging.info(f"update_slice: {self.get_name()}")
+
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
@@ -559,6 +565,8 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        logging.info(f"update_topology: {self.get_name()}")
+
         # Update topology
         if self.sm_slice.model is not None and self.sm_slice.model != "":
             self.topology = ExperimentTopology()
@@ -587,6 +595,8 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        logging.info(f"update_slivers: {self.get_name()}")
+
         if self.sm_slice is None:
             return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(
@@ -615,6 +625,8 @@ class Slice:
 
         :raises Exception: if updating topology fails
         """
+        logging.info(f"update : {self.get_name()}")
+
         try:
             self.update_slice()
         except Exception as e:
@@ -808,7 +820,13 @@ class Slice:
         return self.sm_slice.project_id
 
     def add_l2network(
-        self, name: str = None, interfaces: List[Interface] = [], type: str = None
+        self,
+        name: str = None,
+        interfaces: List[Interface] = [],
+        type: str = None,
+        subnet: ipaddress = None,
+        gateway: ipaddress = None,
+        user_data: dict = {},
     ) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
@@ -842,12 +860,22 @@ class Slice:
         :return: a new L2 network service
         :rtype: NetworkService
         """
-        return NetworkService.new_l2network(
-            slice=self, name=name, interfaces=interfaces, type=type
+        network_service = NetworkService.new_l2network(
+            slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
         )
+        if subnet:
+            network_service.set_subnet(subnet)
+
+        if gateway:
+            network_service.set_gateway(gateway)
+        return network_service
 
     def add_l3network(
-        self, name: str = None, interfaces: List[Interface] = [], type: str = "IPv4"
+        self,
+        name: str = None,
+        interfaces: List[Interface] = [],
+        type: str = "IPv4",
+        user_data: dict = {},
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -891,7 +919,11 @@ class Slice:
         :rtype: NetworkService
         """
         return NetworkService.new_l3network(
-            slice=self, name=name, interfaces=interfaces, type=type
+            slice=self,
+            name=name,
+            interfaces=interfaces,
+            type=type,
+            user_data=user_data,
         )
 
     def add_facility_port(
@@ -922,8 +954,8 @@ class Slice:
         disk: int = 10,
         image: str = None,
         instance_type: str = None,
-        docker_image: str = None,
         host: str = None,
+        user_data: dict = {},
         avoid: List[str] = [],
     ) -> Node:
         """
@@ -943,7 +975,6 @@ class Slice:
         :param image: (Optional) The image to uese for the node. Default: default_rocky_8
         :type image: String
         :param instance_type
-        :param docker_image
         :param host: (Optional) The physical host to deploy the node. Each site
             has worker nodes numbered 1, 2, 3, etc. Host names follow the pattern
             in this example of STAR worker number 1: "star-w1.fabric-testbed.net".
@@ -957,6 +988,13 @@ class Slice:
         """
         node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
 
+        node.init_fablib_data()
+
+        user_data_working = node.get_user_data()
+        for k, v in user_data.items():
+            user_data_working[k] = v
+        node.set_user_data(user_data_working)
+
         if instance_type:
             node.set_instance_type(instance_type)
         else:
@@ -967,9 +1005,6 @@ class Slice:
 
         if host:
             node.set_host(host)
-
-        if docker_image:
-            node.set_docker_image(docker_image)
 
         return node
 
@@ -1455,39 +1490,6 @@ class Slice:
                 return False
         return True
 
-    # def link(self):
-    #     for node in self.get_nodes():
-    #         if node.get_image() in ["rocky", "centos", "fedora"]:
-    #             node.execute("sudo yum install -y -qq docker", quiet=True)
-    #
-    #         if node.get_image() in ["ubuntu", "debian"]:
-    #             node.execute("sudo apt-get install -y -q docker.io", quiet=True)
-    #
-    #         ip = 6 if isinstance(node.get_management_ip(), ipaddress.IPv6Address) else 4
-    #         node.execute(f"docker run -d -it --name Docker registry.ipv{ip}.docker.com/{node.get_docker_image()}", quiet=True)
-    #
-    #         interfaces = [iface["ifname"] for iface in node.get_dataplane_os_interfaces()]
-    #         NSPID = node.execute("docker inspect --format='{{ .State.Pid }}' Docker")[0]
-    #
-    #         try:
-    #             if node.get_image() in ["rocky", "centos", "fedora"]: node.execute("sudo yum install -y net-tools", quiet=True)
-    #             if node.get_image() in ["ubuntu", "debian"]: node.execute("sudo apt-get install -y net-tools", quiet=True)
-    #         except Exception as e:
-    #             logging.error(f"Error installing docker on node {node.get_name()}")
-    #             logging.error(e, exc_info=True)
-    #
-    #         for iface in interfaces:
-    #             try:
-    #                     node.execute(f'sudo ip link set dev {iface} promisc on', quiet=True)
-    #                     node.execute(f'sudo ip link set {iface} netns {NSPID}', quiet=True)
-    #                     node.execute(f'docker exec Docker ip link set dev {iface} up', quiet=True)
-    #                     node.execute(f'docker exec Docker ip link set dev {iface} promisc on', quiet=True)
-    #                     node.execute(f'docker exec Docker sysctl net.ipv6.conf.{iface}.disable_ipv6=1', quiet=True)
-    #             except Exception as e:
-    #                     logging.error(f"Interface: {iface} failed to link")
-    #                     logging.error("--> Try installing docker or docker.io on container <--")
-    #                     logging.error(e, exc_info=True)
-
     def post_boot_config(self):
         """
         Run post boot configuration.  Typically, this is run automatically during
@@ -1501,7 +1503,6 @@ class Slice:
                 f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
             )
             return
-        executor = ThreadPoolExecutor(64)
 
         logging.info(
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
@@ -1516,6 +1517,9 @@ class Slice:
 
         # for node_thread in node_threads:
         #    node_thread.result()
+
+        for network in self.get_networks():
+            network.config()
 
         for interface in self.get_interfaces():
             try:
@@ -1532,9 +1536,12 @@ class Slice:
                     f"sudo nmcli device set {interface.get_device_name()} managed no",
                     quiet=True,
                 )
+
+                # interfaces are config in nodes (below)
+                # interface.config()
             except Exception as e:
                 logging.error(
-                    f"Interface: {interface.get_name()} failed to become unmanged"
+                    f"Interface: {interface.get_name()} failed to become unmanaged"
                 )
                 logging.error(e, exc_info=True)
 
@@ -1543,6 +1550,47 @@ class Slice:
 
         # if self.get_state() == "ModifyOK":
         #    self.modify_accept()
+
+        import time
+
+        start = time.time()
+
+        # from concurrent.futures import ThreadPoolExecutor
+        my_thread_pool_executor = ThreadPoolExecutor(32)
+        threads = {}
+
+        for node in self.get_nodes():
+            # print(f"Configuring {node.get_name()}")
+            thread = my_thread_pool_executor.submit(node.config)
+            threads[thread] = node
+
+        print(
+            f"Running post boot config threads ..."
+        )  # ({time.time() - start:.0f} sec)")
+
+        for thread in concurrent.futures.as_completed(threads.keys()):
+            try:
+                node = threads[thread]
+                result = thread.result()
+                # print(result)
+                print(
+                    f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
+                )
+            except Exception as e:
+                print(
+                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
+                )
+                logging.error(
+                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
+                )
+
+        # print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
+
+        # Push updates to user_data
+        print("Saving fablib data... ", end="")
+        self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
+        self.update()
+        print(" Done!")
 
     def validIPAddress(self, IP: str) -> str:
         """
@@ -1577,7 +1625,13 @@ class Slice:
         for net in self.get_networks():
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
-                    if net.get_subnet() == None or net.get_available_ips() == None:
+                    if (
+                        not type(net.get_subnet())
+                        in [ipaddress.IPv4Network, ipaddress.IPv6Network]
+                        or not type(net.get_gateway())
+                        in [ipaddress.IPv4Address, ipaddress.IPv46ddress]
+                        or net.get_available_ips() == None
+                    ):
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
                         )
@@ -1642,9 +1696,29 @@ class Slice:
 
         print(f"\nTime to stable {time.time() - start:.0f} seconds")
 
-        print("Running post_boot_config ... ", end="")
+        print("Running post_boot_config ... ")
         self.post_boot_config()
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
+
+        # Last update to get final data for display
+        self.update()
+
+        slice_show_table = self.show(colors=True, quiet=True)
+        node_table = self.list_nodes(colors=True, quiet=True)
+        if hasNetworks:
+            network_table = self.list_networks(colors=True, quiet=True)
+
+        time_string = f"{time.time() - start:.0f} sec"
+
+        # Clear screen
+        clear_output(wait=True)
+
+        print(f"\nRetry: {count}, Time: {time_string}")
+
+        display(slice_show_table)
+        display(node_table)
+        if hasNetworks:
+            display(network_table)
 
         if hasNetworks:
             self.list_interfaces()
@@ -1657,6 +1731,8 @@ class Slice:
         wait_interval: int = 20,
         progress: bool = True,
         wait_jupyter: str = "text",
+        post_boot_config: bool = True,
+        wait_ssh: bool = True,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1704,6 +1780,20 @@ class Slice:
                 slice_graph=slice_graph,
                 ssh_key=self.get_slice_public_key(),
             )
+            if return_status == Status.OK:
+                logging.info(
+                    f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
+            else:
+                logging.error(
+                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
+                raise Exception(
+                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
+
+            self.slice_id = slice_reservations[0].slice_id
+
         if return_status != Status.OK:
             raise Exception(
                 "Failed to submit slice: {}, {}".format(
@@ -1712,11 +1802,14 @@ class Slice:
             )
 
         logging.debug(f"slice_reservations: {slice_reservations}")
-        logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        self.slice_id = slice_reservations[0].slice_id
+        # logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        # self.slice_id = slice_reservations[0].slice_id
 
         time.sleep(1)
         self.update()
+
+        if not wait:
+            return self.slice_id
 
         if (
             progress
@@ -1727,15 +1820,19 @@ class Slice:
             return self.slice_id
 
         if wait:
-            self.wait_ssh(
-                timeout=wait_timeout, interval=wait_interval, progress=progress
-            )
+            self.wait()
+
+            if wait_ssh:
+                self.wait_ssh(
+                    timeout=wait_timeout, interval=wait_interval, progress=progress
+                )
 
             if progress:
                 print("Running post boot config ... ", end="")
 
             self.update()
-            self.post_boot_config()
+            if post_boot_config:
+                self.post_boot_config()
 
         if progress:
             print("Done!")
@@ -1810,6 +1907,10 @@ class Slice:
             if val == "Active":
                 color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
             elif val == "Ticketed":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "ActiveTicketed":
+                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "Closed":
                 color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             else:
                 color = ""
@@ -1974,6 +2075,7 @@ class Slice:
         wait_interval: int = 10,
         progress: bool = True,
         wait_jupyter: str = "text",
+        post_boot_config: bool = True,
     ):
         """
         Submits a modify slice request to FABRIC.
@@ -2036,14 +2138,15 @@ class Slice:
                 print("Running post boot config ... ", end="")
 
             self.update()
-            self.post_boot_config()
+            if post_boot_config:
+                self.post_boot_config()
 
         if progress:
             print("Done!")
 
     def modify_accept(self):
         """
-        Submits a accept to accept the last modify slice request to FABRIC.
+        Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
         return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(
@@ -2061,3 +2164,19 @@ class Slice:
         logging.debug(f"modified topology: {topology}")
 
         self.update_slice()
+
+    def get_user_data(self):
+        user_data = {}
+        for node in self.get_nodes():
+            user_data[node.get_name()] = node.get_user_data()
+
+        for network in self.get_networks():
+            user_data[network.get_name()] = network.get_user_data()
+
+        for iface in self.get_interfaces():
+            user_data[iface.get_name()] = iface.get_user_data()
+
+        for componenet in self.get_components():
+            user_data[componenet.get_name()] = componenet.get_user_data()
+
+        return user_data

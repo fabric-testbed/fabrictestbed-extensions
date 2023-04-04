@@ -23,13 +23,15 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
+import ipaddress
+
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
 import json
 
 import logging
-
 
 from typing import TYPE_CHECKING, Any
 
@@ -39,6 +41,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
 
+from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
 
 
@@ -78,10 +81,12 @@ class Interface:
             ["Name", self.get_name()],
             ["Network", network_name],
             ["Bandwidth", self.get_bandwidth()],
+            ["Mode", self.get_mode()],
             ["VLAN", self.get_vlan()],
             ["MAC", self.get_mac()],
             ["Physical Device", self.get_physical_os_interface_name()],
             ["Device", self.get_os_interface()],
+            ["Address", self.get_ip_addr()],
         ]
 
         return tabulate(table)
@@ -99,6 +104,7 @@ class Interface:
     def get_pretty_name_dict():
         return {
             "name": "Name",
+            "short_name": "Short Name",
             "node": "Node",
             "network": "Network",
             "bandwidth": "Bandwidth",
@@ -113,6 +119,8 @@ class Interface:
             "ssh_command": "SSH Command",
             "public_ssh_key_file": "Public SSH Key File",
             "private_ssh_key_file": "Private SSH Key File",
+            "mode": "Mode",
+            "ip_addr": "IP Address",
         }
 
     def toDict(self, skip=[]):
@@ -140,20 +148,31 @@ class Interface:
 
         return {
             "name": str(self.get_name()),
+            "short_name": str(self.get_short_name()),
             "node": str(node_name),
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
-            "vlan": str(self.get_vlan()),
+            "mode": str(self.get_mode()),
+            "vlan": str(self.get_vlan())
+            if self.get_vlan()
+            else "",  # str(self.get_vlan()),
             "mac": str(self.get_mac()),
             "physical_dev": str(self.get_physical_os_interface_name()),
             "dev": str(self.get_os_interface()),
+            "ip_addr": str(self.get_ip_addr()),
         }
+
+    def generate_template_context(self):
+        context = self.toDict()
+        return context
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
+
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
@@ -238,12 +257,22 @@ class Interface:
         :rtype: String
         """
         try:
-            # logging.debug(f"iface: {self}")
-            os_iface = self.get_physical_os_interface_name()
-            vlan = self.get_vlan()
+            fablib_data = self.get_fablib_data()
+            if "dev" in fablib_data:
+                return fablib_data["dev"]
+            else:
+                # logging.debug(f"iface: {self}")
+                os_iface = self.get_physical_os_interface_name()
+                vlan = self.get_vlan()
 
-            if vlan is not None:
-                os_iface = f"{os_iface}.{vlan}"
+                fablib_data["base_dev"] = os_iface
+                if vlan is not None:
+                    os_iface = f"{os_iface}.{vlan}"
+
+                fablib_data["dev"] = os_iface
+
+                self.set_fablib_data(fablib_data)
+
         except:
             os_iface = None
 
@@ -428,6 +457,8 @@ class Interface:
         if_labels.vlan = str(vlan)
         self.get_fim_interface().set_properties(labels=if_labels)
 
+        return self
+
     def get_fim_interface(self) -> FimInterface:
         """
         Not recommended for most users.
@@ -509,6 +540,14 @@ class Interface:
             )
         except:
             return ""
+
+    def get_short_name(self):
+        # strip of the extra parts of the name added by fim
+        return self.get_name()[
+            len(
+                f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"
+            ) :
+        ]
 
     def get_name(self) -> str:
         """
@@ -645,7 +684,7 @@ class Interface:
 
             for addr in addrs:
                 if addr["ifname"] == dev:
-                    return addr["addr_info"][0]["local"]
+                    return ipaddress.ip_address(addr["addr_info"][0]["local"])
 
             return None
         except Exception as e:
@@ -677,3 +716,122 @@ class Interface:
             print(f"Exception: {e}")
 
         return return_ips
+
+    def get_fim(self):
+        return self.get_fim_interface()
+
+    def set_user_data(self, user_data: dict):
+        self.get_fim().set_property(
+            pname="user_data", pval=UserData(json.dumps(user_data))
+        )
+
+    def get_user_data(self):
+        try:
+            return json.loads(str(self.get_fim().get_property(pname="user_data")))
+        except Exception as e:
+            return {}
+
+    def get_fablib_data(self):
+        try:
+            return self.get_user_data()["fablib_data"]
+        except:
+            return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        user_data = self.get_user_data()
+        user_data["fablib_data"] = fablib_data
+        self.set_user_data(user_data)
+
+    def set_network(self, network: NetworkService):
+        current_network = self.get_network()
+        if current_network:
+            current_network.remove_interface(self)
+
+        network.add_interface(self)
+
+        return self
+
+    def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
+        fablib_data = self.get_fablib_data()
+        if mode:
+            fablib_data["mode"] = str(mode)
+
+        mode = fablib_data["mode"]
+        if addr:
+            fablib_data["addr"] = str(self.get_network().allocate_ip(addr))
+        elif mode == "auto":
+            if self.get_network():
+                fablib_data["addr"] = str(self.get_network().allocate_ip())
+        self.set_fablib_data(fablib_data)
+
+        return self
+
+    def get_ip_addr(self):
+        fablib_data = self.get_fablib_data()
+        if "addr" in fablib_data:
+            try:
+                addr = ipaddress.ip_address(fablib_data["addr"])
+            except:
+                addr = fablib_data["addr"]
+            return addr
+        else:
+            return None
+
+    def set_mode(self, mode: str = "user"):
+        fablib_data = self.get_fablib_data()
+        fablib_data["mode"] = mode
+        self.set_fablib_data(fablib_data)
+
+        return self
+
+    def get_mode(self):
+        fablib_data = self.get_fablib_data()
+        if "mode" not in fablib_data:
+            self.set_mode("user")
+            fablib_data = self.get_fablib_data()
+
+        return fablib_data["mode"]
+
+    def config(self):
+        fablib_data = self.get_fablib_data()
+
+        fablib_data = self.get_fablib_data()
+        if "configured" in fablib_data and not bool(fablib_data["configured"]):
+            return
+        fablib_data["configured"] = str(True)
+        self.set_fablib_data(fablib_data)
+
+        if "mode" in fablib_data:
+            mode = fablib_data["mode"]
+        else:
+            mode = "manual"
+
+        if mode == "auto":
+            fablib_data["addr"] = str(self.get_network().allocate_ip())
+            addr = fablib_data["addr"]
+
+            # print(f"auto allocated addr: {addr}")
+
+            self.set_fablib_data(fablib_data)
+
+        if mode == "fablib" or mode == "auto":
+            subnet = self.get_network().get_subnet()
+            if "addr" in fablib_data:
+                addr = fablib_data["addr"]
+                if addr and subnet:
+                    self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+        else:
+            # manual mode... do nothing
+            pass
+
+    def add_mirror(self, port_name: str, name: str = "mirror"):
+        self.get_slice().get_fim_topology().add_port_mirror_service(
+            name=name,
+            from_interface_name=port_name,
+            to_interface=self.get_fim_interface(),
+        )
+
+    def delete(self):
+        net = self.get_network()
+
+        net.remove_interface(self)

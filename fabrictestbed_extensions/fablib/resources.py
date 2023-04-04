@@ -37,6 +37,7 @@ from fabrictestbed.slice_manager import Status
 class Resources:
     site_pretty_names = {
         "name": "Name",
+        "state": "State",
         "address": "Address",
         "location": "Location",
         "hosts": "Hosts",
@@ -193,6 +194,18 @@ class Resources:
             return self.topology.sites[site_name]
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
+            return ""
+
+    def get_state(self, site_name: str):
+        try:
+            return str(
+                self.get_topology_site(site_name)
+                .get_property("maintenance_info")
+                .get(site_name)
+                .state
+            )
+        except Exception as e:
+            logging.warning(f"Failed to get site state {site_name}")
             return ""
 
     def get_component_capacity(self, site_name: str, component_model_name: str) -> int:
@@ -533,6 +546,7 @@ class Resources:
         site_name = site.name
         return {
             "name": site.name,
+            "state": self.get_state(site_name),
             "address": self.get_location_postal(site_name),
             "location": self.get_location_lat_long(site_name),
             "hosts": self.get_host_capacity(site_name),

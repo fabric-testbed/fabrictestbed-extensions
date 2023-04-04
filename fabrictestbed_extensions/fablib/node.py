@@ -23,15 +23,21 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
+import ipaddress
 import json
 import threading
 import time
 import paramiko
 import logging
 
+from fabrictestbed_extensions.fablib.network_service import NetworkService
 from tabulate import tabulate
 import select
 import jinja2
+
+from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
 
 from typing import List, Union, Tuple
@@ -45,7 +51,7 @@ if TYPE_CHECKING:
 from fim.slivers.network_service import NSLayer
 
 from fabrictestbed.slice_editor import Labels, CapacityHints, ServiceType
-from fabrictestbed.slice_editor import Capacities
+from fabrictestbed.slice_editor import Capacities, UserData
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
 from fabrictestbed_extensions.fablib.component import Component
@@ -151,6 +157,8 @@ class Node:
         )
         node.set_image(Node.default_image)
 
+        node.init_fablib_data()
+
         return node
 
     @staticmethod
@@ -227,7 +235,11 @@ class Node:
         if "username" not in skip:
             rtn_dict["username"] = str(self.get_username())
         if "management_ip" not in skip:
-            rtn_dict["management_ip"] = str(self.get_management_ip())
+            rtn_dict["management_ip"] = (
+                str(self.get_management_ip()).strip()
+                if self.get_management_ip()
+                else ""
+            )  # str(self.get_management_ip())
         if "state" not in skip:
             rtn_dict["state"] = str(self.get_reservation_state())
         if "error" not in skip:
@@ -258,24 +270,11 @@ class Node:
         #        "Private SSH Key File": str(self.get_private_key_file()),
         #         }
 
-    def get_template_contextXXX(self):
-        context = {}
-
-        context["node"] = self.toDict(skip=["ssh_command"])
-        context["slice"] = self.get_slice().toDict()
-        context["config"] = self.get_fablib_manager().get_config()
-
-        context["components"] = {}
+    def generate_template_context(self):
+        context = self.toDict(skip=["ssh_command"])
+        context["components"] = []
         for component in self.get_components():
-            context["components"][component.get_name()] = component.toDict()
-
-        context["interfaces"] = {}
-        for interface in self.get_interfaces():
-            context["interfaces"][interface.get_name()] = interface.toDict()
-
-        context["networks"] = {}
-        for network in self.get_networks():
-            context["networks"][network.get_name()] = network.toDict()
+            context["components"].append(component.generate_template_context())
 
         return context
 
@@ -284,10 +283,14 @@ class Node:
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
         return output_string
+
+    def delete(self):
+        self.get_slice().get_fim_topology().remove_node(name=self.get_name())
 
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
@@ -939,7 +942,9 @@ class Node:
         """
         return self.get_slice().get_private_key_passphrase()
 
-    def add_component(self, model: str = None, name: str = None) -> Component:
+    def add_component(
+        self, model: str = None, name: str = None, user_data: dict = {}
+    ) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
         Example model include:
@@ -956,7 +961,9 @@ class Node:
         :return: the new component
         :rtype: Component
         """
-        return Component.new_component(node=self, model=model, name=name)
+        return Component.new_component(
+            node=self, model=model, name=name, user_data=user_data
+        )
 
     def get_components(self) -> List[Component]:
         """
@@ -1126,16 +1133,16 @@ class Node:
 
     def execute(
         self,
-        command,
-        retry=3,
-        retry_interval=10,
-        username=None,
-        private_key_file=None,
-        private_key_passphrase=None,
-        quiet=False,
-        read_timeout=10,
+        command: str,
+        retry: int = 3,
+        retry_interval: int = 10,
+        username: str = None,
+        private_key_file: str = None,
+        private_key_passphrase: str = None,
+        quiet: bool = False,
+        read_timeout: int = 10,
         timeout=None,
-        output_file=None,
+        output_file: str = None,
     ):
         """
         Runs a command on the FABRIC node.
@@ -1402,7 +1409,7 @@ class Node:
     def upload_file_thread(
         self,
         local_file_path: str,
-        remote_file_path: str,
+        remote_file_path: str = ".",
         retry: int = 3,
         retry_interval: int = 10,
     ):
@@ -1436,7 +1443,7 @@ class Node:
     def upload_file(
         self,
         local_file_path: str,
-        remote_file_path: str,
+        remote_file_path: str = ".",
         retry: int = 3,
         retry_interval: int = 10,
     ):
@@ -1779,6 +1786,13 @@ class Node:
                     tar_handle.add(
                         os.path.join(root, file),
                         arcname=os.path.join(root, file)[root_size:],
+                        recursive=True,
+                    )
+                for directory in dirs:
+                    tar_handle.add(
+                        os.path.join(root, directory),
+                        arcname=os.path.join(root, directory)[root_size:],
+                        recursive=True,
                     )
 
         self.upload_file(temp_file, temp_file, retry, retry_interval)
@@ -2100,7 +2114,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                f"{ip_command} addr add {addr}/{subnet.prefixlen} dev {interface.get_device_name()} ",
                 quiet=True,
             )
         except Exception as e:
@@ -2130,7 +2144,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_os_interface()} ",
+                f"{ip_command} addr del {addr}/{subnet.prefixlen} dev {interface.get_device_name()} ",
                 quiet=True,
             )
         except Exception as e:
@@ -2181,7 +2195,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_os_interface()} up",
+                f"{ip_command} link set dev {interface.get_device_name()} up",
                 quiet=True,
             )
         except Exception as e:
@@ -2218,7 +2232,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_os_interface()} down",
+                f"{ip_command} link set dev {interface.get_device_name()} down",
                 quiet=True,
             )
         except Exception as e:
@@ -2417,3 +2431,220 @@ class Node:
         :rtype: Component
         """
         return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
+
+    def get_fim(self):
+        return self.get_fim_node()
+
+    def set_user_data(self, user_data: dict):
+        self.get_fim().set_property(
+            pname="user_data", pval=UserData(json.dumps(user_data))
+        )
+
+    def get_user_data(self):
+        try:
+            return json.loads(str(self.get_fim().get_property(pname="user_data")))
+        except:
+            return {}
+
+    def delete(self):
+        for component in self.get_components():
+            component.delete()
+
+        self.get_slice().get_fim_topology().remove_node(name=self.get_name())
+
+    def init_fablib_data(self):
+        fablib_data = {
+            "instantiated": "False",
+            "run_update_commands": "False",
+            "post_boot_commands": [],
+            "post_update_commands": [],
+        }
+        self.set_fablib_data(fablib_data)
+
+    def get_fablib_data(self):
+        try:
+            return self.get_user_data()["fablib_data"]
+        except:
+            return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        user_data = self.get_user_data()
+        user_data["fablib_data"] = fablib_data
+        self.set_user_data(user_data)
+
+    def add_route(
+        self,
+        subnet: IPv4Network or IPv6Network,
+        next_hop: IPv4Address or IPv6Address or NetworkService,
+    ):
+        if type(next_hop) == NetworkService:
+            next_hop = next_hop.get_name()
+
+        fablib_data = self.get_fablib_data()
+        if "routes" not in fablib_data:
+            fablib_data["routes"] = []
+        fablib_data["routes"].append({"subnet": str(subnet), "next_hop": str(next_hop)})
+        self.set_fablib_data(fablib_data)
+
+    def add_post_update_command(self, command: str):
+        fablib_data = self.get_fablib_data()
+        if "post_update_commands" not in fablib_data:
+            fablib_data["post_update_commands"] = []
+
+        fablib_data["post_update_commands"].append(command)
+        self.set_fablib_data(fablib_data)
+
+    def get_post_update_commands(self):
+        fablib_data = self.get_fablib_data()
+
+        if "post_update_commands" in fablib_data:
+            return fablib_data["post_update_commands"]
+        else:
+            return []
+
+    def add_post_boot_upload_directory(
+        self, local_directory_path: str, remote_directory_path: str = "."
+    ):
+        fablib_data = self.get_fablib_data()
+        if "post_boot_tasks" not in fablib_data:
+            fablib_data["post_boot_tasks"] = []
+        fablib_data["post_boot_tasks"].append(
+            ("upload_directory", local_directory_path, remote_directory_path)
+        )
+        self.set_fablib_data(fablib_data)
+
+    def add_post_boot_upload_file(
+        self, local_file_path: str, remote_file_path: str = "."
+    ):
+        fablib_data = self.get_fablib_data()
+        if "post_boot_tasks" not in fablib_data:
+            fablib_data["post_boot_tasks"] = []
+        fablib_data["post_boot_tasks"].append(
+            ("upload_file", local_file_path, remote_file_path)
+        )
+        self.set_fablib_data(fablib_data)
+
+    def add_post_boot_execute(self, command: str):
+        fablib_data = self.get_fablib_data()
+        if "post_boot_tasks" not in fablib_data:
+            fablib_data["post_boot_tasks"] = []
+        fablib_data["post_boot_tasks"].append(("execute", command))
+        self.set_fablib_data(fablib_data)
+
+    def post_boot_tasks(self):
+        fablib_data = self.get_fablib_data()
+
+        if "post_boot_tasks" in fablib_data:
+            return fablib_data["post_boot_tasks"]
+        else:
+            return []
+
+    def get_routes(self):
+        try:
+            return self.get_fablib_data()["routes"]
+        except Exception as e:
+            return []
+
+    def config_routes(self):
+        routes = self.get_routes()
+
+        for route in routes:
+            try:
+                next_hop = ipaddress.ip_address(route["next_hop"])
+            except Exception as e:
+                net_name = route["next_hop"].split(".")[0]
+                # funct = getattr(NetworkService,funct_name)
+                # next_hop = funct(self.get_slice().get_network(net_name))
+                next_hop = (
+                    self.get_slice().get_network(name=str(net_name)).get_gateway()
+                )
+                # next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
+
+            try:
+                subnet = ipaddress.ip_network(route["subnet"])
+            except Exception as e:
+                net_name = route["subnet"].split(".")[0]
+                subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
+
+            # print(f"subnet: {subnet} ({type(subnet)}, next_hop: {next_hop} ({type(next_hop)}")
+
+            self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
+
+    def run_post_boot_tasks(self, log_dir: str = "."):
+        fablib_data = self.get_fablib_data()
+        if "post_boot_tasks" in fablib_data:
+            commands = fablib_data["post_boot_tasks"]
+        else:
+            commands = []
+
+        for command in commands:
+            if command[0] == "execute":
+                self.execute(
+                    self.render_template(command[1]),
+                    quiet=True,
+                    output_file=f"{log_dir}/{self.get_name()}.log",
+                )
+            elif command[0] == "upload_file":
+                self.upload_file(command[1], command[2])
+            elif command[0] == "upload_directory":
+                self.upload_directory(command[1], command[2])
+            else:
+                logging.error(f"Invalid post boot command: {command}")
+
+    def run_post_update_commands(self, log_dir: str = "."):
+        fablib_data = self.get_fablib_data()
+        if "post_update_commands" in fablib_data:
+            commands = fablib_data["post_update_commands"]
+        else:
+            commands = []
+
+        for command in commands:
+            self.execute(
+                command, quiet=True, output_file=f"{log_dir}/{self.get_name()}.log"
+            )
+
+    def is_instantiated(self):
+        fablib_data = self.get_fablib_data()
+        if fablib_data["instantiated"] == "True":
+            logging.debug(
+                f"is_instantiated True, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}"
+            )
+            return True
+        else:
+            logging.debug(
+                f"is_instantiated False, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}"
+            )
+            return False
+
+    def set_instantiated(self, instantiated: bool = True):
+        fablib_data = self.get_fablib_data()
+        fablib_data["instantiated"] = str(instantiated)
+        self.set_fablib_data(fablib_data)
+
+    def run_update_commands(self):
+        fablib_data = self.get_fablib_data()
+        if fablib_data["run_update_commands"] == "True":
+            return True
+        else:
+            return False
+
+    def set_run_update_commands(self, run_update_commands: bool = True):
+        fablib_data = self.get_fablib_data()
+        fablib_data["run_update_commands"] = str(run_update_commands)
+        self.set_fablib_data(fablib_data)
+
+    def config(self, log_dir="."):
+        self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
+
+        for iface in self.get_interfaces():
+            iface.config()
+        self.config_routes()
+
+        if not self.is_instantiated():
+            self.set_instantiated(True)
+            self.run_post_boot_tasks()
+
+        if self.run_update_commands():
+            self.run_post_update_commands()
+
+        return "Done"
