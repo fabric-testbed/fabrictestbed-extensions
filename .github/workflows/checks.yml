@@ -10,13 +10,23 @@ on:
 
 permissions:
   contents: read
+  # Allow 1Password/check-signed-commits-action to leave comments on
+  # pull requests.
+  pull-requests: write
 
 jobs:
 
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out sources
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # since we need to diff against origin/main.
+
+      # https://github.com/marketplace/actions/check-signed-commits-in-pr
+      - name: Check that commits are signed
+        uses: 1Password/check-signed-commits-action@v1
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
@@ -33,3 +43,13 @@ jobs:
       - name: Run "black --check"
         run: |
           python -m black --check --verbose .
+
+      # Remind PR authors to update CHANGELOG.md
+      - name: Check that Changelog has been updated
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no changelog')
+        run: |
+          # `git diff --exit-code` exits with 1 if there were
+          # differences and 0 means no differences. Here we negate
+          # that, because we want to fail if changelog has not been
+          # updated.
+          ! git diff --exit-code "origin/${GITHUB_BASE_REF}" -- CHANGELOG.md

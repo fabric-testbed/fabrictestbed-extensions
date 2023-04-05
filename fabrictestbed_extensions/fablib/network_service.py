@@ -569,6 +569,8 @@ class NetworkService:
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
+
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
