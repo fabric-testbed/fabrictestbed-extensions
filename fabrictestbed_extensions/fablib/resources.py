@@ -875,3 +875,103 @@ class Links(Resources):
             filter_function=filter_function,
             pretty_names_dict=pretty_names_dict,
         )
+
+
+class FacilityPorts(Resources):
+    link_pretty_names = {
+        "site_name": "Site",
+        "node_id": "Link Name",
+        "vlan_range": "VLAN Range",
+        "link_layer": "Link Layer",
+    }
+
+    def __init__(self, fablib_manager):
+        """
+        Constructor
+        :return:
+        """
+        super().__init__(fablib_manager)
+
+    def __str__(self) -> str:
+        """
+        Creates a tabulated string of all the links.
+
+        Intended for printing available resources.
+
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
+        table = []
+        for _, link in self.topology.links.items():
+            iface = link.interface_list[0]
+            site_names = iface.name.split("_")
+            if iface.type.name == "FacilityPort":
+                table.append(
+                    [
+                        tuple(site_names),
+                        link.node_id,
+                        iface.labels.vlan_range,
+                        link.layer,
+                    ]
+                )
+
+        return tabulate(
+            table,
+            headers=[
+                "site_name",
+                "node_id",
+                "vlan_range",
+                "link_layer",
+            ],
+        )
+
+    def fp_to_dict(self, link: link.Link, iface: interface.Interface) -> dict:
+        """
+        Converts the link resources to a dictionary.
+
+        Intended for printing links in table format.
+
+        :return: collection of link properties
+        :rtype: dict
+        """
+        return {
+            "site_name": tuple(iface.name.split("_")),
+            "node_id": link.node_id,
+            "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
+            "link_layer": link.layer,
+        }
+
+    def list_facility_ports(
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ) -> object:
+        """
+        Print a table of link resources in pretty format.
+
+        :return: formatted table of resources
+        :rtype: object
+        """
+        table = []
+        for _, link in self.topology.links.items():
+            iface = link.interface_list[0]
+            if iface.type.name == "FacilityPort":
+                table.append(self.fp_to_dict(link, iface))
+
+        if pretty_names:
+            pretty_names_dict = self.link_pretty_names
+        else:
+            pretty_names_dict = {}
+
+        return self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Facility Ports",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
