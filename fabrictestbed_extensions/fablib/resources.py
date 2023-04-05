@@ -806,7 +806,12 @@ class Links(Resources):
             site_names = iface.name.split("_")
             if iface.type.name == "TrunkPort" and "HundredGig" not in site_names[0]:
                 table.append(
-                    [tuple(site_names), link.node_id, iface.capacities.bw, link.layer]
+                    [
+                        tuple(site_names),
+                        link.node_id,
+                        iface.capacities.bw if iface.capacities else "N/A",
+                        link.layer,
+                    ]
                 )
 
         return tabulate(
@@ -831,7 +836,7 @@ class Links(Resources):
         return {
             "site_names": tuple(iface.name.split("_")),
             "node_id": link.node_id,
-            "link_capacity_Gbps": iface.capacities.bw,
+            "link_capacity_Gbps": iface.capacities.bw if iface.capacities else "N/A",
             "link_layer": link.layer,
         }
 
@@ -870,12 +875,3 @@ class Links(Resources):
             filter_function=filter_function,
             pretty_names_dict=pretty_names_dict,
         )
-
-
-class FacilityPort(Resources):
-    def __init__(self, fablib_manager):
-        """
-        Constructor
-        :return:
-        """
-        super().__init__(fablib_manager)
