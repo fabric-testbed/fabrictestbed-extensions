@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uploaded post-boot, and commands can be submitted to be run
   post-boot.
 - A way to define layer-2 networks.
+- A way to query links between sites as well as facility ports and print them in a tabular format.
 
 ### Changed
 
