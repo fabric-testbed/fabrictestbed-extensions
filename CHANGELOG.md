@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed an issue with auto network configuration executing twice
 - Fablib will now fail early when required configuration is missing
   (issue
   [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
