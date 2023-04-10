@@ -165,7 +165,7 @@ class NetworkService:
 
         # models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
         if type == NetworkService.network_service_map["L2Bridge"]:
-            if not len(sites) <= 0 or len(sites) >= 1:
+            if len(sites) <= 0 or len(sites) > 1:
                 raise Exception(
                     f"Network type {type} must be empty or include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
                 )

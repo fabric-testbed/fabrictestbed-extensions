@@ -790,7 +790,7 @@ class Interface:
         else:
             return None
 
-    def set_mode(self, mode: str = "user"):
+    def set_mode(self, mode: str = "config"):
         fablib_data = self.get_fablib_data()
         fablib_data["mode"] = mode
         self.set_fablib_data(fablib_data)
@@ -800,7 +800,7 @@ class Interface:
     def get_mode(self):
         fablib_data = self.get_fablib_data()
         if "mode" not in fablib_data:
-            self.set_mode("user")
+            self.set_mode("config")
             fablib_data = self.get_fablib_data()
 
         return fablib_data["mode"]
