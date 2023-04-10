@@ -2604,6 +2604,12 @@ class Node:
 
     def is_instantiated(self):
         fablib_data = self.get_fablib_data()
+        if "instantiated" not in fablib_data:
+            logging.debug(
+                f"is_instantiated False, {self.get_name()}, fablib_data['instantiated']: does not exist"
+            )
+            return False
+
         if fablib_data["instantiated"] == "True":
             logging.debug(
                 f"is_instantiated True, {self.get_name()}, fablib_data['instantiated']: {fablib_data['instantiated']}"
