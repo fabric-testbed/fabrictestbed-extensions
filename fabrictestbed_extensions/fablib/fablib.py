@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fim.user import Node as FimNode
 
-from fabrictestbed_extensions.fablib.resources import Resources
+from fabrictestbed_extensions.fablib.resources import Resources, Links, FacilityPorts
 from fabrictestbed_extensions.fablib.slice import Slice
 
 
@@ -90,6 +90,46 @@ class fablib:
         :rtype: str
         """
         return fablib.get_default_fablib_manager().list_sites()
+
+    @staticmethod
+    def list_links() -> object:
+        """
+        Print the links in pretty format
+
+        :return: Formatted list of links
+        :rtype: object
+        """
+        return fablib.get_default_fablib_manager().list_links()
+
+    @staticmethod
+    def get_links() -> str:
+        """
+        Get a string used to print a tabular list of links
+
+        :return: tabulated string of links
+        :rtype: str
+        """
+        return fablib.get_default_fablib_manager().get_links()
+
+    @staticmethod
+    def list_facility_ports() -> object:
+        """
+        Print the facility ports in pretty format
+
+        :return: Formatted list of facility ports
+        :rtype: object
+        """
+        return fablib.get_default_fablib_manager().list_facility_ports()
+
+    @staticmethod
+    def get_facility_ports() -> str:
+        """
+        Get a string used to print a tabular list of facility ports
+
+        :return: tabulated string of facility ports
+        :rtype: str
+        """
+        return fablib.get_default_fablib_manager().get_facility_ports()
 
     @staticmethod
     def show_site(site_name: str):
@@ -748,6 +788,8 @@ class FablibManager:
         # Create slice manager
         self.slice_manager = None
         self.resources = None
+        self.links = None
+        self.facility_ports = None
         self.build_slice_manager()
 
     def _validate_configuration(self):
@@ -1022,6 +1064,98 @@ class FablibManager:
             pretty_names=pretty_names,
         )
 
+    def list_links(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names=True,
+    ) -> object:
+        """
+        Lists all the links and their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: TODO
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+        return self.get_links(update=update).list_links(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
+        )
+
+    def list_facility_ports(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names=True,
+    ) -> object:
+        """
+        Lists all the facility ports and their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: TODO
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+        return self.get_facility_ports(update=update).list_facility_ports(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
+        )
+
     def show_config(
         self,
         output: str = None,
@@ -1109,6 +1243,41 @@ class FablibManager:
                 pretty_names=pretty_names,
             )
         )
+
+    def get_links(self, update: bool = True) -> Links:
+        """
+        Get the links.
+
+        Optionally update the available resources by querying the FABRIC
+        services. Otherwise, this method returns the existing information.
+
+        :param update:
+        :return: Links
+        """
+
+        if self.links is None:
+            self.links = Links(self)
+        elif update:
+            self.links.update()
+
+        return self.links
+
+    def get_facility_ports(self, update: bool = True) -> FacilityPorts:
+        """
+        Get the facility ports.
+
+        Optionally update the available resources by querying the FABRIC
+        services. Otherwise, this method returns the existing information.
+
+        :param update:
+        :return: Links
+        """
+        if self.facility_ports is None:
+            self.facility_ports = FacilityPorts(self)
+        elif update:
+            self.facility_ports.update()
+
+        return self.facility_ports
 
     def get_resources(self, update: bool = True) -> Resources:
         """
