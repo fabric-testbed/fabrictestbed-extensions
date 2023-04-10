@@ -146,16 +146,16 @@ class Interface:
         else:
             node_name = None
 
-        if self.get_node() and str(self.get_node().get_reservation_state()) == 'Active':
+        if self.get_node() and str(self.get_node().get_reservation_state()) == "Active":
             mac = str(self.get_mac())
             physical_dev = str(self.get_physical_os_interface_name())
             dev = str(self.get_os_interface())
             ip_addr = str(self.get_ip_addr())
         else:
-            mac = ''
-            physical_dev = ''
-            dev = ''
-            ip_addr = ''
+            mac = ""
+            physical_dev = ""
+            dev = ""
+            ip_addr = ""
 
         return {
             "name": str(self.get_name()),
@@ -623,15 +623,21 @@ class Interface:
         """
 
         if self.network is not None:
-            logging.debug(f"Interface known network. Returning known network for interface {self.get_name()}")
+            logging.debug(
+                f"Interface known network. Returning known network for interface {self.get_name()}"
+            )
             return self.network
         else:
-            logging.debug(f"Interface does not known network. Finding network for interface {self.get_name()}")
+            logging.debug(
+                f"Interface does not known network. Finding network for interface {self.get_name()}"
+            )
 
             for net in self.get_slice().get_networks():
                 if net.has_interface(self):
                     self.network = net
-                    logging.debug(f"Interface network found. interface {self.get_name()}, network {self.network.get_name()}")
+                    logging.debug(
+                        f"Interface network found. interface {self.get_name()}, network {self.network.get_name()}"
+                    )
                     return self.network
 
         return None
@@ -810,10 +816,12 @@ class Interface:
 
         fablib_data = self.get_fablib_data()
         if "configured" in fablib_data and bool(fablib_data["configured"]):
-            logging.debug(f'interface {self.get_name()} already configured, skipping config.')
+            logging.debug(
+                f"interface {self.get_name()} already configured, skipping config."
+            )
             return
         else:
-            logging.debug(f'interface {self.get_name()} not configured, configuring.')
+            logging.debug(f"interface {self.get_name()} not configured, configuring.")
 
         fablib_data["configured"] = str(True)
         self.set_fablib_data(fablib_data)

@@ -500,7 +500,9 @@ class Slice:
 
         context["components"] = {}
         for component in self.get_components():
-            context["components"][component.get_name()] = component.generate_template_context()
+            context["components"][
+                component.get_name()
+            ] = component.generate_template_context()
 
         context["interfaces"] = {}
         for interface in self.get_interfaces():
@@ -508,7 +510,9 @@ class Slice:
 
         context["networks"] = {}
         for network in self.get_networks():
-            context["networks"][network.get_name()] = network.generate_template_context()
+            context["networks"][
+                network.get_name()
+            ] = network.generate_template_context()
 
         return context
 

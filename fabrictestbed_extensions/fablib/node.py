@@ -237,7 +237,8 @@ class Node:
         if "management_ip" not in skip:
             rtn_dict["management_ip"] = (
                 str(self.get_management_ip()).strip()
-                if str(self.get_reservation_state()) == 'Active' and self.get_management_ip()
+                if str(self.get_reservation_state()) == "Active"
+                and self.get_management_ip()
                 else ""
             )  # str(self.get_management_ip())
         if "state" not in skip:
@@ -245,10 +246,10 @@ class Node:
         if "error" not in skip:
             rtn_dict["error"] = str(self.get_error_message())
         if "ssh_command" not in skip:
-            if str(self.get_reservation_state()) == 'Active':
+            if str(self.get_reservation_state()) == "Active":
                 rtn_dict["ssh_command"] = str(self.get_ssh_command())
             else:
-                rtn_dict["ssh_command"] = ''
+                rtn_dict["ssh_command"] = ""
         if "public_ssh_key_file" not in skip:
             rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
         if "private_ssh_key_file" not in skip:
@@ -259,7 +260,7 @@ class Node:
     def generate_template_context(self):
         context = self.toDict(skip=["ssh_command"])
         context["components"] = []
-        #for component in self.get_components():
+        # for component in self.get_components():
         #    context["components"].append(component.get_name())
 
         #    context["components"].append(component.generate_template_context())
@@ -462,10 +463,11 @@ class Node:
         :rtype: Object
         """
 
-        if str(self.get_reservation_state()) != 'Active':
-            logging.debug(f"Node {self.get_name()} is {self.get_reservation_state()}, Skipping get interfaces.")
+        if str(self.get_reservation_state()) != "Active":
+            logging.debug(
+                f"Node {self.get_name()} is {self.get_reservation_state()}, Skipping get interfaces."
+            )
             return
-
 
         ifaces = []
         for iface in self.get_interfaces():
@@ -1176,11 +1178,15 @@ class Node:
             f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
         )
 
-        if not self.get_reservation_state() == 'Active':
-            logging.debug(f"Execute failed. Node {self.get_name()} in state {self.get_reservation_state()}")
+        if not self.get_reservation_state() == "Active":
+            logging.debug(
+                f"Execute failed. Node {self.get_name()} in state {self.get_reservation_state()}"
+            )
 
         if not self.get_management_ip():
-            logging.debug(f"Execute failed. Node {self.get_name()} in management IP  {self.get_management_ip()}")
+            logging.debug(
+                f"Execute failed. Node {self.get_name()} in management IP  {self.get_management_ip()}"
+            )
 
         # if not quiet:
         chunking = True

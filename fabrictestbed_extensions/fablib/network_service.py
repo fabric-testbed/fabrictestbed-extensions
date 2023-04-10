@@ -565,7 +565,7 @@ class NetworkService:
     def generate_template_context(self):
         context = self.toDict()
         context["interfaces"] = []
-        #for interface in self.get_interfaces():
+        # for interface in self.get_interfaces():
         #    context["interfaces"].append(interface.get_name())
 
         return context
