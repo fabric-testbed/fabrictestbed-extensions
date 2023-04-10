@@ -165,7 +165,7 @@ class NetworkService:
 
         # models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
         if type == NetworkService.network_service_map["L2Bridge"]:
-            if not len(sites) <= 0 or len(sites) >= 1:
+            if len(sites) <= 0 or len(sites) > 1:
                 raise Exception(
                     f"Network type {type} must be empty or include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
                 )
@@ -562,6 +562,14 @@ class NetworkService:
             "error": str(self.get_error_message()),
         }
 
+    def generate_template_context(self):
+        context = self.toDict()
+        context["interfaces"] = []
+        # for interface in self.get_interfaces():
+        #    context["interfaces"].append(interface.get_name())
+
+        return context
+
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
 
@@ -808,7 +816,7 @@ class NetworkService:
                 .reservation_id
             )
         except Exception as e:
-            logging.warning(f"Failed to get reservation_id: {e}")
+            logging.debug(f"Failed to get reservation_id: {e}")
             return None
 
     def get_reservation_state(self) -> str or None:
@@ -844,7 +852,6 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-
         interfaces = []
         for interface in self.get_fim_network_service().interface_list:
             logging.debug(f"interface: {interface}")

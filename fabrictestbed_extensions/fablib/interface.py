@@ -146,6 +146,17 @@ class Interface:
         else:
             node_name = None
 
+        if self.get_node() and str(self.get_node().get_reservation_state()) == "Active":
+            mac = str(self.get_mac())
+            physical_dev = str(self.get_physical_os_interface_name())
+            dev = str(self.get_os_interface())
+            ip_addr = str(self.get_ip_addr())
+        else:
+            mac = ""
+            physical_dev = ""
+            dev = ""
+            ip_addr = ""
+
         return {
             "name": str(self.get_name()),
             "short_name": str(self.get_short_name()),
@@ -156,10 +167,10 @@ class Interface:
             "vlan": str(self.get_vlan())
             if self.get_vlan()
             else "",  # str(self.get_vlan()),
-            "mac": str(self.get_mac()),
-            "physical_dev": str(self.get_physical_os_interface_name()),
-            "dev": str(self.get_os_interface()),
-            "ip_addr": str(self.get_ip_addr()),
+            "mac": mac,
+            "physical_dev": physical_dev,
+            "dev": dev,
+            "ip_addr": ip_addr,
         }
 
     def generate_template_context(self):
@@ -610,17 +621,25 @@ class Interface:
         :return: the network service this interface is on
         :rtype: NetworkService
         """
+
         if self.network is not None:
-            # print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, {self.network.get_name()}")
+            logging.debug(
+                f"Interface known network. Returning known network for interface {self.get_name()}"
+            )
             return self.network
         else:
+            logging.debug(
+                f"Interface does not known network. Finding network for interface {self.get_name()}"
+            )
+
             for net in self.get_slice().get_networks():
                 if net.has_interface(self):
                     self.network = net
-                    # print(f"return found network, {self.network.get_name()}")
+                    logging.debug(
+                        f"Interface network found. interface {self.get_name()}, network {self.network.get_name()}"
+                    )
                     return self.network
 
-        # print(f"hasattr(self, 'network'): {hasattr(self, 'network')}, None")
         return None
 
     # fablib.Interface.get_ip_link()
@@ -777,7 +796,7 @@ class Interface:
         else:
             return None
 
-    def set_mode(self, mode: str = "user"):
+    def set_mode(self, mode: str = "config"):
         fablib_data = self.get_fablib_data()
         fablib_data["mode"] = mode
         self.set_fablib_data(fablib_data)
@@ -787,7 +806,7 @@ class Interface:
     def get_mode(self):
         fablib_data = self.get_fablib_data()
         if "mode" not in fablib_data:
-            self.set_mode("user")
+            self.set_mode("config")
             fablib_data = self.get_fablib_data()
 
         return fablib_data["mode"]
@@ -796,8 +815,14 @@ class Interface:
         fablib_data = self.get_fablib_data()
 
         fablib_data = self.get_fablib_data()
-        if "configured" in fablib_data and not bool(fablib_data["configured"]):
+        if "configured" in fablib_data and bool(fablib_data["configured"]):
+            logging.debug(
+                f"interface {self.get_name()} already configured, skipping config."
+            )
             return
+        else:
+            logging.debug(f"interface {self.get_name()} not configured, configuring.")
+
         fablib_data["configured"] = str(True)
         self.set_fablib_data(fablib_data)
 
@@ -814,7 +839,7 @@ class Interface:
 
             self.set_fablib_data(fablib_data)
 
-        if mode == "fablib" or mode == "auto":
+        if mode == "config" or mode == "auto":
             subnet = self.get_network().get_subnet()
             if "addr" in fablib_data:
                 addr = fablib_data["addr"]
