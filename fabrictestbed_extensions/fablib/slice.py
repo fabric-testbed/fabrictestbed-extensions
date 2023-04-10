@@ -493,22 +493,22 @@ class Slice:
         context["config"] = self.get_fablib_manager().get_config()
         context["slice"] = self.toDict()
 
-        context["nodes"] = []
+        context["nodes"] = {}
         for node in self.get_nodes():
             node_context = node.generate_template_context()
-            context["nodes"].append(node_context)
+            context["nodes"][node.get_name()] = node_context
 
-        # context["components"] = []
-        # for component in self.get_components():
-        #    context["components"].append(component.toDict())
+        context["components"] = {}
+        for component in self.get_components():
+            context["components"][component.get_name()] = component.generate_template_context()
 
-        # context["interfaces"] = []
-        # for interface in self.get_interfaces():
-        #    context["interfaces"].append(interface.toDict())
+        context["interfaces"] = {}
+        for interface in self.get_interfaces():
+            context["interfaces"][interface.get_name()] = interface.toDict()
 
-        context["networks"] = []
+        context["networks"] = {}
         for network in self.get_networks():
-            context["networks"].append(network.toDict())
+            context["networks"][network.get_name()] = network.generate_template_context()
 
         return context
 
@@ -595,7 +595,7 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
-        logging.info(f"update_slivers: {self.get_name()}")
+        logging.debug(f"update_slivers: {self.get_name()}")
 
         if self.sm_slice is None:
             return
@@ -1561,8 +1561,9 @@ class Slice:
 
         for node in self.get_nodes():
             # print(f"Configuring {node.get_name()}")
-            thread = my_thread_pool_executor.submit(node.config)
-            threads[thread] = node
+            if not node.is_instantiated():
+                thread = my_thread_pool_executor.submit(node.config)
+                threads[thread] = node
 
         print(
             f"Running post boot config threads ..."

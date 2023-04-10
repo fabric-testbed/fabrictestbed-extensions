@@ -100,6 +100,7 @@ class Component:
             "model": "Model",
             "type": "Type",
             "dev": "Device",
+            "node": "Node",
         }
 
     def toDict(self, skip=[]):
@@ -119,13 +120,16 @@ class Component:
             "model": str(self.get_model()),
             "type": str(self.get_type()),
             "dev": str(self.get_device_name()),
+            "node": str(self.get_node().get_name())
         }
 
     def generate_template_context(self):
         context = self.toDict()
         context["interfaces"] = []
-        for interface in self.get_interfaces():
-            context["interfaces"].append(interface.generate_template_context())
+        #for interface in self.get_interfaces():
+        #    context["interfaces"].append(interface.get_name())
+
+        #    context["interfaces"].append(interface.generate_template_context())
         return context
 
     def get_template_context(self):

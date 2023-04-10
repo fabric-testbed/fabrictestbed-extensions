@@ -237,7 +237,7 @@ class Node:
         if "management_ip" not in skip:
             rtn_dict["management_ip"] = (
                 str(self.get_management_ip()).strip()
-                if self.get_management_ip()
+                if str(self.get_reservation_state()) == 'Active' and self.get_management_ip()
                 else ""
             )  # str(self.get_management_ip())
         if "state" not in skip:
@@ -245,36 +245,24 @@ class Node:
         if "error" not in skip:
             rtn_dict["error"] = str(self.get_error_message())
         if "ssh_command" not in skip:
-            rtn_dict["ssh_command"] = str(self.get_ssh_command())
+            if str(self.get_reservation_state()) == 'Active':
+                rtn_dict["ssh_command"] = str(self.get_ssh_command())
+            else:
+                rtn_dict["ssh_command"] = ''
         if "public_ssh_key_file" not in skip:
             rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
         if "private_ssh_key_file" not in skip:
             rtn_dict["private_ssh_key_file"] = str(self.get_private_key_file())
 
         return rtn_dict
-        # return { "ID":  str(self.get_reservation_id()),
-        #        "Name": str(self.get_name()),
-        #        "Cores": str(self.get_cores()),
-        #        "RAM": str(self.get_ram()),
-        #        "Disk": str(self.get_disk()),
-        #        "Image": str(self.get_image()),
-        #        "Image Type": str(self.get_image_type()),
-        #        "Host": str(self.get_host()),
-        #        "Site": str(self.get_site()),
-        #        "Username" : str(self.get_username()),
-        #        "Management IP": str(self.get_management_ip()),
-        #        "State": str(self.get_reservation_state()),
-        #        "Error": str(self.get_error_message()),
-        #        "SSH Command": str(self.get_ssh_command()),
-        #        "Public SSH Key File": str(self.get_public_key_file()),
-        #        "Private SSH Key File": str(self.get_private_key_file()),
-        #         }
 
     def generate_template_context(self):
         context = self.toDict(skip=["ssh_command"])
         context["components"] = []
-        for component in self.get_components():
-            context["components"].append(component.generate_template_context())
+        #for component in self.get_components():
+        #    context["components"].append(component.get_name())
+
+        #    context["components"].append(component.generate_template_context())
 
         return context
 
@@ -473,6 +461,11 @@ class Node:
         :return: table in format specified by output parameter
         :rtype: Object
         """
+
+        if str(self.get_reservation_state()) != 'Active':
+            logging.debug(f"Node {self.get_name()} is {self.get_reservation_state()}, Skipping get interfaces.")
+            return
+
 
         ifaces = []
         for iface in self.get_interfaces():
@@ -1182,6 +1175,12 @@ class Node:
         logging.debug(
             f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
         )
+
+        if not self.get_reservation_state() == 'Active':
+            logging.debug(f"Execute failed. Node {self.get_name()} in state {self.get_reservation_state()}")
+
+        if not self.get_management_ip():
+            logging.debug(f"Execute failed. Node {self.get_name()} in management IP  {self.get_management_ip()}")
 
         # if not quiet:
         chunking = True
@@ -1985,7 +1984,7 @@ class Node:
                     stdout, stderr = self.execute(f"sudo ip list", quiet=True)
                     return stdout
         except Exception as e:
-            logging.warning(f"Failed to get ip addr list: {e}")
+            logging.debug(f"Failed to get ip addr list: {e}")
             raise e
 
     def ip_route_add(

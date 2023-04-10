@@ -146,6 +146,17 @@ class Interface:
         else:
             node_name = None
 
+        if self.get_node() and str(self.get_node().get_reservation_state()) == 'Active':
+            mac = str(self.get_mac())
+            physical_dev = str(self.get_physical_os_interface_name())
+            dev = str(self.get_os_interface())
+            ip_addr = str(self.get_ip_addr())
+        else:
+            mac = ''
+            physical_dev = ''
+            dev = ''
+            ip_addr = ''
+
         return {
             "name": str(self.get_name()),
             "short_name": str(self.get_short_name()),
@@ -156,10 +167,10 @@ class Interface:
             "vlan": str(self.get_vlan())
             if self.get_vlan()
             else "",  # str(self.get_vlan()),
-            "mac": str(self.get_mac()),
-            "physical_dev": str(self.get_physical_os_interface_name()),
-            "dev": str(self.get_os_interface()),
-            "ip_addr": str(self.get_ip_addr()),
+            "mac": mac,
+            "physical_dev": physical_dev,
+            "dev": dev,
+            "ip_addr": ip_addr,
         }
 
     def generate_template_context(self):
