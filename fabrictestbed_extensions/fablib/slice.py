@@ -1926,10 +1926,6 @@ class Slice:
         for network in self.get_networks():
             table.append(network.toDict())
 
-        # if fields == None:
-        #    fields = ["ID", "Name", "Layer", "Type",
-        #              "Site", "Gateway", "L3 Subnet", "State",
-        #              "Error"]
         if pretty_names:
             pretty_names_dict = NetworkService.get_pretty_name_dict()
         else:
