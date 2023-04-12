@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support new GPU models has been added (PR
   [#122](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/122)).
+- Support for maintenance mode (PR
+  [#137](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/137/),
+  issues
+  [#120](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/120),
+  [#125](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/125))
+- Userdata support.
+- Automatically assigning IPs, depending on mode.
+- Support for post-boot configuration.  Files or directories can be
+  uploaded post-boot, and commands can be submitted to be run
+  post-boot.
+- A way to define layer-2 networks.
+- A way to query link and facility port information
 - FablibManager validates its configuration (PR
   [#121](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/121),
   [#136](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/136))
@@ -26,9 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+
 - Fablib will now fail early when required configuration is missing
   (issue
   [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
+- Fixed an issue with auto network configuration executing twice
+- Fablib will now fail early when required configuration is missing
+  (issue
+  [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
+- A workaround for Debian/Ubuntu nmcli transition.
+
 
 ## [1.3.4] - 2023-01-19
 

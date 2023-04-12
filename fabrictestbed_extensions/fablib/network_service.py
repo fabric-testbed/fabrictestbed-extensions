@@ -38,7 +38,10 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_editor import ServiceType, NetworkService as FimNetworkService
 from fim.slivers.network_service import ServiceType, NSLayer
 
+from fabrictestbed.slice_editor import UserData
+
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
+import ipaddress
 import json
 
 
@@ -112,7 +115,7 @@ class NetworkService:
                 basic_nic_count += 1
 
         rtn_nstype = None
-        if len(sites) == 1:
+        if len(sites) <= 1 and len(sites) >= 0:
             rtn_nstype = NetworkService.network_service_map["L2Bridge"]
         # elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
         #    #TODO: remove this when STS works on all links.
@@ -162,9 +165,9 @@ class NetworkService:
 
         # models: 'NIC_Basic', 'NIC_ConnectX_6', 'NIC_ConnectX_5'
         if type == NetworkService.network_service_map["L2Bridge"]:
-            if not len(sites) == 1:
+            if len(sites) > 1:
                 raise Exception(
-                    f"Network type {type} must include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
+                    f"Network type {type} must be empty or include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
                 )
 
         elif type == NetworkService.network_service_map["L2PTP"]:
@@ -212,6 +215,7 @@ class NetworkService:
         name: str = None,
         interfaces: List[Interface] = [],
         type: str = None,
+        user_data={},
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -236,7 +240,11 @@ class NetworkService:
         # NetworkService.validate_nstype(nstype, interfaces)
 
         return NetworkService.new_network_service(
-            slice=slice, name=name, nstype=nstype, interfaces=interfaces
+            slice=slice,
+            name=name,
+            nstype=nstype,
+            interfaces=interfaces,
+            user_data=user_data,
         )
 
     @staticmethod
@@ -245,6 +253,7 @@ class NetworkService:
         name: str = None,
         interfaces: List[Interface] = [],
         type: str = None,
+        user_data: dict = {},
     ):
         """
         Not inteded for API use. See slice.add_l2network
@@ -276,7 +285,7 @@ class NetworkService:
         # validate nstype and interface List
         NetworkService.validate_nstype(nstype, interfaces)
 
-        # Set default VLANs for P2P networks that did not assing VLANs
+        # Set default VLANs for P2P networks that did not pass in VLANs
         if nstype == ServiceType.L2PTP:  # or nstype == ServiceType.L2STS:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
@@ -297,10 +306,14 @@ class NetworkService:
             #    if interface.get_model() != 'NIC_Basic' and not interface.get_vlan():
             #
             #        interface.set_vlan("100")
-
-        return NetworkService.new_network_service(
-            slice=slice, name=name, nstype=nstype, interfaces=interfaces
+        network_service = NetworkService.new_network_service(
+            slice=slice,
+            name=name,
+            nstype=nstype,
+            interfaces=interfaces,
+            user_data=user_data,
         )
+        return network_service
 
     @staticmethod
     def new_network_service(
@@ -308,9 +321,10 @@ class NetworkService:
         name: str = None,
         nstype: ServiceType = None,
         interfaces: List[Interface] = [],
+        user_data: dict = {},
     ):
         """
-        Not inteded for API use. See slice.add_l2network
+        Not intended for API use. See slice.add_l2network
 
 
         Creates a new FABRIC network service and returns the fablib instance.
@@ -336,12 +350,18 @@ class NetworkService:
             name=name, nstype=nstype, interfaces=fim_interfaces
         )
 
-        return NetworkService(slice=slice, fim_network_service=fim_network_service)
+        network_service = NetworkService(
+            slice=slice, fim_network_service=fim_network_service
+        )
+        network_service.set_user_data(user_data)
+        network_service.init_fablib_data()
+
+        return network_service
 
     @staticmethod
     def get_l3network_services(slice: Slice = None) -> list:
         """
-        Not inteded for API use.
+        Not intended for API use.
         """
         topology = slice.get_fim_topology()
 
@@ -536,17 +556,27 @@ class NetworkService:
             "layer": str(self.get_layer()),
             "type": str(self.get_type()),
             "site": str(self.get_site()),
-            "gateway": str(self.get_gateway()),
             "subnet": str(self.get_subnet()),
+            "gateway": str(self.get_gateway()),
             "state": str(self.get_reservation_state()),
             "error": str(self.get_error_message()),
         }
+
+    def generate_template_context(self):
+        context = self.toDict()
+        context["interfaces"] = []
+        # for interface in self.get_interfaces():
+        #    context["interfaces"].append(interface.get_name())
+
+        return context
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
+
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
@@ -631,7 +661,8 @@ class NetworkService:
         :rtype: String
         """
         try:
-            return self.get_sliver().fim_sliver.layer
+            return self.get_fim().get_property(pname="layer")
+            # return self.get_sliver().fim_sliver.layer
         except Exception as e:
             logging.warning(f"Failed to get layer: {e}")
             return None
@@ -644,7 +675,8 @@ class NetworkService:
         :rtype: String
         """
         try:
-            return self.get_sliver().fim_sliver.resource_type
+            return self.get_fim().get_property(pname="type")
+            # return self.get_sliver().fim_sliver.resource_type
         except Exception as e:
             logging.warning(f"Failed to get type: {e}")
             return None
@@ -688,11 +720,25 @@ class NetworkService:
         """
         try:
             gateway = None
-            if self.get_layer() == NSLayer.L3:
-                if self.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
-                    gateway = IPv6Address(self.get_sliver().fim_sliver.gateway.gateway)
-                elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
-                    gateway = IPv4Address(self.get_sliver().fim_sliver.gateway.gateway)
+
+            if self.is_instantiated():
+                if self.get_layer() == NSLayer.L3:
+                    gateway = ipaddress.ip_address(
+                        self.get_sliver().fim_sliver.gateway.gateway
+                    )
+                    # if self.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
+                #    gateway = IPv6Address(self.get_sliver().fim_sliver.gateway.gateway)
+                # elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
+                #    gateway = IPv4Address(self.get_sliver().fim_sliver.gateway.gateway)
+                else:
+                    # L2 Network
+                    fablib_data = self.get_fablib_data()
+                    try:
+                        gateway = ipaddress.ip_address(fablib_data["subnet"]["gateway"])
+                    except Exception as e:
+                        gateway = None
+            else:
+                gateway = f"{self.get_name()}.gateway"
 
             return gateway
         except Exception as e:
@@ -703,7 +749,7 @@ class NetworkService:
         self, count: int = 256
     ) -> List[IPv4Address or IPv6Address] or None:
         """
-        Gets the IPs available for a FABnet L3 network.
+        Gets the IPs available for a FABnet L3 network
 
         Note: large IPv6 address spaces take considerable time to build this
         list. By default this will return the first 256 addresses.  If you needed
@@ -727,18 +773,30 @@ class NetworkService:
 
     def get_subnet(self) -> IPv4Network or IPv6Network or None:
         """
-        Gets the assigend subnet for a FABnetv L3 IPv6 or IPv4 network
+        Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network
 
         :return: gateway IP
         :rtype: IPv4Network or IPv6Network
         """
         try:
             subnet = None
-            if self.get_layer() == NSLayer.L3:
-                if self.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
-                    subnet = IPv6Network(self.get_sliver().fim_sliver.gateway.subnet)
-                elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
-                    subnet = IPv4Network(self.get_sliver().fim_sliver.gateway.subnet)
+            if self.is_instantiated():
+                if self.get_layer() == NSLayer.L3:
+                    subnet = ipaddress.ip_network(
+                        self.get_sliver().fim_sliver.gateway.subnet
+                    )
+                else:
+                    # L2 Network
+                    fablib_data = self.get_fablib_data()
+                    try:
+                        subnet = ipaddress.ip_network(fablib_data["subnet"]["subnet"])
+                    except Exception as e:
+                        logging.warning(f"Failed to get L2 subnet: {e}")
+
+                        subnet = None
+            else:
+                subnet = f"{self.get_name()}.subnet"
+
             return subnet
         except Exception as e:
             logging.warning(f"Failed to get subnet: {e}")
@@ -758,7 +816,7 @@ class NetworkService:
                 .reservation_id
             )
         except Exception as e:
-            logging.warning(f"Failed to get reservation_id: {e}")
+            logging.debug(f"Failed to get reservation_id: {e}")
             return None
 
     def get_reservation_state(self) -> str or None:
@@ -794,7 +852,6 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-
         interfaces = []
         for interface in self.get_fim_network_service().interface_list:
             logging.debug(f"interface: {interface}")
@@ -832,3 +889,205 @@ class NetworkService:
                 return True
 
         return False
+
+    def get_fim(self):
+        return self.get_fim_network_service()
+
+    def set_user_data(self, user_data: dict):
+        self.get_fim().set_property(
+            pname="user_data", pval=UserData(json.dumps(user_data))
+        )
+
+    def get_user_data(self):
+        try:
+            return json.loads(str(self.get_fim().get_property(pname="user_data")))
+        except:
+            return {}
+
+    def __replace_network_service(self, nstype: ServiceType):
+        fim_interfaces = []
+        name = self.get_name()
+
+        for interface in self.get_interfaces():
+            fim_interfaces.append(interface.get_fim_interface())
+            self.get_fim().disconnect_interface(interface=interface.get_fim())
+
+        user_data = self.get_user_data()
+        self.get_slice().topology.remove_network_service(name=self.get_name())
+
+        self.fim_network_service = self.get_slice().topology.add_network_service(
+            name=name, nstype=nstype, interfaces=fim_interfaces
+        )
+        self.set_user_data(user_data)
+
+    def add_interface(self, interface: Interface):
+        iface_fablib_data = interface.get_fablib_data()
+
+        new_interfaces = self.get_interfaces()
+        new_interfaces.append(interface)
+
+        curr_nstype = self.get_type()
+        if self.get_layer() == NSLayer.L2:
+            new_nstype = NetworkService.calculate_l2_nstype(interfaces=new_interfaces)
+            if curr_nstype != new_nstype:
+                self.__replace_network_service(new_nstype)
+        elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
+            if interface.get_site() != self.get_site():
+                raise Exception("L3 networks can only include nodes from one site")
+
+        if "addr" in iface_fablib_data:
+            addr = iface_fablib_data["addr"]
+        else:
+            addr = None
+
+        if "auto" in iface_fablib_data:
+            auto = iface_fablib_data["auto"]
+        else:
+            auto = False
+
+        if self.get_subnet():
+            if addr:
+                iface_fablib_data["addr"] = str(self.allocate_ip(addr))
+            elif auto:
+                iface_fablib_data["addr"] = str(self.allocate_ip())
+
+        interface.set_fablib_data(iface_fablib_data)
+
+        self.get_fim().connect_interface(interface=interface.get_fim())
+
+    def remove_interface(self, interface: Interface):
+        iface_fablib_data = interface.get_fablib_data()
+
+        self.free_ip(interface.get_ip_addr())
+
+        interfaces = self.get_interfaces()
+
+        if interface in interfaces:
+            interfaces.remove(interface)
+
+        curr_nstype = self.get_type()
+        if self.get_layer() == NSLayer.L2:
+            new_nstype = NetworkService.calculate_l2_nstype(interfaces=interfaces)
+            if curr_nstype != new_nstype:
+                self.__replace_network_service(new_nstype)
+
+        interface.set_fablib_data(iface_fablib_data)
+
+        self.get_fim().disconnect_interface(interface=interface.get_fim())
+
+    def delete(self):
+        self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
+
+    def get_fablib_data(self):
+        try:
+            return self.get_user_data()["fablib_data"]
+        except:
+            return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        user_data = self.get_user_data()
+        user_data["fablib_data"] = fablib_data
+        self.set_user_data(user_data)
+
+    def set_subnet(self, subnet: IPv4Network or IPv6Network):
+        fablib_data = self.get_fablib_data()
+        if "subnet" not in fablib_data:
+            fablib_data["subnet"] = {}
+        fablib_data["subnet"]["subnet"] = str(subnet)
+        fablib_data["subnet"]["allocated_ips"] = []
+        self.set_fablib_data(fablib_data)
+
+    def set_gateway(self, gateway: IPv4Address or IPv6Address):
+        fablib_data = self.get_fablib_data()
+        if "subnet" not in fablib_data:
+            fablib_data["subnet"] = {}
+        fablib_data["subnet"]["gateway"] = str(gateway)
+        self.set_fablib_data(fablib_data)
+
+    def get_allocated_ips(self):
+        try:
+            allocated_ips = []
+            for addr in self.get_fablib_data()["subnet"]["allocated_ips"]:
+                allocated_ips.append(ipaddress.ip_address(addr))
+
+            return allocated_ips
+        except Exception as e:
+            return []
+
+    def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
+        fablib_data = self.get_fablib_data()
+        allocated_ips = fablib_data["subnet"]["allocated_ips"]
+        allocated_ips.append(str(addr))
+        self.set_fablib_data(fablib_data)
+
+    def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
+        subnet = self.get_subnet()
+        allocated_ips = self.get_allocated_ips()
+
+        if addr:
+            # if addr != subnet.network_address and addr not in allocated_ips:
+            if addr not in allocated_ips:
+                self.set_allocated_ip(addr)
+                return addr
+        elif (
+            type(subnet) == ipaddress.IPv4Network
+            or type(subnet) == ipaddress.IPv6Network
+        ):
+            for host in subnet:
+                if host != subnet.network_address and host not in allocated_ips:
+                    self.set_allocated_ip(host)
+
+                    return host
+        return None
+
+    def set_allocated_ips(self, allocated_ips: dict[IPv4Address or IPv6Address]):
+        fablib_data = self.get_fablib_data()
+        allocated_ips_strs = []
+        for ip in allocated_ips:
+            allocated_ips_strs.append(str(ip))
+
+        fablib_data["subnet"]["allocated_ips"] = allocated_ips_strs
+        self.set_fablib_data(fablib_data)
+
+    def free_ip(self, addr: IPv4Address or IPv6Address):
+        allocated_ips = self.get_allocated_ips()
+        if addr in allocated_ips:
+            allocated_ips.remove(addr)
+        self.set_allocated_ips(allocated_ips)
+
+    def set_gateway(self, gateway: IPv4Address or IPv6Address):
+        fablib_data = self.get_fablib_data()
+        fablib_data["subnet"]["gateway"] = str(gateway)
+        self.set_fablib_data(fablib_data)
+
+    def init_fablib_data(self):
+        fablib_data = {"instantiated": "False", "mode": "manual"}
+        self.set_fablib_data(fablib_data)
+
+    def is_instantiated(self):
+        fablib_data = self.get_fablib_data()
+        if fablib_data["instantiated"] == "True":
+            return True
+        else:
+            return False
+
+    def set_instantiated(self, instantiated: bool = True):
+        fablib_data = self.get_fablib_data()
+        fablib_data["instantiated"] = str(instantiated)
+        self.set_fablib_data(fablib_data)
+
+    def config(self):
+        if not self.is_instantiated():
+            self.set_instantiated(True)
+
+        # init
+        if self.get_layer() == NSLayer.L3:
+            # init fablib data for fabnet networks
+            self.set_subnet(self.get_subnet())
+            self.set_gateway(self.get_gateway())
+            allocated_ips = self.get_allocated_ips()
+            if not allocated_ips:
+                allocated_ips = []
+            if self.get_gateway() not in allocated_ips:
+                allocated_ips.append(self.get_gateway())
+            self.set_allocated_ip(self.get_gateway())

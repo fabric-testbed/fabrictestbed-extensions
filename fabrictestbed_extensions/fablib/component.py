@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
+    from fabrictestbed_extensions.fablib.interface import Interface
 
 from tabulate import tabulate
 from typing import List
@@ -38,6 +39,7 @@ import logging
 
 from fabrictestbed.slice_editor import ComponentModelType, Labels, Flags
 from fabrictestbed.slice_editor import Component as FimComponent
+from fabrictestbed.slice_editor import UserData
 
 
 class Component:
@@ -90,12 +92,15 @@ class Component:
     def get_pretty_name_dict():
         return {
             "name": "Name",
+            "short_name": "Short Name",
             "details": "Details",
             "disk": "Disk",
             "units": "Units",
             "pci_address": "PCI Address",
             "model": "Model",
             "type": "Type",
+            "dev": "Device",
+            "node": "Node",
         }
 
     def toDict(self, skip=[]):
@@ -107,19 +112,32 @@ class Component:
         """
         return {
             "name": str(self.get_name()),
+            "short_name": str(self.get_short_name()),
             "details": str(self.get_details()),
             "disk": str(self.get_disk()),
             "units": str(self.get_unit()),
             "pci_address": str(self.get_pci_addr()),
             "model": str(self.get_model()),
             "type": str(self.get_type()),
+            "dev": str(self.get_device_name()),
+            "node": str(self.get_node().get_name()),
         }
+
+    def generate_template_context(self):
+        context = self.toDict()
+        context["interfaces"] = []
+        # for interface in self.get_interfaces():
+        #    context["interfaces"].append(interface.get_name())
+
+        #    context["interfaces"].append(interface.generate_template_context())
+        return context
 
     def get_template_context(self):
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
         environment = jinja2.Environment()
+        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
 
@@ -257,7 +275,9 @@ class Component:
         return f"{node.get_name()}-{name}"
 
     @staticmethod
-    def new_component(node: Node = None, model: str = None, name: str = None):
+    def new_component(
+        node: Node = None, model: str = None, name: str = None, user_data: dict = {}
+    ):
         """
         Not intended for API use
 
@@ -275,12 +295,14 @@ class Component:
         # Hack to make it possile to find interfaces
         name = Component.calculate_name(node=node, name=name)
 
-        return Component(
+        component = Component(
             node=node,
             fim_component=node.fim_node.add_component(
                 model_type=Component.component_model_map[model], name=name
             ),
         )
+        component.set_user_data(user_data)
+        return component
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
         """
@@ -351,6 +373,10 @@ class Component:
         :rtype: String
         """
         return self.node.get_site()
+
+    def get_short_name(self):
+        # strip of the extra parts of the name added by fim
+        return self.get_name()[len(f"{self.get_node().get_name()}-") :]
 
     def get_name(self) -> str:
         """
@@ -587,3 +613,25 @@ class Component:
             flags=Flags(auto_mount=auto_mount),
         )
         return Component(node=node, fim_component=fim_component)
+
+    def get_fim(self):
+        return self.get_fim_component()
+
+    def set_user_data(self, user_data: dict):
+        self.get_fim().set_property(
+            pname="user_data", pval=UserData(json.dumps(user_data))
+        )
+
+    def get_user_data(self):
+        try:
+            return json.loads(str(self.get_fim().get_property(pname="user_data")))
+        except:
+            return {}
+
+    def delete(self):
+        for interface in self.get_interfaces():
+            interface.delete()
+
+        self.get_slice().get_fim_topology().nodes[
+            self.get_node().get_name()
+        ].remove_component(name=self.get_name())
