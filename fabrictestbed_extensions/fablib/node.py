@@ -2576,13 +2576,19 @@ class Node:
             self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
 
     def run_post_boot_tasks(self, log_dir: str = "."):
+
+        logging.debug(f'run_post_boot_tasks: {self.get_name()}')
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" in fablib_data:
             commands = fablib_data["post_boot_tasks"]
         else:
             commands = []
 
+        logging.debug(f'run_post_boot_tasks: commands: {commands}')
+
         for command in commands:
+            logging.debug(f'run_post_boot_tasks: command: {command}')
+
             if command[0] == "execute":
                 self.execute(
                     self.render_template(command[1]),
@@ -2590,9 +2596,17 @@ class Node:
                     output_file=f"{log_dir}/{self.get_name()}.log",
                 )
             elif command[0] == "upload_file":
-                self.upload_file(command[1], command[2])
+                logging.debug(f'run_post_boot_tasks: upload_file: {command}')
+
+                rtnval = self.upload_file(command[1], command[2])
+                logging.debug(f'run_post_boot_tasks: upload_file rtnval: {rtnval}')
+
             elif command[0] == "upload_directory":
-                self.upload_directory(command[1], command[2])
+                logging.debug(f'run_post_boot_tasks: upload_directory: {command}')
+
+                rtnval = self.upload_directory(command[1], command[2])
+                logging.debug(f'run_post_boot_tasks: upload_directory rtnval: {rtnval}')
+
             else:
                 logging.error(f"Invalid post boot command: {command}")
 
@@ -2645,6 +2659,7 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def config(self, log_dir="."):
+
         self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
 
         for iface in self.get_interfaces():
