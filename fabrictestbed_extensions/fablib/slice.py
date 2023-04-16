@@ -1706,11 +1706,17 @@ class Slice:
                 self.update()
                 if len(self.get_interfaces()) > 0:
                     hasNetworks = True
+                else:
+                    hasNetworks = False
                 if self.isReady():
                     break
             else:
                 if verbose:
                     self.update()
+                    if len(self.get_interfaces()) > 0:
+                        hasNetworks = True
+                    else:
+                        hasNetworks = False
                 else:
                     self.update_slice()
 
@@ -1747,14 +1753,13 @@ class Slice:
 
             count += 1
 
-        print(f"\nTime to stable {time.time() - start:.0f} seconds")
 
         #self.update()
 
-        if len(self.get_interfaces()) > 0:
-            hasNetworks = True
-        else:
-            hasNetworks = False
+        #if len(self.get_interfaces()) > 0:
+        #    hasNetworks = True
+        #else:
+        #    hasNetworks = False
 
         slice_show_table = self.show(colors=True, quiet=True)
         node_table = self.list_nodes(colors=True, quiet=True)
@@ -1767,6 +1772,8 @@ class Slice:
         display(node_table)
         if hasNetworks and network_table:
             display(network_table)
+
+        print(f"\nTime to stable {time.time() - start:.0f} seconds")
 
         print("Running post_boot_config ... ")
         self.post_boot_config()
