@@ -1889,8 +1889,8 @@ class Slice:
         #time.sleep(1)
         #self.update()
 
-        if not wait:
-            return self.slice_id
+        #if not wait:
+        #    return self.slice_id
 
         if (
                 progress
@@ -1901,6 +1901,8 @@ class Slice:
             return self.slice_id
 
         elif wait:
+            self.update()
+
             self.wait()
 
             if wait_ssh:
@@ -1911,11 +1913,11 @@ class Slice:
             if progress:
                 print("Running post boot config ... ", end="")
 
-            self.update()
             if post_boot_config:
                 self.post_boot_config()
         else:
             self.update()
+            return self.slice_id
 
         if progress:
             print("Done!")
