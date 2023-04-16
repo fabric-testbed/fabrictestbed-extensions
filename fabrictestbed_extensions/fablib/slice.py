@@ -82,6 +82,12 @@ class Slice:
 
         self.slice_key = fablib_manager.get_default_slice_key()
 
+        self.update_topology_count = 0
+        self.update_slivers_count = 0
+        self.update_slice_count = 0
+        self.update_count = 0
+
+
     def get_fablib_manager(self):
         return self.fablib_manager
 
@@ -538,7 +544,8 @@ class Slice:
 
         :raises Exception: if slice manager slice no longer exists
         """
-        logging.info(f"update_slice: {self.get_name()}")
+        self.update_slice_count += 1
+        logging.info(f"update_slice: {self.get_name()}, count: {self.update_slice_count}")
 
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
@@ -570,7 +577,8 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
-        logging.info(f"update_topology: {self.get_name()}")
+        self.update_topology_count += 1
+        logging.info(f"update_topology: {self.get_name()}, count: {self.update_topology_count}")
 
         # Update topology
         if self.sm_slice.model is not None and self.sm_slice.model != "":
@@ -600,7 +608,10 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
-        logging.debug(f"update_slivers: {self.get_name()}")
+        self.update_slivers_count += 1
+        logging.debug(f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}")
+
+
 
         if self.sm_slice is None:
             return
@@ -630,7 +641,8 @@ class Slice:
 
         :raises Exception: if updating topology fails
         """
-        logging.info(f"update : {self.get_name()}")
+        self.update_count += 1
+        logging.info(f"update : {self.get_name()}, count: {self.update_count}")
 
         try:
             self.update_slice()
@@ -1610,15 +1622,16 @@ class Slice:
 
     def isReady(self, update=False):
         if not self.isStable():
+            logging.debug(f"isReady: {self.get_name()} not stable ({self.get_state()}), returning false")
             return False
 
         if update:
             self.update()
 
         for node in self.get_nodes():
-            if node.get_reservation_state() == "Ticketed":
+            if node.get_reservation_state() == "Ticketed" or not node.get_reservation_state() or node.get_reservation_state() == 'None':
                 logging.warning(
-                    f"slice not ready: node {node.get_name()} status: {node.get_status()}"
+                    f"slice not ready: node {node.get_name()} status: {node.get_reservation_state()}"
                 )
                 return False
 
@@ -1652,7 +1665,7 @@ class Slice:
 
         return True
 
-    def wait_jupyter(self, timeout: int = 1800, interval: int = 10, verbose=False):
+    def wait_jupyter(self, timeout: int = 1800, interval: int = 30, verbose=False):
         """
         Waits for the slice to be in a stable and displays jupyter compliant tables of the slice progress.
 
@@ -1668,6 +1681,8 @@ class Slice:
         from IPython.display import clear_output
         import time
 
+        logging.debug(f"wait_jupyter: slice {self.get_name()}")
+
         start = time.time()
 
         if len(self.get_interfaces()) > 0:
@@ -1677,17 +1692,22 @@ class Slice:
 
         count = 0
         # while not self.isStable():
-        while not self.isReady():
+        #while not self.isReady():
+        while True:
             if time.time() > start + timeout:
                 raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
 
             time.sleep(interval)
+            stable=False
             self.update_slice()
             self.update_slivers()
             if self.isStable():
+                stable=True
                 self.update()
                 if len(self.get_interfaces()) > 0:
                     hasNetworks = True
+                if self.isReady():
+                    break
             else:
                 if verbose:
                     self.update()
@@ -1698,7 +1718,7 @@ class Slice:
             sliver_table = self.list_slivers(colors=True, quiet=True)
 
             logging.debug(f"sliver_table: {sliver_table}")
-            if self.isStable() or verbose:
+            if stable or verbose:
                 node_table = self.list_nodes(colors=True, quiet=True)
                 if hasNetworks:
                     network_table = self.list_networks(colors=True, quiet=True)
@@ -1709,23 +1729,27 @@ class Slice:
             clear_output(wait=True)
 
             print(f"\nRetry: {count}, Time: {time_string}")
+            logging.debug(f"{self.get_name()}, update_count: {self.update_count}, update_topology_count: {self.update_topology_count}, update_slivers_count: {self.update_slivers_count},  update_slice_count: {self.update_slice_count}")
 
-            if self.isStable():
+            if stable:
                 if slice_show_table: display(slice_show_table)
                 if node_table: display(node_table)
-                if network_table and hasNetworks:
+                if hasNetworks and network_table:
                     display(network_table)
+
             else:
                 if slice_show_table: display(slice_show_table)
                 if sliver_table: display(sliver_table)
                 if verbose:
                     if node_table: display(node_table)
-                    if hasNetworks:
-                        if network_table: display(network_table)
+                    if hasNetworks and network_table:
+                        display(network_table)
 
             count += 1
 
         print(f"\nTime to stable {time.time() - start:.0f} seconds")
+
+        #self.update()
 
         if len(self.get_interfaces()) > 0:
             hasNetworks = True
@@ -1741,7 +1765,7 @@ class Slice:
 
         display(slice_show_table)
         display(node_table)
-        if hasNetworks:
+        if hasNetworks and network_table:
             display(network_table)
 
         print("Running post_boot_config ... ")
@@ -1749,7 +1773,8 @@ class Slice:
         print(f"Time to post boot config {time.time() - start:.0f} seconds")
 
         # Last update to get final data for display
-        self.update()
+        # no longer needed because post_boot_config does this
+        #self.update()
 
         slice_show_table = self.show(colors=True, quiet=True)
         node_table = self.list_nodes(colors=True, quiet=True)
@@ -1832,6 +1857,9 @@ class Slice:
                 logging.info(
                     f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}"
                 )
+                logging.debug(f"slice_reservations: {slice_reservations}")
+                logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+                self.slice_id = slice_reservations[0].slice_id
             else:
                 logging.error(
                     f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
@@ -1840,8 +1868,6 @@ class Slice:
                     f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
                 )
 
-            self.slice_id = slice_reservations[0].slice_id
-
         if return_status != Status.OK:
             raise Exception(
                 "Failed to submit slice: {}, {}".format(
@@ -1849,12 +1875,12 @@ class Slice:
                 )
             )
 
-        logging.debug(f"slice_reservations: {slice_reservations}")
-        # logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        # self.slice_id = slice_reservations[0].slice_id
+        #logging.debug(f"slice_reservations: {slice_reservations}")
+        #logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        #self.slice_id = slice_reservations[0].slice_id
 
-        time.sleep(1)
-        self.update()
+        #time.sleep(1)
+        #self.update()
 
         if not wait:
             return self.slice_id
@@ -1867,7 +1893,7 @@ class Slice:
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 
-        if wait:
+        elif wait:
             self.wait()
 
             if wait_ssh:
@@ -1881,6 +1907,8 @@ class Slice:
             self.update()
             if post_boot_config:
                 self.post_boot_config()
+        else:
+            self.update()
 
         if progress:
             print("Done!")
@@ -2067,7 +2095,7 @@ class Slice:
         def state_color(val):
             if val == "Active":
                 color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
-            elif val == "Ticketed" or val == "Nascent":
+            elif val == "Ticketed" or val == "Nascent" or val == "ActiveTicketed":
                 color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             else:
                 color = ""
@@ -2089,7 +2117,7 @@ class Slice:
                 type='node'
             else:
                 type=sliver.sliver_type
-                
+
             table.append({'id': sliver.sliver_id,
                           'name': sliver.sliver['Name'],
                           'type': type,
@@ -2299,11 +2327,11 @@ class Slice:
             )
 
         logging.debug(f"slice_reservations: {slice_reservations}")
-        logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        self.slice_id = slice_reservations[0].slice_id
+        #logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+        #self.slice_id = slice_reservations[0].slice_id
 
-        time.sleep(1)
-        self.update()
+        #time.sleep(1)
+        #self.update()
 
         if (
                 progress
@@ -2313,7 +2341,7 @@ class Slice:
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
 
-        if wait:
+        elif wait:
             self.wait_ssh(
                 timeout=wait_timeout, interval=wait_interval, progress=progress
             )
@@ -2324,9 +2352,14 @@ class Slice:
             self.update()
             if post_boot_config:
                 self.post_boot_config()
+        else:
+            self.update()
 
         if progress:
             print("Done!")
+
+        return self.slice_id
+
 
     def modify_accept(self):
         """
