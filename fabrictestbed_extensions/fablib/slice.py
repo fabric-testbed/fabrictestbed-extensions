@@ -1683,6 +1683,7 @@ class Slice:
 
             time.sleep(interval)
             self.update_slice()
+            self.update_slivers()
             if self.isStable():
                 self.update()
                 if len(self.get_interfaces()) > 0:
@@ -1710,17 +1711,17 @@ class Slice:
             print(f"\nRetry: {count}, Time: {time_string}")
 
             if self.isStable():
-                display(slice_show_table)
-                display(node_table)
-                if hasNetworks:
+                if slice_show_table: display(slice_show_table)
+                if node_table: display(node_table)
+                if network_table and hasNetworks:
                     display(network_table)
             else:
-                display(slice_show_table)
-                display(sliver_table)
+                if slice_show_table: display(slice_show_table)
+                if sliver_table: display(sliver_table)
                 if verbose:
-                    display(node_table)
+                    if node_table: display(node_table)
                     if hasNetworks:
-                        display(network_table)
+                        if network_table: display(network_table)
 
             count += 1
 
@@ -1957,8 +1958,8 @@ class Slice:
                 color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
             elif val == "ActiveTicketed":
                 color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
-            elif val == "Closed":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "Failed":
+                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -1967,6 +1968,8 @@ class Slice:
         table = []
         for network in self.get_networks():
             table.append(network.toDict())
+
+        table = sorted(table, key=lambda x: (x['name']))
 
         if pretty_names:
             pretty_names_dict = NetworkService.get_pretty_name_dict()
@@ -1985,7 +1988,7 @@ class Slice:
             pretty_names_dict=pretty_names_dict,
         )
 
-        if colors:
+        if table and colors:
             if pretty_names:
                 # table = table.apply(highlight, axis=1)
                 table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
@@ -1995,7 +1998,7 @@ class Slice:
                 table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
                 table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
 
-        if not quiet:
+        if table and not quiet:
             display(table)
 
         return table
@@ -2079,14 +2082,23 @@ class Slice:
                 error = reservation_info['error_message']
             except:
                 error = ''
-            table.append({'name': sliver.sliver['Name'],
-                          'id': sliver.sliver_id,
-                          'type': sliver.sliver_type,
+
+            if sliver.sliver_type == 'NetworkServiceSliver':
+                type='network'
+            elif sliver.sliver_type == 'NodeSliver':
+                type='node'
+            else:
+                type=sliver.sliver_type
+                
+            table.append({'id': sliver.sliver_id,
+                          'name': sliver.sliver['Name'],
+                          'type': type,
                           'state': sliver.state,
                           'error': error
                           })
 
             logging.debug(sliver)
+        table = sorted(table, key=lambda x: ([-ord(c) for c in x['type']], x['name']))
 
         logging.debug(f'table: {table}')
 
@@ -2112,7 +2124,7 @@ class Slice:
             pretty_names_dict=pretty_names_dict,
         )
 
-        if colors:
+        if table and colors:
             if pretty_names:
                 # table = table.apply(highlight, axis=1)
                 table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
@@ -2121,7 +2133,8 @@ class Slice:
                 # table = table.apply(highlight, axis=1)
                 table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
                 table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
-        if not quiet:
+
+        if table and not quiet:
             display(table)
 
         return table
@@ -2201,6 +2214,8 @@ class Slice:
         for node in self.get_nodes():
             table.append(node.toDict())
 
+        table = sorted(table, key=lambda x: (x['name']))
+
         # if fields == None:
         #    fields = ["ID", "Name", "Site", "Host",
         #              "Cores", "RAM", "Disk", "Image",
@@ -2223,7 +2238,7 @@ class Slice:
             pretty_names_dict=pretty_names_dict,
         )
 
-        if colors:
+        if table and colors:
             if pretty_names:
                 # table = table.apply(highlight, axis=1)
                 table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
@@ -2232,7 +2247,7 @@ class Slice:
                 # table = table.apply(highlight, axis=1)
                 table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
                 table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
-        if not quiet:
+        if table and not quiet:
             display(table)
 
         return table

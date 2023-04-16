@@ -2105,12 +2105,15 @@ class FablibManager:
         output=None,
         quiet=False,
     ):
+        if len(table) == 0:
+            return None
+
         if headers is not None:
             printable_table = pd.DataFrame(table, columns=headers)
         else:
             printable_table = pd.DataFrame(table)
 
-            # Table config (maybe some of this is unnecessary?
+        # Table config (maybe some of this is unnecessary?
         # df.style.set_properties(**{'background-color': 'black',
         #                   'color': 'green'})
 
@@ -2180,10 +2183,6 @@ class FablibManager:
             ],
             overwrite=False,
         )
-
-        # printable_table = printable_table.set_table_styles([dict(selector='.level0',
-        #                                                         props=[('border', '1px black solid !important')])],
-        #                                                   overwrite=False)
 
         if not quiet:
             display(printable_table)
