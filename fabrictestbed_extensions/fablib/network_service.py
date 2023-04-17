@@ -23,6 +23,7 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import logging
 
 from tabulate import tabulate
@@ -499,8 +500,8 @@ class NetworkService:
         self.slice = slice
 
         try:
-            if slice.isStable():
-                self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+            if self.slice.isStable():
+                self.sliver = self.slice.get_sliver(reservation_id=self.get_reservation_id())
         except:
             pass
         
@@ -691,6 +692,8 @@ class NetworkService:
             return None
 
     def get_sliver(self) -> OrchestratorSliver:
+        if not self.sliver and self.slice.isStable():
+            self.sliver = self.slice.get_sliver(reservation_id=self.get_reservation_id())
         return self.sliver
 
     def get_fim_network_service(self) -> FimNetworkService:
