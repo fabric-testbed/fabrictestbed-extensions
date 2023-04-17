@@ -35,10 +35,16 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fabrictestbed.slice_editor import ServiceType, NetworkService as FimNetworkService
+from fabrictestbed.slice_editor import (
+    ServiceType,
+    Labels,
+    Flags,
+    NetworkService as FimNetworkService,
+)
 from fim.slivers.network_service import ServiceType, NSLayer
 
 from fabrictestbed.slice_editor import UserData
+from fabric_cf.orchestrator.orchestrator_proxy import Status
 
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 import ipaddress
@@ -1054,6 +1060,18 @@ class NetworkService:
         if addr in allocated_ips:
             allocated_ips.remove(addr)
         self.set_allocated_ips(allocated_ips)
+
+    def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
+        labels = self.fim_network_service.labels
+        if labels is None:
+            labels = Labels()
+        if self.fim_network_service.type == ServiceType.FABNetv4Ext:
+            labels = Labels.update(labels, ipv4=ipv4)
+
+        elif self.fim_network_service.type == ServiceType.FABNetv6Ext:
+            labels = Labels.update(labels, ipv6=ipv6)
+
+        self.fim_network_service.set_properties(labels=labels)
 
     def set_gateway(self, gateway: IPv4Address or IPv6Address):
         fablib_data = self.get_fablib_data()
