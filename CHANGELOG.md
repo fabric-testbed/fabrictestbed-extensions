@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A way to define layer-2 networks.
 - A way to query link and facility port information
 - Added function to make IP address of node publicly routable with external networking. `make_ip_publicly_routable`
+- Streamlined polling after a submit to reduce load on the control framework
 
 ### Changed
 
@@ -33,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#74](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/74)).
 - Make configure_nvme() more generic (PR
   [#126](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/126)).
+
+
 
 ### Fixed
 
