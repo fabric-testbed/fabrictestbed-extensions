@@ -143,7 +143,9 @@ class FablibManagerTests(unittest.TestCase):
         # TODO - (1) check that the token is a readable file.  Leave
         # the validation to FABRIC API; (2) use our own exception
         # class that holds a list of error strings.  The assertEqual
-        # below is unweildy.
+        # below is unweildy; (3) Improve error messages.  What key are
+        # we talking about?  Public or private key? Bastion or
+        # slice/sliver key?
         expected_error = (
             "Error initializing FablibManager: ["
             + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
