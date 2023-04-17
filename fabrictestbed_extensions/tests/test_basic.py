@@ -20,7 +20,7 @@ class FablibManagerTests(unittest.TestCase):
         Constants.FABRIC_CREDMGR_HOST,
         Constants.FABRIC_ORCHESTRATOR_HOST,
         Constants.FABRIC_PROJECT_ID,
-        # Constants.FABRIC_TOKEN_LOCATION,
+        Constants.FABRIC_TOKEN_LOCATION,
         FablibManager.FABRIC_BASTION_HOST,
         FablibManager.FABRIC_BASTION_USERNAME,
         FablibManager.FABRIC_BASTION_KEY_LOCATION,
@@ -141,8 +141,7 @@ class FablibManagerTests(unittest.TestCase):
         self.assertIsInstance(ctx.exception, AttributeError)
 
         expected_error = (
-            "Error initializing FablibManager: "
-            + "['FABRIC token is not set', "
+            "Error initializing FablibManager: ["
             + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
             + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
             + "'Error reading SSH key: None (error: Key object may not be empty)', "
