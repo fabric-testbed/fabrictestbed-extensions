@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   post-boot.
 - A way to define layer-2 networks.
 - A way to query link and facility port information
+- Added function to make IP address of node publicly routable with external networking. `make_ip_publicly_routable`
 
 ### Changed
 
