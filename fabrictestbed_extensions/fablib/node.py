@@ -86,9 +86,12 @@ class Node:
             self.username = None
 
         try:
-            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+            if self.get_reservation_id():
+                self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
         except:
-            self.sliver = None
+            pass
+
+        self.sliver = None
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 

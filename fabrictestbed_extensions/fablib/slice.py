@@ -634,6 +634,7 @@ class Slice:
 
     def get_slivers(self) -> List[OrchestratorSliver]:
         if not self.slivers:
+            logging.debug(f'get_slivers', stack_info=False)
             self.update_slivers()
 
         return self.slivers
@@ -1692,24 +1693,36 @@ class Slice:
 
         logging.debug(f"wait_jupyter: slice {self.get_name()}")
 
-        start = time.time()
+        time.sleep(60)      
 
-        if len(self.get_interfaces()) > 0:
-            hasNetworks = True
-        else:
-            hasNetworks = False
+        start = time.time()
+        
+        logging.debug(f"wait_jupyte (1): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
+        #if len(self.get_interfaces()) > 0:
+        #    hasNetworks = True
+        #else:
+        #    hasNetworks = False
 
         count = 0
         # while not self.isStable():
         # while not self.isReady():
         while True:
+            logging.debug(f"wait_jupyter (2): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
             if time.time() > start + timeout:
                 raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
 
             time.sleep(interval)
+            logging.debug(f"wait_jupyter (3): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
             stable = False
             self.update_slice()
+            logging.debug(f"wait_jupyter (4): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
             self.update_slivers()
+            logging.debug(f"wait_jupyter (5): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
             if self.isStable():
                 stable = True
                 self.update()
@@ -1729,16 +1742,27 @@ class Slice:
                 else:
                     self.update_slice()
 
+            logging.debug(f"wait_jupyter (10): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
             slice_show_table = self.show(colors=True, quiet=True)
+            logging.debug(f"wait_jupyter (11): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
             sliver_table = self.list_slivers(colors=True, quiet=True)
+            logging.debug(f"wait_jupyter (12): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
 
             logging.debug(f"sliver_table: {sliver_table}")
             if stable or verbose:
+                logging.debug(f"wait_jupyter (20): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
                 node_table = self.list_nodes(colors=True, quiet=True)
                 if hasNetworks:
+                    logging.debug(f"wait_jupyter (21): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
+
                     network_table = self.list_networks(colors=True, quiet=True)
 
             time_string = f"{time.time() - start:.0f} sec"
+            logging.debug(f"wait_jupyter (30): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
 
             # Clear screen
             clear_output(wait=True)
@@ -1768,6 +1792,7 @@ class Slice:
                         display(network_table)
 
             count += 1
+            logging.debug(f"wait_jupyter (31): {self.get_name()}:  update_slivers_count: {self.update_slivers_count}")
 
         # self.update()
 
