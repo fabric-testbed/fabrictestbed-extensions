@@ -499,7 +499,7 @@ class NetworkService:
         self.slice = slice
 
         try:
-            if self.get_reservation_id():
+            if slice.isStable():
                 self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
         except:
             pass
