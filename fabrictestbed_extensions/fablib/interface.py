@@ -812,7 +812,12 @@ class Interface:
         return fablib_data["mode"]
 
     def config(self):
-        fablib_data = self.get_fablib_data()
+        network = self.get_network()
+        if not network:
+            logging.info(
+                f"interface {self.get_name()} not connected to network, skipping config."
+            )
+            return
 
         fablib_data = self.get_fablib_data()
         if "configured" in fablib_data and bool(fablib_data["configured"]):
