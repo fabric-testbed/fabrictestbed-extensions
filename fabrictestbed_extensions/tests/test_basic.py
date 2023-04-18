@@ -122,7 +122,7 @@ class FablibManagerTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.errors, expected_errors)
 
-    def test_fablib_manager_test_with_dummy_token(self):
+    def test_fablib_manager_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
         # complicates writing a test for it.  It eventually makes a
         # network call to credential manager API, but it is not right
@@ -139,8 +139,21 @@ class FablibManagerTests(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
 
-        with self.assertRaises(FablibConfigurationError):
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
+
+            self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+            # TODO: use some actual ssh keys so that so that we get
+            # the actual error about invalid token.
+            expected_errors = [
+                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+                "Error reading SSH key: None (error: Key object may not be empty)",
+                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            ]
+
+            self.assertEqual(ctx.exception.errors, expected_errors)
 
     def test_fablib_manager_with_empty_config(self):
         # Check that an empty configuration file will cause
