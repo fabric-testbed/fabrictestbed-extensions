@@ -36,24 +36,24 @@ class FablibManagerTests(unittest.TestCase):
         with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
 
-            self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
-            expected_errors = [
-                "orchestrator host is not set",
-                "credmanager host is not set",
-                "FABRIC token is not set",
-                "project ID is not set",
-                "bastion username is not set",
-                "bastion key file is not set",
-                "bastion host address is not set",
-                "bastion key filename is set to None",
-                "Error reading SSH key: None (error: Key object may not be empty)",
-                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
-                "Error reading SSH key: None (error: Key object may not be empty)",
-                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
-            ]
+        expected_errors = [
+            "orchestrator host is not set",
+            "credmanager host is not set",
+            "FABRIC token is not set",
+            "project ID is not set",
+            "bastion username is not set",
+            "bastion key file is not set",
+            "bastion host address is not set",
+            "bastion key filename is set to None",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+        ]
 
-            self.assertEqual(expected_errors, ctx.exception.errors)
+        self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_one_env_var(self):
         # Test with some required env vars set.
@@ -69,17 +69,17 @@ class FablibManagerTests(unittest.TestCase):
         with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
 
-            self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
-            # SSH keys are invalid, so expect some errors.
-            expected_errors = [
-                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-                "Error reading SSH key: None (error: Key object may not be empty)",
-                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
-            ]
+        # SSH keys are invalid, so expect some errors.
+        expected_errors = [
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+        ]
 
-            self.assertEqual(expected_errors, ctx.exception.errors)
+        self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_test_only_cm_host(self):
         with self.assertRaises(FablibConfigurationError):
@@ -112,14 +112,12 @@ class FablibManagerTests(unittest.TestCase):
             FablibManager()
 
         self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
-
         expected_errors = [
             "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
             "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
             "Error reading SSH key: None (error: Key object may not be empty)",
             "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
         ]
-
         self.assertEqual(ctx.exception.errors, expected_errors)
 
     def test_fablib_manager_with_dummy_token(self):
@@ -142,18 +140,18 @@ class FablibManagerTests(unittest.TestCase):
         with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
 
-            self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
-            # TODO: use some actual ssh keys so that so that we get
-            # the actual error about invalid token.
-            expected_errors = [
-                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-                "Error reading SSH key: None (error: Key object may not be empty)",
-                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
-            ]
+        # TODO: use some actual ssh keys so that so that we get
+        # the actual error about invalid token.
+        expected_errors = [
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+        ]
 
-            self.assertEqual(ctx.exception.errors, expected_errors)
+        self.assertEqual(ctx.exception.errors, expected_errors)
 
     def test_fablib_manager_with_empty_config(self):
         # Check that an empty configuration file will cause
