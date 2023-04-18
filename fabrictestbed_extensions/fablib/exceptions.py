@@ -32,9 +32,5 @@ class FablibConfigurationError(Exception):
         :param message: an error message.
         :param errors: a list of errors.
         """
-        super().__init__(message)
+        self.message = message
         self.errors = errors
-
-    @property
-    def errors(self):
-        return self.errors
