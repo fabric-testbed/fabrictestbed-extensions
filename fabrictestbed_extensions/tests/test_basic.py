@@ -62,13 +62,24 @@ class FablibManagerTests(unittest.TestCase):
             self.assertRaises(FablibConfigurationError, FablibManager)
 
     def test_fablib_manager_all_env_vars(self):
-        # Test with all required configuration except
-        # FABRIC_TOKEN_LOCATION.
+        # Test with all required configuration set to something.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        with self.assertRaises(FablibConfigurationError):
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
+
+            self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+            # SSH keys are invalid, so expect some errors.
+            expected_errors = [
+                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+                "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+                "Error reading SSH key: None (error: Key object may not be empty)",
+                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            ]
+
+            self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_test_only_cm_host(self):
         with self.assertRaises(FablibConfigurationError):
