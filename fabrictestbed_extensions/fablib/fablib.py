@@ -49,6 +49,7 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fim.user import Node as FimNode
 
+from fabrictestbed_extensions.fablib.exceptions import FablibConfigurationError
 from fabrictestbed_extensions.fablib.resources import Resources, Links, FacilityPorts
 from fabrictestbed_extensions.fablib.slice import Slice
 
@@ -844,11 +845,9 @@ class FablibManager:
             errors += node_key_errors
 
         if errors:
-            # TODO: define custom exception class to report errors,
-            # and emit a more helpful error message with hints about
-            # setting up environment variables or configuration file.
-            raise AttributeError(
-                f"Error initializing {self.__class__.__name__}: {errors}"
+            raise FablibConfigurationError(
+                message=f"Error initializing {self.__class__.__name__}",
+                errors=errors,
             )
 
     def _check_key_and_cert(self, ssh_key_file, ssh_key_pass=None, ssh_cert_file=None):
