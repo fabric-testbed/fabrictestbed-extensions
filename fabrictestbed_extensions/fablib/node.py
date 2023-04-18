@@ -1178,7 +1178,8 @@ class Node:
         import logging
 
         logging.debug(
-            f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
+            f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}",
+            stack_info=True
         )
 
         if not self.get_reservation_state() == "Active":

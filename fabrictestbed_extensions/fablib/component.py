@@ -318,6 +318,7 @@ class Component:
         super().__init__()
         self.fim_component = fim_component
         self.node = node
+        self.interfaces = None
 
     def get_interfaces(self) -> List[Interface]:
         """
@@ -329,11 +330,13 @@ class Component:
 
         from fabrictestbed_extensions.fablib.interface import Interface
 
-        ifaces = []
-        for fim_interface in self.get_fim_component().interface_list:
-            ifaces.append(Interface(component=self, fim_interface=fim_interface))
+        if not self.interfaces:
+            self.interfaces = []
+            for fim_interface in self.get_fim_component().interface_list:
+                self.interfaces.append(Interface(component=self, fim_interface=fim_interface))
 
-        return ifaces
+
+        return self.interfaces
 
     def get_fim_component(self) -> FimComponent:
         """
