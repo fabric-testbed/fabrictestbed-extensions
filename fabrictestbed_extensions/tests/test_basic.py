@@ -58,9 +58,8 @@ class FablibManagerTests(unittest.TestCase):
     def test_fablib_manager_one_env_var(self):
         # Test with some required env vars set.
         for var in self.required_env_vars:
-            with self.assertRaises(FablibConfigurationError):
-                os.environ[var] = "dummy"
-                FablibManager()
+            os.environ[var] = "dummy"
+            self.assertRaises(FablibConfigurationError, FablibManager)
 
     def test_fablib_manager_all_env_vars(self):
         # Test with all required configuration except
