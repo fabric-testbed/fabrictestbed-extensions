@@ -499,6 +499,8 @@ class NetworkService:
         self.fim_network_service = fim_network_service
         self.slice = slice
 
+        self.interfaces = None
+
         try:
             if self.slice.isStable():
                 self.sliver = self.slice.get_sliver(reservation_id=self.get_reservation_id())
@@ -864,12 +866,13 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-        interfaces = []
-        for interface in self.get_fim_network_service().interface_list:
-            logging.debug(f"interface: {interface}")
-            interfaces.append(self.get_slice().get_interface(name=interface.name))
+        if not self.interfaces:
+            self.interfaces = []
+            for interface in self.get_fim_network_service().interface_list:
+                logging.debug(f"interface: {interface}")
+                self.interfaces.append(self.get_slice().get_interface(name=interface.name))
 
-        return interfaces
+        return self.interfaces
 
     def get_interface(self, name: str = None) -> Interface or None:
         """
