@@ -180,12 +180,12 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, FablibConfigurationError)
 
-        # # TODO - (1) check that the token is a readable file.  Leave
-        # # the validation to FABRIC API; (2) use our own exception
-        # # class that holds a list of error strings.  The assertEqual
-        # # below is unweildy; (3) Improve error messages.  What key are
-        # # we talking about?  Public or private key? Bastion or
-        # # slice/sliver key?
+        # TODO - (1) check that the token is a readable file.  Leave
+        # the validation to FABRIC API; (2) use our own exception
+        # class that holds a list of error strings.  The assertEqual
+        # below is unweildy; (3) Improve error messages.  What key are
+        # we talking about?  Public or private key? Bastion or
+        # slice/sliver key?
 
         self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
