@@ -159,8 +159,27 @@ class FablibManagerTests(unittest.TestCase):
         rcfile = tempfile.NamedTemporaryFile()
         rcfile.flush()
 
-        with self.assertRaises(FablibConfigurationError):
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager(fabric_rc=rcfile.name)
+
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        expected_errors = [
+            "orchestrator host is not set",
+            "credmanager host is not set",
+            "FABRIC token is not set",
+            "project ID is not set",
+            "bastion username is not set",
+            "bastion key file is not set",
+            "bastion host address is not set",
+            "bastion key filename is set to None",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+        ]
+
+        self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_with_some_config(self):
         # Test with some configuration in the rc file.
