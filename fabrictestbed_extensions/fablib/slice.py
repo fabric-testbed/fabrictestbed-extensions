@@ -2147,10 +2147,16 @@ class Slice:
             else:
                 type = sliver.sliver_type
 
+            if 'Site' in sliver.sliver:
+                site = sliver.sliver["Site"]
+            else:
+                site = ''
+
             table.append(
                 {
                     "id": sliver.sliver_id,
                     "name": sliver.sliver["Name"],
+                    "site": site,
                     "type": type,
                     "state": sliver.state,
                     "error": error,
@@ -2166,6 +2172,7 @@ class Slice:
             pretty_names_dict = {
                 "name": "Name",
                 "id": "ID",
+                "site": "Site",
                 "type": "Type",
                 "state": "State",
                 "error": "Error",

@@ -2678,10 +2678,10 @@ class Node:
 
 
 
-    def add_fabnet(self, name='fabnet_default', net_type='IPv4', nic_type='NIC_Basic', routes=['FABNETV4_SUBNET']):
+    def add_fabnet(self, name='FABNET', net_type='IPv4', nic_type='NIC_Basic', routes=None):
         site=self.get_site()
     
-        net_name=f'{name}_{site.lower()}'
+        net_name=f'{name}_{net_type}_{site}'
         
         net = self.get_slice().get_network(net_name)
         if not net:
@@ -2691,7 +2691,12 @@ class Node:
         iface = self.add_component(model=nic_type, name=f'{net_name}_nic').get_interfaces()[0]
         net.add_interface(iface)
         iface.set_mode('auto')
-        for route in routes:
-            if route == 'FABNETV4_SUBNET':
-                route = self.get_fablib_manager().FABNETV4_SUBNET
-            self.add_route(subnet=route, next_hop=net.get_gateway())
+
+        if routes:
+            for route in routes:
+                self.add_route(subnet=route, next_hop=net.get_gateway())
+        else:
+            if net_type == 'IPv4':
+                self.add_route(subnet=self.get_fablib_manager().FABNETV4_SUBNET, next_hop=net.get_gateway())
+            elif net_type == 'IPv6':
+                self.add_route(subnet=self.get_fablib_manager().FABNETV6_SUBNET, next_hop=net.get_gateway())
