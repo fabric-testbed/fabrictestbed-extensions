@@ -968,7 +968,10 @@ class NetworkService:
 
         interface.set_fablib_data(iface_fablib_data)
 
-        self.get_fim().connect_interface(interface=interface.get_fim())
+        try:
+            self.get_fim().connect_interface(interface=interface.get_fim())
+        except:
+            pass
 
     def remove_interface(self, interface: Interface):
         iface_fablib_data = interface.get_fablib_data()
