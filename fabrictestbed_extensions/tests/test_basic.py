@@ -33,8 +33,27 @@ class FablibManagerTests(unittest.TestCase):
 
     def test_fablib_manager_no_env_vars(self):
         # Test with no required env vars set.
-        with self.assertRaises(FablibConfigurationError):
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
+
+            self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+            expected_errors = [
+                "orchestrator host is not set",
+                "credmanager host is not set",
+                "FABRIC token is not set",
+                "project ID is not set",
+                "bastion username is not set",
+                "bastion key file is not set",
+                "bastion host address is not set",
+                "bastion key filename is set to None",
+                "Error reading SSH key: None (error: Key object may not be empty)",
+                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+                "Error reading SSH key: None (error: Key object may not be empty)",
+                "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            ]
+
+            self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_one_env_var(self):
         # Test with some required env vars set.
