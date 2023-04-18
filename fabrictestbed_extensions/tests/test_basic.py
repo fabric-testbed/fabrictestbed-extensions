@@ -5,6 +5,7 @@ import unittest
 
 from fabrictestbed.util.constants import Constants
 
+from fabrictestbed_extensions.fablib.exceptions import FablibConfigurationError
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
@@ -32,13 +33,13 @@ class FablibManagerTests(unittest.TestCase):
 
     def test_fablib_manager_no_env_vars(self):
         # Test with no required env vars set.
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             FablibManager()
 
     def test_fablib_manager_one_env_var(self):
         # Test with some required env vars set.
         for var in self.required_env_vars:
-            with self.assertRaises(AttributeError):
+            with self.assertRaises(FablibConfigurationError):
                 os.environ[var] = "dummy"
                 FablibManager()
 
@@ -48,26 +49,26 @@ class FablibManagerTests(unittest.TestCase):
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             FablibManager()
 
     def test_fablib_manager_test_only_cm_host(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
             FablibManager()
 
     def test_fablib_manager_test_only_orchestrator_host(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
             FablibManager()
 
     def test_fablib_manager_test_only_project_id(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
             FablibManager()
 
     def test_fablib_manager_test_only_token_location(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
             FablibManager()
 
@@ -78,20 +79,19 @@ class FablibManagerTests(unittest.TestCase):
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
-
-        with self.assertRaises(AttributeError) as ctx:
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager()
 
-        expected_error = (
-            "Error initializing FablibManager: ["
-            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
-            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
-            + "'Error reading SSH key: None (error: Key object may not be empty)', "
-            + "\"Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')\"]"
-        )
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
-        self.assertEqual(f"{ctx.exception}", expected_error)
+        expected_errors = [
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+        ]
+
+        self.assertEqual(ctx.exception.errors, expected_errors)
 
     def test_fablib_manager_test_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
@@ -110,7 +110,7 @@ class FablibManagerTests(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(FablibConfigurationError):
             FablibManager()
 
     def test_fablib_manager_with_empty_config(self):
@@ -119,7 +119,7 @@ class FablibManagerTests(unittest.TestCase):
         rcfile = tempfile.NamedTemporaryFile()
         rcfile.flush()
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError):
             FablibManager(fabric_rc=rcfile.name)
 
     def test_fablib_manager_with_some_config(self):
@@ -134,24 +134,26 @@ class FablibManagerTests(unittest.TestCase):
 
         rcfile.flush()
 
-        with self.assertRaises(AttributeError) as ctx:
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager(fabric_rc=rcfile.name)
 
         # Check that the error is what we expected.
-        self.assertIsInstance(ctx.exception, AttributeError)
+        self.assertIsInstance(ctx.exception, FablibConfigurationError)
 
-        # TODO - (1) check that the token is a readable file.  Leave
-        # the validation to FABRIC API; (2) use our own exception
-        # class that holds a list of error strings.  The assertEqual
-        # below is unweildy; (3) Improve error messages.  What key are
-        # we talking about?  Public or private key? Bastion or
-        # slice/sliver key?
-        expected_error = (
-            "Error initializing FablibManager: ["
-            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
-            + "\"Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')\", "
-            + "'Error reading SSH key: None (error: Key object may not be empty)', "
-            + "\"Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')\"]"
-        )
+        # # TODO - (1) check that the token is a readable file.  Leave
+        # # the validation to FABRIC API; (2) use our own exception
+        # # class that holds a list of error strings.  The assertEqual
+        # # below is unweildy; (3) Improve error messages.  What key are
+        # # we talking about?  Public or private key? Bastion or
+        # # slice/sliver key?
 
-        self.assertEqual(f"{ctx.exception}", expected_error)
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        expected_errors = [
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
+            "Error reading SSH key: None (error: Key object may not be empty)",
+            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+        ]
+
+        self.assertEqual(ctx.exception.errors, expected_errors)
