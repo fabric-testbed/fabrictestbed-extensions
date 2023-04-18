@@ -946,6 +946,8 @@ class NetworkService:
             new_nstype = NetworkService.calculate_l2_nstype(interfaces=new_interfaces)
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
+            else:
+                self.get_fim().connect_interface(interface=interface.get_fim())
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
@@ -968,10 +970,8 @@ class NetworkService:
 
         interface.set_fablib_data(iface_fablib_data)
 
-        try:
+        if self.get_layer() == NSLayer.L3:
             self.get_fim().connect_interface(interface=interface.get_fim())
-        except:
-            pass
 
     def remove_interface(self, interface: Interface):
         iface_fablib_data = interface.get_fablib_data()
