@@ -25,6 +25,7 @@ dependencies = [
     "jinja2>=3.0.0",
     "pandas",
     "numpy",
+    "ipython"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
