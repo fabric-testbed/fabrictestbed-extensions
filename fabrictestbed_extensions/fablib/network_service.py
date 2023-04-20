@@ -503,10 +503,12 @@ class NetworkService:
 
         try:
             if self.slice.isStable():
-                self.sliver = self.slice.get_sliver(reservation_id=self.get_reservation_id())
+                self.sliver = self.slice.get_sliver(
+                    reservation_id=self.get_reservation_id()
+                )
         except:
             pass
-        
+
         self.sliver = None
 
     def __str__(self):
@@ -695,7 +697,9 @@ class NetworkService:
 
     def get_sliver(self) -> OrchestratorSliver:
         if not self.sliver and self.slice.isStable():
-            self.sliver = self.slice.get_sliver(reservation_id=self.get_reservation_id())
+            self.sliver = self.slice.get_sliver(
+                reservation_id=self.get_reservation_id()
+            )
         return self.sliver
 
     def get_fim_network_service(self) -> FimNetworkService:
@@ -870,7 +874,9 @@ class NetworkService:
             self.interfaces = []
             for interface in self.get_fim_network_service().interface_list:
                 logging.debug(f"interface: {interface}")
-                self.interfaces.append(self.get_slice().get_interface(name=interface.name))
+                self.interfaces.append(
+                    self.get_slice().get_interface(name=interface.name)
+                )
 
         return self.interfaces
 

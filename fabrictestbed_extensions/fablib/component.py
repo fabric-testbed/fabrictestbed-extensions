@@ -333,8 +333,9 @@ class Component:
         if not self.interfaces:
             self.interfaces = []
             for fim_interface in self.get_fim_component().interface_list:
-                self.interfaces.append(Interface(component=self, fim_interface=fim_interface))
-
+                self.interfaces.append(
+                    Interface(component=self, fim_interface=fim_interface)
+                )
 
         return self.interfaces
 

@@ -86,7 +86,7 @@ class Node:
             self.username = None
 
         try:
-            if slice.isStable(): 
+            if slice.isStable():
                 self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
         except:
             pass
@@ -1179,7 +1179,7 @@ class Node:
 
         logging.debug(
             f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}",
-            stack_info=True
+            stack_info=True,
         )
 
         if not self.get_reservation_state() == "Active":
@@ -2677,27 +2677,35 @@ class Node:
 
         return "Done"
 
+    def add_fabnet(
+        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
+    ):
+        site = self.get_site()
 
+        net_name = f"{name}_{net_type}_{site}"
 
-    def add_fabnet(self, name='FABNET', net_type='IPv4', nic_type='NIC_Basic', routes=None):
-        site=self.get_site()
-    
-        net_name=f'{name}_{net_type}_{site}'
-        
         net = self.get_slice().get_network(net_name)
         if not net:
             net = self.get_slice().add_l3network(name=net_name, type=net_type)
-        
+
         # Add ccontrol plane network to node1
-        iface = self.add_component(model=nic_type, name=f'{net_name}_nic').get_interfaces()[0]
+        iface = self.add_component(
+            model=nic_type, name=f"{net_name}_nic"
+        ).get_interfaces()[0]
         net.add_interface(iface)
-        iface.set_mode('auto')
+        iface.set_mode("auto")
 
         if routes:
             for route in routes:
                 self.add_route(subnet=route, next_hop=net.get_gateway())
         else:
-            if net_type == 'IPv4':
-                self.add_route(subnet=self.get_fablib_manager().FABNETV4_SUBNET, next_hop=net.get_gateway())
-            elif net_type == 'IPv6':
-                self.add_route(subnet=self.get_fablib_manager().FABNETV6_SUBNET, next_hop=net.get_gateway())
+            if net_type == "IPv4":
+                self.add_route(
+                    subnet=self.get_fablib_manager().FABNETV4_SUBNET,
+                    next_hop=net.get_gateway(),
+                )
+            elif net_type == "IPv6":
+                self.add_route(
+                    subnet=self.get_fablib_manager().FABNETV6_SUBNET,
+                    next_hop=net.get_gateway(),
+                )

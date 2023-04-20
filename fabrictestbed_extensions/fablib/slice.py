@@ -90,7 +90,6 @@ class Slice:
         self.update_slice_count = 0
         self.update_count = 0
 
-
     def get_fablib_manager(self):
         return self.fablib_manager
 
@@ -638,7 +637,7 @@ class Slice:
 
     def get_slivers(self) -> List[OrchestratorSliver]:
         if not self.slivers:
-            logging.debug(f'get_slivers', stack_info=False)
+            logging.debug(f"get_slivers", stack_info=False)
             self.update_slivers()
 
         return self.slivers
@@ -1185,7 +1184,6 @@ class Slice:
         :rtype: List[Interface]
         """
         if not self.interfaces:
-
             self.interfaces = []
             for node in self.get_nodes():
                 logging.debug(f"Getting interfaces for node {node.get_name()}")
@@ -1711,12 +1709,11 @@ class Slice:
 
         logging.debug(f"wait_jupyter: slice {self.get_name()}")
 
-
         start = time.time()
 
-        #if len(self.get_interfaces()) > 0:
+        # if len(self.get_interfaces()) > 0:
         #    hasNetworks = True
-        #else:
+        # else:
         #    hasNetworks = False
 
         count = 0
@@ -2165,10 +2162,10 @@ class Slice:
             else:
                 type = sliver.sliver_type
 
-            if 'Site' in sliver.sliver:
+            if "Site" in sliver.sliver:
                 site = sliver.sliver["Site"]
             else:
-                site = ''
+                site = ""
 
             table.append(
                 {
