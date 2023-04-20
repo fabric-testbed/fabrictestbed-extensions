@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A way to query link and facility port information
 - Added function to make IP address of node publicly routable with external networking. `make_ip_publicly_routable`
 - Streamlined polling after a submit to reduce load on the control framework
+- Added easy, one-line "add_fabnet" functionality simple L3 networks
 
 ### Changed
 

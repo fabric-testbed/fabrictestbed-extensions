@@ -59,6 +59,7 @@ class Interface:
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
+        self.dev = None
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -338,12 +339,16 @@ class Interface:
         :rtype: Dict
         """
 
-        ip_addr_list_json = self.get_node().ip_addr_list(output="json")
+        if not self.dev:
+            ip_addr_list_json = self.get_node().ip_addr_list(output="json")
 
-        mac = self.get_mac()
-        for dev in ip_addr_list_json:
-            if str(dev["address"].upper()) == str(mac.upper()):
-                return dev
+            mac = self.get_mac()
+            for dev in ip_addr_list_json:
+                if str(dev["address"].upper()) == str(mac.upper()):
+                    self.dev = dev
+                    return dev
+        else:
+            return self.dev
 
         return None
 

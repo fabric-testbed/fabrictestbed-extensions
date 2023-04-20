@@ -23,6 +23,7 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import logging
 
 from tabulate import tabulate
@@ -498,10 +499,17 @@ class NetworkService:
         self.fim_network_service = fim_network_service
         self.slice = slice
 
+        self.interfaces = None
+
         try:
-            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+            if self.slice.isStable():
+                self.sliver = self.slice.get_sliver(
+                    reservation_id=self.get_reservation_id()
+                )
         except:
-            self.sliver = None
+            pass
+
+        self.sliver = None
 
     def __str__(self):
         """
@@ -688,6 +696,10 @@ class NetworkService:
             return None
 
     def get_sliver(self) -> OrchestratorSliver:
+        if not self.sliver and self.slice.isStable():
+            self.sliver = self.slice.get_sliver(
+                reservation_id=self.get_reservation_id()
+            )
         return self.sliver
 
     def get_fim_network_service(self) -> FimNetworkService:
@@ -858,12 +870,15 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-        interfaces = []
-        for interface in self.get_fim_network_service().interface_list:
-            logging.debug(f"interface: {interface}")
-            interfaces.append(self.get_slice().get_interface(name=interface.name))
+        if not self.interfaces:
+            self.interfaces = []
+            for interface in self.get_fim_network_service().interface_list:
+                logging.debug(f"interface: {interface}")
+                self.interfaces.append(
+                    self.get_slice().get_interface(name=interface.name)
+                )
 
-        return interfaces
+        return self.interfaces
 
     def get_interface(self, name: str = None) -> Interface or None:
         """
@@ -937,6 +952,8 @@ class NetworkService:
             new_nstype = NetworkService.calculate_l2_nstype(interfaces=new_interfaces)
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
+            else:
+                self.get_fim().connect_interface(interface=interface.get_fim())
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
@@ -959,7 +976,8 @@ class NetworkService:
 
         interface.set_fablib_data(iface_fablib_data)
 
-        self.get_fim().connect_interface(interface=interface.get_fim())
+        if self.get_layer() == NSLayer.L3:
+            self.get_fim().connect_interface(interface=interface.get_fim())
 
     def remove_interface(self, interface: Interface):
         iface_fablib_data = interface.get_fablib_data()

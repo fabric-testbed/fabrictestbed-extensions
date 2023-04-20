@@ -80,6 +80,9 @@ class Slice:
         self.slivers = []
         self.fablib_manager = fablib_manager
 
+        self.nodes = None
+        self.interfaces = None
+
         self.slice_key = fablib_manager.get_default_slice_key()
 
         self.update_topology_count = 0
@@ -634,6 +637,7 @@ class Slice:
 
     def get_slivers(self) -> List[OrchestratorSliver]:
         if not self.slivers:
+            logging.debug(f"get_slivers", stack_info=False)
             self.update_slivers()
 
         return self.slivers
@@ -657,6 +661,8 @@ class Slice:
         except Exception as e:
             logging.warning(f"slice.update_slivers failed: {e}")
 
+        self.nodes = None
+        self.interfaces = None
         self.update_topology()
 
         if self.get_state() == "ModifyOK":
@@ -880,6 +886,9 @@ class Slice:
         :return: a new L2 network service
         :rtype: NetworkService
         """
+        self.nodes = None
+        self.interfaces = None
+
         network_service = NetworkService.new_l2network(
             slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
         )
@@ -938,6 +947,9 @@ class Slice:
         :return: a new L3 network service
         :rtype: NetworkService
         """
+        self.nodes = None
+        self.interfaces = None
+
         return NetworkService.new_l3network(
             slice=self,
             name=name,
@@ -1025,6 +1037,9 @@ class Slice:
 
         if host:
             node.set_host(host)
+
+        self.nodes = None
+        self.interfaces = None
 
         return node
 
@@ -1133,17 +1148,18 @@ class Slice:
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
-        return_nodes = []
 
-        # fails for topology that does not have nodes
-        try:
-            for node_name, node in self.get_fim_topology().nodes.items():
-                return_nodes.append(Node.get_node(self, node))
-        except Exception as e:
-            logging.info(f"get_nodes: exception {e}")
-            # traceback.print_exc()
-            pass
-        return return_nodes
+        if not self.nodes:
+            self.nodes = []
+            # fails for topology that does not have nodes
+            try:
+                for node_name, node in self.get_fim_topology().nodes.items():
+                    self.nodes.append(Node.get_node(self, node))
+            except Exception as e:
+                logging.info(f"get_nodes: exception {e}")
+                pass
+
+        return self.nodes
 
     def get_node(self, name: str) -> Node:
         """
@@ -1167,15 +1183,16 @@ class Slice:
         :return: a list of interfaces on this slice
         :rtype: List[Interface]
         """
-        interfaces = []
-        for node in self.get_nodes():
-            logging.debug(f"Getting interfaces for node {node.get_name()}")
-            for interface in node.get_interfaces():
-                logging.debug(
-                    f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
-                )
-                interfaces.append(interface)
-        return interfaces
+        if not self.interfaces:
+            self.interfaces = []
+            for node in self.get_nodes():
+                logging.debug(f"Getting interfaces for node {node.get_name()}")
+                for interface in node.get_interfaces():
+                    logging.debug(
+                        f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
+                    )
+                    self.interfaces.append(interface)
+        return self.interfaces
 
     def get_interface(self, name: str = None) -> Interface:
         """
@@ -1694,10 +1711,10 @@ class Slice:
 
         start = time.time()
 
-        if len(self.get_interfaces()) > 0:
-            hasNetworks = True
-        else:
-            hasNetworks = False
+        # if len(self.get_interfaces()) > 0:
+        #    hasNetworks = True
+        # else:
+        #    hasNetworks = False
 
         count = 0
         # while not self.isStable():
@@ -1707,9 +1724,11 @@ class Slice:
                 raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
 
             time.sleep(interval)
+
             stable = False
             self.update_slice()
             self.update_slivers()
+
             if self.isStable():
                 stable = True
                 self.update()
@@ -2143,10 +2162,16 @@ class Slice:
             else:
                 type = sliver.sliver_type
 
+            if "Site" in sliver.sliver:
+                site = sliver.sliver["Site"]
+            else:
+                site = ""
+
             table.append(
                 {
                     "id": sliver.sliver_id,
                     "name": sliver.sliver["Name"],
+                    "site": site,
                     "type": type,
                     "state": sliver.state,
                     "error": error,
@@ -2162,6 +2187,7 @@ class Slice:
             pretty_names_dict = {
                 "name": "Name",
                 "id": "ID",
+                "site": "Site",
                 "type": "Type",
                 "state": "State",
                 "error": "Error",
