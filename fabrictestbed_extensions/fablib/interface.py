@@ -688,7 +688,7 @@ class Interface:
         return stdout
 
     # fablib.Interface.get_ip_addr()
-    def get_ip_addr(self, dev=None):
+    def get_ip_addr_ssh(self, dev=None):
         """
         Gets the ip addr info for this interface.
 
@@ -799,7 +799,8 @@ class Interface:
                 addr = fablib_data["addr"]
             return addr
         else:
-            return None
+            #get_ip_addr_ssh()
+            return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
         fablib_data = self.get_fablib_data()
