@@ -708,7 +708,8 @@ class Interface:
 
             for addr in addrs:
                 if addr["ifname"] == dev:
-                    return ipaddress.ip_address(addr["addr_info"][0]["local"])
+                    # Hack to make it backward compatible. Should return an object
+                    return str(ipaddress.ip_address(addr["addr_info"][0]["local"]))
 
             return None
         except Exception as e:
