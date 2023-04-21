@@ -6,7 +6,7 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.2] - 2023-04-21
 
 ### Added
 
@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added function to make IP address of node publicly routable with external networking. `make_ip_publicly_routable`
 - Streamlined polling after a submit to reduce load on the control framework
 - Added easy, one-line "add_fabnet" functionality simple L3 networks
+- ipython 8.12.0 is added as a direct dependency; this is a short-term
+  workaround until FABRIC's JupyterHub is updated.
 
 ### Changed
 
