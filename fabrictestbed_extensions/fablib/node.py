@@ -2662,7 +2662,7 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def config(self, log_dir="."):
-        self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
+        self.execute(f"sudo hostnamectl set-hostname '{self.get_name()}'", quiet=True)
 
         for iface in self.get_interfaces():
             iface.config()
