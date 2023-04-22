@@ -800,7 +800,7 @@ class Interface:
                 addr = fablib_data["addr"]
             return addr
         else:
-            #get_ip_addr_ssh()
+            # get_ip_addr_ssh()
             return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
