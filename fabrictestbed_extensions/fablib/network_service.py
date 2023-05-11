@@ -804,7 +804,7 @@ class NetworkService:
             elif self.get_fim_network_service().labels.ipv6 is not None:
                 result = []
                 for x in self.get_fim_network_service().labels.ipv6:
-                    result.append(IPv4Address(x))
+                    result.append(IPv6Address(x))
                 return result
         return None
 
