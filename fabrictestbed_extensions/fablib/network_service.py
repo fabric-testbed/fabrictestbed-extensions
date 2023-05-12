@@ -27,7 +27,7 @@ from __future__ import annotations
 import logging
 
 from tabulate import tabulate
-from typing import List
+from typing import List, Union
 
 from typing import TYPE_CHECKING
 
@@ -789,7 +789,7 @@ class NetworkService:
             logging.warning(f"Failed to get_available_ips: {e}")
             return None
 
-    def get_public_ips(self) -> List[IPv4Address] or List[IPv6Address] or None:
+    def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
         """
         Get list of public IPs assigned to the FabNetv*Ext service
         :return: List of Public IPs
