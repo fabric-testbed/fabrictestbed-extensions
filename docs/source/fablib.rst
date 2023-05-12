@@ -496,6 +496,8 @@
 
   .. automethod:: get_reservation_state
 
+  .. automethod:: get_public_ips
+
 .. automodule:: resources
 
 ``Resources``
