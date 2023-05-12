@@ -20,12 +20,12 @@ dependencies = [
     "ipyleaflet",
     "ipycytoscape",
     "tabulate",
-    "fabrictestbed==1.4.4",
+    "fabrictestbed==1.5.0rc1",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
     "numpy",
-    "ipython==8.12.0"
+    "ipython>=8.12.0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
