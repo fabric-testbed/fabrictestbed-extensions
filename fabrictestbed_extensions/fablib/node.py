@@ -1208,6 +1208,7 @@ class Node:
             # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
             src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
+            logging.error("node.execute: Management IP Invalid:", exc_info=True)
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
@@ -1936,7 +1937,6 @@ class Node:
         stdout, stderr = self.execute("sudo ip -j route list", quiet=True)
         stdout_json = json.loads(stdout)
 
-        # print(pythonObj)
         for i in stdout_json:
             if i["dst"] == "default":
                 logging.debug(
