@@ -2008,7 +2008,6 @@ class Slice:
             return "background-color: %s" % color
 
         def highlight(x):
-
             if x.State == "Closed":
                 # return [f'background-color: {self.get_fablib_manager().ERROR_LIGHT_COLOR}']*(len(fields))
                 color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
