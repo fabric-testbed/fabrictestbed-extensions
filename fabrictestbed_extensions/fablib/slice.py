@@ -1079,13 +1079,12 @@ class Slice:
         :return: a list of error messages
         :rtype: List[Dict[String, String]]
         """
-        # strings to ingnor
+        # strings to ignore
         cascade_notice_string1 = "Closing reservation due to failure in slice"
         cascade_notice_string2 = "is in a terminal state"
 
         origin_notices = []
         for reservation_id, notice in self.get_notices().items():
-            # print(f"XXXXX: reservation_id: {reservation_id}, notice {notice}")
             if cascade_notice_string1 in notice or cascade_notice_string2 in notice:
                 continue
 
@@ -1136,7 +1135,7 @@ class Slice:
                     return_components.append(component)
 
         except Exception as e:
-            print(f"get_components: exception {e}")
+            logging.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
             pass
         return return_components
@@ -1292,8 +1291,7 @@ class Slice:
                     )
 
         except Exception as e:
-            print(f"get_network_services: exception {e}")
-            # traceback.print_exc()
+            logging.error(e, exc_info=True)
             pass
         return return_networks
 
@@ -2010,7 +2008,6 @@ class Slice:
             return "background-color: %s" % color
 
         def highlight(x):
-            print(f"x: {x}")
 
             if x.State == "Closed":
                 # return [f'background-color: {self.get_fablib_manager().ERROR_LIGHT_COLOR}']*(len(fields))
