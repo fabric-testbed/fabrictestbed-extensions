@@ -199,11 +199,12 @@ class Resources:
 
     def get_state(self, site_name: str):
         try:
-            maint_info = self.get_topology_site(site_name).get_property("maintenance_info")
-            if maint_info.get(site_name) is None:
-                return "Active"
-            else:
-                return maint_info.get(site_name).state
+            return str(
+                self.get_topology_site(site_name)
+                .get_property("maintenance_info")
+                .get(site_name)
+                .state
+            )
         except Exception as e:
             logging.warning(f"Failed to get site state {site_name}")
             return ""
