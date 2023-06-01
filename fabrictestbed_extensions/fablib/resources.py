@@ -775,7 +775,7 @@ class Resources:
             "a30_allocated": {
                 "pretty_name": "A30 Allocated",
                 "value": self.get_component_capacity(site_name, "GPU-A30")
-                         - self.get_component_available(site_name, "GPU-A30"),
+                - self.get_component_available(site_name, "GPU-A30"),
             },
             "a40_available": {
                 "pretty_name": "A40 Available",
@@ -788,7 +788,7 @@ class Resources:
             "a40_allocated": {
                 "pretty_name": "A40 Allocated",
                 "value": self.get_component_capacity(site_name, "GPU-A40")
-                         - self.get_component_available(site_name, "GPU-A40"),
+                - self.get_component_available(site_name, "GPU-A40"),
             },
         }
 
