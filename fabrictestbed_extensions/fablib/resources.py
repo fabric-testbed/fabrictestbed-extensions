@@ -621,11 +621,11 @@ class Resources:
             "a30_available": self.get_component_available(site_name, "GPU-A30"),
             "a30_capacity": self.get_component_capacity(site_name, "GPU-A30"),
             "a30_allocated": self.get_component_capacity(site_name, "GPU-A30")
-                                 - self.get_component_available(site_name, "GPU-A30"),
+            - self.get_component_available(site_name, "GPU-A30"),
             "a40_available": self.get_component_available(site_name, "GPU-A40"),
             "a40_capacity": self.get_component_capacity(site_name, "GPU-A40"),
             "a40_allocated": self.get_component_capacity(site_name, "GPU-A40")
-                                 - self.get_component_available(site_name, "GPU-A40"),
+            - self.get_component_available(site_name, "GPU-A40"),
         }
 
     def site_to_dictXXX(self, site):
