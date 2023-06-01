@@ -142,7 +142,7 @@ class Resources:
                 "Tesla T4 (GPU)",
                 "RTX6000 (GPU)",
                 "A30 (GPU)",
-                "A40 (GPU)"
+                "A40 (GPU)",
             ],
         )
 
