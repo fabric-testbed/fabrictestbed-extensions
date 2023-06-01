@@ -70,6 +70,12 @@ class Resources:
         "rtx6000_available": "RTX6000 Available",
         "rtx6000_capacity": "RTX6000 Capacity",
         "rtx6000_allocated": "RTX6000 Allocated",
+        "a30_available": "A30 Available",
+        "a30_capacity": "A30 Capacity",
+        "a30_allocated": "A30 Allocated",
+        "a40_available": "A40 Available",
+        "a40_capacity": "A40 Capacity",
+        "a40_allocated": "A40 Allocated",
     }
 
     def __init__(self, fablib_manager):
@@ -113,6 +119,8 @@ class Resources:
                     f"{self.get_component_available(site_name,'NVME-P4510')}/{self.get_component_capacity(site_name,'NVME-P4510')}",
                     f"{self.get_component_available(site_name,'GPU-Tesla T4')}/{self.get_component_capacity(site_name,'GPU-Tesla T4')}",
                     f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}",
+                    f"{self.get_component_available(site_name, 'GPU-A30')}/{self.get_component_capacity(site_name, 'GPU-A30')}",
+                    f"{self.get_component_available(site_name, 'GPU-A40')}/{self.get_component_capacity(site_name, 'GPU-A40')}",
                 ]
             )
 
@@ -133,6 +141,8 @@ class Resources:
                 "P4510 (NVMe 1TB)",
                 "Tesla T4 (GPU)",
                 "RTX6000 (GPU)",
+                "A30 (GPU)",
+                "A40 (GPU)"
             ],
         )
 
@@ -608,6 +618,14 @@ class Resources:
             "rtx6000_capacity": self.get_component_capacity(site_name, "GPU-RTX6000"),
             "rtx6000_allocated": self.get_component_capacity(site_name, "GPU-RTX6000")
             - self.get_component_available(site_name, "GPU-RTX6000"),
+            "a30_available": self.get_component_available(site_name, "GPU-A30"),
+            "a30_capacity": self.get_component_capacity(site_name, "GPU-A30"),
+            "a30_allocated": self.get_component_capacity(site_name, "GPU-A30")
+                                 - self.get_component_available(site_name, "GPU-A30"),
+            "a40_available": self.get_component_available(site_name, "GPU-A40"),
+            "a40_capacity": self.get_component_capacity(site_name, "GPU-A40"),
+            "a40_allocated": self.get_component_capacity(site_name, "GPU-A40")
+                                 - self.get_component_available(site_name, "GPU-A40"),
         }
 
     def site_to_dictXXX(self, site):
@@ -745,6 +763,32 @@ class Resources:
                 "pretty_name": "RTX6000 Allocated",
                 "value": self.get_component_capacity(site_name, "GPU-RTX6000")
                 - self.get_component_available(site_name, "GPU-RTX6000"),
+            },
+            "a30_available": {
+                "pretty_name": "A30 Available",
+                "value": self.get_component_available(site_name, "GPU-A30"),
+            },
+            "a30_capacity": {
+                "pretty_name": "A30 Capacity",
+                "value": self.get_component_capacity(site_name, "GPU-A30"),
+            },
+            "A30_allocated": {
+                "pretty_name": "A30 Allocated",
+                "value": self.get_component_capacity(site_name, "GPU-A30")
+                         - self.get_component_available(site_name, "GPU-A30"),
+            },
+            "A40_available": {
+                "pretty_name": "A40 Available",
+                "value": self.get_component_available(site_name, "GPU-A40"),
+            },
+            "a40_capacity": {
+                "pretty_name": "A40 Capacity",
+                "value": self.get_component_capacity(site_name, "GPU-A40"),
+            },
+            "a40_allocated": {
+                "pretty_name": "A40 Allocated",
+                "value": self.get_component_capacity(site_name, "GPU-A40")
+                         - self.get_component_available(site_name, "GPU-A40"),
             },
         }
 

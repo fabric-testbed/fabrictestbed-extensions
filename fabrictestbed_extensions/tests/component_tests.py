@@ -55,6 +55,8 @@ class ComponentTest(AbcTest):
     COMPONENT_MODELS = {
         "GPU_Tesla_T4": ComponentModelType.GPU_Tesla_T4,
         "GPU_RTX6000": ComponentModelType.GPU_RTX6000,
+        "GPU_A30": ComponentModelType.GPU_A30,
+        "GPU_A40": ComponentModelType.GPU_A40,
         "SharedNIC_ConnectX_6": ComponentModelType.SharedNIC_ConnectX_6,
         "SmartNIC_ConnectX_6": ComponentModelType.SmartNIC_ConnectX_6,
         "SmartNIC_ConnectX_5": ComponentModelType.SmartNIC_ConnectX_5,
