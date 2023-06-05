@@ -952,6 +952,8 @@ class Node:
         - NVME_P4510: NVMe Storage Device
         - GPU_TeslaT4: Tesla T4 GPU
         - GPU_RTX6000: RTX6000 GPU
+        - GPU_A30: A30 GPU
+        - GPU_A40: A40 GPU
         :param model: the name of the component model to add
         :type model: String
         :param name: the name of the new component
