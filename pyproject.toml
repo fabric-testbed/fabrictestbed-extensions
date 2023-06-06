@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fabrictestbed-fablib"
-# Bump version up in top-level __init.py__.
+# setuptools_scm picks up version from the git tag.
 dynamic = ["version"]
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
