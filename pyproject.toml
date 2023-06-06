@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "fabrictestbed-extensions"
+name = "fabrictestbed-fablib"
 # Bump version up in top-level __init.py__.
 dynamic = ["version"]
 description = "FABRIC Python Client Library and CLI Extensions"
