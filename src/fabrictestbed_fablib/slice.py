@@ -35,14 +35,14 @@ import json
 from typing import TYPE_CHECKING
 
 from IPython.core.display_functions import display
-from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+from fabrictestbed_fablib.facility_port import FacilityPort
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
         Slice as OrchestratorSlice,
         Sliver as OrchestratorSliver,
     )
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
+    from fabrictestbed_fablib.fablib import FablibManager
 
 from tabulate import tabulate
 
@@ -56,10 +56,10 @@ import concurrent.futures
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import Status, SliceState
 
-from fabrictestbed_extensions.fablib.network_service import NetworkService
-from fabrictestbed_extensions.fablib.node import Node
-from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_fablib.network_service import NetworkService
+from fabrictestbed_fablib.node import Node
+from fabrictestbed_fablib.component import Component
+from fabrictestbed_fablib.interface import Interface
 
 
 class Slice:

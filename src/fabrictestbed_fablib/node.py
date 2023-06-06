@@ -31,7 +31,7 @@ import time
 import paramiko
 import logging
 
-from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_fablib.network_service import NetworkService
 from tabulate import tabulate
 import select
 import jinja2
@@ -54,8 +54,8 @@ from fabrictestbed.slice_editor import Labels, CapacityHints, ServiceType
 from fabrictestbed.slice_editor import Capacities, UserData
 from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
-from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_fablib.component import Component
+from fabrictestbed_fablib.interface import Interface
 from fabrictestbed.slice_editor import Node as FimNode
 
 

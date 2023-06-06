@@ -47,8 +47,8 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fim.user import Node as FimNode
 
-from fabrictestbed_extensions.fablib.resources import Resources, Links, FacilityPorts
-from fabrictestbed_extensions.fablib.slice import Slice
+from fabrictestbed_fablib.resources import Resources, Links, FacilityPorts
+from fabrictestbed_fablib.slice import Slice
 
 
 class fablib:

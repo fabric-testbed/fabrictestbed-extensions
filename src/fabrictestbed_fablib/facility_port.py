@@ -28,12 +28,12 @@ from tabulate import tabulate
 import json
 
 from fabrictestbed.slice_editor import Labels, Capacities
-from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_fablib.interface import Interface
 
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.slice import Slice
+    from fabrictestbed_fablib.slice import Slice
     from fim.user.interface import Interface as FimInterface
 
 

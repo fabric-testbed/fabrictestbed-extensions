@@ -32,7 +32,7 @@ from typing import List, Union
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.slice import Slice
+    from fabrictestbed_fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
