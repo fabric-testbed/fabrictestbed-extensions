@@ -33,10 +33,10 @@ work. FABRIC team tends to favor virtualenvwrapper.
 Once installed, you can use FABlib in your Python projects:
 
 ```python
-from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manager
+from fabrictestbed_fablib.fablib import FablibManager
 
 try:
-    fablib = fablib_manager()
+    fablib = FablibManager()
     fablib.show_config()
 except Exception as e:
     print(f"Exception: {e}")
