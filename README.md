@@ -87,7 +87,7 @@ $ python -m build
 
 When it is time to release a new version of FABlib, remember to: 
 
-1. Update `version` in `pyproject.toml`
+1. Update `version` in `pyproject.toml`.
 2. Tag the release tag and push the tag to GitHub:
 
 ```console
@@ -96,7 +96,7 @@ $ git push origin --tags rel<x.y.z>
 ```
 
 2. Build the source and wheel packages.
-3. upload packages to PyPI using [twine]:
+3. Upload packages to PyPI using [twine]:
 
 ```console
 $ pip install twine
