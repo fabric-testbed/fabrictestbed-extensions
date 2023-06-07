@@ -91,8 +91,8 @@ When it is time to release a new version of FABlib, remember to:
 2. Tag the release tag and push the tag to GitHub:
 
 ```console
-$ git tag --sign --message "new release" relx.y.z HEAD
-$ git push origin --tags relx.y.z
+$ git tag --sign --message "Great new features" rel<x.y.z> <commit>
+$ git push origin --tags rel<x.y.z>
 ```
 
 2. Build the source and wheel packages.
