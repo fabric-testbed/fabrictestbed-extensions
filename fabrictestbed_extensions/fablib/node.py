@@ -31,6 +31,7 @@ import time
 import paramiko
 import logging
 
+from IPython.core.display_functions import display
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from tabulate import tabulate
 import select
