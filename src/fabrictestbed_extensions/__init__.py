@@ -27,6 +27,6 @@ warnings.warn(
     "fabrictestbed_extensions module is deprecated", DeprecationWarning, stacklevel=2
 )
 
-import fabrictestbed_fablib
+from importlib.metadata import version
 
-__version__ = fabrictestbed_fablib.__version__
+__version__ = version(__package__)

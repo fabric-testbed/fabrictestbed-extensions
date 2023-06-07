@@ -2,13 +2,9 @@
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.dynamic]
-version = {attr = "fabrictestbed_fablib.__version__"}
-
 [project]
 name = "fabrictestbed-fablib"
-# Bump version up in ./src/fabrictestbed_fablib/__init.py__.
-dynamic = ["version"]
+version = "1.4.6rc1"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
     {name="Paul Ruth", email="pruth@renci.org"},

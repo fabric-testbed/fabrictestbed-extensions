@@ -31,10 +31,7 @@ from fabrictestbed_fablib.node import Node
 from fabrictestbed_fablib.resources import Resources
 from fabrictestbed_fablib.slice import Slice
 
-__version__ = "1.4.6rc1"
-
 __all__ = [
-    __version__,
     Component,
     FablibManager,
     FacilityPort,
