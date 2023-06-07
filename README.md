@@ -33,7 +33,7 @@ work. FABRIC team tends to favor virtualenvwrapper.
 Once installed, you can use FABlib in your Python projects:
 
 ```python
-from fabrictestbed_fablib.fablib import FablibManager
+from fabrictestbed_fablib import FablibManager
 
 try:
     fablib = FablibManager()
