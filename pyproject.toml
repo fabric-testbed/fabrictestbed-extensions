@@ -1,12 +1,13 @@
 [build-system]
-requires = ["setuptools >= 61.0", "setuptools-scm"]
+requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools_scm]
+[tool.setuptools.dynamic]
+version = {attr = "fabrictestbed_fablib.__version__"}
 
 [project]
 name = "fabrictestbed-fablib"
-# setuptools_scm picks up version from the git tag.
+# Bump version up in fabrictestbed_fablib/__init.py__.
 dynamic = ["version"]
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
