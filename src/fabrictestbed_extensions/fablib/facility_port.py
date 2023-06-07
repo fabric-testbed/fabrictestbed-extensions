@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib
+from fabrictestbed_fablib.facility_port import FacilityPort
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.facility_port module is deprecated;"
@@ -9,5 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-FacilityPort = fabrictestbed_fablib.fablib.FacilityPort
-
+__all__ = [FacilityPort]

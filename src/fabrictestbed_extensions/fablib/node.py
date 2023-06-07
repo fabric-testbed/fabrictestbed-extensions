@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib
+from fabrictestbed_fablib.node import Node
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.node module is deprecated;"
@@ -9,4 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-Node = fabrictestbed_fablib.fablib.Node
+__all__ = [Node]

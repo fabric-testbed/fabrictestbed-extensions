@@ -1,6 +1,6 @@
 import warnings
 
-from fabrictestbed_fablib import component
+from fabrictestbed_fablib.component import Component
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.component module is deprecated;"
@@ -9,5 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-Component = fablib.Component
-
+__all__ = [Component]

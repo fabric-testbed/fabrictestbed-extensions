@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib
+from fabrictestbed_fablib.fablib import FablibManager
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.fablib module is deprecated;"
@@ -9,4 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-FablibManager = fabrictestbed_fablib.fablib.FablibManager
+__all__ = [FablibManager]

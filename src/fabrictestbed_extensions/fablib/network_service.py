@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib
+from fabrictestbed_fablib.network_service import NetworkService
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.network_service module is deprecated;"
@@ -9,4 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-NetworkService = fabrictestbed_fablib.fablib.NetworkService
+__all__ = [NetworkService]

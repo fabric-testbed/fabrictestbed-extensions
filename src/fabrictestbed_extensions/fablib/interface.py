@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib
+from fabrictestbed_fablib.interface import Interface
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.interface module is deprecated;"
@@ -9,4 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-Interface = fabrictestbed_fablib.interface.Interface
+__all__ = [Interface]
