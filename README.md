@@ -100,7 +100,7 @@ $ twine upload dist/*
 <!-- URLs -->
 
 [pypy]: https://pypi.org/project/fabrictestbed-fablib/
-[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-fablib?style=plastic (PyPI)
+[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-fablib?style=plain (PyPI)
 
 [api-docs]: https://fabric-fablib.readthedocs.io/en/latest/?badge=latest
 [api-docs-badge]: https://readthedocs.org/projects/fabric-fablib/badge/?version=latest (Documentation Status)
