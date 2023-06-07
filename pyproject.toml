@@ -7,7 +7,7 @@ version = {attr = "fabrictestbed_fablib.__version__"}
 
 [project]
 name = "fabrictestbed-fablib"
-# Bump version up in fabrictestbed_fablib/__init.py__.
+# Bump version up in ./src/fabrictestbed_fablib/__init.py__.
 dynamic = ["version"]
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
