@@ -42,7 +42,7 @@ jobs:
 
       - name: Run "black --check"
         run: |
-          python -m black --check --verbose .
+          python -m black --check .
 
       # Remind PR authors to update CHANGELOG.md
       - name: Check that Changelog has been updated
