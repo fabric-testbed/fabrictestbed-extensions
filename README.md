@@ -1,4 +1,4 @@
-# fabrictestbed-extensions
+# fabrictestbed-fablib
 
 [![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
 
@@ -11,7 +11,7 @@ known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
 You can install released versions of FABlib from PyPI:
 
 ```console
-$ pip install fabrictestbed-extensions
+$ pip install fabrictestbed-fablib
 ```
 
 If you need the current development version of FABlib, install it from
@@ -99,8 +99,8 @@ $ twine upload dist/*
 
 <!-- URLs -->
 
-[pypy]: https://pypi.org/project/fabrictestbed-extensions/
-[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
+[pypy]: https://pypi.org/project/fabrictestbed-fablib/
+[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-fablib?style=plastic (PyPI)
 
 [api-docs]: https://fabric-fablib.readthedocs.io/en/latest/?badge=latest
 [api-docs-badge]: https://readthedocs.org/projects/fabric-fablib/badge/?version=latest (Documentation Status)
