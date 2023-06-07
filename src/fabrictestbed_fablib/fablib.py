@@ -35,7 +35,7 @@ from typing import List, Dict
 from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
-from importlib.metadata import version  
+from importlib.metadata import version
 import pandas as pd
 from ipaddress import IPv4Network, IPv6Network
 from tabulate import tabulate
