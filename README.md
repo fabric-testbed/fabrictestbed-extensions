@@ -87,7 +87,7 @@ $ python -m build
 
 When it is time to release a new version of FABlib, remember to: 
 
-1. Update `__version__` in `src/fabrictestbed_fablib/__init__.py`
+1. Update `version` in `pyproject.toml`
 2. Build the source and wheel packages.
 3. upload packages to PyPI using [twine]:
 
