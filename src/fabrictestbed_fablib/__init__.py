@@ -22,4 +22,25 @@
 # SOFTWARE.
 #
 
+from fabrictestbed_fablib.component import Component
+from fabrictestbed_fablib.fablib import FablibManager
+from fabrictestbed_fablib.facility_port import FacilityPort
+from fabrictestbed_fablib.interface import Interface
+from fabrictestbed_fablib.network_service import NetworkService
+from fabrictestbed_fablib.node import Node
+from fabrictestbed_fablib.resources import Resources
+from fabrictestbed_fablib.slice import Slice
+
 __version__ = "1.4.6rc1"
+
+__all__ = [
+    __version__,
+    Component,
+    FablibManager,
+    FacilityPort,
+    Interface,
+    NetworkService,
+    Node,
+    Resources,
+    Slice,
+]
