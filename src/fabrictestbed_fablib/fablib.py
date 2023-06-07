@@ -35,7 +35,7 @@ from typing import List, Dict
 from typing import TYPE_CHECKING
 
 from fabrictestbed.util.constants import Constants
-from fabrictestbed_extensions import __version__ as fablib_version
+from importlib.metadata import version  
 import pandas as pd
 from ipaddress import IPv4Network, IPv6Network
 from tabulate import tabulate
@@ -1423,7 +1423,7 @@ class FablibManager:
             "fabric_slice_private_key_passphrase": self.get_default_slice_private_key_passphrase(),
             "fablib_log_file": self.get_log_file(),
             "fablib_log_level": self.get_log_level(),
-            "fablib_version": fablib_version,
+            "fablib_version": version(__package__),
         }
 
     def get_configXXX(self) -> Dict[str, Dict[str, str]]:
