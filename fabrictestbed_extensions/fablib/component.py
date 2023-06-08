@@ -25,6 +25,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import json
+import jinja2
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -583,8 +584,7 @@ class Component:
             )
             output.append(self.node.execute(f"df -h {mount_point}"))
         except Exception as e:
-            print(f"config_nvme Fail: {self.get_name()}")
-            # traceback.print_exc()
+            logging.error(f"config_nvme Fail: {self.get_name()}:", exc_info=True)
             raise Exception(str(output))
 
         return output

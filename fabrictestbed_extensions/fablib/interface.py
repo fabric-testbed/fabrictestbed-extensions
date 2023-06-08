@@ -30,6 +30,7 @@ from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
 import json
+import jinja2
 
 import logging
 
@@ -669,7 +670,7 @@ class Interface:
                     return link
             return None
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"{e}")
 
     def get_ip_addr_show(self, dev=None):
         try:
@@ -713,7 +714,7 @@ class Interface:
 
             return None
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"{e}")
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):
@@ -738,7 +739,7 @@ class Interface:
                     if addr_info["family"] == family:
                         return_ips.append(addr_info["local"])
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"{e}")
 
         return return_ips
 
