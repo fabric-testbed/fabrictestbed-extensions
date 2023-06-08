@@ -30,6 +30,7 @@ from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 from ipaddress import IPv4Address
 import json
+import jinja2
 
 import logging
 

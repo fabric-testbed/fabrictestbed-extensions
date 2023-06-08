@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from tabulate import tabulate
 import json
+import jinja2
 
 from fabrictestbed.slice_editor import Labels, Capacities
 from fabrictestbed_fablib.interface import Interface

@@ -34,6 +34,7 @@ from typing import List, Dict
 
 from typing import TYPE_CHECKING
 
+from IPython.core.display_functions import display
 from fabrictestbed.util.constants import Constants
 from importlib.metadata import version
 import pandas as pd
