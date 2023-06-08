@@ -25,6 +25,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import json
+import jinja2
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice

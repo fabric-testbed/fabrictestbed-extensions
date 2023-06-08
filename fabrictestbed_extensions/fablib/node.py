@@ -31,6 +31,7 @@ import time
 import paramiko
 import logging
 
+from IPython.core.display_functions import display
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from tabulate import tabulate
 import select
@@ -1292,9 +1293,13 @@ class Node:
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
                     stdout_chunks = []
-                    stdout_chunks.append(
-                        stdout.channel.recv(len(stdout.channel.in_buffer))
-                    )
+                    try:
+                        stdout_chunks.append(
+                            stdout.channel.recv(len(stdout.channel.in_buffer))
+                        )
+                    except EOFError:
+                        logging.warning('A Paramiko EOFError has occurred, '
+                                        'if this is part of a reboot sequence, it can be ignored')
                     stderr_chunks = []
 
                     while (
@@ -1377,7 +1382,7 @@ class Node:
 
             except Exception as e:
                 logging.warning(
-                    f"Exception in upload_file() (attempt #{attempt} of {retry}): {e}"
+                    f"Exception in node.execute() (attempt #{attempt} of {retry}): {e}"
                 )
 
                 if attempt + 1 == retry:
@@ -1636,7 +1641,7 @@ class Node:
         elif self.validIPAddress(management_ip) == "IPv6":
             src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
-            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
+            raise Exception(f"download_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
         for attempt in range(int(retry)):
