@@ -121,6 +121,7 @@ class Resources:
                     f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}",
                     f"{self.get_component_available(site_name, 'GPU-A30')}/{self.get_component_capacity(site_name, 'GPU-A30')}",
                     f"{self.get_component_available(site_name, 'GPU-A40')}/{self.get_component_capacity(site_name, 'GPU-A40')}",
+                    f"{self.get_component_available(site_name, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site_name, 'FPGA-Xilinx-U280')}",
                 ]
             )
 
@@ -143,6 +144,7 @@ class Resources:
                 "RTX6000 (GPU)",
                 "A30 (GPU)",
                 "A40 (GPU)",
+                "FPGA-Xilinx-U280"
             ],
         )
 
@@ -626,6 +628,10 @@ class Resources:
             "a40_capacity": self.get_component_capacity(site_name, "GPU-A40"),
             "a40_allocated": self.get_component_capacity(site_name, "GPU-A40")
             - self.get_component_available(site_name, "GPU-A40"),
+            "fpga_u280_available": self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+            "fpga_u280_capacity": self.get_component_capacity(site_name, "FPGA-Xilinx-U280"),
+            "fpga_u280_allocated": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
+                             - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
         }
 
     def site_to_dictXXX(self, site):
@@ -789,6 +795,19 @@ class Resources:
                 "pretty_name": "A40 Allocated",
                 "value": self.get_component_capacity(site_name, "GPU-A40")
                 - self.get_component_available(site_name, "GPU-A40"),
+            },
+            "fpga_u280_available": {
+                "pretty_name": "FPGA U280 Available",
+                "value": self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+            },
+            "fpga_u280_capacity": {
+                "pretty_name": "FPGA U280 Capacity",
+                "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280"),
+            },
+            "fpga_u280_allocated": {
+                "pretty_name": "FPGA U280 Allocated",
+                "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
+                         - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
             },
         }
 

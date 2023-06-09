@@ -955,6 +955,7 @@ class Node:
         - GPU_RTX6000: RTX6000 GPU
         - GPU_A30: A30 GPU
         - GPU_A40: A40 GPU
+        - FPGA_Xilinx_U280: Xilinx U280 GPU
         :param model: the name of the component model to add
         :type model: String
         :param name: the name of the new component

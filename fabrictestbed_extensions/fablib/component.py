@@ -54,6 +54,7 @@ class Component:
         "GPU_A40": ComponentModelType.GPU_A40,
         "GPU_A30": ComponentModelType.GPU_A30,
         "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280
     }
 
     def __str__(self):
