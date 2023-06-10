@@ -704,7 +704,7 @@ class Interface:
             dev = self.get_os_interface()
             # print(f"dev: {dev}")
 
-            if dev == None:
+            if dev is None:
                 return addrs
 
             for addr in addrs:
@@ -802,6 +802,8 @@ class Interface:
             return addr
         else:
             # get_ip_addr_ssh()
+            if self.get_mac() is None:
+                return None
             return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
