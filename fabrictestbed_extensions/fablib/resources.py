@@ -78,7 +78,7 @@ class Resources:
         "a40_allocated": "A40 Allocated",
     }
 
-    def __init__(self, fablib_manager):
+    def __init__(self, fablib_manager, force_refresh: bool = False):
         """
         Constructor
         :return:
@@ -89,7 +89,7 @@ class Resources:
 
         self.topology = None
 
-        self.update()
+        self.update(force_refresh=force_refresh)
 
     def __str__(self) -> str:
         """
@@ -489,14 +489,14 @@ class Resources:
     def get_fablib_manager(self):
         return self.fablib_manager
 
-    def update(self):
+    def update(self, force_refresh: bool = False):
         """
         Update the available resources by querying the FABRIC services
 
         """
         logging.info(f"Updating available resources")
         return_status, topology = (
-            self.get_fablib_manager().get_slice_manager().resources()
+            self.get_fablib_manager().get_slice_manager().resources(force_refresh=force_refresh)
         )
         if return_status != Status.OK:
             raise Exception(

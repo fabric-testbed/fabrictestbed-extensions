@@ -84,7 +84,7 @@ class fablib:
         return fablib.get_default_fablib_manager().get_site_names()
 
     @staticmethod
-    def list_sites() -> str:
+    def list_sites() -> object:
         """
         Get a string used to print a tabular list of sites with state
 
@@ -1027,7 +1027,8 @@ class FablibManager:
         quiet: bool = False,
         filter_function=None,
         update: bool = True,
-        pretty_names=True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1056,9 +1057,12 @@ class FablibManager:
         :param filter_function: lambda function
         :type filter_function: lambda
         :return: table in format specified by output parameter
+        :param update
+        :param pretty_names
+        :param force_refresh
         :rtype: Object
         """
-        return self.get_resources(update=update).list_sites(
+        return self.get_resources(update=update, force_refresh=force_refresh).list_sites(
             output=output,
             fields=fields,
             quiet=quiet,
@@ -1281,7 +1285,7 @@ class FablibManager:
 
         return self.facility_ports
 
-    def get_resources(self, update: bool = True) -> Resources:
+    def get_resources(self, update: bool = True, force_refresh:bool = False) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1290,7 +1294,7 @@ class FablibManager:
         :rtype: Resources
         """
         if not self.resources:
-            self.get_available_resources(update=update)
+            self.get_available_resources(update=update, force_refresh=force_refresh)
 
         return self.resources
 
@@ -1675,7 +1679,7 @@ class FablibManager:
 
         return topology.sites[site]
 
-    def get_available_resources(self, update: bool = False) -> Resources:
+    def get_available_resources(self, update: bool = False, force_refresh: bool = False) -> Resources:
         """
         Get the available resources.
 
@@ -1683,14 +1687,15 @@ class FablibManager:
         services. Otherwise, this method returns the existing information.
 
         :param update:
+        :param force_refresh
         :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
-            self.resources = Resources(self)
+            self.resources = Resources(self, force_refresh=force_refresh)
         elif update:
-            self.resources.update()
+            self.resources.update(force_refresh=force_refresh)
 
         return self.resources
 
