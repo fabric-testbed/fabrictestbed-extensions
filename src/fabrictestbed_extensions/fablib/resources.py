@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib
+import fabrictestbed_fablib.fablib import Resources
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.resources module is deprecated;"
@@ -9,4 +9,4 @@ warnings.warn(
     stacklevel=2,
 )
 
-Resources = fabrictestbed_fablib.fablib.Resources
+__all__ = [Resources]
