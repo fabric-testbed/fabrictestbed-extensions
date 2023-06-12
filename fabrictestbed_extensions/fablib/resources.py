@@ -78,7 +78,7 @@ class Resources:
         "a40_allocated": "A40 Allocated",
     }
 
-    def __init__(self, fablib_manager):
+    def __init__(self, fablib_manager, force_refresh: bool = False):
         """
         Constructor
         :return:
@@ -89,7 +89,7 @@ class Resources:
 
         self.topology = None
 
-        self.update()
+        self.update(force_refresh=force_refresh)
 
     def __str__(self) -> str:
         """
@@ -121,6 +121,7 @@ class Resources:
                     f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}",
                     f"{self.get_component_available(site_name, 'GPU-A30')}/{self.get_component_capacity(site_name, 'GPU-A30')}",
                     f"{self.get_component_available(site_name, 'GPU-A40')}/{self.get_component_capacity(site_name, 'GPU-A40')}",
+                    f"{self.get_component_available(site_name, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site_name, 'FPGA-Xilinx-U280')}",
                 ]
             )
 
@@ -143,6 +144,7 @@ class Resources:
                 "RTX6000 (GPU)",
                 "A30 (GPU)",
                 "A40 (GPU)",
+                "FPGA-Xilinx-U280"
             ],
         )
 
@@ -487,14 +489,14 @@ class Resources:
     def get_fablib_manager(self):
         return self.fablib_manager
 
-    def update(self):
+    def update(self, force_refresh: bool = False):
         """
         Update the available resources by querying the FABRIC services
 
         """
         logging.info(f"Updating available resources")
         return_status, topology = (
-            self.get_fablib_manager().get_slice_manager().resources()
+            self.get_fablib_manager().get_slice_manager().resources(force_refresh=force_refresh)
         )
         if return_status != Status.OK:
             raise Exception(
@@ -626,6 +628,10 @@ class Resources:
             "a40_capacity": self.get_component_capacity(site_name, "GPU-A40"),
             "a40_allocated": self.get_component_capacity(site_name, "GPU-A40")
             - self.get_component_available(site_name, "GPU-A40"),
+            "fpga_u280_available": self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+            "fpga_u280_capacity": self.get_component_capacity(site_name, "FPGA-Xilinx-U280"),
+            "fpga_u280_allocated": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
+                             - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
         }
 
     def site_to_dictXXX(self, site):
@@ -789,6 +795,19 @@ class Resources:
                 "pretty_name": "A40 Allocated",
                 "value": self.get_component_capacity(site_name, "GPU-A40")
                 - self.get_component_available(site_name, "GPU-A40"),
+            },
+            "fpga_u280_available": {
+                "pretty_name": "FPGA U280 Available",
+                "value": self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+            },
+            "fpga_u280_capacity": {
+                "pretty_name": "FPGA U280 Capacity",
+                "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280"),
+            },
+            "fpga_u280_allocated": {
+                "pretty_name": "FPGA U280 Allocated",
+                "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
+                         - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
             },
         }
 

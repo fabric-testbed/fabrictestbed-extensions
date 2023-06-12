@@ -41,7 +41,7 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 
 
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 
 from typing import TYPE_CHECKING
 
@@ -416,8 +416,8 @@ class Node:
 
             return False
 
-        if pretty_names and len(self.self.get_components()) > 0:
-            pretty_names_dict = self.self.get_components()[0].get_pretty_name_dict()
+        if pretty_names and len(self.get_components()) > 0:
+            pretty_names_dict = self.get_components()[0].get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -426,7 +426,7 @@ class Node:
             output=output,
             quiet=quiet,
             filter_function=combined_filter_function,
-            pretty_names_dict=pretty_names_dict,
+            pretty_names=pretty_names_dict,
         )
 
     def list_interfaces(
@@ -955,6 +955,7 @@ class Node:
         - GPU_RTX6000: RTX6000 GPU
         - GPU_A30: A30 GPU
         - GPU_A40: A40 GPU
+        - FPGA_Xilinx_U280: Xilinx U280 GPU
         :param model: the name of the component model to add
         :type model: String
         :param name: the name of the new component

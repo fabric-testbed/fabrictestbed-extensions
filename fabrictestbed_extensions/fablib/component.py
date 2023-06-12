@@ -54,6 +54,7 @@ class Component:
         "GPU_A40": ComponentModelType.GPU_A40,
         "GPU_A30": ComponentModelType.GPU_A30,
         "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280
     }
 
     def __str__(self):
@@ -102,6 +103,7 @@ class Component:
             "type": "Type",
             "dev": "Device",
             "node": "Node",
+            "numa": "Numa Node",
         }
 
     def toDict(self, skip=[]):
@@ -122,6 +124,7 @@ class Component:
             "type": str(self.get_type()),
             "dev": str(self.get_device_name()),
             "node": str(self.get_node().get_name()),
+            "numa": str(self.get_numa_node())
         }
 
     def generate_template_context(self):
@@ -397,6 +400,12 @@ class Component:
         Not intended for API use
         """
         return self.get_fim_component().details
+
+    def get_numa_node(self) -> str:
+        """
+        Get the Numa Node assigned to the device
+        """
+        return self.get_fim_component().get_property(pname="label_allocations").numa
 
     def get_disk(self) -> int:
         """
