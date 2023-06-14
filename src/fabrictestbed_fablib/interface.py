@@ -89,6 +89,7 @@ class Interface:
             ["Physical Device", self.get_physical_os_interface_name()],
             ["Device", self.get_os_interface()],
             ["Address", self.get_ip_addr()],
+            ["Numa Node", self.get_numa_node()],
         ]
 
         return tabulate(table)
@@ -123,6 +124,7 @@ class Interface:
             "private_ssh_key_file": "Private SSH Key File",
             "mode": "Mode",
             "ip_addr": "IP Address",
+            "numa": "Numa Node"
         }
 
     def toDict(self, skip=[]):
@@ -173,7 +175,11 @@ class Interface:
             "physical_dev": physical_dev,
             "dev": dev,
             "ip_addr": ip_addr,
+            "numa": str(self.get_numa_node()),
         }
+
+    def get_numa_node(self) -> str:
+        return self.get_component().get_numa_node()
 
     def generate_template_context(self):
         context = self.toDict()
@@ -704,7 +710,7 @@ class Interface:
             dev = self.get_os_interface()
             # print(f"dev: {dev}")
 
-            if dev == None:
+            if dev is None:
                 return addrs
 
             for addr in addrs:
@@ -802,6 +808,8 @@ class Interface:
             return addr
         else:
             # get_ip_addr_ssh()
+            if self.get_mac() is None:
+                return None
             return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):

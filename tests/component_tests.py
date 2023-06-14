@@ -61,6 +61,7 @@ class ComponentTest(AbcTest):
         "SmartNIC_ConnectX_6": ComponentModelType.SmartNIC_ConnectX_6,
         "SmartNIC_ConnectX_5": ComponentModelType.SmartNIC_ConnectX_5,
         "NVME_P4510": ComponentModelType.NVME_P4510,
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280
     }
 
     def __init__(self):

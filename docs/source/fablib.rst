@@ -389,6 +389,8 @@
 
   .. automethod:: configure_nvme
 
+  .. automethod:: get_numa_node
+
 
 
 .. automodule:: interface
@@ -451,6 +453,7 @@
 
   .. automethod::  get_ips
 
+  .. automethod:: get_numa_node
 
 .. automodule:: network_service
 
