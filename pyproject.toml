@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fabrictestbed-fablib"
-version = "1.4.6rc1"
+version = "1.5.1"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
     {name="Paul Ruth", email="pruth@renci.org"},
