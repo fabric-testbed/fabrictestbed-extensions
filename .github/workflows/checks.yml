@@ -42,7 +42,7 @@ jobs:
 
       - name: Run "black --check"
         run: |
-          python -m black --check --verbose .
+          python -m black --check .
 
       - name: Run "isort --check"
         run: |
