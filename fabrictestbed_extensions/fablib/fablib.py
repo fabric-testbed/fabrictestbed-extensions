@@ -1059,7 +1059,9 @@ class FablibManager:
         :param force_refresh
         :rtype: Object
         """
-        return self.get_resources(update=update, force_refresh=force_refresh).list_sites(
+        return self.get_resources(
+            update=update, force_refresh=force_refresh
+        ).list_sites(
             output=output,
             fields=fields,
             quiet=quiet,
@@ -1282,7 +1284,9 @@ class FablibManager:
 
         return self.facility_ports
 
-    def get_resources(self, update: bool = True, force_refresh:bool = False) -> Resources:
+    def get_resources(
+        self, update: bool = True, force_refresh: bool = False
+    ) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1676,7 +1680,9 @@ class FablibManager:
 
         return topology.sites[site]
 
-    def get_available_resources(self, update: bool = False, force_refresh: bool = False) -> Resources:
+    def get_available_resources(
+        self, update: bool = False, force_refresh: bool = False
+    ) -> Resources:
         """
         Get the available resources.
 

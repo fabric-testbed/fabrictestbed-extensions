@@ -54,7 +54,7 @@ class Component:
         "GPU_A40": ComponentModelType.GPU_A40,
         "GPU_A30": ComponentModelType.GPU_A30,
         "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
-        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280,
     }
 
     def __str__(self):
@@ -124,7 +124,7 @@ class Component:
             "type": str(self.get_type()),
             "dev": str(self.get_device_name()),
             "node": str(self.get_node().get_name()),
-            "numa": str(self.get_numa_node())
+            "numa": str(self.get_numa_node()),
         }
 
     def generate_template_context(self):

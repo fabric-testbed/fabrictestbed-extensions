@@ -1295,8 +1295,10 @@ class Node:
                             stdout.channel.recv(len(stdout.channel.in_buffer))
                         )
                     except EOFError:
-                        logging.warning('A Paramiko EOFError has occurred, '
-                                        'if this is part of a reboot sequence, it can be ignored')
+                        logging.warning(
+                            "A Paramiko EOFError has occurred, "
+                            "if this is part of a reboot sequence, it can be ignored"
+                        )
                     stderr_chunks = []
 
                     while (

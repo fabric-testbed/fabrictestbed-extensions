@@ -122,7 +122,7 @@ class Interface:
             "private_ssh_key_file": "Private SSH Key File",
             "mode": "Mode",
             "ip_addr": "IP Address",
-            "numa": "Numa Node"
+            "numa": "Numa Node",
         }
 
     def toDict(self, skip=[]):
