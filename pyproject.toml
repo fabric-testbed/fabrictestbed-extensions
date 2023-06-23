@@ -44,6 +44,7 @@ ChangeLog = "https://github.com/fabric-testbed/fabrictestbed-extensions/blob/mai
 [project.optional-dependencies]
 doc = ["sphinx", "furo"]
 test = ["pytest", "coverage[toml]"]
+dev = ["black ~= 23.3", "isort ~= 5.12"]
 
 [tool.coverage.run]
 branch = true
