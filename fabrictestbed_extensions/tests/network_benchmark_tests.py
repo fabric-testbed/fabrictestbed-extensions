@@ -1,26 +1,24 @@
-import os
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-import json
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
-    Labels,
-)
-import time
-import paramiko
-import re
-
 import importlib.resources as pkg_resources
+import json
+import os
+import re
+import time
 from typing import List
 
+import paramiko
+from fabrictestbed.slice_editor import (
+    Capacities,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    Labels,
+    ServiceType,
+)
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fabrictestbed.util.constants import Constants
 
-from .abc_test import AbcTest
-
 from .. import images
+from .abc_test import AbcTest
 
 
 class NetworkBencharks(AbcTest):

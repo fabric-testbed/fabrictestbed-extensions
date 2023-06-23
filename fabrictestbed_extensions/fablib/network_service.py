@@ -25,32 +25,25 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, List, Union
 
 from tabulate import tabulate
-from typing import List, Union
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fabrictestbed.slice_editor import (
-    ServiceType,
-    Labels,
-    Flags,
-    NetworkService as FimNetworkService,
-)
-from fim.slivers.network_service import ServiceType, NSLayer
-
-from fabrictestbed.slice_editor import UserData
-from fabric_cf.orchestrator.orchestrator_proxy import Status
-
-from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 import ipaddress
 import json
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+
 import jinja2
+from fabric_cf.orchestrator.orchestrator_proxy import Status
+from fabrictestbed.slice_editor import Flags, Labels
+from fabrictestbed.slice_editor import NetworkService as FimNetworkService
+from fabrictestbed.slice_editor import ServiceType, UserData
+from fim.slivers.network_service import NSLayer, ServiceType
 
 
 class NetworkService:

@@ -23,16 +23,15 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import logging
-from tabulate import tabulate
 
-from typing import List, Tuple
 import json
+import logging
+from typing import List, Tuple
 
-from fabrictestbed.slice_editor import AdvertisedTopology
-from fabrictestbed.slice_editor import Capacities
+from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
-from fim.user import link, interface
+from fim.user import interface, link
+from tabulate import tabulate
 
 
 class Resources:
