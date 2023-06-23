@@ -179,7 +179,8 @@ class Interface:
         }
 
     def get_numa_node(self) -> str:
-        return self.get_component().get_numa_node()
+        if self.get_component() is not None:
+            return self.get_component().get_numa_node()
 
     def generate_template_context(self):
         context = self.toDict()

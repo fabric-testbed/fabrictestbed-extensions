@@ -405,7 +405,8 @@ class Component:
         """
         Get the Numa Node assigned to the device
         """
-        return self.get_fim_component().get_property(pname="label_allocations").numa
+        if self.get_fim_component() is not None:
+            return self.get_fim_component().get_property(pname="label_allocations").numa
 
     def get_disk(self) -> int:
         """
