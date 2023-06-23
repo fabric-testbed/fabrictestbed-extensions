@@ -50,6 +50,9 @@ dev = ["black ~= 23.3", "isort ~= 5.12"]
 branch = true
 omit = [ "fabrictestbed_extensions/tests/*" ]
 
+[tool.black]
+src_paths = ["fabrictestbed_extensions", "docs/source/conf.py"]
+
 [tool.isort]
 profile = "black"
 src_paths = ["fabrictestbed_extensions", "docs/source/conf.py"]
