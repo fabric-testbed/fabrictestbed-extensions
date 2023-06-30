@@ -45,9 +45,9 @@ from fabrictestbed.slice_editor import ExperimentTopology, Capacities
 from fabrictestbed.slice_manager import SliceManager, Status, SliceState
 from fabrictestbed.util.constants import Constants
 
-from .abc_test import AbcTest
+from abc_test import AbcTest
 
-from .. import images
+from fabrictestbed_extensions import images
 
 
 class LinkBenchmark(AbcTest):

@@ -18,9 +18,9 @@ from typing import List
 
 from fabrictestbed.util.constants import Constants
 
-from .abc_test import AbcTest
+from abc_test import AbcTest
 
-from .. import images
+from fabrictestbed_extensions import images
 
 
 class NetworkBencharks(AbcTest):
