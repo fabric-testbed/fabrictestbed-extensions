@@ -23,29 +23,26 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-import json
-import paramiko
-import time
-
 import importlib.resources as pkg_resources
+import json
+import os
+import re
+import time
+import traceback
 from typing import List
 
-from fabrictestbed.slice_editor import (
-    ExperimentTopology,
-    Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
-    ComponentCatalog,
-)
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
-from fabrictestbed.util.constants import Constants
-
+import paramiko
 from abc_test import AbcTest
+from fabrictestbed.slice_editor import (
+    Capacities,
+    ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    ServiceType,
+)
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+from fabrictestbed.util.constants import Constants
 
 from fabrictestbed_extensions import images
 
