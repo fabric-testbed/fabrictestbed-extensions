@@ -31,7 +31,7 @@ import time
 import traceback
 from typing import List
 
-from abc_test import AbcTest
+from tests.integration.abc_test import AbcTest
 from fabrictestbed.slice_editor import (
     Capacities,
     ComponentCatalog,
