@@ -23,35 +23,30 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
 import functools
-import time
-
 import importlib.resources as pkg_resources
+import os
+import re
+import time
+import traceback
 from typing import List
 
+from tests.integration.abc_test import AbcTest
 from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
     Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
     ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    Labels,
+    ServiceType,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+
+from fabrictestbed_extensions import images
 
 
-from .abc_test import AbcTest
-
-from .. import images
-
-
-class GPUTeslaT4Benchmark(AbcTest):
+class NVMEBenchmark(AbcTest):
     def __init__(self):
         """
         Constructor
@@ -65,26 +60,26 @@ class GPUTeslaT4Benchmark(AbcTest):
         cores = 4
         ram = 8
         disk = 50
-        model_type = ComponentModelType.GPU_Tesla_T4
-        # Tesla_T4_component_type = ComponentType.Tesla_T4
-        # Tesla_T4_model = 'P4510'
-        Tesla_T4_name = "gpu1"
+        model_type = ComponentModelType.NVME_P4510
+        # nvme_component_type = ComponentType.NVME
+        # nvme_model = 'P4510'
+        nvme_name = "nvme1"
 
         self.topology = ExperimentTopology()
 
         cap = Capacities(core=cores, ram=ram, disk=disk)
 
         for node_num in range(0, node_count):
-            node_name = "Tesla_T4-" + str(site_name) + "-" + str(node_num)
+            node_name = "nvme-" + str(site_name) + "-" + str(node_num)
             # Add node
             n1 = self.topology.add_node(name=node_name, site=site_name)
 
             # Set Properties
             n1.set_properties(capacities=cap, image_type=image_type, image_ref=image)
 
-            # Add the PCI Tesla_T4 device
-            n1.add_component(model_type=model_type, name=Tesla_T4_name)
-            # n1.add_component(ctype=Tesla_T4_component_type, model=Tesla_T4_model, name=Tesla_T4_name)
+            # Add the PCI NVMe device
+            n1.add_component(model_type=model_type, name=nvme_name)
+            # n1.add_component(ctype=nvme_component_type, model=nvme_model, name=nvme_name)
 
         # Generate Slice Graph
         slice_graph = self.topology.serialize()
@@ -117,64 +112,9 @@ class GPUTeslaT4Benchmark(AbcTest):
         # print("Lease End  : {}".format(self.slice.lease_end))
 
     def config_test(self):
-        for node_name, node in self.topology.nodes.items():
-            # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-            # print("Node:")
-            print("Config | ", end="")
-            print(str(node_name) + " | ", end="")
-            try:
-                print("{}".format(str(node_name)) + " | ", end="")
-
-                # print("   Name              : {}".format(node_name))
-                # print("   Cores             : {}".format(node.get_property(pname='capacity_allocations').core))
-                # print("   RAM               : {}".format(node.get_property(pname='capacity_allocations').ram))
-                # print("   Disk              : {}".format(node.get_property(pname='capacity_allocations').disk))
-                # print("   Image             : {}".format(node.image_ref))
-                # print("   Image Type        : {}".format(node.image_type))
-                # print("   Host              : {}".format(node.get_property(pname='label_allocations').instance_parent))
-                print(
-                    "{}".format(
-                        str(
-                            node.get_property(pname="label_allocations").instance_parent
-                        )
-                    ).replace("\n", "")
-                    + " | ",
-                    end="",
-                )
-                # print("   Site              : {}".format(node.site))
-                print(
-                    "{}".format(str(node.management_ip)).replace("\n", "") + " | ",
-                    end="",
-                )
-
-                # print("   Management IP     : {}".format(node.management_ip))
-                # print("   Reservation ID    : {}".format(node.get_property(pname='reservation_info').reservation_id))
-                # print("   Reservation State : {}".format(node.get_property(pname='reservation_info').reservation_state))
-                # print("   Components        : {}".format(node.components))
-                # print("   Interfaces        : {}".format(node.interfaces))
-                # print()
-                name = node_name
-                management_ip = node.management_ip
-
-                # print("------------------------- Test Output ---------------------------")
-                script = "#!/bin/bash  \n" "sudo yum install -y pciutils \n"
-                try:
-                    stdout_str = self.execute_script(
-                        node_username="centos", node=node, script=script
-                    )
-                    print("Done ")
-                except Exception as e:
-                    print("Fail {}".format(str(e)))
-                # print(str(stdout_str.replace('\n','')) + " | ", end = '')
-                # print("-----------------------------------------------------------------")
-                # stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
-            except Exception as e:
-                print("Error in test: Error {}".format(e))
-                traceback.print_exc()
+        pass
 
     def run_test(self):
-        self.config_test()
-
         for node_name, node in self.topology.nodes.items():
             # print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
             # print("Node:")
@@ -202,20 +142,17 @@ class GPUTeslaT4Benchmark(AbcTest):
 
                 hostname = reservation_id + "-" + name.lower()
 
-                expected_stdout = (
-                    "3D controller: NVIDIA Corporation TU104GL [Tesla T4] (rev a1)"
-                )
+                expected_stdout = "Hello, FABRIC from node " + hostname + "\n"
 
                 # print("------------------------- Test Output ---------------------------")
-                script = "#!/bin/bash  \n" """lspci | grep Tesla \n"""
-                #'lspci \| grep \"3D controller: NVIDIA Corporation TU104GL [Tesla T4]\" \n'
+                script = "#!/bin/bash  \n" "lspci | grep NVMe \n"
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
-                # print(str(stdout_str.replace('\n','')) + " | ", end = '')
+                print(str(stdout_str.replace("\n", "")) + " | ", end="")
                 # print("-----------------------------------------------------------------")
                 # stdout_str = str(stdout.read(),'utf-8').replace('\\n','\n')
-                if expected_stdout in stdout_str:
+                if stdout_str == expected_stdout:
                     print("Success")
                 else:
                     print("Fail")
@@ -271,8 +208,7 @@ class GPUTeslaT4Benchmark(AbcTest):
         delete=True,
         node_count=1,
     ):
-        for site, node_count in sites:
-            # print("site: {}, node_count: {}".format(site,node_count))
+        for site in sites:
             self.run(
                 slice_name + "-" + site,
                 create_slice=create_slice,
@@ -295,7 +231,7 @@ class GPUTeslaT4Benchmark(AbcTest):
         Run the test
         :return:
         """
-        print("Tesla_T4 test, slice_name: {}, site: {}".format(slice_name, site))
+        print("NVMe test, slice_name: {}, site: {}".format(slice_name, site))
         if create_slice:
             # print("Creating Slice")
             try:
@@ -310,8 +246,8 @@ class GPUTeslaT4Benchmark(AbcTest):
             except Exception as e:
                 print("Create Slice FAILED. Error {}".format(e))
                 traceback.print_exc()
-            time.sleep(5 * node_count)
 
+        time.sleep(5 * node_count)
         self.get_existing_slice(slice_name)
         # time.sleep(60)
 
