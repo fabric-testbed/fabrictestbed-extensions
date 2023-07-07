@@ -792,6 +792,8 @@ class ComponentTest(AbcTest):
         :return:
         """
         self.test_name = test_name
+        slice_name = "component_test_slice"
+        site = "RENCI"
         print("Tesla_T4 test, slice_name: {}, site: {}".format(slice_name, site))
         if create_slice:
             # print("Creating Slice")
