@@ -52,7 +52,7 @@ class HelloFABRIC(AbcTest):
 
         for site in sites:
             for node_num in range(0, node_count):
-                node_name = "hello-" + str(site) + "-" + str(node_num)
+                node_name = f"hello-{site}-{node_num}"
                 site_name = site
                 # Add node
                 # labels = Labels()
@@ -68,6 +68,9 @@ class HelloFABRIC(AbcTest):
 
         # Generate Slice Graph
         slice_graph = self.topology.serialize()
+
+        print(f"slice_graph: {slice_graph}")
+        assert slice_graph is not None
 
         # Request slice from Orchestrator
         return_status, slice_reservations = self.slice_manager.create(
@@ -146,7 +149,7 @@ class HelloFABRIC(AbcTest):
                     print("Fail")
                     # print('Fail: --{}--  --{}--'.format(expected_stdout,stdout_str))
             except Exception as e:
-                print("Error in test: Error {}".format(e))
+                print(f"Error in test: Error {e}")
                 traceback.print_exc()
 
     def delete_slice(self):
@@ -198,7 +201,7 @@ class HelloFABRIC(AbcTest):
     ):
         for site in sites:
             self.run(
-                slice_name + "-" + site,
+                slice_name=f"{slice_name}-{site}",
                 create_slice=create_slice,
                 run_test=run_test,
                 delete=delete,
@@ -221,7 +224,7 @@ class HelloFABRIC(AbcTest):
         """
         # print(self.advertised_topology)
 
-        print("HelloFABRIC test, slice_name: {}, site: {}".format(slice_name, sites))
+        print(f"HelloFABRIC test, slice_name: {slice_name}, site: {site}")
         if create_slice:
             # print("Creating Slice")
             try:
@@ -234,7 +237,7 @@ class HelloFABRIC(AbcTest):
                 # time.sleep(10)
 
             except Exception as e:
-                print("Create Slice FAILED. Error {}".format(e))
+                print(f"Create Slice FAILED. Error {e}")
                 traceback.print_exc()
 
         time.sleep(5 * node_count)
@@ -246,7 +249,7 @@ class HelloFABRIC(AbcTest):
                 # print("Run Test")
                 self.run_test()
             except Exception as e:
-                print("Run test FAILED. Error {}".format(e))
+                print(f"Run test FAILED. Error {e}")
                 traceback.print_exc()
         if delete:
             try:
