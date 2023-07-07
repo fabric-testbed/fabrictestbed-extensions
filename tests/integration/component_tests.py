@@ -829,3 +829,7 @@ class ComponentTest(AbcTest):
                 self.delete_slice()
             except:
                 print("Delete FAILED")
+
+
+if __name__ == "__main__":
+    ComponentTest().run()

@@ -45,6 +45,8 @@ from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 from fabrictestbed_extensions import images
 
+from abc_test import AbcTest
+
 
 class HelloFABRIC(AbcTest):
     def __init__(self):
@@ -269,3 +271,7 @@ class HelloFABRIC(AbcTest):
                 self.delete_slice()
             except:
                 print("Delete FAILED")
+
+
+if __name__ == "__main__":
+    HelloFABRIC().run(slice_name="hello_fabric_integration_test")
