@@ -257,4 +257,4 @@ class HelloFABRIC(AbcTest):
 
 
 if __name__ == "__main__":
-    HelloFABRIC().run(slice_name="hello_fabric_integration_test")
+    HelloFABRIC().run_all(slice_name="hello_fabric_integration_test", sites=["RENCI"])
