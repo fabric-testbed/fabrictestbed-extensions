@@ -23,16 +23,15 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import logging
-from tabulate import tabulate
 
-from typing import List, Tuple
 import json
+import logging
+from typing import List, Tuple
 
-from fabrictestbed.slice_editor import AdvertisedTopology
-from fabrictestbed.slice_editor import Capacities
+from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
-from fim.user import link, interface
+from fim.user import interface, link
+from tabulate import tabulate
 
 
 class Resources:
@@ -144,7 +143,7 @@ class Resources:
                 "RTX6000 (GPU)",
                 "A30 (GPU)",
                 "A40 (GPU)",
-                "FPGA-Xilinx-U280"
+                "FPGA-Xilinx-U280",
             ],
         )
 
@@ -496,7 +495,9 @@ class Resources:
         """
         logging.info(f"Updating available resources")
         return_status, topology = (
-            self.get_fablib_manager().get_slice_manager().resources(force_refresh=force_refresh)
+            self.get_fablib_manager()
+            .get_slice_manager()
+            .resources(force_refresh=force_refresh)
         )
         if return_status != Status.OK:
             raise Exception(
@@ -628,10 +629,16 @@ class Resources:
             "a40_capacity": self.get_component_capacity(site_name, "GPU-A40"),
             "a40_allocated": self.get_component_capacity(site_name, "GPU-A40")
             - self.get_component_available(site_name, "GPU-A40"),
-            "fpga_u280_available": self.get_component_available(site_name, "FPGA-Xilinx-U280"),
-            "fpga_u280_capacity": self.get_component_capacity(site_name, "FPGA-Xilinx-U280"),
-            "fpga_u280_allocated": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
-                             - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+            "fpga_u280_available": self.get_component_available(
+                site_name, "FPGA-Xilinx-U280"
+            ),
+            "fpga_u280_capacity": self.get_component_capacity(
+                site_name, "FPGA-Xilinx-U280"
+            ),
+            "fpga_u280_allocated": self.get_component_capacity(
+                site_name, "FPGA-Xilinx-U280"
+            )
+            - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
         }
 
     def site_to_dictXXX(self, site):
@@ -807,7 +814,7 @@ class Resources:
             "fpga_u280_allocated": {
                 "pretty_name": "FPGA U280 Allocated",
                 "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
-                         - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+                - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
             },
         }
 

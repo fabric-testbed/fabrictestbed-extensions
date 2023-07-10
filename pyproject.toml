@@ -43,8 +43,20 @@ ChangeLog = "https://github.com/fabric-testbed/fabrictestbed-extensions/blob/mai
 
 [project.optional-dependencies]
 doc = ["sphinx", "furo"]
-test = ["pytest", "coverage[toml]"]
+test = [
+    "black==23.*",
+    "isort==5.*",
+    "pytest",
+    "coverage[toml]"
+    ]
 
 [tool.coverage.run]
 branch = true
 omit = [ "fabrictestbed_extensions/tests/*" ]
+
+[tool.black]
+src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
+
+[tool.isort]
+profile = "black"
+src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]

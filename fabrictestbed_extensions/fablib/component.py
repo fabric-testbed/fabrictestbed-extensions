@@ -23,8 +23,10 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 import json
+from typing import TYPE_CHECKING
+
 import jinja2
 
 if TYPE_CHECKING:
@@ -33,14 +35,12 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabrictestbed_extensions.fablib.interface import Interface
 
-from tabulate import tabulate
+import logging
 from typing import List
 
-import logging
-
-from fabrictestbed.slice_editor import ComponentModelType, Labels, Flags
 from fabrictestbed.slice_editor import Component as FimComponent
-from fabrictestbed.slice_editor import UserData
+from fabrictestbed.slice_editor import ComponentModelType, Flags, Labels, UserData
+from tabulate import tabulate
 
 
 class Component:
@@ -54,7 +54,7 @@ class Component:
         "GPU_A40": ComponentModelType.GPU_A40,
         "GPU_A30": ComponentModelType.GPU_A30,
         "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
-        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280,
     }
 
     def __str__(self):
@@ -124,7 +124,7 @@ class Component:
             "type": str(self.get_type()),
             "dev": str(self.get_device_name()),
             "node": str(self.get_node().get_name()),
-            "numa": str(self.get_numa_node())
+            "numa": str(self.get_numa_node()),
         }
 
     def generate_template_context(self):
