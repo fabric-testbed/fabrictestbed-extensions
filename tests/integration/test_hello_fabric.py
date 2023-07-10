@@ -1,4 +1,5 @@
-import random
+import socket
+import time
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
@@ -13,7 +14,11 @@ def test_fablib_hello():
     # Give the slice a unique name so that slice creation will not
     # fail and we will know that it originated from an integration
     # test.
-    slice_name = f"integration-test-slice-{random.randint(1, 2**12)}"
+    time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    host = socket.gethostname()
+    slice_name = f"integration test @ {time_stamp} on {host}"
+
+    print(f"Creating slice '{slice_name}'..")
     slice = fablib.new_slice(name=slice_name)
 
     try:
