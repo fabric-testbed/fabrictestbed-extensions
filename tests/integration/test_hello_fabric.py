@@ -1,3 +1,5 @@
+import random
+
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
@@ -8,17 +10,23 @@ def test_fablib_hello():
 
     fablib.list_sites()
 
-    slice = fablib.new_slice(name="MySlice")
+    # Give the slice a unique name so that slice creation will not
+    # fail and we will know that it originated from an integration
+    # test.
+    slice_name = f"integration-test-slice-{random.randint(1, 2**12)}"
+    slice = fablib.new_slice(name=slice_name)
 
-    # Add a node.
-    node = slice.add_node(name="Node1")
+    try:
+        # Add a node.
+        node = slice.add_node(name="node-1")
 
-    # Submit the slice.
-    slice.submit()
+        # Submit the slice.
+        slice.submit()
 
-    slice.show()
+        slice.show()
 
-    for node in slice.get_nodes():
-        stdout, stderr = node.execute("echo Hello, FABRIC from node `hostname -s`")
+        for node in slice.get_nodes():
+            stdout, stderr = node.execute("echo Hello, FABRIC from node `hostname -s`")
 
-    slice.delete()
+    finally:
+        slice.delete()
