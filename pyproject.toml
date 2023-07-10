@@ -60,3 +60,13 @@ src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
 [tool.isort]
 profile = "black"
 src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+# By default, run only unit tests when pytest is invoked.  Integration
+# tests will require some manual setup (namely token acquisition), and
+# thus we can't run them on CI.
+testpaths = [
+    "tests/unit/",
+]
