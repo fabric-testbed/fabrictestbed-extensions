@@ -23,33 +23,30 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import os
+
+import json
 import logging
+import os
 import random
 from concurrent.futures import ThreadPoolExecutor
-
-from IPython import get_ipython
-
-from typing import List, Dict
-
-from typing import TYPE_CHECKING
-
-from IPython.core.display_functions import display
-from fabrictestbed.util.constants import Constants
-from fabrictestbed_extensions import __version__ as fablib_version
-import pandas as pd
 from ipaddress import IPv4Network, IPv6Network
-from tabulate import tabulate
-import json
+from typing import TYPE_CHECKING, Dict, List
 
+import pandas as pd
+from fabrictestbed.util.constants import Constants
+from IPython import get_ipython
+from IPython.core.display_functions import display
+from tabulate import tabulate
+
+from fabrictestbed_extensions import __version__ as fablib_version
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
 
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
-from fabrictestbed_extensions.fablib.resources import Resources, Links, FacilityPorts
+from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
 from fabrictestbed_extensions.fablib.slice import Slice
 
 
@@ -1062,7 +1059,9 @@ class FablibManager:
         :param force_refresh
         :rtype: Object
         """
-        return self.get_resources(update=update, force_refresh=force_refresh).list_sites(
+        return self.get_resources(
+            update=update, force_refresh=force_refresh
+        ).list_sites(
             output=output,
             fields=fields,
             quiet=quiet,
@@ -1285,7 +1284,9 @@ class FablibManager:
 
         return self.facility_ports
 
-    def get_resources(self, update: bool = True, force_refresh:bool = False) -> Resources:
+    def get_resources(
+        self, update: bool = True, force_refresh: bool = False
+    ) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1679,7 +1680,9 @@ class FablibManager:
 
         return topology.sites[site]
 
-    def get_available_resources(self, update: bool = False, force_refresh: bool = False) -> Resources:
+    def get_available_resources(
+        self, update: bool = False, force_refresh: bool = False
+    ) -> Resources:
         """
         Get the available resources.
 

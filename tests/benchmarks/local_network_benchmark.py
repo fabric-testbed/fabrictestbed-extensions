@@ -32,7 +32,6 @@ import traceback
 from typing import List
 
 import paramiko
-from tests.integration.abc_test import AbcTest
 from fabrictestbed.slice_editor import (
     Capacities,
     ComponentCatalog,
@@ -45,6 +44,7 @@ from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fabrictestbed.util.constants import Constants
 
 from fabrictestbed_extensions import images
+from tests.integration.abc_test import AbcTest
 
 
 class LinkBenchmark(AbcTest):

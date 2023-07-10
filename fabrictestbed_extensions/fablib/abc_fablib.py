@@ -22,8 +22,8 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 import os
-
 from abc import ABC
+
 from fabrictestbed.util.constants import Constants
 
 

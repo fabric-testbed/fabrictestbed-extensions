@@ -31,8 +31,6 @@ import time
 import traceback
 from typing import List
 
-from tests.integration.abc_test import AbcTest
-
 from fabrictestbed.slice_editor import (
     Capacities,
     ComponentCatalog,
@@ -45,6 +43,7 @@ from fabrictestbed.slice_editor import (
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 from fabrictestbed_extensions import images
+from tests.integration.abc_test import AbcTest
 
 
 class GPUTeslaT4Benchmark(AbcTest):

@@ -45,6 +45,8 @@ from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 from fabrictestbed_extensions import images
 
+from .abc_test import AbcTest
+
 
 class HelloFABRIC(AbcTest):
     def __init__(self):
