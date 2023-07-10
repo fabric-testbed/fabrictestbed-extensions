@@ -41,9 +41,9 @@ from fabrictestbed.slice_editor import (
     ServiceType,
 )
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+from tests.integration.abc_test import AbcTest
 
-from .. import images
-from .abc_test import AbcTest
+from fabrictestbed_extensions import images
 
 
 class NVMEBenchmark(AbcTest):

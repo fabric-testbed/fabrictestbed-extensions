@@ -31,6 +31,7 @@ import time
 import traceback
 from typing import List
 
+from abc_test import AbcTest
 from fabrictestbed.slice_editor import (
     Capacities,
     ComponentCatalog,
@@ -42,7 +43,8 @@ from fabrictestbed.slice_editor import (
 )
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
-from .. import images
+from fabrictestbed_extensions import images
+
 from .abc_test import AbcTest
 
 
