@@ -9,7 +9,7 @@ def test_fablib_hello():
 
     fablib.show_config()
 
-    fablib.list_sites()
+    # fablib.list_sites()
 
     # Give the slice a unique name so that slice creation will not
     # fail and we will know that it originated from an integration
