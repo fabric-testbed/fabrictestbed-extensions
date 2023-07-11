@@ -23,13 +23,18 @@ def test_fablib_hello():
 
     try:
         # Add a node.
-        node = slice.add_node(name="node-1")
+        node_name = "node-1"
+        print(f"Adding node '{node_name}' to slice '{slice_name}'..")
+        node = slice.add_node(name=node_name)
 
         # Submit the slice.
+        print(f"Submitting slice '{slice_name}'..")
         slice.submit()
 
+        print(f"Slice '{slice_name}' status:")
         slice.show()
 
+        print(f"Testing node '{node_name}' on slice '{slice_name}'...")
         for node in slice.get_nodes():
             stdout, stderr = node.execute("echo Hello, FABRIC from node `hostname -s`")
 
