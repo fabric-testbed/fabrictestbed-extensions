@@ -27,8 +27,11 @@ def test_fablib_hello():
     try:
         # Add a node.
         node_name = "node-1"
-        print(f"Adding node '{node_name}' to slice '{slice_name}'..")
-        node = slice.add_node(name=node_name)
+        site_name = fablib.get_random_site()
+        print(
+            f"Adding node '{node_name}' at site '{site_name}' to slice '{slice_name}'.."
+        )
+        node = slice.add_node(name=node_name, site=site_name)
 
         # Submit the slice.
         print(f"Submitting slice '{slice_name}'..")
