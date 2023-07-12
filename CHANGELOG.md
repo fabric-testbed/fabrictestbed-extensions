@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Address a crash when querying NUMA properties. (Issue
+  [#191](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/191),
+  PR [#192](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/192))
+
 
 ## [1.4.4] - 2023-05-21
 
