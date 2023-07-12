@@ -5,6 +5,9 @@ from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
 def test_fablib_hello():
+    """
+    Create a slice with a single node, and echo a message from the node.
+    """
     fablib = FablibManager()
 
     fablib.show_config()
@@ -12,8 +15,8 @@ def test_fablib_hello():
     # fablib.list_sites()
 
     # Give the slice a unique name so that slice creation will not
-    # fail and we will know that it originated from an integration
-    # test.
+    # fail (because there is an existing slice with the same name) and
+    # we will have some hints about the test that created the slice.
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     host = socket.gethostname()
     slice_name = f"integration test @ {time_stamp} on {host}"
