@@ -1,48 +1,56 @@
 import socket
 import time
+import unittest
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
-def test_fablib_hello():
+class HelloFabricTests(unittest.TestCase):
     """
-    Create a slice with a single node, and echo a message from the node.
+    Run some basic tests against the testbed.
     """
-    fablib = FablibManager()
 
-    fablib.show_config()
+    def test_fablib_hello(self):
+        """
+        Create a slice with a single node, and echo a message from the node.
+        """
+        fablib = FablibManager()
 
-    # fablib.list_sites()
+        fablib.show_config()
 
-    # Give the slice a unique name so that slice creation will not
-    # fail (because there is an existing slice with the same name) and
-    # we will have some hints about the test that created the slice.
-    time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    host = socket.gethostname()
-    slice_name = f"integration test @ {time_stamp} on {host}"
+        # fablib.list_sites()
 
-    print(f"Creating slice '{slice_name}'..")
-    slice = fablib.new_slice(name=slice_name)
+        # Give the slice a unique name so that slice creation will not
+        # fail (because there is an existing slice with the same name) and
+        # we will have some hints about the test that created the slice.
+        time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        host = socket.gethostname()
+        slice_name = f"integration test @ {time_stamp} on {host}"
 
-    try:
-        # Add a node.
-        node_name = "node-1"
-        site_name = fablib.get_random_site()
-        print(
-            f"Adding node '{node_name}' at site '{site_name}' to slice '{slice_name}'.."
-        )
-        node = slice.add_node(name=node_name, site=site_name)
+        print(f"Creating slice '{slice_name}'..")
+        slice = fablib.new_slice(name=slice_name)
 
-        # Submit the slice.
-        print(f"Submitting slice '{slice_name}'..")
-        slice.submit()
+        try:
+            # Add a node.
+            node_name = "node-1"
+            site_name = fablib.get_random_site()
+            print(
+                f"Adding node '{node_name}' at site '{site_name}' to slice '{slice_name}'.."
+            )
+            node = slice.add_node(name=node_name, site=site_name)
 
-        print(f"Slice '{slice_name}' status:")
-        slice.show()
+            # Submit the slice.
+            print(f"Submitting slice '{slice_name}'..")
+            slice.submit()
 
-        print(f"Testing node '{node_name}' on slice '{slice_name}'...")
-        for node in slice.get_nodes():
-            stdout, stderr = node.execute("echo Hello, FABRIC from node `hostname -s`")
+            print(f"Slice '{slice_name}' status:")
+            slice.show()
 
-    finally:
-        slice.delete()
+            print(f"Testing node '{node_name}' on slice '{slice_name}'...")
+            for node in slice.get_nodes():
+                stdout, stderr = node.execute(
+                    "echo Hello, FABRIC from node `hostname -s`"
+                )
+
+        finally:
+            slice.delete()
