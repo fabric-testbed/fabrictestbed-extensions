@@ -50,8 +50,8 @@ class AbcTest(ABC):
         self.bastion_key_filename = os.environ["HOME"] + "/.ssh/pruth_fabric_rsa"
         self.bastion_key_filename = os.environ["FABRIC_BASTION_KEY_LOCATION"]
 
-        self.node_ssh_key_priv_file = os.environ["FABRIC_SLICE_PRIVATE_KEY_FILE"]
-        self.node_ssh_key_pub_file = os.environ["FABRIC_SLICE_PUBLIC_KEY_FILE"]
+        self.node_ssh_key_priv_file = os.environ["SLICE_PRIVATE_KEY_FILE"]
+        self.node_ssh_key_pub_file = os.environ["SLICE_PUBLIC_KEY_FILE"]
 
         self.node_ssh_key = None
         with open(self.node_ssh_key_pub_file, "r") as fd:

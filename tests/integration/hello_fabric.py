@@ -23,12 +23,27 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
+import functools
+import importlib.resources as pkg_resources
+import os
+import re
 import time
 import traceback
+from typing import List
 
 from abc_test import AbcTest
-from fabrictestbed.slice_editor import Capacities, ExperimentTopology
-from fabrictestbed.slice_manager import SliceState, Status
+from fabrictestbed.slice_editor import (
+    Capacities,
+    ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    Labels,
+    ServiceType,
+)
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+
+from fabrictestbed_extensions import images
 
 from .abc_test import AbcTest
 
@@ -54,7 +69,7 @@ class HelloFABRIC(AbcTest):
 
         for site in sites:
             for node_num in range(0, node_count):
-                node_name = f"hello-{site}-{node_num}"
+                node_name = "hello-" + str(site) + "-" + str(node_num)
                 site_name = site
                 # Add node
                 # labels = Labels()
@@ -70,9 +85,6 @@ class HelloFABRIC(AbcTest):
 
         # Generate Slice Graph
         slice_graph = self.topology.serialize()
-
-        print(f"slice_graph: {slice_graph}")
-        assert slice_graph is not None
 
         # Request slice from Orchestrator
         return_status, slice_reservations = self.slice_manager.create(
@@ -151,7 +163,7 @@ class HelloFABRIC(AbcTest):
                     print("Fail")
                     # print('Fail: --{}--  --{}--'.format(expected_stdout,stdout_str))
             except Exception as e:
-                print(f"Error in test: Error {e}")
+                print("Error in test: Error {}".format(e))
                 traceback.print_exc()
 
     def delete_slice(self):
@@ -203,7 +215,7 @@ class HelloFABRIC(AbcTest):
     ):
         for site in sites:
             self.run(
-                slice_name=f"{slice_name}-{site}",
+                slice_name + "-" + site,
                 create_slice=create_slice,
                 run_test=run_test,
                 delete=delete,
@@ -226,7 +238,7 @@ class HelloFABRIC(AbcTest):
         """
         # print(self.advertised_topology)
 
-        print(f"HelloFABRIC test, slice_name: {slice_name}, site: {site}")
+        print("HelloFABRIC test, slice_name: {}, site: {}".format(slice_name, sites))
         if create_slice:
             # print("Creating Slice")
             try:
@@ -239,7 +251,7 @@ class HelloFABRIC(AbcTest):
                 # time.sleep(10)
 
             except Exception as e:
-                print(f"Create Slice FAILED. Error {e}")
+                print("Create Slice FAILED. Error {}".format(e))
                 traceback.print_exc()
 
         time.sleep(5 * node_count)
@@ -251,7 +263,7 @@ class HelloFABRIC(AbcTest):
                 # print("Run Test")
                 self.run_test()
             except Exception as e:
-                print(f"Run test FAILED. Error {e}")
+                print("Run test FAILED. Error {}".format(e))
                 traceback.print_exc()
         if delete:
             try:
@@ -259,7 +271,3 @@ class HelloFABRIC(AbcTest):
                 self.delete_slice()
             except:
                 print("Delete FAILED")
-
-
-if __name__ == "__main__":
-    HelloFABRIC().run_all(slice_name="hello_fabric_integration_test", sites=["RENCI"])
