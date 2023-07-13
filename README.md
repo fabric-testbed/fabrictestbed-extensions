@@ -155,7 +155,7 @@ For details about publishing to PyPI, see flit documentation about
 [package uploads]: https://flit.pypa.io/en/latest/upload.html
 
 [build]: https://pypi.org/project/build/
-[tox]: https://tox.wiki/
+[tox]: https://pypi.org/project/tox/
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
 [isort]: https://pypi.org/project/isort/
