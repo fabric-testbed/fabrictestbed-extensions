@@ -75,6 +75,9 @@ class Resources:
         "a40_available": "A40 Available",
         "a40_capacity": "A40 Capacity",
         "a40_allocated": "A40 Allocated",
+        "fpga_u280_available": "U280 Available",
+        "fpga_u280_capacity": "U280 Capacity",
+        "fpga_u280_allocated": "U280 Allocated",
     }
 
     def __init__(self, fablib_manager, force_refresh: bool = False):

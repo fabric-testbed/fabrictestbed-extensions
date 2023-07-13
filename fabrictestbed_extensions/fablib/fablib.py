@@ -768,7 +768,7 @@ class FablibManager:
         if log_level is not None:
             self.set_log_level(log_level)
         if log_file is not None:
-            self.log_level = log_file
+            self.log_file = log_file
         if data_dir is not None:
             self.data_dir = data_dir
 
