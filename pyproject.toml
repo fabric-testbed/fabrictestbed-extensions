@@ -46,6 +46,7 @@ doc = ["sphinx", "furo"]
 test = [
     "black==23.*",
     "isort==5.*",
+    "tox==4.*",
     "pytest",
     "coverage[toml]"
     ]
