@@ -54,3 +54,7 @@ class HelloFabricTests(unittest.TestCase):
 
         finally:
             slice.delete()
+
+
+if __name__ == "__main__":
+    unittest.main()
