@@ -3,6 +3,8 @@ import time
 import unittest
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
+from fabrictestbed_extensions.fablib.slice import Slice
+from fabrictestbed_extensions.fablib.node import Node
 
 
 class HelloFabricTests(unittest.TestCase):
@@ -30,14 +32,19 @@ class HelloFabricTests(unittest.TestCase):
         print(f"Creating slice '{slice_name}'..")
         slice = fablib.new_slice(name=slice_name)
 
+        self.assertIsInstance(slice, Slice)
+
         try:
             # Add a node.
             node_name = "node-1"
             site_name = fablib.get_random_site()
+
             print(
                 f"Adding node '{node_name}' at site '{site_name}' to slice '{slice_name}'.."
             )
             node = slice.add_node(name=node_name, site=site_name)
+
+            self.assertIsInstance(node, Node)
 
             # Submit the slice.
             print(f"Submitting slice '{slice_name}'..")
@@ -51,6 +58,9 @@ class HelloFabricTests(unittest.TestCase):
                 stdout, stderr = node.execute(
                     "echo Hello, FABRIC from node `hostname -s`"
                 )
+
+                self.assertEqual(stdout, f"Hello, FABRIC from node {node_name}\n")
+                self.assertEqual(stderr, "")
 
         finally:
             slice.delete()
