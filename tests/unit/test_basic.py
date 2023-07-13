@@ -102,8 +102,8 @@ class FablibManagerTests(unittest.TestCase):
         # '.invalid' is an invalid host per RFC 6761, so this test
         # must fail without ever making a successful network call.
         os.environ[Constants.FABRIC_CREDMGR_HOST] = ".invalid"
-        path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
-        os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
+        path = pathlib.Path(__file__).parent / "data" / "dummy-token.json"
+        os.environ[Constants.FABRIC_TOKEN_LOCATION] = f"{path}"
 
         self.assertRaises(ValueError, FablibManager, fabric_rc=self.rcfile.name)
 
