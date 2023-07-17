@@ -30,17 +30,25 @@ class FablibManagerTests(unittest.TestCase):
         # Run each test with an empty environment.
         os.environ.clear()
 
+        # Create an empty configuration file, so that we will be
+        # really testing with a clean slate.  Creating the
+        # configuration file in read-only mode should ensure that it
+        # will remain empty.
+        self.rcfile = tempfile.NamedTemporaryFile(mode="r")
+        self.rcfile.flush()
+
+    def tearDown(self):
+        self.rcfile.close()
+
     def test_fablib_manager_no_env_vars(self):
         # Test with no required env vars set.
-        with self.assertRaises(AttributeError):
-            FablibManager()
+        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_one_env_var(self):
         # Test with some required env vars set.
         for var in self.required_env_vars:
-            with self.assertRaises(AttributeError):
-                os.environ[var] = "dummy"
-                FablibManager()
+            os.environ[var] = "dummy"
+            self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_all_env_vars(self):
         # Test with all required configuration except
@@ -48,28 +56,23 @@ class FablibManagerTests(unittest.TestCase):
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        with self.assertRaises(AttributeError):
-            FablibManager()
+        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_cm_host(self):
-        with self.assertRaises(AttributeError):
-            os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
-            FablibManager()
+        os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
+        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_orchestrator_host(self):
-        with self.assertRaises(AttributeError):
-            os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
-            FablibManager()
+        os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
+        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_project_id(self):
-        with self.assertRaises(AttributeError):
-            os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
-            FablibManager()
+        os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
+        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_token_location(self):
-        with self.assertRaises(AttributeError):
-            os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
-            FablibManager()
+        os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
+        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_with_no_token_file(self):
         # Should fail when token location is not a valid path.
@@ -83,8 +86,7 @@ class FablibManagerTests(unittest.TestCase):
         # FablibManager() without a valid token or token location
         # should raise a "ValueError: Invalid value for
         # `refresh_token`, must not be `None`"
-        with self.assertRaises(ValueError):
-            FablibManager()
+        self.assertRaises(ValueError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
@@ -100,11 +102,10 @@ class FablibManagerTests(unittest.TestCase):
         # '.invalid' is an invalid host per RFC 6761, so this test
         # must fail without ever making a successful network call.
         os.environ[Constants.FABRIC_CREDMGR_HOST] = ".invalid"
-        path = os.path.join(os.path.dirname(__file__), "dummy-token.json")
-        os.environ[Constants.FABRIC_TOKEN_LOCATION] = path
+        path = pathlib.Path(__file__).parent / "data" / "dummy-token.json"
+        os.environ[Constants.FABRIC_TOKEN_LOCATION] = f"{path}"
 
-        with self.assertRaises(Exception):
-            FablibManager()
+        self.assertRaises(ValueError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_with_empty_config(self):
         # Check that an empty configuration file will cause
