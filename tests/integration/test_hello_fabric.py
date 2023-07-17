@@ -3,8 +3,8 @@ import time
 import unittest
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
-from fabrictestbed_extensions.fablib.slice import Slice
 from fabrictestbed_extensions.fablib.node import Node
+from fabrictestbed_extensions.fablib.slice import Slice
 
 
 class HelloFabricTests(unittest.TestCase):
