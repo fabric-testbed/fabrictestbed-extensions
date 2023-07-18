@@ -1,4 +1,4 @@
-# ChangeLog
+# Change Log 
 
 This is the changelog file for FABRIC testbed extensions.  All notable
 changes to this project will be documented in this file.
@@ -68,7 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ipython 8.12.0 is added as a direct dependency; this is a short-term
   workaround until FABRIC's JupyterHub is updated.
 
-
 ### Changed
 
 - Fablib now uses pyproject.toml for specifying packaging metadata
@@ -81,16 +80,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-
-- Fablib will now fail early when required configuration is missing
-  (issue
-  [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
 - Fixed an issue with auto network configuration executing twice
 - Fablib will now fail early when required configuration is missing
   (issue
   [#69](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/69)).
 - A workaround for Debian/Ubuntu nmcli transition.
-
 
 ## [1.3.4] - 2023-01-19
 
@@ -107,8 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- FABLIB: Now leaves network manager for management iface but does not
-  manage other ifaces
+- FABLIB:  Now leaves network manager for management iface but does not manage other ifaces
 
 ### Fixed
 
@@ -117,4 +110,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.2] - 2022-10-25
 
-Older changes are not included in ChangeLog.
+Older changes are not included in change log.
