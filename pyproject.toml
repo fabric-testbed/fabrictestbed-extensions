@@ -53,7 +53,7 @@ test = [
 
 [tool.coverage.run]
 branch = true
-omit = [ "fabrictestbed_extensions/tests/*" ]
+omit = [ "tests/*" ]
 
 [tool.black]
 src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
