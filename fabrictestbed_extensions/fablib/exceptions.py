@@ -25,10 +25,12 @@ from typing import List
 
 
 class FablibConfigurationError(Exception):
+    """
+    Exception raised when we detect configuration errors.
+    """
+
     def __init__(self, message: str, errors: List[str]):
         """
-        Exception raised when we detect configuration errors.
-
         :param message: an error message.
         :param errors: a list of errors.
         """
