@@ -23,6 +23,8 @@
 
 from typing import List
 
+__all__ = ["FablibConfigurationError"]
+
 
 class FablibConfigurationError(Exception):
     """
