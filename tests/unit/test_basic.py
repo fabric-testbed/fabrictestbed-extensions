@@ -69,7 +69,9 @@ class FablibManagerTests(unittest.TestCase):
         # Test with some required env vars set.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
-            self.assertRaises(FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name)
+            self.assertRaises(
+                FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+            )
 
     def test_fablib_manager_all_env_vars(self):
         # Test with all required configuration set to something.
@@ -93,19 +95,27 @@ class FablibManagerTests(unittest.TestCase):
 
     def test_fablib_manager_test_only_cm_host(self):
         os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
-        self.assertRaises(FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_orchestrator_host(self):
         os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
-        self.assertRaises(FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_project_id(self):
         os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
-        self.assertRaises(FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_token_location(self):
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
-        self.assertRaises(FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_with_no_token_file(self):
         # Should fail when token location is not a valid path.

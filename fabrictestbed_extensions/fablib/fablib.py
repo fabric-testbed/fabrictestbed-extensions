@@ -29,23 +29,11 @@ import logging
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor
-
-import paramiko
-
-
-from IPython import get_ipython
-
-from typing import List, Dict
-
-from typing import TYPE_CHECKING
-
-from fabrictestbed.util.constants import Constants
-import pandas as pd
-
 from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
 
 import pandas as pd
+import paramiko
 from fabrictestbed.util.constants import Constants
 from IPython import get_ipython
 from IPython.core.display_functions import display
