@@ -23,18 +23,17 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import ipaddress
-
-import time
-import logging
-from concurrent.futures import ThreadPoolExecutor
-
-import pandas as pd
 import json
-
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from IPython.core.display_functions import display
+
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
 if TYPE_CHECKING:
@@ -44,22 +43,19 @@ if TYPE_CHECKING:
     )
     from fabrictestbed_extensions.fablib.fablib import FablibManager
 
-from tabulate import tabulate
-
-from ipaddress import ip_address, IPv4Address
-
-from typing import List, Union, Dict
-
-from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+from ipaddress import IPv4Address, ip_address
+from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
-from fabrictestbed.slice_manager import Status, SliceState
+from fabrictestbed.slice_manager import SliceState, Status
+from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.network_service import NetworkService
-from fabrictestbed_extensions.fablib.node import Node
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_extensions.fablib.node import Node
 
 
 class Slice:
@@ -79,6 +75,9 @@ class Slice:
         self.topology = None
         self.slivers = []
         self.fablib_manager = fablib_manager
+
+        self.nodes = None
+        self.interfaces = None
 
         self.slice_key = fablib_manager.get_default_slice_key()
 
@@ -634,6 +633,7 @@ class Slice:
 
     def get_slivers(self) -> List[OrchestratorSliver]:
         if not self.slivers:
+            logging.debug(f"get_slivers", stack_info=False)
             self.update_slivers()
 
         return self.slivers
@@ -657,6 +657,8 @@ class Slice:
         except Exception as e:
             logging.warning(f"slice.update_slivers failed: {e}")
 
+        self.nodes = None
+        self.interfaces = None
         self.update_topology()
 
         if self.get_state() == "ModifyOK":
@@ -880,6 +882,9 @@ class Slice:
         :return: a new L2 network service
         :rtype: NetworkService
         """
+        self.nodes = None
+        self.interfaces = None
+
         network_service = NetworkService.new_l2network(
             slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
         )
@@ -938,6 +943,9 @@ class Slice:
         :return: a new L3 network service
         :rtype: NetworkService
         """
+        self.nodes = None
+        self.interfaces = None
+
         return NetworkService.new_l3network(
             slice=self,
             name=name,
@@ -1026,6 +1034,9 @@ class Slice:
         if host:
             node.set_host(host)
 
+        self.nodes = None
+        self.interfaces = None
+
         return node
 
     def get_object_by_reservation(
@@ -1064,13 +1075,12 @@ class Slice:
         :return: a list of error messages
         :rtype: List[Dict[String, String]]
         """
-        # strings to ingnor
+        # strings to ignore
         cascade_notice_string1 = "Closing reservation due to failure in slice"
         cascade_notice_string2 = "is in a terminal state"
 
         origin_notices = []
         for reservation_id, notice in self.get_notices().items():
-            # print(f"XXXXX: reservation_id: {reservation_id}, notice {notice}")
             if cascade_notice_string1 in notice or cascade_notice_string2 in notice:
                 continue
 
@@ -1121,7 +1131,7 @@ class Slice:
                     return_components.append(component)
 
         except Exception as e:
-            print(f"get_components: exception {e}")
+            logging.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
             pass
         return return_components
@@ -1133,17 +1143,18 @@ class Slice:
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
-        return_nodes = []
 
-        # fails for topology that does not have nodes
-        try:
-            for node_name, node in self.get_fim_topology().nodes.items():
-                return_nodes.append(Node.get_node(self, node))
-        except Exception as e:
-            logging.info(f"get_nodes: exception {e}")
-            # traceback.print_exc()
-            pass
-        return return_nodes
+        if not self.nodes:
+            self.nodes = []
+            # fails for topology that does not have nodes
+            try:
+                for node_name, node in self.get_fim_topology().nodes.items():
+                    self.nodes.append(Node.get_node(self, node))
+            except Exception as e:
+                logging.info(f"get_nodes: exception {e}")
+                pass
+
+        return self.nodes
 
     def get_node(self, name: str) -> Node:
         """
@@ -1167,15 +1178,16 @@ class Slice:
         :return: a list of interfaces on this slice
         :rtype: List[Interface]
         """
-        interfaces = []
-        for node in self.get_nodes():
-            logging.debug(f"Getting interfaces for node {node.get_name()}")
-            for interface in node.get_interfaces():
-                logging.debug(
-                    f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
-                )
-                interfaces.append(interface)
-        return interfaces
+        if not self.interfaces:
+            self.interfaces = []
+            for node in self.get_nodes():
+                logging.debug(f"Getting interfaces for node {node.get_name()}")
+                for interface in node.get_interfaces():
+                    logging.debug(
+                        f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
+                    )
+                    self.interfaces.append(interface)
+        return self.interfaces
 
     def get_interface(self, name: str = None) -> Interface:
         """
@@ -1275,8 +1287,7 @@ class Slice:
                     )
 
         except Exception as e:
-            print(f"get_network_services: exception {e}")
-            # traceback.print_exc()
+            logging.error(e, exc_info=True)
             pass
         return return_networks
 
@@ -1687,17 +1698,18 @@ class Slice:
         :rtype: SMSlice
         """
 
-        from IPython.display import clear_output
         import time
+
+        from IPython.display import clear_output
 
         logging.debug(f"wait_jupyter: slice {self.get_name()}")
 
         start = time.time()
 
-        if len(self.get_interfaces()) > 0:
-            hasNetworks = True
-        else:
-            hasNetworks = False
+        # if len(self.get_interfaces()) > 0:
+        #    hasNetworks = True
+        # else:
+        #    hasNetworks = False
 
         count = 0
         # while not self.isStable():
@@ -1707,9 +1719,11 @@ class Slice:
                 raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
 
             time.sleep(interval)
+
             stable = False
             self.update_slice()
             self.update_slivers()
+
             if self.isStable():
                 stable = True
                 self.update()
@@ -1991,8 +2005,6 @@ class Slice:
             return "background-color: %s" % color
 
         def highlight(x):
-            print(f"x: {x}")
-
             if x.State == "Closed":
                 # return [f'background-color: {self.get_fablib_manager().ERROR_LIGHT_COLOR}']*(len(fields))
                 color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
@@ -2143,10 +2155,16 @@ class Slice:
             else:
                 type = sliver.sliver_type
 
+            if "Site" in sliver.sliver:
+                site = sliver.sliver["Site"]
+            else:
+                site = ""
+
             table.append(
                 {
                     "id": sliver.sliver_id,
                     "name": sliver.sliver["Name"],
+                    "site": site,
                     "type": type,
                     "state": sliver.state,
                     "error": error,
@@ -2162,6 +2180,7 @@ class Slice:
             pretty_names_dict = {
                 "name": "Name",
                 "id": "ID",
+                "site": "Site",
                 "type": "Type",
                 "state": "State",
                 "error": "Error",

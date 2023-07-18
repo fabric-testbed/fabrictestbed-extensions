@@ -23,35 +23,30 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
 import functools
-import time
-
 import importlib.resources as pkg_resources
+import os
+import re
+import time
+import traceback
 from typing import List
 
 from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
     Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
     ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    Labels,
+    ServiceType,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+
+from fabrictestbed_extensions import images
+from tests.integration.abc_test import AbcTest
 
 
-from .abc_test import AbcTest
-
-from .. import images
-
-
-class HelloFABRIC(AbcTest):
+class NVMEBenchmark(AbcTest):
     def __init__(self):
         """
         Constructor
@@ -59,32 +54,32 @@ class HelloFABRIC(AbcTest):
         """
         super().__init__()
 
-    def create_slice(self, slice_name, sites, node_count=1):
+    def create_slice(self, slice_name, site_name, node_count=1):
         image = "default_centos_8"
         image_type = "qcow2"
-        cores = 2
-        ram = 2
-        disk = 2
+        cores = 4
+        ram = 8
+        disk = 50
+        model_type = ComponentModelType.NVME_P4510
+        # nvme_component_type = ComponentType.NVME
+        # nvme_model = 'P4510'
+        nvme_name = "nvme1"
 
         self.topology = ExperimentTopology()
-        # Set capacities
+
         cap = Capacities(core=cores, ram=ram, disk=disk)
 
-        for site in sites:
-            for node_num in range(0, node_count):
-                node_name = "hello-" + str(site) + "-" + str(node_num)
-                site_name = site
-                # Add node
-                # labels = Labels()
-                # labels.instance_parent = site.lower()+'-w'+str(node_num)+'.fabric-testbed.net'
+        for node_num in range(0, node_count):
+            node_name = "nvme-" + str(site_name) + "-" + str(node_num)
+            # Add node
+            n1 = self.topology.add_node(name=node_name, site=site_name)
 
-                node = self.topology.add_node(name=node_name, site=site_name)
+            # Set Properties
+            n1.set_properties(capacities=cap, image_type=image_type, image_ref=image)
 
-                # Set Properties
-                # node.set_properties(capacities=cap, image_type=image_type, image_ref=image, labels=labels)
-                node.set_properties(
-                    capacities=cap, image_type=image_type, image_ref=image
-                )
+            # Add the PCI NVMe device
+            n1.add_component(model_type=model_type, name=nvme_name)
+            # n1.add_component(ctype=nvme_component_type, model=nvme_model, name=nvme_name)
 
         # Generate Slice Graph
         slice_graph = self.topology.serialize()
@@ -93,7 +88,6 @@ class HelloFABRIC(AbcTest):
         return_status, slice_reservations = self.slice_manager.create(
             slice_name=slice_name, slice_graph=slice_graph, ssh_key=self.node_ssh_key
         )
-        # time.sleep(5)
 
         if return_status == Status.OK:
             slice_id = slice_reservations[0].get_slice_id()
@@ -101,7 +95,7 @@ class HelloFABRIC(AbcTest):
         else:
             print(f"Failure: {slice_reservations}")
 
-        # time.sleep(10)
+        # time.sleep(30)
 
         return_status, slices = self.slice_manager.slices(
             excludes=[SliceState.Dead, SliceState.Closing]
@@ -109,7 +103,7 @@ class HelloFABRIC(AbcTest):
 
         if return_status == Status.OK:
             self.slice = list(filter(lambda x: x.slice_name == slice_name, slices))[0]
-            # self.slice = self.wait_for_slice(slice, progress=True, timeout=600)
+            # self.slice = self.wait_for_slice(slice, progress=True)
 
         # print()
         # print("Slice Name : {}".format(self.slice.slice_name))
@@ -151,9 +145,7 @@ class HelloFABRIC(AbcTest):
                 expected_stdout = "Hello, FABRIC from node " + hostname + "\n"
 
                 # print("------------------------- Test Output ---------------------------")
-                script = (
-                    "#!/bin/bash  \n" "echo Hello, FABRIC from node `hostname -s`   \n"
-                )
+                script = "#!/bin/bash  \n" "lspci | grep NVMe \n"
                 stdout_str = self.execute_script(
                     node_username="centos", node=node, script=script
                 )
@@ -170,7 +162,7 @@ class HelloFABRIC(AbcTest):
                 traceback.print_exc()
 
     def delete_slice(self):
-        status, result = self.slice_manager.delete(slice_object=self.slice)
+        status, result = self.slice_manager.delete(slice_id=self.slice.slice_id)
 
         # print("Response Status {}".format(status))
         # print("Response received {}".format(result))
@@ -222,7 +214,7 @@ class HelloFABRIC(AbcTest):
                 create_slice=create_slice,
                 run_test=run_test,
                 delete=delete,
-                sites=[site],
+                site=site,
                 node_count=node_count,
             )
 
@@ -232,20 +224,18 @@ class HelloFABRIC(AbcTest):
         create_slice=True,
         run_test=True,
         delete=True,
-        sites=[],
+        site=None,
         node_count=1,
     ):
         """
         Run the test
         :return:
         """
-        # print(self.advertised_topology)
-
-        print("HelloFABRIC test, slice_name: {}, site: {}".format(slice_name, sites))
+        print("NVMe test, slice_name: {}, site: {}".format(slice_name, site))
         if create_slice:
             # print("Creating Slice")
             try:
-                self.create_slice(slice_name, sites, node_count=node_count)
+                self.create_slice(slice_name, site, node_count=node_count)
                 time.sleep(5)
 
                 self.slice = self.wait_for_slice(

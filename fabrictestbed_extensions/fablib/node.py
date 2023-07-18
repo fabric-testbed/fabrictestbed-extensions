@@ -24,39 +24,36 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 
+import concurrent.futures
 import ipaddress
 import json
+import logging
+import select
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+
+import jinja2
 import paramiko
-import logging
+from IPython.core.display_functions import display
+from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
-from tabulate import tabulate
-import select
-import jinja2
-
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
-
-
-from typing import List, Union, Tuple
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fim.slivers.network_service import NSLayer
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
-from fabrictestbed.slice_editor import Labels, CapacityHints, ServiceType
-from fabrictestbed.slice_editor import Capacities, UserData
-from ipaddress import ip_address, IPv4Address, IPv6Address, IPv4Network, IPv6Network
+from fabrictestbed.slice_editor import Capacities, CapacityHints, Labels
+from fabrictestbed.slice_editor import Node as FimNode
+from fabrictestbed.slice_editor import ServiceType, UserData
+from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
-from fabrictestbed.slice_editor import Node as FimNode
 
 
 class Node:
@@ -86,9 +83,12 @@ class Node:
             self.username = None
 
         try:
-            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+            if slice.isStable():
+                self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
         except:
-            self.sliver = None
+            pass
+
+        self.sliver = None
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
@@ -412,8 +412,8 @@ class Node:
 
             return False
 
-        if pretty_names and len(self.self.get_components()) > 0:
-            pretty_names_dict = self.self.get_components()[0].get_pretty_name_dict()
+        if pretty_names and len(self.get_components()) > 0:
+            pretty_names_dict = self.get_components()[0].get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -422,7 +422,7 @@ class Node:
             output=output,
             quiet=quiet,
             filter_function=combined_filter_function,
-            pretty_names_dict=pretty_names_dict,
+            pretty_names=pretty_names_dict,
         )
 
     def list_interfaces(
@@ -949,6 +949,9 @@ class Node:
         - NVME_P4510: NVMe Storage Device
         - GPU_TeslaT4: Tesla T4 GPU
         - GPU_RTX6000: RTX6000 GPU
+        - GPU_A30: A30 GPU
+        - GPU_A40: A40 GPU
+        - FPGA_Xilinx_U280: Xilinx U280 GPU
         :param model: the name of the component model to add
         :type model: String
         :param name: the name of the new component
@@ -1175,7 +1178,8 @@ class Node:
         import logging
 
         logging.debug(
-            f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}"
+            f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}",
+            stack_info=True,
         )
 
         if not self.get_reservation_state() == "Active":
@@ -1204,6 +1208,7 @@ class Node:
             # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
             src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
+            logging.error("node.execute: Management IP Invalid:", exc_info=True)
             raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
@@ -1285,9 +1290,15 @@ class Node:
                 else:
                     # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
                     stdout_chunks = []
-                    stdout_chunks.append(
-                        stdout.channel.recv(len(stdout.channel.in_buffer))
-                    )
+                    try:
+                        stdout_chunks.append(
+                            stdout.channel.recv(len(stdout.channel.in_buffer))
+                        )
+                    except EOFError:
+                        logging.warning(
+                            "A Paramiko EOFError has occurred, "
+                            "if this is part of a reboot sequence, it can be ignored"
+                        )
                     stderr_chunks = []
 
                     while (
@@ -1370,7 +1381,7 @@ class Node:
 
             except Exception as e:
                 logging.warning(
-                    f"Exception in upload_file() (attempt #{attempt} of {retry}): {e}"
+                    f"Exception in node.execute() (attempt #{attempt} of {retry}): {e}"
                 )
 
                 if attempt + 1 == retry:
@@ -1629,7 +1640,7 @@ class Node:
         elif self.validIPAddress(management_ip) == "IPv6":
             src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
-            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
+            raise Exception(f"download_file: Management IP Invalid: {management_ip}")
         dest_addr = (management_ip, 22)
 
         for attempt in range(int(retry)):
@@ -1770,8 +1781,8 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import tarfile
         import os
+        import tarfile
         import tempfile
 
         logging.debug(
@@ -1870,8 +1881,8 @@ class Node:
         :type retry_interval: int
         :raise Exception: if management IP is invalid
         """
-        import tarfile
         import os
+        import tarfile
 
         logging.debug(
             f"upload node: {self.get_name()}, local_directory_path: {local_directory_path}"
@@ -1932,7 +1943,6 @@ class Node:
         stdout, stderr = self.execute("sudo ip -j route list", quiet=True)
         stdout_json = json.loads(stdout)
 
-        # print(pythonObj)
         for i in stdout_json:
             if i["dst"] == "default":
                 logging.debug(
@@ -2658,7 +2668,7 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def config(self, log_dir="."):
-        self.execute(f"sudo hostnamectl set-hostname {self.get_name()}", quiet=True)
+        self.execute(f"sudo hostnamectl set-hostname '{self.get_name()}'", quiet=True)
 
         for iface in self.get_interfaces():
             iface.config()
@@ -2672,3 +2682,36 @@ class Node:
             self.run_post_update_commands()
 
         return "Done"
+
+    def add_fabnet(
+        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
+    ):
+        site = self.get_site()
+
+        net_name = f"{name}_{net_type}_{site}"
+
+        net = self.get_slice().get_network(net_name)
+        if not net:
+            net = self.get_slice().add_l3network(name=net_name, type=net_type)
+
+        # Add ccontrol plane network to node1
+        iface = self.add_component(
+            model=nic_type, name=f"{net_name}_nic"
+        ).get_interfaces()[0]
+        net.add_interface(iface)
+        iface.set_mode("auto")
+
+        if routes:
+            for route in routes:
+                self.add_route(subnet=route, next_hop=net.get_gateway())
+        else:
+            if net_type == "IPv4":
+                self.add_route(
+                    subnet=self.get_fablib_manager().FABNETV4_SUBNET,
+                    next_hop=net.get_gateway(),
+                )
+            elif net_type == "IPv6":
+                self.add_route(
+                    subnet=self.get_fablib_manager().FABNETV6_SUBNET,
+                    next_hop=net.get_gateway(),
+                )

@@ -8,6 +8,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Address a crash when querying NUMA properties. (Issue
+  [#191](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/191),
+  PR [#192](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/192))
+
+### Changed
+
+- FablibManager validates ssh keys (PR
+  [#136](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/136))
+
+### Added
+
+- Add/update integration tests (Issues
+  [#184](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/184),
+  [#186](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/186),
+  PR [#187](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/187))
+
+
+## [1.4.4] - 2023-05-21
+
+### Fixed
+
+- Changed some error that were printing to stdout to log instead.
+
+### Added
+
+- Added a get_public_ips call to NetworkService for user to get list of public IPs assigned to their FabNetExt
+
+
+## [1.4.3] - 2023-04-22
+
+### Fixed
+
+- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured. 
+
+## [1.4.2] - 2023-04-21
+
 ### Added
 
 - Support new GPU models has been added (PR
@@ -26,9 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A way to query link and facility port information
 - Added function to make IP address of node publicly routable with external networking. `make_ip_publicly_routable`
 - Streamlined polling after a submit to reduce load on the control framework
-- FablibManager validates its configuration (PR
-  [#121](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/121),
-  [#136](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/136))
+- Added easy, one-line "add_fabnet" functionality simple L3 networks
+- ipython 8.12.0 is added as a direct dependency; this is a short-term
+  workaround until FABRIC's JupyterHub is updated.
+
 
 ### Changed
 

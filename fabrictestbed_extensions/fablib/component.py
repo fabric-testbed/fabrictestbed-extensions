@@ -23,8 +23,11 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 import json
+from typing import TYPE_CHECKING
+
+import jinja2
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -32,14 +35,12 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabrictestbed_extensions.fablib.interface import Interface
 
-from tabulate import tabulate
+import logging
 from typing import List
 
-import logging
-
-from fabrictestbed.slice_editor import ComponentModelType, Labels, Flags
 from fabrictestbed.slice_editor import Component as FimComponent
-from fabrictestbed.slice_editor import UserData
+from fabrictestbed.slice_editor import ComponentModelType, Flags, Labels, UserData
+from tabulate import tabulate
 
 
 class Component:
@@ -53,6 +54,7 @@ class Component:
         "GPU_A40": ComponentModelType.GPU_A40,
         "GPU_A30": ComponentModelType.GPU_A30,
         "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280,
     }
 
     def __str__(self):
@@ -101,6 +103,7 @@ class Component:
             "type": "Type",
             "dev": "Device",
             "node": "Node",
+            "numa": "Numa Node",
         }
 
     def toDict(self, skip=[]):
@@ -121,6 +124,7 @@ class Component:
             "type": str(self.get_type()),
             "dev": str(self.get_device_name()),
             "node": str(self.get_node().get_name()),
+            "numa": str(self.get_numa_node()),
         }
 
     def generate_template_context(self):
@@ -318,6 +322,7 @@ class Component:
         super().__init__()
         self.fim_component = fim_component
         self.node = node
+        self.interfaces = None
 
     def get_interfaces(self) -> List[Interface]:
         """
@@ -329,11 +334,14 @@ class Component:
 
         from fabrictestbed_extensions.fablib.interface import Interface
 
-        ifaces = []
-        for fim_interface in self.get_fim_component().interface_list:
-            ifaces.append(Interface(component=self, fim_interface=fim_interface))
+        if not self.interfaces:
+            self.interfaces = []
+            for fim_interface in self.get_fim_component().interface_list:
+                self.interfaces.append(
+                    Interface(component=self, fim_interface=fim_interface)
+                )
 
-        return ifaces
+        return self.interfaces
 
     def get_fim_component(self) -> FimComponent:
         """
@@ -392,6 +400,16 @@ class Component:
         Not intended for API use
         """
         return self.get_fim_component().details
+
+    def get_numa_node(self) -> str:
+        """
+        Get the Numa Node assigned to the device
+        """
+        try:
+            return self.get_fim_component().get_property(pname="label_allocations").numa
+        except Exception as e:
+            logging.error(f"get_numa_node failed: {e}")
+            return None
 
     def get_disk(self) -> int:
         """
@@ -579,8 +597,7 @@ class Component:
             )
             output.append(self.node.execute(f"df -h {mount_point}"))
         except Exception as e:
-            print(f"config_nvme Fail: {self.get_name()}")
-            # traceback.print_exc()
+            logging.error(f"config_nvme Fail: {self.get_name()}:", exc_info=True)
             raise Exception(str(output))
 
         return output

@@ -23,32 +23,27 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, List, Union
 
 from tabulate import tabulate
-from typing import List
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
     from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
-from fabrictestbed.slice_editor import (
-    ServiceType,
-    Labels,
-    Flags,
-    NetworkService as FimNetworkService,
-)
-from fim.slivers.network_service import ServiceType, NSLayer
-
-from fabrictestbed.slice_editor import UserData
-from fabric_cf.orchestrator.orchestrator_proxy import Status
-
-from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 import ipaddress
 import json
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+
+import jinja2
+from fabric_cf.orchestrator.orchestrator_proxy import Status
+from fabrictestbed.slice_editor import Flags, Labels
+from fabrictestbed.slice_editor import NetworkService as FimNetworkService
+from fabrictestbed.slice_editor import ServiceType, UserData
+from fim.slivers.network_service import NSLayer, ServiceType
 
 
 class NetworkService:
@@ -498,10 +493,17 @@ class NetworkService:
         self.fim_network_service = fim_network_service
         self.slice = slice
 
+        self.interfaces = None
+
         try:
-            self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+            if self.slice.isStable():
+                self.sliver = self.slice.get_sliver(
+                    reservation_id=self.get_reservation_id()
+                )
         except:
-            self.sliver = None
+            pass
+
+        self.sliver = None
 
     def __str__(self):
         """
@@ -688,6 +690,10 @@ class NetworkService:
             return None
 
     def get_sliver(self) -> OrchestratorSliver:
+        if not self.sliver and self.slice.isStable():
+            self.sliver = self.slice.get_sliver(
+                reservation_id=self.get_reservation_id()
+            )
         return self.sliver
 
     def get_fim_network_service(self) -> FimNetworkService:
@@ -777,6 +783,25 @@ class NetworkService:
             logging.warning(f"Failed to get_available_ips: {e}")
             return None
 
+    def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
+        """
+        Get list of public IPs assigned to the FabNetv*Ext service
+        :return: List of Public IPs
+        :rtype: List[IPv4Address] or List[IPv6Address] or None
+        """
+        if self.get_fim_network_service().labels is not None:
+            if self.get_fim_network_service().labels.ipv4 is not None:
+                result = []
+                for x in self.get_fim_network_service().labels.ipv4:
+                    result.append(IPv4Address(x))
+                return result
+            elif self.get_fim_network_service().labels.ipv6 is not None:
+                result = []
+                for x in self.get_fim_network_service().labels.ipv6:
+                    result.append(IPv6Address(x))
+                return result
+        return None
+
     def get_subnet(self) -> IPv4Network or IPv6Network or None:
         """
         Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network
@@ -858,12 +883,15 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-        interfaces = []
-        for interface in self.get_fim_network_service().interface_list:
-            logging.debug(f"interface: {interface}")
-            interfaces.append(self.get_slice().get_interface(name=interface.name))
+        if not self.interfaces:
+            self.interfaces = []
+            for interface in self.get_fim_network_service().interface_list:
+                logging.debug(f"interface: {interface}")
+                self.interfaces.append(
+                    self.get_slice().get_interface(name=interface.name)
+                )
 
-        return interfaces
+        return self.interfaces
 
     def get_interface(self, name: str = None) -> Interface or None:
         """
@@ -937,6 +965,8 @@ class NetworkService:
             new_nstype = NetworkService.calculate_l2_nstype(interfaces=new_interfaces)
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
+            else:
+                self.get_fim().connect_interface(interface=interface.get_fim())
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
@@ -959,7 +989,8 @@ class NetworkService:
 
         interface.set_fablib_data(iface_fablib_data)
 
-        self.get_fim().connect_interface(interface=interface.get_fim())
+        if self.get_layer() == NSLayer.L3:
+            self.get_fim().connect_interface(interface=interface.get_fim())
 
     def remove_interface(self, interface: Interface):
         iface_fablib_data = interface.get_fablib_data()

@@ -23,10 +23,15 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
-import os
+
+import json
 import logging
+import os
 import random
 from concurrent.futures import ThreadPoolExecutor
+
+import paramiko
+
 
 from IPython import get_ipython
 
@@ -34,23 +39,28 @@ from typing import List, Dict
 
 from typing import TYPE_CHECKING
 
-import paramiko
-
 from fabrictestbed.util.constants import Constants
 import pandas as pd
-from ipaddress import IPv4Network, IPv6Network
-from tabulate import tabulate
-import json
 
+from ipaddress import IPv4Network, IPv6Network
+from typing import TYPE_CHECKING, Dict, List
+
+import pandas as pd
+from fabrictestbed.util.constants import Constants
+from IPython import get_ipython
+from IPython.core.display_functions import display
+from tabulate import tabulate
+
+from fabrictestbed_extensions import __version__ as fablib_version
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
 
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
 from fabrictestbed_extensions.fablib.exceptions import FablibConfigurationError
-from fabrictestbed_extensions.fablib.resources import Resources, Links, FacilityPorts
+from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
 from fabrictestbed_extensions.fablib.slice import Slice
 
 
@@ -85,7 +95,7 @@ class fablib:
         return fablib.get_default_fablib_manager().get_site_names()
 
     @staticmethod
-    def list_sites() -> str:
+    def list_sites() -> object:
         """
         Get a string used to print a tabular list of sites with state
 
@@ -772,7 +782,7 @@ class FablibManager:
         if log_level is not None:
             self.set_log_level(log_level)
         if log_file is not None:
-            self.log_level = log_file
+            self.log_file = log_file
         if data_dir is not None:
             self.data_dir = data_dir
 
@@ -1139,7 +1149,8 @@ class FablibManager:
         quiet: bool = False,
         filter_function=None,
         update: bool = True,
-        pretty_names=True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1168,9 +1179,14 @@ class FablibManager:
         :param filter_function: lambda function
         :type filter_function: lambda
         :return: table in format specified by output parameter
+        :param update
+        :param pretty_names
+        :param force_refresh
         :rtype: Object
         """
-        return self.get_resources(update=update).list_sites(
+        return self.get_resources(
+            update=update, force_refresh=force_refresh
+        ).list_sites(
             output=output,
             fields=fields,
             quiet=quiet,
@@ -1393,7 +1409,9 @@ class FablibManager:
 
         return self.facility_ports
 
-    def get_resources(self, update: bool = True) -> Resources:
+    def get_resources(
+        self, update: bool = True, force_refresh: bool = False
+    ) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1402,7 +1420,7 @@ class FablibManager:
         :rtype: Resources
         """
         if not self.resources:
-            self.get_available_resources(update=update)
+            self.get_available_resources(update=update, force_refresh=force_refresh)
 
         return self.resources
 
@@ -1511,6 +1529,7 @@ class FablibManager:
             "fabric_slice_private_key_passphrase": "Slice Private Key Passphrase",
             "fablib_log_file": "Log File",
             "fablib_log_level": "Log Level",
+            "fablib_version": "Version",
         }
 
     def get_config(self) -> Dict[str, Dict[str, str]]:
@@ -1535,6 +1554,7 @@ class FablibManager:
             "fabric_slice_private_key_passphrase": self.get_default_slice_private_key_passphrase(),
             "fablib_log_file": self.get_log_file(),
             "fablib_log_level": self.get_log_level(),
+            "fablib_version": fablib_version,
         }
 
     def get_configXXX(self) -> Dict[str, Dict[str, str]]:
@@ -1785,7 +1805,9 @@ class FablibManager:
 
         return topology.sites[site]
 
-    def get_available_resources(self, update: bool = False) -> Resources:
+    def get_available_resources(
+        self, update: bool = False, force_refresh: bool = False
+    ) -> Resources:
         """
         Get the available resources.
 
@@ -1793,14 +1815,15 @@ class FablibManager:
         services. Otherwise, this method returns the existing information.
 
         :param update:
+        :param force_refresh
         :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
-            self.resources = Resources(self)
+            self.resources = Resources(self, force_refresh=force_refresh)
         elif update:
-            self.resources.update()
+            self.resources.update(force_refresh=force_refresh)
 
         return self.resources
 

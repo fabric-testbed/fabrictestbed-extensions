@@ -25,15 +25,14 @@
 from __future__ import annotations
 
 import ipaddress
+import json
+import logging
+from ipaddress import IPv4Address
+from typing import TYPE_CHECKING, Any
 
+import jinja2
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
-from ipaddress import IPv4Address
-import json
-
-import logging
-
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -59,6 +58,7 @@ class Interface:
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
+        self.dev = None
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -87,6 +87,7 @@ class Interface:
             ["Physical Device", self.get_physical_os_interface_name()],
             ["Device", self.get_os_interface()],
             ["Address", self.get_ip_addr()],
+            ["Numa Node", self.get_numa_node()],
         ]
 
         return tabulate(table)
@@ -121,6 +122,7 @@ class Interface:
             "private_ssh_key_file": "Private SSH Key File",
             "mode": "Mode",
             "ip_addr": "IP Address",
+            "numa": "Numa Node",
         }
 
     def toDict(self, skip=[]):
@@ -171,7 +173,12 @@ class Interface:
             "physical_dev": physical_dev,
             "dev": dev,
             "ip_addr": ip_addr,
+            "numa": str(self.get_numa_node()),
         }
+
+    def get_numa_node(self) -> str:
+        if self.get_component() is not None:
+            return self.get_component().get_numa_node()
 
     def generate_template_context(self):
         context = self.toDict()
@@ -338,12 +345,16 @@ class Interface:
         :rtype: Dict
         """
 
-        ip_addr_list_json = self.get_node().ip_addr_list(output="json")
+        if not self.dev:
+            ip_addr_list_json = self.get_node().ip_addr_list(output="json")
 
-        mac = self.get_mac()
-        for dev in ip_addr_list_json:
-            if str(dev["address"].upper()) == str(mac.upper()):
-                return dev
+            mac = self.get_mac()
+            for dev in ip_addr_list_json:
+                if str(dev["address"].upper()) == str(mac.upper()):
+                    self.dev = dev
+                    return dev
+        else:
+            return self.dev
 
         return None
 
@@ -664,7 +675,7 @@ class Interface:
                     return link
             return None
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"{e}")
 
     def get_ip_addr_show(self, dev=None):
         try:
@@ -683,7 +694,7 @@ class Interface:
         return stdout
 
     # fablib.Interface.get_ip_addr()
-    def get_ip_addr(self, dev=None):
+    def get_ip_addr_ssh(self, dev=None):
         """
         Gets the ip addr info for this interface.
 
@@ -698,16 +709,17 @@ class Interface:
             dev = self.get_os_interface()
             # print(f"dev: {dev}")
 
-            if dev == None:
+            if dev is None:
                 return addrs
 
             for addr in addrs:
                 if addr["ifname"] == dev:
-                    return ipaddress.ip_address(addr["addr_info"][0]["local"])
+                    # Hack to make it backward compatible. Should return an object
+                    return str(ipaddress.ip_address(addr["addr_info"][0]["local"]))
 
             return None
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"{e}")
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):
@@ -732,7 +744,7 @@ class Interface:
                     if addr_info["family"] == family:
                         return_ips.append(addr_info["local"])
         except Exception as e:
-            print(f"Exception: {e}")
+            logging.warning(f"{e}")
 
         return return_ips
 
@@ -794,7 +806,10 @@ class Interface:
                 addr = fablib_data["addr"]
             return addr
         else:
-            return None
+            # get_ip_addr_ssh()
+            if self.get_mac() is None:
+                return None
+            return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
         fablib_data = self.get_fablib_data()
