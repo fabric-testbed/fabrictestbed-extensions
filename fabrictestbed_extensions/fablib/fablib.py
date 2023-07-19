@@ -814,10 +814,10 @@ class FablibManager:
             if not hasattr(self, attr) or getattr(self, attr) is None:
                 errors.append(f"{value} is not set")
 
-        # Validate ssh keys and certs.  We should check that:
+        # Validate ssh keys and certs.  We check that:
         #
-        #  - Keys and certs exists, and they have the right permissions.
-        #  - Keys are of the right form.
+        #  - Keys and certs exists.
+        #  - Keys are of the right type (RSA or ECDSA).
         #  - If keys are password protected, we must know the
         #    passwords.
         if not hasattr(self, "bastion_key_filename"):
