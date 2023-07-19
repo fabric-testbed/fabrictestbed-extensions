@@ -57,10 +57,7 @@ class FablibManagerTests(unittest.TestCase):
             "bastion key file is not set",
             "bastion host address is not set",
             "bastion key filename is set to None",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "sliver key filename is set to None",
         ]
 
         self.assertEqual(expected_errors, ctx.exception.errors)
@@ -85,10 +82,8 @@ class FablibManagerTests(unittest.TestCase):
 
         # SSH keys are invalid, so expect some errors.
         expected_errors = [
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "sliver key filename is set to None"
         ]
 
         self.assertEqual(expected_errors, ctx.exception.errors)
@@ -134,11 +129,10 @@ class FablibManagerTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
         expected_errors = [
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "sliver key filename is set to None"
         ]
+
         self.assertEqual(ctx.exception.errors, expected_errors)
 
     def test_fablib_manager_with_dummy_token(self):
@@ -166,10 +160,8 @@ class FablibManagerTests(unittest.TestCase):
         # TODO: use some actual ssh keys so that so that we get
         # the actual error about invalid token.
         expected_errors = [
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "sliver key filename is set to None"
         ]
 
         self.assertEqual(ctx.exception.errors, expected_errors)
@@ -194,10 +186,7 @@ class FablibManagerTests(unittest.TestCase):
             "bastion key file is not set",
             "bastion host address is not set",
             "bastion key filename is set to None",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "sliver key filename is set to None",           
         ]
 
         self.assertEqual(expected_errors, ctx.exception.errors)
@@ -230,10 +219,8 @@ class FablibManagerTests(unittest.TestCase):
         self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
         expected_errors = [
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: dummy (error: [Errno 2] No such file or directory: 'dummy')",
-            "Error reading SSH key: None (error: Key object may not be empty)",
-            "Error reading SSH key: None (error: 'NoneType' object has no attribute 'get_text')",
+            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "sliver key filename is set to None",
         ]
 
         self.assertEqual(ctx.exception.errors, expected_errors)
