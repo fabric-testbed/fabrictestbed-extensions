@@ -831,7 +831,7 @@ class FablibManager:
                 ssh_key_pass=self.bastion_passphrase,
                 ssh_cert_file=None,
                 usage_site="bastion",
-            )            
+            )
 
         if self.get_default_slice_private_key_file() is None:
             errors.append("sliver key filename is set to None")
@@ -879,7 +879,9 @@ class FablibManager:
         try:
             pathlib.Path(ssh_key_file).read_bytes()
         except Exception as e:
-            errors.append(f"Error opening {usage_site} key '{ssh_key_file}' (error: {e})")
+            errors.append(
+                f"Error opening {usage_site} key '{ssh_key_file}' (error: {e})"
+            )
             return errors
 
         # Do we have an RSA key?
