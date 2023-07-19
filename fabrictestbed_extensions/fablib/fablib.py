@@ -875,7 +875,7 @@ class FablibManager:
         try:
             pathlib.Path(ssh_key_file).read_bytes()
         except Exception as e:
-            errors.append(f"Error opening {usage_site} key '{ssh_key_file}': {e}")
+            errors.append(f"Error opening {usage_site} key '{ssh_key_file}' (error: {e})")
             return errors
 
         # Do we have an RSA key?

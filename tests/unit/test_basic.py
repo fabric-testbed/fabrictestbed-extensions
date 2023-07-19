@@ -82,7 +82,7 @@ class FablibManagerTests(unittest.TestCase):
 
         # SSH keys are invalid, so expect some errors.
         expected_errors = [
-            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
             "sliver key filename is set to None"
         ]
 
@@ -129,7 +129,7 @@ class FablibManagerTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
         expected_errors = [
-            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
             "sliver key filename is set to None"
         ]
 
@@ -160,7 +160,7 @@ class FablibManagerTests(unittest.TestCase):
         # TODO: use some actual ssh keys so that so that we get
         # the actual error about invalid token.
         expected_errors = [
-            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
             "sliver key filename is set to None"
         ]
 
@@ -219,7 +219,7 @@ class FablibManagerTests(unittest.TestCase):
         self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
 
         expected_errors = [
-            "Error opening bastion key 'dummy': [Errno 2] No such file or directory: 'dummy'",
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
             "sliver key filename is set to None",
         ]
 
