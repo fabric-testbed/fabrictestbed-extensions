@@ -228,21 +228,27 @@ class FablibManagerTests(unittest.TestCase):
 
 class FablibManagerSSHKeyTests(unittest.TestCase):
     """
-    Only for testing bastion and sliver SSH key checking.
+    Tests for SSH key validation.
     """
 
     TEST_DATA_PATH = pathlib.Path(__file__).parent / "data"
 
+    # Generated with: ssh-keygen -t dsa -f id_dsa -C "test DSA key"
     TEST_DSA_PRIVATE_KEY = TEST_DATA_PATH / "id_dsa"
     TEST_DSA_PUBLIC_KEY = TEST_DATA_PATH / "id_dsa.pub"
 
+    # Generated with: ssh-keygen -t ecdsa -f id_ecdsa -C "test ECDSA key"
     TEST_ECDSA_PRIVATE_KEY = TEST_DATA_PATH / "id_ecdsa"
     TEST_ECDSA_PUBLIC_KEY = TEST_DATA_PATH / "id_ecdsa.pub"
 
+    # Generated with: ssh-keygen -t rsa -f id_rsa -C "test RSA key"
     TEST_RSA_PRIVATE_KEY = TEST_DATA_PATH / "id_rsa"
     TEST_RSA_PUBLIC_KEY = TEST_DATA_PATH / "id_rsa.pub"
 
     def test_dsa(self):
+        """
+        FABRIC does not admit DSA keys.
+        """
         errors = FablibManager._check_key_and_cert(
             ssh_key_file=self.TEST_DSA_PRIVATE_KEY,
             ssh_cert_file=self.TEST_DSA_PUBLIC_KEY,
@@ -253,6 +259,9 @@ class FablibManagerSSHKeyTests(unittest.TestCase):
         self.assertEqual(errors, expected_errors)
 
     def test_ecdsa(self):
+        """
+        ECDSA keys generated with defaults should be good.
+        """
         errors = FablibManager._check_key_and_cert(
             ssh_key_file=self.TEST_ECDSA_PRIVATE_KEY,
             ssh_cert_file=self.TEST_ECDSA_PUBLIC_KEY,
@@ -260,6 +269,9 @@ class FablibManagerSSHKeyTests(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_rsa(self):
+        """
+        RSA keys generated with defaults should be good.
+        """
         errors = FablibManager._check_key_and_cert(
             ssh_key_file=self.TEST_RSA_PRIVATE_KEY,
             ssh_cert_file=self.TEST_RSA_PUBLIC_KEY,
