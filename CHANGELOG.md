@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#184](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/184),
   [#186](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/186),
   PR [#187](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/187))
+
+### Removed
+
 - Remove unused `AbcFabLIB` class (Issue
   [#117](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/117))
 
