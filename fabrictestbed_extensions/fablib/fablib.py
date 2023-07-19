@@ -864,7 +864,11 @@ class FablibManager:
         https://learn.fabric-testbed.net/knowledge-base/logging-into-fabric-vms/
 
         This method checks that they keys and certs are usable, and
-        conforms to FABRIC policy.
+        conforms to FABRIC policy regarding key types and their
+        lengths.  This method is messy, because paramiko does not
+        offer an easy API for querying ssh keys.
+
+        https://github.com/paramiko/paramiko/issues/1303
         """
         errors = []
         key = None
