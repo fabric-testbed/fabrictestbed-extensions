@@ -822,17 +822,16 @@ class FablibManager:
         #    passwords.
         if not hasattr(self, "bastion_key_filename"):
             errors.append("bastion key filename is not known")
-
-        if self.bastion_key_filename is None:
+        elif self.bastion_key_filename is None:
             errors.append("bastion key filename is set to None")
-
-        # Check that we have a usable bastion key and passphrase.
-        errors += self._check_key_and_cert(
-            ssh_key_file=self.get_bastion_key_filename(),
-            ssh_key_pass=self.bastion_passphrase,
-            ssh_cert_file=None,
-            usage_site="bastion",
-        )
+        else:
+            # Check that we have a usable bastion key and passphrase.
+            errors += self._check_key_and_cert(
+                ssh_key_file=self.get_bastion_key_filename(),
+                ssh_key_pass=self.bastion_passphrase,
+                ssh_cert_file=None,
+                usage_site="bastion",
+            )            
 
         # Check that we have a usable slice/sliver private key, the
         # necessary passphrase to unlock the key, and a public key
