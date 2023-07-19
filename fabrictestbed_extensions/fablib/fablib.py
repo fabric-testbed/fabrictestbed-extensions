@@ -826,7 +826,7 @@ class FablibManager:
             errors.append("bastion key filename is set to None")
 
         bastion_key_errors = self._check_key_and_cert(
-            ssh_key_file=self.bastion_key_filename,
+            ssh_key_file=self.get_bastion_key_filename(),
             ssh_key_pass=self.bastion_passphrase,
             ssh_cert_file=None,
         )
