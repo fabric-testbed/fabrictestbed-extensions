@@ -852,8 +852,9 @@ class FablibManager:
                 errors=errors,
             )
 
+    @staticmethod
     def _check_key_and_cert(
-        self, ssh_key_file, ssh_key_pass=None, ssh_cert_file=None, usage_site=None
+        ssh_key_file, ssh_key_pass=None, ssh_cert_file=None, usage_site=None
     ):
         """
         Given an SSH key and cert, ensure that we can use them.
