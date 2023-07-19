@@ -826,7 +826,7 @@ class FablibManager:
             errors.append("bastion key filename is set to None")
 
         bastion_key_errors = self._check_key_and_cert(
-            self.bastion_key_filename,
+            ssh_key_file=self.bastion_key_filename,
             ssh_key_pass=self.bastion_passphrase,
             ssh_cert_file=None,
         )
@@ -835,7 +835,7 @@ class FablibManager:
             errors += bastion_key_errors
 
         node_key_errors = self._check_key_and_cert(
-            self.get_default_slice_private_key_file(),
+            ssh_key_file=self.get_default_slice_private_key_file(),
             ssh_key_pass=self.get_default_slice_private_key_passphrase(),
             ssh_cert_file=self.get_default_slice_public_key_file(),
         )
