@@ -233,14 +233,14 @@ class FablibManagerSSHKeyTests(unittest.TestCase):
 
     TEST_DATA_PATH = pathlib.Path(__file__).parent / "data"
 
-    TEST_DSA_PRIVATE_KEY = TEST_DATA_PATH / "dsa"
-    TEST_DSA_PUBLIC_KEY = TEST_DATA_PATH / "dsa.pub"
+    TEST_DSA_PRIVATE_KEY = TEST_DATA_PATH / "id_dsa"
+    TEST_DSA_PUBLIC_KEY = TEST_DATA_PATH / "id_dsa.pub"
 
-    TEST_ECDSA_PRIVATE_KEY = TEST_DATA_PATH / "ecdsa"
-    TEST_ECDSA_PUBLIC_KEY = TEST_DATA_PATH / "ecdsa.pub"
+    TEST_ECDSA_PRIVATE_KEY = TEST_DATA_PATH / "id_ecdsa"
+    TEST_ECDSA_PUBLIC_KEY = TEST_DATA_PATH / "id_ecdsa.pub"
 
-    TEST_RSA_PRIVATE_KEY = TEST_DATA_PATH / "rsa"
-    TEST_RSA_PUBLIC_KEY = TEST_DATA_PATH / "rsa.pub"
+    TEST_RSA_PRIVATE_KEY = TEST_DATA_PATH / "id_rsa"
+    TEST_RSA_PUBLIC_KEY = TEST_DATA_PATH / "id_rsa.pub"
 
     def test_dsa(self):
         errors = FablibManager._check_key_and_cert(
