@@ -873,7 +873,7 @@ class FablibManager:
         try:
             pathlib.Path(ssh_key_file).read_bytes()
         except Exception as e:
-            errors.append(f"Error opening {usage_site} key {ssh_key_file}: {e}")
+            errors.append(f"Error opening {usage_site} key '{ssh_key_file}': {e}")
             return errors
 
         # Do we have an RSA key?
@@ -885,11 +885,11 @@ class FablibManager:
             bits = key.get_bits()
             if bits < 3072:
                 errors.append(
-                    f"Key size for {usage_site} RSA key {ssh_key_file} is {bits}. Need >= 3072"
+                    f"Key size for {usage_site} RSA key '{ssh_key_file}' is {bits}. Need >= 3072"
                 )
         except Exception as e:
             rsa_key_error = (
-                f"Error reading {usage_site} SSH key: {ssh_key_file} (error: {e})"
+                f"Error reading {usage_site} SSH key: '{ssh_key_file}' (error: {e})"
             )
 
         if key is None:
@@ -901,11 +901,11 @@ class FablibManager:
                 bits = key.get_bits()
                 if bits < 256:
                     errors.append(
-                        f"Key size for {usage_site} ECDSA key {ssh_key_file} is {bits}. Need >= 256"
+                        f"Key size for {usage_site} ECDSA key '{ssh_key_file}' is {bits}. Need >= 256"
                     )
             except Exception as e:
                 ecdsa_key_error = (
-                    f"Error reading {usage_site} SSH key: {ssh_key_file} (error: {e})"
+                    f"Error reading {usage_site} SSH key: '{ssh_key_file}' (error: {e})"
                 )
 
         # If key is still none, we have an error.
@@ -919,7 +919,7 @@ class FablibManager:
             try:
                 key.load_certificate(ssh_cert_file)
             except Exception as e:
-                errors.append(f"Error loading {usage_site} cert {ssh_cert_file}: {e}")
+                errors.append(f"Error loading {usage_site} cert '{ssh_cert_file}': {e}")
 
         # Return all the errors we've accumulated so far.
         return errors
