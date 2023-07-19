@@ -897,38 +897,6 @@ class FablibManager:
         # Return all the errors we've accumulated so far.
         return errors
 
-    def _check_bastion_key(self):
-        if hasattr(self, "bastion_key_filename"):
-            return "bastion key filename is not known"
-
-        if self.bastion_key_filename is None:
-            return "bastion key filename is set to None"
-
-        try:
-            if self.bastion_key_passphrase:
-                paramiko.RSAKey(
-                    filename=self.bastion_key_filename,
-                    passphrase=self.bastion_key_passphrase,
-                )
-            else:
-                paramiko.RSAKey(filename=self.bastion_key_filename)
-        except paramiko.PasswordRequiredException as e:
-            return f"Bastion SSH key passphrase is not set {e}"
-        except Exception as e:
-            return f"Error with bastion SSH key: {e}"
-
-    def _check_bastion_cert(self):
-        # TODO
-        pass
-
-    def _check_sliver_key(self):
-        # TODO
-        pass
-
-    def _check_sliver_cert(self):
-        # TODO
-        pass
-
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
 
