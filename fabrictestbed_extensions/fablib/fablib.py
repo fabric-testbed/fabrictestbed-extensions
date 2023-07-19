@@ -859,6 +859,8 @@ class FablibManager:
         """
         errors = []
         key = None
+        rsa_key_error = None
+        ecdsa_key_error = None
 
         # Do we have an RSA key?
         try:
@@ -872,7 +874,7 @@ class FablibManager:
                     f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072"
                 )
         except Exception as e:
-            errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
+            rsa_key_error = f"Error reading SSH key: {ssh_key_file} (error: {e})"
 
         if key is None:
             # Do we have an ECDSA key, then?
@@ -886,7 +888,14 @@ class FablibManager:
                         f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256"
                     )
             except Exception as e:
-                errors.append(f"Error reading SSH key: {ssh_key_file} (error: {e})")
+                ecdsa_key_error = f"Error reading SSH key: {ssh_key_file} (error: {e})"
+
+        # If key is still none, we have an error.
+        if key is None:
+            if rsa_key_error:
+                errors.append(rsa_key_error)
+            if ecdsa_key_error:
+                errors.append(ecdsa_key_error)
 
         if key and ssh_cert_file:
             try:
