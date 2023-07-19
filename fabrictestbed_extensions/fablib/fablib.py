@@ -833,15 +833,18 @@ class FablibManager:
                 usage_site="bastion",
             )            
 
-        # Check that we have a usable slice/sliver private key, the
-        # necessary passphrase to unlock the key, and a public key
-        # (also known as a certificate).
-        errors += self._check_key_and_cert(
-            ssh_key_file=self.get_default_slice_private_key_file(),
-            ssh_key_pass=self.get_default_slice_private_key_passphrase(),
-            ssh_cert_file=self.get_default_slice_public_key_file(),
-            usage_site="sliver",
-        )
+        if self.get_default_slice_private_key_file() is None:
+            errors.append("sliver key filename is set to None")
+        else:
+            # Check that we have a usable slice/sliver private key, the
+            # necessary passphrase to unlock the key, and a public key
+            # (also known as a certificate).
+            errors += self._check_key_and_cert(
+                ssh_key_file=self.get_default_slice_private_key_file(),
+                ssh_key_pass=self.get_default_slice_private_key_passphrase(),
+                ssh_cert_file=self.get_default_slice_public_key_file(),
+                usage_site="sliver",
+            )
 
         if errors:
             raise FablibConfigurationError(
