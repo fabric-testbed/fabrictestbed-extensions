@@ -834,13 +834,13 @@ class FablibManager:
         if bastion_key_errors:
             errors += bastion_key_errors
 
-        node_key_errors = self._check_key_and_cert(
+        slice_key_errors = self._check_key_and_cert(
             ssh_key_file=self.get_default_slice_private_key_file(),
             ssh_key_pass=self.get_default_slice_private_key_passphrase(),
             ssh_cert_file=self.get_default_slice_public_key_file(),
         )
-        if node_key_errors:
-            errors += node_key_errors
+        if slice_key_errors:
+            errors += slice_key_errors
 
         if errors:
             raise FablibConfigurationError(
