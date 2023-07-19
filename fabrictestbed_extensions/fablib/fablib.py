@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import pathlib
 import random
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
@@ -867,6 +868,13 @@ class FablibManager:
         key = None
         rsa_key_error = None
         ecdsa_key_error = None
+
+        # If we can't read the key file, give up early.
+        try:
+            pathlib.Path(ssh_key_file).read_bytes()
+        except Exception as e:
+            errors.append(f"Error opening {usage_site} key {ssh_key_file}: {e}")
+            return errors
 
         # Do we have an RSA key?
         try:
