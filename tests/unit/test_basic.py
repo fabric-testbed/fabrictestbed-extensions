@@ -224,3 +224,44 @@ class FablibManagerTests(unittest.TestCase):
         ]
 
         self.assertEqual(ctx.exception.errors, expected_errors)
+
+
+class FablibManagerSSHKeyTests(unittest.TestCase):
+    """
+    Only for testing bastion and sliver SSH key checking.
+    """
+
+    TEST_DATA_PATH = pathlib.Path(__file__).parent / "data"
+
+    TEST_DSA_PRIVATE_KEY = TEST_DATA_PATH / "dsa"
+    TEST_DSA_PUBLIC_KEY = TEST_DATA_PATH / "dsa.pub"
+
+    TEST_ECDSA_PRIVATE_KEY = TEST_DATA_PATH / "ecdsa"
+    TEST_ECDSA_PUBLIC_KEY = TEST_DATA_PATH / "ecdsa.pub"
+
+    TEST_RSA_PRIVATE_KEY = TEST_DATA_PATH / "rsa"
+    TEST_RSA_PUBLIC_KEY = TEST_DATA_PATH / "rsa.pub"
+
+    def test_dsa(self):
+        errors = FablibManager._check_key_and_cert(
+            ssh_key_file=self.TEST_DSA_PRIVATE_KEY,
+            ssh_cert_file=self.TEST_DSA_PUBLIC_KEY,
+        )
+        expected_errors = [
+            f"SSH key '{self.TEST_DSA_PRIVATE_KEY}' is neither RSA nor ECDSA"
+        ]
+        self.assertEqual(errors, expected_errors)
+
+    def test_ecdsa(self):
+        errors = FablibManager._check_key_and_cert(
+            ssh_key_file=self.TEST_ECDSA_PRIVATE_KEY,
+            ssh_cert_file=self.TEST_ECDSA_PUBLIC_KEY,
+        )
+        self.assertEqual(errors, [])
+
+    def test_rsa(self):
+        errors = FablibManager._check_key_and_cert(
+            ssh_key_file=self.TEST_RSA_PRIVATE_KEY,
+            ssh_cert_file=self.TEST_RSA_PUBLIC_KEY,
+        )
+        self.assertEqual(errors, [])
