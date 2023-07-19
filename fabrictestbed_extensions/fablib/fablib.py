@@ -830,13 +830,17 @@ class FablibManager:
             ssh_key_file=self.get_bastion_key_filename(),
             ssh_key_pass=self.bastion_passphrase,
             ssh_cert_file=None,
+            usage_site="bastion",            
         )
 
-        # Check that we have a usable slice key, passphrase, and cert.
+        # Check that we have a usable slice/sliver private key, the
+        # necessary passphrase to unlock the key, and a public key
+        # (also known as a certificate).
         errors += self._check_key_and_cert(
             ssh_key_file=self.get_default_slice_private_key_file(),
             ssh_key_pass=self.get_default_slice_private_key_passphrase(),
             ssh_cert_file=self.get_default_slice_public_key_file(),
+            usage_site="sliver",            
         )
 
         if errors:
@@ -845,7 +849,7 @@ class FablibManager:
                 errors=errors,
             )
 
-    def _check_key_and_cert(self, ssh_key_file, ssh_key_pass=None, ssh_cert_file=None):
+    def _check_key_and_cert(self, ssh_key_file, ssh_key_pass=None, ssh_cert_file=None, usage_site=None):
         """
         Given an SSH key and cert, ensure that we can use them.
 
@@ -871,10 +875,10 @@ class FablibManager:
             bits = key.get_bits()
             if bits < 3072:
                 errors.append(
-                    f"Key size for RSA key {ssh_key_pass} is {bits}. Need >= 3072"
+                    f"Key size for {usage_site} RSA key {ssh_key_pass} is {bits}. Need >= 3072"
                 )
         except Exception as e:
-            rsa_key_error = f"Error reading SSH key: {ssh_key_file} (error: {e})"
+            rsa_key_error = f"Error reading {usage_site} SSH key: {ssh_key_file} (error: {e})"
 
         if key is None:
             # Do we have an ECDSA key, then?
@@ -885,10 +889,10 @@ class FablibManager:
                 bits = key.get_bits()
                 if bits < 256:
                     errors.append(
-                        f"Key size for ECDSA key {ssh_key_pass} is {bits}. Need >= 256"
+                        f"Key size for {usage_site} ECDSA key {ssh_key_pass} is {bits}. Need >= 256"
                     )
             except Exception as e:
-                ecdsa_key_error = f"Error reading SSH key: {ssh_key_file} (error: {e})"
+                ecdsa_key_error = f"Error reading {usage_site} SSH key: {ssh_key_file} (error: {e})"
 
         # If key is still none, we have an error.
         if key is None:
@@ -901,7 +905,7 @@ class FablibManager:
             try:
                 key.load_certificate(ssh_cert_file)
             except Exception as e:
-                errors.append(f"Error loading {ssh_cert_file}: {e}")
+                errors.append(f"Error loading {usage_site} cert {ssh_cert_file}: {e}")
 
         # Return all the errors we've accumulated so far.
         return errors
