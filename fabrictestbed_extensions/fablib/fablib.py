@@ -919,6 +919,9 @@ class FablibManager:
 
         # If key is still none, we have an error.
         if key is None:
+            if rsa_key_error and ecdsa_key_error:
+                errors.append(f"SSH key '{ssh_key_file}' is neither RSA nor ECDSA")
+                return errors
             if rsa_key_error:
                 errors.append(rsa_key_error)
             if ecdsa_key_error:
