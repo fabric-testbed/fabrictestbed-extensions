@@ -1,6 +1,6 @@
 import warnings
 
-import fabrictestbed_fablib.fablib import Resources
+from fabrictestbed_fablib.fablib import Resources
 
 warnings.warn(
     "fabrictestbed_extensions.fablib.resources module is deprecated;"
