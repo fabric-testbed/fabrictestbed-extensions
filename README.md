@@ -60,17 +60,35 @@ computer, see: [Install the FABRIC Python API][fablib-install].
 Contributions to FABlib are made with GitHub Pull Requests. When you
 submit a pull request, some tests will run against it:
 
-- Code formatting will be checked using [black].  Be sure that your
-  code is formatted with black, using its defaults.
-- CHANGELOG.md will be checked for updates.
-- Packages will be built.
+- Code formatting will be checked using [black] and [isort].  Be sure
+  that your code is formatted with these tools.
 - Unit tests will be run.
+- Packages will be built.
+- CHANGELOG.md will be checked for updates.
 
-You can run tests in your environment, like so, using [pytest]:
+
+## Testing FABlib
+
+FABlib currently has a modest set of unit and integration tests, under
+the top-level `tests` directory.  Unit tests can be run like so, using
+[tox]:
 
 ```console
 $ pip install -e .[test]
-$ pytest
+$ tox
+```
+
+Integration tests can be run like so:
+
+```console
+$ tox -e integration
+```
+
+Tox attempts to run tests in an isolated virtual environment.  If you
+want to run some tests directly using [pytest], that is possible too:
+
+```
+$ pytest -s tests/integration/test_hello_fabric.py
 ```
 
 ## Packaging FABlib
@@ -85,7 +103,7 @@ $ python -m build
 
 ## Releasing FABlib
 
-When it is time to release a new version of FABlib, remember to: 
+When it is time to release a new version of FABlib, remember to:
 
 1. Update `version` in `pyproject.toml`.
 2. Tag the release tag and push the tag to GitHub:
@@ -126,6 +144,8 @@ $ twine upload dist/*
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
 
 [build]: https://pypi.org/project/build/
+[tox]: https://pypi.org/project/tox/
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
 [twine]: https://pypi.org/project/twine/
+[isort]: https://pypi.org/project/isort/

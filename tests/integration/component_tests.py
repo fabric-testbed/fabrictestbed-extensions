@@ -23,32 +23,29 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-
 import functools
-import time
-
 import importlib.resources as pkg_resources
+import os
+import re
+import time
+import traceback
 from typing import List
 
+from abc_test import AbcTest
 from fabrictestbed.slice_editor import (
-    Labels,
-    ExperimentTopology,
     Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
     ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    Labels,
+    ServiceType,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
+from fabrictestbed_extensions import images
 
 from .abc_test import AbcTest
-
-from .. import images
 
 
 class ComponentTest(AbcTest):
@@ -61,7 +58,7 @@ class ComponentTest(AbcTest):
         "SmartNIC_ConnectX_6": ComponentModelType.SmartNIC_ConnectX_6,
         "SmartNIC_ConnectX_5": ComponentModelType.SmartNIC_ConnectX_5,
         "NVME_P4510": ComponentModelType.NVME_P4510,
-        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280
+        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280,
     }
 
     def __init__(self):

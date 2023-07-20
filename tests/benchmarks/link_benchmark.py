@@ -23,31 +23,27 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-import os
-import traceback
-import re
-import json
-import paramiko
-import time
-
 import importlib.resources as pkg_resources
+import json
+import os
+import re
+import time
+import traceback
 from typing import List
 
+import paramiko
 from fabrictestbed.slice_editor import (
-    ExperimentTopology,
     Capacities,
-    ComponentType,
-    ComponentModelType,
-    ServiceType,
     ComponentCatalog,
+    ComponentModelType,
+    ComponentType,
+    ExperimentTopology,
+    ServiceType,
 )
-from fabrictestbed.slice_editor import ExperimentTopology, Capacities
-from fabrictestbed.slice_manager import SliceManager, Status, SliceState
+from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fabrictestbed.util.constants import Constants
 
-from .abc_test import AbcTest
-
-from .. import images
+from tests.integration.abc_test import AbcTest
 
 
 class LinkBenchmark(AbcTest):
@@ -239,19 +235,11 @@ class LinkBenchmark(AbcTest):
         n2.add_component(
             model_type=ComponentModelType.SmartNIC_ConnectX_6, name="n2-nic1"
         )
-        if site1 == site2:
-            t.add_network_service(
-                name="net1",
-                nstype=ServiceType.L2Bridge,
-                interfaces=[n1.interface_list[0], n2.interface_list[0]],
-            )
-        else:
-            t.add_network_service(
-                name="net1",
-                nstype=ServiceType.L2PTP,
-                interfaces=[n1.interface_list[0], n2.interface_list[0]],
-            )
-
+        t.add_network_service(
+            name="ptp1",
+            nstype=ServiceType.L2PTP,
+            interfaces=[n1.interface_list[0], n2.interface_list[0]],
+        )
         if_labels = n1.interface_list[0].get_property(pname="labels")
         if_labels.vlan = "200"
         n1.interface_list[0].set_properties(labels=if_labels)
@@ -427,7 +415,7 @@ class LinkBenchmark(AbcTest):
                 )
             )
 
-        # slice_manager.delete(slice_object=slice_object)
+        slice_manager.delete(slice_object=slice_object)
 
         if verbose:
             for k in output:

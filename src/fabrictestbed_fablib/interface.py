@@ -25,16 +25,14 @@
 from __future__ import annotations
 
 import ipaddress
+import json
+import logging
+from ipaddress import IPv4Address
+from typing import TYPE_CHECKING, Any
 
+import jinja2
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
-from ipaddress import IPv4Address
-import json
-import jinja2
-
-import logging
-
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -124,7 +122,7 @@ class Interface:
             "private_ssh_key_file": "Private SSH Key File",
             "mode": "Mode",
             "ip_addr": "IP Address",
-            "numa": "Numa Node"
+            "numa": "Numa Node",
         }
 
     def toDict(self, skip=[]):

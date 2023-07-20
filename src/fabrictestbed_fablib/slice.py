@@ -23,18 +23,17 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
+
 import ipaddress
-
-import time
-import logging
-from concurrent.futures import ThreadPoolExecutor
-
-import pandas as pd
 import json
-
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from IPython.core.display_functions import display
+
 from fabrictestbed_fablib.facility_port import FacilityPort
 
 if TYPE_CHECKING:
@@ -44,17 +43,14 @@ if TYPE_CHECKING:
     )
     from fabrictestbed_fablib.fablib import FablibManager
 
-from tabulate import tabulate
-
-from ipaddress import ip_address, IPv4Address
-
-from typing import List, Union, Dict
-
-from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+from ipaddress import IPv4Address, ip_address
+from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
-from fabrictestbed.slice_manager import Status, SliceState
+from fabrictestbed.slice_manager import SliceState, Status
+from tabulate import tabulate
 
 from fabrictestbed_fablib.network_service import NetworkService
 from fabrictestbed_fablib.node import Node
@@ -1702,8 +1698,9 @@ class Slice:
         :rtype: SMSlice
         """
 
-        from IPython.display import clear_output
         import time
+
+        from IPython.display import clear_output
 
         logging.debug(f"wait_jupyter: slice {self.get_name()}")
 
