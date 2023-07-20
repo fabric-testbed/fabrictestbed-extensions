@@ -52,10 +52,10 @@ from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import SliceState, Status
 from tabulate import tabulate
 
-from fabrictestbed_fablib.network_service import NetworkService
-from fabrictestbed_fablib.node import Node
 from fabrictestbed_fablib.component import Component
 from fabrictestbed_fablib.interface import Interface
+from fabrictestbed_fablib.network_service import NetworkService
+from fabrictestbed_fablib.node import Node
 
 
 class Slice:

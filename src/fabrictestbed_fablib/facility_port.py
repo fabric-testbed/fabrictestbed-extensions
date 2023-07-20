@@ -25,12 +25,6 @@
 from __future__ import annotations
 
 import json
-
-import jinja2
-
-from fabrictestbed.slice_editor import Labels, Capacities
-from fabrictestbed_fablib.interface import Interface
-
 from typing import TYPE_CHECKING, List
 
 import jinja2
@@ -38,10 +32,12 @@ from fabrictestbed.slice_editor import Capacities, Labels
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_fablib.interface import Interface
 
 if TYPE_CHECKING:
-    from fabrictestbed_fablib.slice import Slice
     from fim.user.interface import Interface as FimInterface
+
+    from fabrictestbed_fablib.slice import Slice
 
 
 class FacilityPort:

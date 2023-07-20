@@ -29,19 +29,7 @@ import logging
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor
-
-
-from IPython import get_ipython
-
-from typing import List, Dict
-
-from typing import TYPE_CHECKING
-
-from IPython.core.display_functions import display
-from fabrictestbed.util.constants import Constants
 from importlib.metadata import version
-import pandas as pd
-
 from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
 
@@ -59,7 +47,7 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
-from fabrictestbed_fablib.resources import Resources, Links, FacilityPorts
+from fabrictestbed_fablib.resources import FacilityPorts, Links, Resources
 from fabrictestbed_fablib.slice import Slice
 
 
