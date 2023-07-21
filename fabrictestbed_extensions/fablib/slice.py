@@ -1540,34 +1540,29 @@ class Slice:
                 look_for_keys=False,
             )
 
-            logging.info(f"Bastion connection attempt result: {result}")
-
+            # Things should be fine if we are here.
             if result is None:
-                raise Exception(f"Connection with {bastion_host} failed")
+                logging.info(f"Connection with {bastion_host} appears to be working")
+                return True
 
         except paramiko.AuthenticationException as e:
             # Report error and give up.
             logging.error(f"Bastion auth error: {e}")
             raise e
-            # return False
 
         except paramiko.SSHException as e:
             # Unsure how to handle this. Same as above maybe?
             logging.error(f"Bastion SSH error: {e}")
             raise e
-            # return False
 
         except Exception as e:
             # Could this be a transient error? Should we keep
             # re-trying in that case?
             logging.error(f"Bastion connection error: {e}")
             raise e
-            # return False
 
         finally:
             bastion_client.close()
-
-        return True
 
     def test_ssh(self) -> bool:
         """
