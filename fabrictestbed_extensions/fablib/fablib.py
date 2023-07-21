@@ -1601,8 +1601,8 @@ class FablibManager:
         :return: FABRIC Bastion key filename
         :rtype: String
         """
-        return self.bastion_passphrase        
-    
+        return self.bastion_passphrase
+
     def get_bastion_public_addr(self) -> str:
         """
         Gets the FABRIC Bastion host address.
