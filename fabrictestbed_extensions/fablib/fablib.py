@@ -1006,6 +1006,11 @@ class FablibManager:
             "default_ubuntu_20",
             "default_ubuntu_21",
             "default_ubuntu_22",
+            "default_fedora_36",
+            "default_fedora_37",
+            "docker_rocky_8",
+            "docker_ubuntu_20",
+            "docker_ubuntu_22"
         ]
 
     def get_site_names(self) -> List[str]:
