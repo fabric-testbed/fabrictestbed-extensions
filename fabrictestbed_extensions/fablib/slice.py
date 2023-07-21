@@ -1525,11 +1525,12 @@ class Slice:
             bastion_host = self.fablib_manager.get_bastion_public_addr()
             bastion_username = self.fablib_manager.get_bastion_username()
             bastion_key_path = self.fablib_manager.get_bastion_key_filename()
-            bastion_key_passphrase = None
+            bastion_key_passphrase = self.fablib_manager.get_bastion_key_passphrase()
 
             logging.info(
                 f"Probing bastion host {bastion_host} with "
-                f"username: {bastion_username}, key: {bastion_key_path}"
+                f"username: {bastion_username}, key: {bastion_key_path}, "
+                f"key passphrase: {'hidden' if bastion_key_passphrase else None}"
             )
 
             result = bastion_client.connect(
