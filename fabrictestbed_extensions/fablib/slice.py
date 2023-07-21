@@ -32,6 +32,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import pandas as pd
+import paramiko
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
@@ -1474,6 +1475,8 @@ class Slice:
         timeout_start = time.time()
         slice = self.sm_slice
 
+        self._probe_bastion()
+
         # Wait for the slice to be stable ok
         self.wait(timeout=timeout, interval=interval, progress=progress)
 
@@ -1505,6 +1508,66 @@ class Slice:
 
             time.sleep(interval)
             self.update()
+
+    def _probe_bastion(self):
+        """
+        See if bastion will admit us with our configuration.
+
+        Bastion hosts are configured to block hosts that attempts to
+        use it with too many authentication failures.  We want to
+        avoid that.
+        """
+
+        try:
+            bastion_client = paramiko.SSHClient()
+            bastion_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+
+            bastion_host = self.fablib_manager.get_bastion_host()
+            username = self.fablib_manager.get_bastion_username()
+            bastion_key_path = self.fablib_manager.get_bastion_key_filename()
+            bastion_key_passphrase = None
+
+            logging.debug(
+                f"Probing bastion host {bastion_host} with "
+                f"username: {bastion_username}, key: {bastion_key}"
+            )
+
+            result = bastion_client.connect(
+                hostname=bastion_hostname,
+                username=bastion_username,
+                key_filename=bastion_key_path,
+                passphrase=bastion_key_passphrase,
+                look_for_keys=False,
+            )
+
+            logging.debug(f"Bastion connection attempt result: {result}")
+
+            if result is None:
+                return False
+
+        except paramiko.AuthenticationException as e:
+            # Report error and give up.
+            logger.error(f"Bastion auth error: {e}")
+            raise e
+            # return False
+
+        except paramiko.SSHException as e:
+            # Unsure how to handle this. Same as above maybe?
+            logger.error(f"Bastion SSH error: {e}")
+            raise e
+            # return False
+
+        except Exception as e:
+            # Could this be a transient error? Should we keep
+            # re-trying in that case?
+            logger.error(f"Some other error: {e}")
+            raise e
+            # return False
+
+        finally:
+            bastion_client.close()
+
+        return True
 
     def test_ssh(self) -> bool:
         """
