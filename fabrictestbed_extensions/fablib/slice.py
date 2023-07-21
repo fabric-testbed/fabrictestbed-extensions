@@ -1475,7 +1475,11 @@ class Slice:
         timeout_start = time.time()
         slice = self.sm_slice
 
-        self._probe_bastion_host()        
+        try:
+            self._probe_bastion_host()        
+        except Exception as e:
+            print(f"Error when connecting to bastion host: {e}", file=stderr)
+            return False
 
         # Wait for the slice to be stable ok
         self.wait(timeout=timeout, interval=interval, progress=progress)
