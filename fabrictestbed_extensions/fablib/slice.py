@@ -1513,13 +1513,16 @@ class Slice:
             time.sleep(interval)
             self.update()
 
-    def _probe_bastion_host(self):
+    def _probe_bastion_host(self) -> bool:
         """
         See if bastion will admit us with our configuration.
 
         Bastion hosts are configured to block hosts that attempts to
         use it with too many authentication failures.  We want to
         avoid that.
+
+        Returns True if connection attempt succeeds.  Raises an error
+        in the event of failure.
         """
 
         try:
