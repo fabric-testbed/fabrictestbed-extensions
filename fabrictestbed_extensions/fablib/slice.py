@@ -27,6 +27,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
@@ -1476,9 +1477,9 @@ class Slice:
         slice = self.sm_slice
 
         try:
-            self._probe_bastion_host()        
+            self._probe_bastion_host()
         except Exception as e:
-            print(f"Error when connecting to bastion host: {e}", file=stderr)
+            print(f"Error when connecting to bastion host: {e}", file=sys.stderr)
             return False
 
         # Wait for the slice to be stable ok
