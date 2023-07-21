@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PR [#187](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/187))
 - Remove unused `AbcFabLIB` class (Issue
   [#117](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/117))
-
+- Update list of OS images (PR
+  [#202](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/202))
 
 ## [1.4.4] - 2023-05-21
 
