@@ -1527,7 +1527,7 @@ class Slice:
             bastion_key_path = self.fablib_manager.get_bastion_key_filename()
             bastion_key_passphrase = None
 
-            logging.debug(
+            logging.info(
                 f"Probing bastion host {bastion_host} with "
                 f"username: {bastion_username}, key: {bastion_key}"
             )
@@ -1540,7 +1540,7 @@ class Slice:
                 look_for_keys=False,
             )
 
-            logging.debug(f"Bastion connection attempt result: {result}")
+            logging.info(f"Bastion connection attempt result: {result}")
 
             if result is None:
                 return False
