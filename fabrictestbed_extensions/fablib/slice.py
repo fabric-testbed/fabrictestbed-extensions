@@ -1475,7 +1475,7 @@ class Slice:
         timeout_start = time.time()
         slice = self.sm_slice
 
-        self._probe_bastion()
+        self._probe_bastion_host()        
 
         # Wait for the slice to be stable ok
         self.wait(timeout=timeout, interval=interval, progress=progress)
@@ -1509,7 +1509,7 @@ class Slice:
             time.sleep(interval)
             self.update()
 
-    def _probe_bastion(self):
+    def _probe_bastion_host(self):
         """
         See if bastion will admit us with our configuration.
 
