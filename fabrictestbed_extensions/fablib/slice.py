@@ -1671,7 +1671,7 @@ class Slice:
                         not type(net.get_subnet())
                         in [ipaddress.IPv4Network, ipaddress.IPv6Network]
                         or not type(net.get_gateway())
-                        in [ipaddress.IPv4Address, ipaddress.IPv6ddress]
+                        in [ipaddress.IPv4Address, ipaddress.IPv6Address]
                         or net.get_available_ips() == None
                     ):
                         logging.warning(
