@@ -862,7 +862,7 @@ class Interface:
         else:
             mode = self.MANUAL
 
-        if mode == self.AUTO and addr is not None:
+        if mode == self.AUTO and addr is None:
             fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
             # addr = fablib_data[self.ADDR]
             # print(f"auto allocated addr: {addr}")
