@@ -45,6 +45,13 @@ from fim.user.interface import Interface as FimInterface
 
 
 class Interface:
+    CONFIGURED = "configured"
+    MODE = "mode"
+    AUTO = "auto"
+    MANUAL = "manual"
+    ADDR = "addr"
+    CONFIG = "config"
+
     def __init__(self, component: Component = None, fim_interface: FimInterface = None):
         """
         Constructor. Sets keyword arguments as instance fields.
@@ -785,25 +792,25 @@ class Interface:
     def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
         fablib_data = self.get_fablib_data()
         if mode:
-            fablib_data["mode"] = str(mode)
+            fablib_data[self.MODE] = str(mode)
 
-        mode = fablib_data["mode"]
+        mode = fablib_data[self.MODE]
         if addr:
-            fablib_data["addr"] = str(self.get_network().allocate_ip(addr))
-        elif mode == "auto":
+            fablib_data[self.ADDR] = str(self.get_network().allocate_ip(addr))
+        elif mode == self.AUTO:
             if self.get_network():
-                fablib_data["addr"] = str(self.get_network().allocate_ip())
+                fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
         self.set_fablib_data(fablib_data)
 
         return self
 
     def get_ip_addr(self):
         fablib_data = self.get_fablib_data()
-        if "addr" in fablib_data:
+        if self.ADDR in fablib_data:
             try:
-                addr = ipaddress.ip_address(fablib_data["addr"])
+                addr = ipaddress.ip_address(fablib_data[self.ADDR])
             except:
-                addr = fablib_data["addr"]
+                addr = fablib_data[self.ADDR]
             return addr
         else:
             # get_ip_addr_ssh()
@@ -813,18 +820,26 @@ class Interface:
 
     def set_mode(self, mode: str = "config"):
         fablib_data = self.get_fablib_data()
-        fablib_data["mode"] = mode
+        fablib_data[self.MODE] = mode
         self.set_fablib_data(fablib_data)
 
         return self
 
     def get_mode(self):
         fablib_data = self.get_fablib_data()
-        if "mode" not in fablib_data:
-            self.set_mode("config")
+        if self.MODE not in fablib_data:
+            self.set_mode(self.CONFIG)
             fablib_data = self.get_fablib_data()
 
-        return fablib_data["mode"]
+        return fablib_data[self.MODE]
+
+    def is_configured(self):
+        fablib_data = self.get_fablib_data()
+        is_configured = fablib_data.get(self.CONFIGURED)
+        if is_configured is None or not bool(is_configured):
+            return False
+
+        return True
 
     def config(self):
         network = self.get_network()
@@ -835,36 +850,31 @@ class Interface:
             return
 
         fablib_data = self.get_fablib_data()
-        if "configured" in fablib_data and bool(fablib_data["configured"]):
-            logging.debug(
-                f"interface {self.get_name()} already configured, skipping config."
-            )
-            return
+        addr = None
+        if self.is_configured():
+            addr = fablib_data.get(self.ADDR)
         else:
-            logging.debug(f"interface {self.get_name()} not configured, configuring.")
+            fablib_data[self.CONFIGURED] = str(True)
+            self.set_fablib_data(fablib_data)
 
-        fablib_data["configured"] = str(True)
-        self.set_fablib_data(fablib_data)
-
-        if "mode" in fablib_data:
-            mode = fablib_data["mode"]
+        if self.MODE in fablib_data:
+            mode = fablib_data[self.MODE]
         else:
-            mode = "manual"
+            mode = self.MANUAL
 
-        if mode == "auto":
-            fablib_data["addr"] = str(self.get_network().allocate_ip())
-            addr = fablib_data["addr"]
-
+        if mode == self.AUTO and addr is not None:
+            fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
+            # addr = fablib_data[self.ADDR]
             # print(f"auto allocated addr: {addr}")
 
             self.set_fablib_data(fablib_data)
 
-        if mode == "config" or mode == "auto":
+        if mode == self.CONFIG or mode == self.AUTO:
             subnet = self.get_network().get_subnet()
-            if "addr" in fablib_data:
-                addr = fablib_data["addr"]
-                if addr and subnet:
-                    self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+            addr = fablib_data.get(self.ADDR)
+            if addr and subnet:
+                self.ip_link_up()
+                self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
         else:
             # manual mode... do nothing
             pass
