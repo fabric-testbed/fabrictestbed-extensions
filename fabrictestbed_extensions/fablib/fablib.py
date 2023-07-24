@@ -1636,7 +1636,7 @@ class FablibManager:
         """
         return self.bastion_private_ipv6_addr
 
-    def _probe_bastion_host(self) -> bool:
+    def probe_bastion_host(self) -> bool:
         """
         See if bastion will admit us with our configuration.
 
