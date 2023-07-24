@@ -1480,9 +1480,9 @@ class Slice:
             self.get_fablib_manager().probe_bastion_host()
         except Exception as e:
             print(f"Error when connecting to bastion host: {e}", file=sys.stderr)
-            # TODO: How to propagate this error?  If we can continue
-            # functioning without bastion, we can return False here;
-            # if we can't, we should perhaps raise an error?
+            # How to propagate this error?  If we can continue
+            # functioning without bastion, we can return False here.
+            # If we can't, we should raise an error?
             #
             # Seems that post_boot_config(), which is invoked after
             # wait_ssh(), needs bastion, so re-throwing the error
