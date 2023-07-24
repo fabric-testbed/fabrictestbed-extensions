@@ -1477,7 +1477,7 @@ class Slice:
         slice = self.sm_slice
 
         try:
-            self._probe_bastion_host()
+            self.get_fablib_manager().probe_bastion_host()
         except Exception as e:
             print(f"Error when connecting to bastion host: {e}", file=sys.stderr)
             # TODO: How to propagate this error?  If we can continue
