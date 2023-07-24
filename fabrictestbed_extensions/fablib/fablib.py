@@ -1656,10 +1656,10 @@ class FablibManager:
             bastion_client = paramiko.SSHClient()
             bastion_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
 
-            bastion_host = self.fablib_manager.get_bastion_public_addr()
-            bastion_username = self.fablib_manager.get_bastion_username()
-            bastion_key_path = self.fablib_manager.get_bastion_key_filename()
-            bastion_key_passphrase = self.fablib_manager.get_bastion_key_passphrase()
+            bastion_host = self.get_bastion_public_addr()
+            bastion_username = self.get_bastion_username()
+            bastion_key_path = self.get_bastion_key_filename()
+            bastion_key_passphrase = self.get_bastion_key_passphrase()
 
             logging.info(
                 f"Probing bastion host {bastion_host} with "
