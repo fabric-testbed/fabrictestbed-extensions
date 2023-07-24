@@ -481,7 +481,7 @@ class Interface:
         if self.get_network() is None:
             return
 
-        self.get_node().un_manage_interface(None, self)
+        self.get_node().un_manage_interface(self)
 
     def set_vlan(self, vlan: Any = None):
         """
