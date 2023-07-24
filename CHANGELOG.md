@@ -1,4 +1,4 @@
-# Change Log 
+# Change Log
 
 This is the changelog file for FABRIC testbed extensions.  All notable
 changes to this project will be documented in this file.
@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured. 
+- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured.
 
 ## [1.4.2] - 2023-04-21
 
