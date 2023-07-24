@@ -2166,6 +2166,26 @@ class Node:
             logging.warning(f"Failed to del addr: {e}")
             raise e
 
+    def un_manage_interface(self, interface: Interface):
+        """
+        Mark an interface unmanaged by Network Manager;
+        This is needed to be run on rocky* images to avoid the
+        network configuration from being overwritten by NetworkManager
+        :param interface: the FABlib interface.
+        :type interface: Interface
+        """
+
+        if interface is None:
+            return
+
+        try:
+            self.execute(
+                f"sudo nmcli dev set {interface.get_physical_os_interface()} managed no",
+                quiet=True,
+            )
+        except Exception as e:
+            logging.warning(f"Failed to mark interface as unmanaged: {e}")
+
     def ip_link_up(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
         """
         Bring up a link on an interface on the node.

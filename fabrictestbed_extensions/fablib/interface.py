@@ -472,6 +472,17 @@ class Interface:
         self.get_node().ip_link_down(None, self)
         self.get_node().ip_link_up(None, self)
 
+    def un_manage_interface(self):
+        """
+        Mark an interface unmanaged by Network Manager;
+        This is needed to be run on rocky* images to avoid the
+        network configuration from being overwritten by NetworkManager
+        """
+        if self.get_network() is None:
+            return
+
+        self.get_node().un_manage_interface(None, self)
+
     def set_vlan(self, vlan: Any = None):
         """
         Set the VLAN on the FABRIC request.
@@ -873,6 +884,7 @@ class Interface:
             subnet = self.get_network().get_subnet()
             addr = fablib_data.get(self.ADDR)
             if addr and subnet:
+                self.un_manage_interface()
                 self.ip_link_up()
                 self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
         else:
