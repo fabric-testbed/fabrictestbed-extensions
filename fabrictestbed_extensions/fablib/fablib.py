@@ -1636,6 +1636,69 @@ class FablibManager:
         """
         return self.bastion_private_ipv6_addr
 
+    def _probe_bastion_host(self) -> bool:
+        """
+        See if bastion will admit us with our configuration.
+
+        Bastion hosts are configured to block hosts that attempts to
+        use it with too many repeated authentication failures.  We
+        want to avoid that.
+
+        Returns True if connection attempt succeeds.  Raises an error
+        in the event of failure.
+
+        It seems that error reporting is not quite accurate.  When a
+        connection is attempted using the wrong ssh key, we get a
+        paramiko.SSHException, not paramiko.AuthenticationException.
+        """
+
+        try:
+            bastion_client = paramiko.SSHClient()
+            bastion_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+
+            bastion_host = self.fablib_manager.get_bastion_public_addr()
+            bastion_username = self.fablib_manager.get_bastion_username()
+            bastion_key_path = self.fablib_manager.get_bastion_key_filename()
+            bastion_key_passphrase = self.fablib_manager.get_bastion_key_passphrase()
+
+            logging.info(
+                f"Probing bastion host {bastion_host} with "
+                f"username: {bastion_username}, key: {bastion_key_path}, "
+                f"key passphrase: {'hidden' if bastion_key_passphrase else None}"
+            )
+
+            result = bastion_client.connect(
+                hostname=bastion_host,
+                username=bastion_username,
+                key_filename=bastion_key_path,
+                passphrase=bastion_key_passphrase,
+                look_for_keys=False,
+            )
+
+            # Things should be fine if we are here.
+            if result is None:
+                logging.info(f"Connection with {bastion_host} appears to be working")
+                return True
+
+        except paramiko.AuthenticationException as e:
+            # Report error and give up.
+            logging.error(f"Bastion auth error: {e}")
+            raise e
+
+        except paramiko.SSHException as e:
+            # Unsure how to handle this. Same as above maybe?
+            logging.error(f"Bastion SSH error: {e}")
+            raise e
+
+        except Exception as e:
+            # Could this be a transient error? Should we keep
+            # re-trying in that case?
+            logging.error(f"Bastion connection error: {e}")
+            raise e
+
+        finally:
+            bastion_client.close()
+
     def set_slice_manager(self, slice_manager: SliceManager):
         """
         Not intended as API call
