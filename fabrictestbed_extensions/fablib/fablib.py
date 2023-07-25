@@ -1607,6 +1607,16 @@ class FablibManager:
         """
         return self.bastion_passphrase
 
+    def get_bastion_key(self) -> str:
+        """
+        Reads the FABRIC Bastion private key file and returns the key.
+
+        :return: FABRIC Bastion key string
+        :rtype: String
+        """
+        with open(self.bastion_key_filename, "r", encoding="utf-8") as f:
+            return f.read()
+
     def get_bastion_public_addr(self) -> str:
         """
         Gets the FABRIC Bastion host address.
@@ -2004,7 +2014,12 @@ class FablibManager:
                 excludes=[SliceState.Dead, SliceState.Closing], slice_name=name
             )
 
-            return slices[0]
+            if len(slices) > 0:
+                return slices[0]
+            else:
+                raise Exception(
+                    f'Unable to find slice "{name}" for this project. Check slice name spelling and project id.'
+                )
         else:
             raise Exception(
                 "get_slice requires slice name (name) or slice id (slice_id)"
