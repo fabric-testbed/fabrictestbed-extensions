@@ -709,6 +709,16 @@ class Slice:
         else:
             return None
 
+    def get_slice_public_key(self) -> str:
+        """
+        Gets the string representing the slice public key.
+
+        :return: public key
+        :rtype: String
+        """
+        with open(self.get_slice_public_key_file(), "r", encoding="utf-8") as f:
+            return f.read()
+
     def get_slice_private_key_file(self) -> str:
         """
         Gets the path to the slice private key file.
@@ -723,6 +733,16 @@ class Slice:
             return self.slice_key["slice_private_key_file"]
         else:
             return None
+
+    def get_slice_private_key(self) -> str:
+        """
+        Gets the string representing the slice private key.
+
+        :return: public key
+        :rtype: String
+        """
+        with open(self.get_slice_private_key_file(), "r", encoding="utf-8") as f:
+            return f.read()
 
     def is_dead_or_closing(self):
         if self.get_state() in ["Closing", "Dead"]:
