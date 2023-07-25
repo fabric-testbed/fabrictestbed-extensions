@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # # Create a Local Ethernet (Layer 2) Network: Automatic Configuration
-# 
+#
 # This notebook shows how to create an isolated local Ethernet and connect compute nodes to it and
 # use FABlib's automatic configuration functionality.
 #
@@ -47,15 +47,15 @@ class L2ReconfigPostRebootTests(unittest.TestCase):
         # - NIC_ConnectX_5: 25 Gbps Dedicated Mellanox ConnectX-5 PCI Device (2 Ports)
         # - NIC_ConnectX_6: 100 Gbps Dedicated Mellanox ConnectX-6 PCI Device (2 Ports)
 
-        slice_name = 'MySlice'
+        slice_name = "MySlice"
         site = fablib.get_random_site()
-        site="GATECH"
+        site = "GATECH"
         print(f"Site: {site}")
 
-        node1_name = 'Node1'
-        node2_name = 'Node2'
+        node1_name = "Node1"
+        node2_name = "Node2"
 
-        network_name='net1'
+        network_name = "net1"
 
         # Create Slice
         slice = fablib.new_slice(name=slice_name)
@@ -63,22 +63,32 @@ class L2ReconfigPostRebootTests(unittest.TestCase):
         try:
             print(f"Building topology for the slice: {slice_name}")
             # Network
-            net1 = slice.add_l2network(name=network_name, subnet=IPv4Network("192.168.1.0/24"))
+            net1 = slice.add_l2network(
+                name=network_name, subnet=IPv4Network("192.168.1.0/24")
+            )
 
             # Node1
-            node1 = slice.add_node(name=node1_name, site=site, image="default_ubuntu_22")
-            iface1 = node1.add_component(model='NIC_Basic', name='nic1').get_interfaces()[0]
-            iface1.set_mode('auto')
+            node1 = slice.add_node(
+                name=node1_name, site=site, image="default_ubuntu_22"
+            )
+            iface1 = node1.add_component(
+                model="NIC_Basic", name="nic1"
+            ).get_interfaces()[0]
+            iface1.set_mode("auto")
             net1.add_interface(iface1)
 
             # Node2
-            node2 = slice.add_node(name=node2_name, site=site, image="default_ubuntu_22")
-            iface2 = node2.add_component(model='NIC_Basic', name='nic1').get_interfaces()[0]
-            iface2.set_mode('auto')
+            node2 = slice.add_node(
+                name=node2_name, site=site, image="default_ubuntu_22"
+            )
+            iface2 = node2.add_component(
+                model="NIC_Basic", name="nic1"
+            ).get_interfaces()[0]
+            iface2.set_mode("auto")
             net1.add_interface(iface2)
 
             print(f"Submitting slice {slice_name}")
-            #Submit Slice Request
+            # Submit Slice Request
             slice.submit()
 
             # Run the Experiment
@@ -96,8 +106,10 @@ class L2ReconfigPostRebootTests(unittest.TestCase):
             node2 = slice.get_node(name=node2_name)
             node2_addr = node2.get_interface(network_name=network_name).get_ip_addr()
 
-            stdout, stderr = node1.execute(f'ping -c 5 {node2_addr}')
-            self.assertTrue("5 packets transmitted, 5 received, 0% packet loss" in stdout)
+            stdout, stderr = node1.execute(f"ping -c 5 {node2_addr}")
+            self.assertTrue(
+                "5 packets transmitted, 5 received, 0% packet loss" in stdout
+            )
             self.assertEqual(stderr, "")
 
             # Reboot Nodes
@@ -128,8 +140,10 @@ class L2ReconfigPostRebootTests(unittest.TestCase):
 
             node2_addr = node2.get_interface(network_name=network_name).get_ip_addr()
 
-            stdout, stderr = node1.execute(f'ping -c 5 {node2_addr}')
-            self.assertTrue("5 packets transmitted, 5 received, 0% packet loss" in stdout)
+            stdout, stderr = node1.execute(f"ping -c 5 {node2_addr}")
+            self.assertTrue(
+                "5 packets transmitted, 5 received, 0% packet loss" in stdout
+            )
             self.assertEqual(stderr, "")
 
         finally:
