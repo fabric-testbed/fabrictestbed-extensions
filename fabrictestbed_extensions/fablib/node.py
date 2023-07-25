@@ -2180,7 +2180,7 @@ class Node:
 
         try:
             self.execute(
-                f"sudo nmcli dev set {interface.get_physical_os_interface()} managed no",
+                f"sudo nmcli dev set {interface.get_physical_os_interface_name()} managed no",
                 quiet=True,
             )
         except Exception as e:
@@ -2221,7 +2221,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_physical_os_interface()} up",
+                f"{ip_command} link set dev {interface.get_physical_os_interface_name()} up",
                 quiet=True,
             )
         except Exception as e:
