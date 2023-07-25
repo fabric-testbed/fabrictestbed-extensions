@@ -1,4 +1,4 @@
-# fabrictestbed-extensions
+# fabrictestbed-fablib
 
 [![pypi-badge]][pypy] [![api-docs-badge]][api-docs]
 
@@ -11,7 +11,7 @@ known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
 You can install released versions of FABlib from PyPI:
 
 ```console
-$ pip install fabrictestbed-extensions
+$ pip install fabrictestbed-fablib
 ```
 
 If you need the current development version of FABlib, install it from
@@ -33,10 +33,10 @@ work. FABRIC team tends to favor virtualenvwrapper.
 Once installed, you can use FABlib in your Python projects:
 
 ```python
-from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manager
+from fabrictestbed_fablib import FablibManager
 
 try:
-    fablib = fablib_manager()
+    fablib = FablibManager()
     fablib.show_config()
 except Exception as e:
     print(f"Exception: {e}")
@@ -93,18 +93,9 @@ $ pytest -s tests/integration/test_hello_fabric.py
 
 ## Packaging FABlib
 
-FABlib uses [flit] as the build backend.  To build source and wheel
-packages, do this:
+To build source and wheel packages, do this:
 
 ```console
-$ pip install flit
-$ flit build
-```
-
-While using flit as the build backend, continuing to use [build] as
-the build frontend should work too:
-
-```
 $ pip install build
 $ python -m build
 ```
@@ -112,28 +103,29 @@ $ python -m build
 
 ## Releasing FABlib
 
-When it is time to release a new version of FABlib, remember to: (1)
-update the package version in top-level `__init__.py`, (2) build the
-source and wheel packages, and (3) upload packages to PyPI:
+When it is time to release a new version of FABlib, remember to:
+
+1. Update `version` in `pyproject.toml`.
+2. Tag the release tag and push the tag to GitHub:
 
 ```console
-$ flit publish
+$ git tag --sign --message "Great new features" rel<x.y.z> <commit>
+$ git push origin --tags rel<x.y.z>
 ```
 
-Continuing to use twine to publish packages is an option too:
+2. Build the source and wheel packages.
+3. Upload packages to PyPI using [twine]:
 
 ```console
+$ pip install twine
 $ twine upload dist/*
 ```
-
-For details about publishing to PyPI, see flit documentation about
-[package uploads].
 
 
 <!-- URLs -->
 
-[pypy]: https://pypi.org/project/fabrictestbed-extensions/
-[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
+[pypy]: https://pypi.org/project/fabrictestbed-fablib/
+[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-fablib?style=plain (PyPI)
 
 [api-docs]: https://fabric-fablib.readthedocs.io/en/latest/?badge=latest
 [api-docs-badge]: https://readthedocs.org/projects/fabric-fablib/badge/?version=latest (Documentation Status)
@@ -151,11 +143,9 @@ For details about publishing to PyPI, see flit documentation about
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
 
-[flit]: https://flit.pypa.io/en/stable/
-[package uploads]: https://flit.pypa.io/en/latest/upload.html
-
 [build]: https://pypi.org/project/build/
 [tox]: https://pypi.org/project/tox/
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
+[twine]: https://pypi.org/project/twine/
 [isort]: https://pypi.org/project/isort/

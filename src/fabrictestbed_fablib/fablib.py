@@ -29,6 +29,7 @@ import logging
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor
+from importlib.metadata import version
 from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
 
@@ -46,8 +47,8 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
-from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
-from fabrictestbed_extensions.fablib.slice import Slice
+from fabrictestbed_fablib.resources import FacilityPorts, Links, Resources
+from fabrictestbed_fablib.slice import Slice
 
 
 class fablib:
@@ -1433,7 +1434,7 @@ class FablibManager:
             "fabric_slice_private_key_passphrase": self.get_default_slice_private_key_passphrase(),
             "fablib_log_file": self.get_log_file(),
             "fablib_log_level": self.get_log_level(),
-            "fablib_version": fablib_version,
+            "fablib_version": version(__package__),
         }
 
     def get_configXXX(self) -> Dict[str, Dict[str, str]]:

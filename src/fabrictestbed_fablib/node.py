@@ -40,6 +40,7 @@ from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_fablib.network_service import NetworkService
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -52,8 +53,8 @@ from fabrictestbed.slice_editor import Node as FimNode
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer
 
-from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_fablib.component import Component
+from fabrictestbed_fablib.interface import Interface
 
 
 class Node:

@@ -34,14 +34,14 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from IPython.core.display_functions import display
 
-from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+from fabrictestbed_fablib.facility_port import FacilityPort
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
         Slice as OrchestratorSlice,
         Sliver as OrchestratorSliver,
     )
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
+    from fabrictestbed_fablib.fablib import FablibManager
 
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -52,10 +52,10 @@ from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import SliceState, Status
 from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.interface import Interface
-from fabrictestbed_extensions.fablib.network_service import NetworkService
-from fabrictestbed_extensions.fablib.node import Node
+from fabrictestbed_fablib.component import Component
+from fabrictestbed_fablib.interface import Interface
+from fabrictestbed_fablib.network_service import NetworkService
+from fabrictestbed_fablib.node import Node
 
 
 class Slice:

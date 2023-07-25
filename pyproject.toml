@@ -1,11 +1,10 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "fabrictestbed-extensions"
-# Bump version up in top-level __init.py__.
-dynamic = ["version"]
+name = "fabrictestbed-fablib"
+version = "1.5.1"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
     {name="Paul Ruth", email="pruth@renci.org"},
@@ -56,11 +55,11 @@ branch = true
 omit = [ "fabrictestbed_extensions/tests/*" ]
 
 [tool.black]
-src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
+src_paths = ["src", "docs/source/conf.py", "tests"]
 
 [tool.isort]
 profile = "black"
-src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
+src_paths = ["src", "docs/source/conf.py", "tests"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

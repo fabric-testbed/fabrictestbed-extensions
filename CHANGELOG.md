@@ -22,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Methods added to retrieve SSH keys for bastion and sliver (PR
   [#207](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/207))
 
+### Changed
+
+- Renamed the package to fabrictestbed-fablib.  Modules are also renamed, such
+  that we will have the shorter `import fabrictestbed_fablib.fablib` instead
+  of the longer `import fabrictestbed_extensions.fablib.fablib` (PR
+  [#172](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/172),
+  issue [#164](https://github.com/fabric-testbed/fabrictestbed-extensions/issue/164)). 
+  A comatibility shim module is added so that we do not break existing code and
+  notebooks in the interim.  The existence of two top-level modules also
+  necessitates a switch to setuptools as the build backend.
+
 
 ## [1.4.4] - 2023-05-21
 
