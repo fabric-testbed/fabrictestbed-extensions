@@ -1597,7 +1597,7 @@ class FablibManager:
         :rtype: String
         """
         return self.bastion_key_filename
-    
+
     def get_bastion_key(self) -> str:
         """
         Reads the FABRIC Bastion private key file and returns the key.
@@ -1605,7 +1605,7 @@ class FablibManager:
         :return: FABRIC Bastion key string
         :rtype: String
         """
-        with open(self.bastion_key_filename, 'r', encoding='utf-8') as f:
+        with open(self.bastion_key_filename, "r", encoding="utf-8") as f:
             return f.read()
 
     def get_bastion_public_addr(self) -> str:
@@ -1945,7 +1945,9 @@ class FablibManager:
             if len(slices) > 0:
                 return slices[0]
             else:
-                raise Exception(f'Unable to find slice "{name}" for this project. Check slice name spelling and project id.')
+                raise Exception(
+                    f'Unable to find slice "{name}" for this project. Check slice name spelling and project id.'
+                )
         else:
             raise Exception(
                 "get_slice requires slice name (name) or slice id (slice_id)"
