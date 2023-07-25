@@ -997,16 +997,20 @@ class FablibManager:
             "default_centos9_stream",
             "default_centos_7",
             "default_centos_8",
-            "default_cirros",
             "default_debian_10",
+            "default_debian_11",
             "default_fedora_35",
-            "default_freebsd_13_zfs",
-            "default_openbsd_7",
             "default_rocky_8",
+            "default_rocky_9",
             "default_ubuntu_18",
             "default_ubuntu_20",
             "default_ubuntu_21",
             "default_ubuntu_22",
+            "default_fedora_36",
+            "default_fedora_37",
+            "docker_rocky_8",
+            "docker_ubuntu_20",
+            "docker_ubuntu_22",
         ]
 
     def get_site_names(self) -> List[str]:
@@ -1595,6 +1599,16 @@ class FablibManager:
         """
         return self.bastion_key_filename
 
+    def get_bastion_key(self) -> str:
+        """
+        Reads the FABRIC Bastion private key file and returns the key.
+
+        :return: FABRIC Bastion key string
+        :rtype: String
+        """
+        with open(self.bastion_key_filename, "r", encoding="utf-8") as f:
+            return f.read()
+
     def get_bastion_public_addr(self) -> str:
         """
         Gets the FABRIC Bastion host address.
@@ -1929,7 +1943,12 @@ class FablibManager:
                 excludes=[SliceState.Dead, SliceState.Closing], slice_name=name
             )
 
-            return slices[0]
+            if len(slices) > 0:
+                return slices[0]
+            else:
+                raise Exception(
+                    f'Unable to find slice "{name}" for this project. Check slice name spelling and project id.'
+                )
         else:
             raise Exception(
                 "get_slice requires slice name (name) or slice id (slice_id)"
