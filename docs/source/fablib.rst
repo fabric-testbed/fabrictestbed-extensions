@@ -339,6 +339,8 @@
 
  .. automethod:: add_storage
 
+ .. automethod:: un_manage_interface
+
 
 .. automodule:: component
 
@@ -454,6 +456,8 @@
   .. automethod::  get_ips
 
   .. automethod:: get_numa_node
+
+  .. automethod:: un_manage_interface
 
 .. automodule:: network_service
 
