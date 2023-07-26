@@ -35,6 +35,7 @@ import pandas as pd
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+from fss_utils.sshkey import FABRICSSHKey, FABRICSSHKeyException
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
@@ -1862,6 +1863,7 @@ class Slice:
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
+        extra_ssh_keys: List[str] or None = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1878,10 +1880,13 @@ class Slice:
         :param wait_interval: how often to check on the slice resources
         :param progress: indicator for whether to show progress while waiting
         :param wait_jupyter: Special wait for jupyter notebooks.
+        :param post_boot_config:
+        :param wait_ssh:
+        :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
         :return: slice_id
         """
 
-        if self.get_state() == None:
+        if self.get_state() is None:
             modify = False
         else:
             modify = True
@@ -1901,13 +1906,26 @@ class Slice:
                 slice_id=self.slice_id, slice_graph=slice_graph
             )
         else:
+            # retrieve and validate SSH keys
+            ssh_keys = list()
+            ssh_keys.append(self.get_slice_public_key())
+            if extra_ssh_keys:
+                if isinstance(extra_ssh_keys, list):
+                    ssh_keys.extend(extra_ssh_keys)
+                else:
+                    logging.error('Extra SSH keys must be provided as a list of strings.')
+                    raise Exception('Extra SSH keys must be provided as a list of strings.')
+            # validate each key - this will throw an exception
+            for ssh_key in ssh_keys:
+                # this will throw an informative exception
+                FABRICSSHKey.get_key_length(ssh_key)
             (
                 return_status,
                 slice_reservations,
             ) = self.fablib_manager.get_slice_manager().create(
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
-                ssh_key=self.get_slice_public_key(),
+                ssh_key=ssh_keys,
             )
             if return_status == Status.OK:
                 logging.info(
