@@ -1602,15 +1602,6 @@ class FablibManager:
         """
         return self.bastion_key_filename
 
-    def get_bastion_key_passphrase(self) -> str:
-        """
-        Gets the passphrase for FABRIC Bastion key.
-
-        :return: FABRIC Bastion key filename
-        :rtype: String
-        """
-        return self.bastion_passphrase
-
     def get_bastion_key(self) -> str:
         """
         Reads the FABRIC Bastion private key file and returns the key.
@@ -1673,7 +1664,7 @@ class FablibManager:
             bastion_host = self.get_bastion_public_addr()
             bastion_username = self.get_bastion_username()
             bastion_key_path = self.get_bastion_key_filename()
-            bastion_key_passphrase = self.get_bastion_key_passphrase()
+            bastion_key_passphrase = self.bastion_passphrase
 
             logging.info(
                 f"Probing bastion host {bastion_host} with "
