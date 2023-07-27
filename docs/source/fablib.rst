@@ -61,6 +61,8 @@
 
    .. automethod:: get_bastion_private_ipv6_addr
 
+   .. automethod:: probe_bastion_host                   
+
    .. automethod:: get_slice_manager
 
    .. automethod:: new_slice
