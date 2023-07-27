@@ -44,6 +44,7 @@ from fabrictestbed.slice_editor import Flags, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
+from fim.user.network_service import MirrorDirection
 
 
 class NetworkService:
@@ -51,6 +52,12 @@ class NetworkService:
         "L2Bridge": ServiceType.L2Bridge,
         "L2PTP": ServiceType.L2PTP,
         "L2STS": ServiceType.L2STS,
+        "PortMirror": ServiceType.PortMirror,
+        "FABNetv4": ServiceType.FABNetv4,
+        "FABNetv6": ServiceType.FABNetv6,
+        "FABNetv4Ext": ServiceType.FABNetv4Ext,
+        "FABNetv6Ext": ServiceType.FABNetv6Ext,
+        "L3VPN": ServiceType.L3VPN
     }
 
     # Type names used in fim network services
@@ -209,6 +216,50 @@ class NetworkService:
             raise Exception(f"Unknown network type {type}")
 
         return True
+
+    @staticmethod
+    def new_portmirror_service(
+            slice: Slice = None,
+            name: str = None,
+            mirror_interface: str = None,
+            receive_interface: Interface = None,
+            mirror_direction: str = "both"
+    ) -> NetworkService:
+        """
+        Instantiate a new PortMirror service
+        mirror_direction can be "rx", "tx" or "both" (non-case-sensitive)
+        """
+        # decode the direction
+        if not isinstance(mirror_interface, str):
+            raise Exception(f'When creating a PortMirror service mirror_interface is specified by name')
+        if not isinstance(mirror_direction, str):
+            raise Exception(f'When creating a PortMirror service mirror_direction is a string "rx", "tx" or "both"'
+                            f'defaulting to "both"')
+        direction = MirrorDirection.Both
+        match mirror_direction.lower():
+            case ['rx']:
+                direction = MirrorDirection.RX_Only
+            case ['tx']:
+                direction = MirrorDirection.TX_Only
+            case ['both']:
+                direction = MirrorDirection.Both
+            case _:
+                raise Exception(f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
+                                f'service {name}')
+        logging.info(
+            f"Create PortMirror Service: Slice: {slice.get_name()}, Network Name: {name} listening on "
+            f"{mirror_interface} into {receive_interface.get_name()} with direction {direction}"
+        )
+        fim_network_service = slice.topology.add_port_mirror_service(name=name,
+                                                                     from_interface_name=mirror_interface,
+                                                                     to_interface=receive_interface,
+                                                                     direction=direction)
+
+        network_service = NetworkService(
+            slice=slice, fim_network_service=fim_network_service
+        )
+        network_service.init_fablib_data()
+        return network_service
 
     @staticmethod
     def new_l3network(
