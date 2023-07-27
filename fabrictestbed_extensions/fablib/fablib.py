@@ -1651,10 +1651,6 @@ class FablibManager:
 
         Returns True if connection attempt succeeds.  Raises an error
         in the event of failure.
-
-        It seems that error reporting is not quite accurate.  When a
-        connection is attempted using the wrong ssh key, we get a
-        paramiko.SSHException, not paramiko.AuthenticationException.
         """
 
         bastion_client = paramiko.SSHClient()
