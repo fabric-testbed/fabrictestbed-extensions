@@ -19,10 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#117](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/117))
 - Update list of OS images (PR
   [#202](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/202))
+- Make Network Interface Config Idempotant (Issue[#205](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/205))
 - Methods added to retrieve SSH keys for bastion and sliver (PR
   [#207](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/207))
 - Fail early when connection with bastion host fails (Issue
   [#151](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/151))
+- List Facility Ports updated to include additional parameters (Issue
+  [#210](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/210))
+
 
 
 ## [1.4.4] - 2023-05-21
