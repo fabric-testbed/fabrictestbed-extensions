@@ -862,12 +862,13 @@ class Slice:
         """
         return self.sm_slice.project_id
 
-    def add_port_mirror_service(self,
-                                name: str,
-                                mirror_interface_name: str,
-                                receive_interface: Interface or None = None,
-                                mirror_direction: str = 'both'
-                                ) -> NetworkService:
+    def add_port_mirror_service(
+        self,
+        name: str,
+        mirror_interface_name: str,
+        receive_interface: Interface or None = None,
+        mirror_direction: str = "both",
+    ) -> NetworkService:
         """
         Adds a special PortMirror service - it receives data from the dataplane
         switch interface specified by `mirror_interface` into an interface
@@ -885,7 +886,7 @@ class Slice:
             name=name,
             mirror_interface_name=mirror_interface_name,
             receive_interface=receive_interface,
-            mirror_direction=mirror_direction
+            mirror_direction=mirror_direction,
         )
         return port_mirror_service
 

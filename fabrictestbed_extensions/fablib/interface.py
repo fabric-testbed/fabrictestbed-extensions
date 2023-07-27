@@ -276,9 +276,11 @@ class Interface:
         If available provide the name of the attached port on the dataplane switch.
         Only possible once the slice has been instantiated.
         """
-        if (self.fim_interface and
-                self.fim_interface.get_peers() and
-                self.fim_interface.get_peers()[0]):
+        if (
+            self.fim_interface
+            and self.fim_interface.get_peers()
+            and self.fim_interface.get_peers()[0]
+        ):
             return self.fim_interface.get_peers()[0].labels.local_name
         else:
             return None
