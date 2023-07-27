@@ -1649,8 +1649,8 @@ class FablibManager:
         use it with too many repeated authentication failures.  We
         want to avoid that.
 
-        Returns True if connection attempt succeeds.  Raises an error
-        in the event of failure.
+        Returns ``True`` if connection attempt succeeds.  Raises an
+        error in the event of failure.
         """
 
         bastion_client = paramiko.SSHClient()
