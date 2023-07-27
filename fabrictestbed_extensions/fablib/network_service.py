@@ -259,7 +259,7 @@ class NetworkService:
                             f'service {name}')
         logging.info(
             f"Create PortMirror Service: Slice: {slice.get_name()}, Network Name: {name} listening on "
-            f"{mirror_interface} into {receive_interface.get_name()} with direction {direction}"
+            f"{mirror_interface} with direction {direction}"
         )
         fim_network_service = slice.topology.add_port_mirror_service(name=name,
                                                                      from_interface_name=mirror_interface,
