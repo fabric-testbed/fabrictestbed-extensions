@@ -1,19 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
+#!/usr/bin/env python3
 # # Create a Local Ethernet (Layer 2) Network: Automatic Configuration
 #
 # This notebook shows how to create an isolated local Ethernet and connect compute nodes to it and
 # use FABlib's automatic configuration functionality.
 #
-import socket
-import time
 import unittest
 from ipaddress import IPv4Network
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
-from fabrictestbed_extensions.fablib.node import Node
-from fabrictestbed_extensions.fablib.slice import Slice
 
 
 class L2ReconfigPostRebootTests(unittest.TestCase):

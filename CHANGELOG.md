@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make Network Interface Config Idempotant (Issue[#205](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/205))
 - Methods added to retrieve SSH keys for bastion and sliver (PR
   [#207](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/207))
+- List Facility Ports updated to include additional parameters (Issue [#210](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/210))
 
 
 ## [1.4.4] - 2023-05-21

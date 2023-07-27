@@ -32,10 +32,10 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from fss_utils.sshkey import FABRICSSHKey, FABRICSSHKeyException
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
-from fss_utils.sshkey import FABRICSSHKey, FABRICSSHKeyException
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
@@ -1913,8 +1913,12 @@ class Slice:
                 if isinstance(extra_ssh_keys, list):
                     ssh_keys.extend(extra_ssh_keys)
                 else:
-                    logging.error('Extra SSH keys must be provided as a list of strings.')
-                    raise Exception('Extra SSH keys must be provided as a list of strings.')
+                    logging.error(
+                        "Extra SSH keys must be provided as a list of strings."
+                    )
+                    raise Exception(
+                        "Extra SSH keys must be provided as a list of strings."
+                    )
             # validate each key - this will throw an exception
             for ssh_key in ssh_keys:
                 # this will throw an informative exception
