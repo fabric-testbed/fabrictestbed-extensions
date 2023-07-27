@@ -33,7 +33,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import pandas as pd
-import paramiko
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
