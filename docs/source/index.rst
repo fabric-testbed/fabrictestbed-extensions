@@ -122,6 +122,7 @@ values set using environment variables.
    :maxdepth: 2
    :caption: Contents:
 
+   fablib
 
 Indices and tables
 ==================
