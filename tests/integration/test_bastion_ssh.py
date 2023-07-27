@@ -19,8 +19,7 @@ class BastionHostTests(unittest.TestCase):
         This should pass when fablib set up is correct.
         """
         fm = FablibManager(offline=True)
-        result = fm.probe_bastion_host()
-        self.assertTrue(result)
+        self.assertTrue(fm.probe_bastion_host())
 
     def test_probe_bastion_host_no_username(self):
         """
