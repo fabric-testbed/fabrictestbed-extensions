@@ -1694,19 +1694,11 @@ class FablibManager:
                 logging.info(f"Connection with {bastion_host} appears to be working")
                 return True
 
-        except paramiko.AuthenticationException as e:
-            # Report error and give up.
-            logging.error(f"Bastion auth error: {e}")
-            raise e
-
-        except paramiko.SSHException as e:
-            # Unsure how to handle this. Same as above maybe?
-            logging.error(f"Bastion SSH error: {e}")
-            raise e
-
-        except Exception as e:
-            # Could this be a transient error? Should we keep
-            # re-trying in that case?
+        # In theory paramiko can raise several types of exceptions,
+        # but in practice it has not been that precise.  Let us treat
+        # all exceptions as un-recoverable for now, and refine the
+        # behavior based on some real-world testing.
+        except (paramiko.SSHException, Exception) as e:
             logging.error(f"Bastion connection error: {e}")
             raise e
 
