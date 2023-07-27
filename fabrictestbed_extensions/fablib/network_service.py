@@ -44,6 +44,7 @@ from fabrictestbed.slice_editor import Flags, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
+from fim.user.network_service import MirrorDirection
 
 
 class NetworkService:
@@ -51,6 +52,12 @@ class NetworkService:
         "L2Bridge": ServiceType.L2Bridge,
         "L2PTP": ServiceType.L2PTP,
         "L2STS": ServiceType.L2STS,
+        "PortMirror": ServiceType.PortMirror,
+        "FABNetv4": ServiceType.FABNetv4,
+        "FABNetv6": ServiceType.FABNetv6,
+        "FABNetv4Ext": ServiceType.FABNetv4Ext,
+        "FABNetv6Ext": ServiceType.FABNetv6Ext,
+        "L3VPN": ServiceType.L3VPN,
     }
 
     # Type names used in fim network services
@@ -62,6 +69,8 @@ class NetworkService:
         "FABNetv6Ext",
         "L3VPN",
     ]
+
+    fim_special_service_types = ["PortMirror"]
 
     @staticmethod
     def get_fim_l2network_service_types() -> List[str]:
@@ -78,6 +87,13 @@ class NetworkService:
         return NetworkService.fim_l3network_service_types
 
     @staticmethod
+    def get_fim_special_service_types() -> List[str]:
+        """
+        Not intended for API use
+        """
+        return NetworkService.fim_special_service_types
+
+    @staticmethod
     def get_fim_network_service_types() -> List[str]:
         """
         Not inteded for API use
@@ -85,6 +101,7 @@ class NetworkService:
         return (
             NetworkService.get_fim_l2network_service_types()
             + NetworkService.get_fim_l3network_service_types()
+            + NetworkService.get_fim_special_service_types()
         )
 
     @staticmethod
@@ -209,6 +226,73 @@ class NetworkService:
             raise Exception(f"Unknown network type {type}")
 
         return True
+
+    @staticmethod
+    def new_portmirror_service(
+        slice: Slice = None,
+        name: str = None,
+        mirror_interface_name: str = None,
+        receive_interface: Interface or None = None,
+        mirror_direction: str = "both",
+    ) -> NetworkService:
+        """
+        Instantiate a new PortMirror service
+        mirror_direction can be "rx", "tx" or "both" (non-case-sensitive)
+        """
+        # decode the direction
+        if not isinstance(mirror_interface_name, str):
+            raise Exception(
+                f"When creating a PortMirror service mirror_interface is specified by name"
+            )
+        if not isinstance(mirror_direction, str):
+            raise Exception(
+                f'When creating a PortMirror service mirror_direction is a string "rx", "tx" or "both"'
+                f'defaulting to "both"'
+            )
+        if not receive_interface:
+            raise Exception(
+                f"For PortMirror service the receiving interface must be specified upfront"
+            )
+        direction = MirrorDirection.Both
+        # enable below when we are officially off python 3.9 and into 3.10 or higher
+        # match mirror_direction.lower():
+        #    case ['rx']:
+        #        direction = MirrorDirection.RX_Only
+        #    case ['tx']:
+        #        direction = MirrorDirection.TX_Only
+        #   case ['both']:
+        #        direction = MirrorDirection.Both
+        #   case _:
+        #       raise Exception(f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
+        #                        f'service {name}')
+        no_case_direction = mirror_direction.lower()
+        if no_case_direction == "rx":
+            direction = MirrorDirection.RX_Only
+        elif no_case_direction == "tx":
+            direction = MirrorDirection.TX_Only
+        elif no_case_direction == "both":
+            pass
+        else:
+            raise Exception(
+                f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
+                f"service {name}"
+            )
+        logging.info(
+            f"Create PortMirror Service: Slice: {slice.get_name()}, Network Name: {name} listening on "
+            f"{mirror_interface_name} with direction {direction}"
+        )
+        fim_network_service = slice.topology.add_port_mirror_service(
+            name=name,
+            from_interface_name=mirror_interface_name,
+            to_interface=receive_interface.fim_interface,
+            direction=direction,
+        )
+
+        network_service = NetworkService(
+            slice=slice, fim_network_service=fim_network_service
+        )
+        network_service.init_fablib_data()
+        return network_service
 
     @staticmethod
     def new_l3network(
@@ -683,7 +767,7 @@ class NetworkService:
         :rtype: String
         """
         try:
-            return self.get_fim().get_property(pname="type")
+            return self.get_fim().type
             # return self.get_sliver().fim_sliver.resource_type
         except Exception as e:
             logging.warning(f"Failed to get type: {e}")
@@ -955,6 +1039,12 @@ class NetworkService:
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
+        if self.get_type() == ServiceType.PortMirror:
+            raise Exception(
+                "Interfaces cannot be attached to PortMirror service - they can only"
+                "be specified at service creation"
+            )
+
         iface_fablib_data = interface.get_fablib_data()
 
         new_interfaces = self.get_interfaces()
