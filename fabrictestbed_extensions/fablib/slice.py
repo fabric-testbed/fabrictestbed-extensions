@@ -1913,8 +1913,12 @@ class Slice:
                 if isinstance(extra_ssh_keys, list):
                     ssh_keys.extend(extra_ssh_keys)
                 else:
-                    logging.error('Extra SSH keys must be provided as a list of strings.')
-                    raise Exception('Extra SSH keys must be provided as a list of strings.')
+                    logging.error(
+                        "Extra SSH keys must be provided as a list of strings."
+                    )
+                    raise Exception(
+                        "Extra SSH keys must be provided as a list of strings."
+                    )
             # validate each key - this will throw an exception
             for ssh_key in ssh_keys:
                 # this will throw an informative exception
