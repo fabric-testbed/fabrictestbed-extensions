@@ -70,6 +70,8 @@ class NetworkService:
         "L3VPN",
     ]
 
+    fim_special_service_types = ["PortMirror"]
+
     @staticmethod
     def get_fim_l2network_service_types() -> List[str]:
         """
@@ -85,6 +87,13 @@ class NetworkService:
         return NetworkService.fim_l3network_service_types
 
     @staticmethod
+    def get_fim_special_service_types() -> List[str]:
+        """
+        Not intended for API use
+        """
+        return NetworkService.fim_special_service_types
+
+    @staticmethod
     def get_fim_network_service_types() -> List[str]:
         """
         Not inteded for API use
@@ -92,6 +101,7 @@ class NetworkService:
         return (
             NetworkService.get_fim_l2network_service_types()
             + NetworkService.get_fim_l3network_service_types()
+            + NetworkService.get_fim_special_service_types()
         )
 
     @staticmethod
