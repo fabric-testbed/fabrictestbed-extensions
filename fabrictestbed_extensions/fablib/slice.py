@@ -881,6 +881,7 @@ class Slice:
         self.nodes = None
         self.interfaces = None
         port_mirror_service = NetworkService.new_portmirror_service(
+            slice=self,
             name=name,
             mirror_interface=mirror_interface,
             receive_interface=receive_interface,
