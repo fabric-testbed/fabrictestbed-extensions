@@ -6,11 +6,6 @@
 Welcome to fabrictestbed-extensions documentation!
 ==================================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
 fabrictestbed-extensions, otherwise known as "FABlib", is an
 implementation of a Python API for interacting with `FABRIC testbed`_.
 You would typically call FABlib APIs from your `Jupyter`_ notebooks or
@@ -121,6 +116,12 @@ values set using environment variables.
 .. _FABRIC testbed: https://fabric-testbed.net/
 .. _Jupyter: https://jupyter.org/
 .. _JupyterHub: https://jupyter.org/hub
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
 
 Indices and tables
 ==================
