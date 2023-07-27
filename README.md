@@ -91,6 +91,22 @@ want to run some tests directly using [pytest], that is possible too:
 $ pytest -s tests/integration/test_hello_fabric.py
 ```
 
+## Documenting FABlib
+
+FABlib uses Sphinx to generate API documentation from Python
+docstrings. Publishing them at [Read the Docs][fablib-api-rtd] is a
+mostly automated process.
+
+When working on API documentation on your local setup, in order to
+preview the generated HTML, run:
+
+```
+$ tox -e docs
+```
+
+Resulting files can be found in `docs/build/html/`.
+
+
 ## Packaging FABlib
 
 FABlib uses [flit] as the build backend.  To build source and wheel
