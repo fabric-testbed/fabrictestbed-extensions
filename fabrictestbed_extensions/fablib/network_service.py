@@ -236,16 +236,27 @@ class NetworkService:
             raise Exception(f'When creating a PortMirror service mirror_direction is a string "rx", "tx" or "both"'
                             f'defaulting to "both"')
         direction = MirrorDirection.Both
-        match mirror_direction.lower():
-            case ['rx']:
-                direction = MirrorDirection.RX_Only
-            case ['tx']:
-                direction = MirrorDirection.TX_Only
-            case ['both']:
-                direction = MirrorDirection.Both
-            case _:
-                raise Exception(f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
-                                f'service {name}')
+        # enable below when we are officially off python 3.9 and into 3.10 or higher
+        #match mirror_direction.lower():
+        #    case ['rx']:
+        #        direction = MirrorDirection.RX_Only
+        #    case ['tx']:
+        #        direction = MirrorDirection.TX_Only
+        #   case ['both']:
+        #        direction = MirrorDirection.Both
+        #   case _:
+        #       raise Exception(f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
+        #                        f'service {name}')
+        no_case_direction = mirror_direction.lower()
+        if no_case_direction == 'rx':
+            direction = MirrorDirection.RX_Only
+        elif no_case_direction == 'tx':
+            direction = MirrorDirection.TX_Only
+        elif no_case_direction == 'both':
+            pass
+        else:
+            raise Exception(f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
+                            f'service {name}')
         logging.info(
             f"Create PortMirror Service: Slice: {slice.get_name()}, Network Name: {name} listening on "
             f"{mirror_interface} into {receive_interface.get_name()} with direction {direction}"
