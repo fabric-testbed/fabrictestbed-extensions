@@ -864,7 +864,7 @@ class Slice:
 
     def add_port_mirror_service(self,
                                 name: str,
-                                mirror_interface: str,
+                                mirror_interface_name: str,
                                 receive_interface: Interface or None = None,
                                 mirror_direction: str = 'both'
                                 ) -> NetworkService:
@@ -873,7 +873,7 @@ class Slice:
         switch interface specified by `mirror_interface` into an interface
         specified by `receive_interface`
         :param name: Name of the service
-        :param mirror_interface: Name of the interface on the dataplane switch to mirror
+        :param mirror_interface_name: Name of the interface on the dataplane switch to mirror
         :param receive_interface: Interface in the topology belonging to a SmartNIC component
         :param mirror_direction: String 'rx', 'tx' or 'both' defaulting to 'both'
         which receives the data
@@ -883,7 +883,7 @@ class Slice:
         port_mirror_service = NetworkService.new_portmirror_service(
             slice=self,
             name=name,
-            mirror_interface=mirror_interface,
+            mirror_interface_name=mirror_interface_name,
             receive_interface=receive_interface,
             mirror_direction=mirror_direction
         )

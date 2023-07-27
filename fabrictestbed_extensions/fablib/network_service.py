@@ -221,8 +221,8 @@ class NetworkService:
     def new_portmirror_service(
             slice: Slice = None,
             name: str = None,
-            mirror_interface: str = None,
-            receive_interface: Interface = None,
+            mirror_interface_name: str = None,
+            receive_interface: Interface or None = None,
             mirror_direction: str = "both"
     ) -> NetworkService:
         """
@@ -230,11 +230,13 @@ class NetworkService:
         mirror_direction can be "rx", "tx" or "both" (non-case-sensitive)
         """
         # decode the direction
-        if not isinstance(mirror_interface, str):
+        if not isinstance(mirror_interface_name, str):
             raise Exception(f'When creating a PortMirror service mirror_interface is specified by name')
         if not isinstance(mirror_direction, str):
             raise Exception(f'When creating a PortMirror service mirror_direction is a string "rx", "tx" or "both"'
                             f'defaulting to "both"')
+        if not receive_interface:
+            raise Exception(f'For PortMirror service the receiving interface must be specified upfront')
         direction = MirrorDirection.Both
         # enable below when we are officially off python 3.9 and into 3.10 or higher
         #match mirror_direction.lower():
@@ -259,11 +261,11 @@ class NetworkService:
                             f'service {name}')
         logging.info(
             f"Create PortMirror Service: Slice: {slice.get_name()}, Network Name: {name} listening on "
-            f"{mirror_interface} with direction {direction}"
+            f"{mirror_interface_name} with direction {direction}"
         )
         fim_network_service = slice.topology.add_port_mirror_service(name=name,
-                                                                     from_interface_name=mirror_interface,
-                                                                     to_interface=receive_interface,
+                                                                     from_interface_name=mirror_interface_name,
+                                                                     to_interface=receive_interface.fim_interface,
                                                                      direction=direction)
 
         network_service = NetworkService(
@@ -745,7 +747,7 @@ class NetworkService:
         :rtype: String
         """
         try:
-            return self.get_fim().get_property(pname="type")
+            return self.get_fim().type
             # return self.get_sliver().fim_sliver.resource_type
         except Exception as e:
             logging.warning(f"Failed to get type: {e}")
@@ -1017,6 +1019,11 @@ class NetworkService:
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
+
+        if self.get_type() == ServiceType.PortMirror:
+            raise Exception('Interfaces cannot be attached to PortMirror service - they can only'
+                            'be specified at service creation')
+
         iface_fablib_data = interface.get_fablib_data()
 
         new_interfaces = self.get_interfaces()
