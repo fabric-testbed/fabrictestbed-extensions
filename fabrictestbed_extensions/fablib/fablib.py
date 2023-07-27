@@ -608,6 +608,7 @@ class FablibManager:
         data_dir: str = None,
         output: str = None,
         execute_thread_pool_size: int = 64,
+        offline: bool = False,
     ):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
@@ -789,7 +790,9 @@ class FablibManager:
         self.resources = None
         self.links = None
         self.facility_ports = None
-        self.build_slice_manager()
+
+        if not offline:
+            self.build_slice_manager()
 
     def _validate_configuration(self):
         """
