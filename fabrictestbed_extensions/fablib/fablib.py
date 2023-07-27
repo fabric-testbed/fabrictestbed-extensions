@@ -33,6 +33,7 @@ from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
 
 import pandas as pd
+import paramiko
 from fabrictestbed.util.constants import Constants
 from IPython import get_ipython
 from IPython.core.display_functions import display
@@ -1665,10 +1666,10 @@ class FablibManager:
         paramiko.SSHException, not paramiko.AuthenticationException.
         """
 
-        try:
-            bastion_client = paramiko.SSHClient()
-            bastion_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+        bastion_client = paramiko.SSHClient()
+        bastion_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
 
+        try:
             bastion_host = self.get_bastion_public_addr()
             bastion_username = self.get_bastion_username()
             bastion_key_path = self.get_bastion_key_filename()
