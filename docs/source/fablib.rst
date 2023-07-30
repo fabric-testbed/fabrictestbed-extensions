@@ -18,8 +18,8 @@ Slice
    :members:
 
 
-``Node``
-----------------
+Node
+----
 
 .. automodule:: node
 
