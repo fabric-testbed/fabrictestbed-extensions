@@ -7,114 +7,12 @@ FablibManager
    :members:
 
 
+Slice
+-----
+
 .. automodule:: slice
-
-``Slice``
---------------
-
 .. autoclass:: slice.Slice
-
-  .. automethod:: __str__
-
-  .. automethod:: save
-
-  .. automethod:: load
-
-  .. automethod:: show
-
-  .. automethod:: list_nodes
-
-  .. automethod:: list_interfaces
-
-  .. automethod:: list_components
-
-  .. automethod:: new_slice
-
-  .. automethod:: toJson
-
-  .. automethod:: toDict
-
-  .. automethod:: get_fim_topology
-
-  .. automethod:: update
-
-  .. automethod:: get_slice_public_key
-
-  .. automethod:: get_private_key_passphrase
-
-  .. automethod:: get_slice_public_key_file
-
-  .. automethod:: get_slice_private_key_file
-
-  .. automethod:: isStable
-
-  .. automethod:: get_state
-
-  .. automethod:: get_name
-
-  .. automethod:: get_slice_id
-
-  .. automethod:: get_lease_end
-
-  .. automethod:: get_lease_start
-
-  .. automethod:: get_project_id
-
-  .. automethod:: add_l2network
-
-  .. automethod:: add_l3network
-
-  .. automethod:: add_facility_port
-
-  .. automethod:: add_node
-
-  .. automethod:: get_object_by_reservation
-
-  .. automethod:: get_error_messages
-
-  .. automethod:: get_notices
-
-  .. automethod:: get_components
-
-  .. automethod:: get_nodes
-
-  .. automethod:: get_node
-
-  .. automethod:: get_interfaces
-
-  .. automethod:: get_interface
-
-  .. automethod:: get_networks
-
-  .. automethod:: get_network
-
-  .. automethod:: get_l2networks
-
-  .. automethod:: get_l2network
-
-  .. automethod:: get_l3networks
-
-  .. automethod:: get_l3network
-
-  .. automethod:: delete
-
-  .. automethod:: renew
-
-  .. automethod:: wait
-
-  .. automethod:: wait_ssh
-
-  .. automethod:: test_ssh
-
-  .. automethod:: post_boot_config
-
-  .. automethod:: wait_jupyter
-
-  .. automethod:: submit
-
-  .. automethod:: list_networks
-
-  .. automethod:: list_nodes
+   :members:
 
 
 ``Node``
