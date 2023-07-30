@@ -22,8 +22,10 @@ Node
 ----
 
 .. automodule:: node
+   :members:
 
 .. autoclass:: node.Node
+   :members:
 
 
 ``Component``
