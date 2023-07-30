@@ -38,69 +38,15 @@ Node
    :members:
 
 
+Interface
+---------
+
 .. automodule:: interface
-
-``Interface``
-----------------------
-
+   :members:
 
 .. autoclass:: interface.Interface
+   :members:
 
-  .. automethod:: __str__
-
-  .. automethod:: toJson
-
-  .. automethod:: toDict
-
-  .. automethod:: show
-
-  .. automethod:: get_mac
-
-  .. automethod:: get_device_name
-
-  .. automethod:: get_os_interface
-
-  .. automethod:: get_physical_os_interface
-
-  .. automethod:: ip_addr_add
-
-  .. automethod:: ip_addr_del
-
-  .. automethod:: ip_link_up
-
-  .. automethod:: ip_link_down
-
-  .. automethod:: set_vlan
-
-  .. automethod:: get_bandwidth
-
-  .. automethod:: get_vlan
-
-  .. automethod:: get_reservation_state
-
-  .. automethod:: get_name
-
-  .. automethod:: get_component
-
-  .. automethod:: get_model
-
-  .. automethod:: get_site
-
-  .. automethod:: get_slice
-
-  .. automethod:: get_node
-
-  .. automethod:: get_network
-
-  .. automethod:: get_ip_link
-
-  .. automethod::  get_ip_addr
-
-  .. automethod::  get_ips
-
-  .. automethod:: get_numa_node
-
-  .. automethod:: un_manage_interface
 
 .. automodule:: network_service
 
