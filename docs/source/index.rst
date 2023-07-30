@@ -118,14 +118,14 @@ Most of FABLib's functionality comes wrapped in these classes:
 .. toctree::
    :maxdepth: 1
 
-   fablib
-   slice
-   node
-   component
-   interface
-   network_service
-   facility_port.rst
-   resources.rst
+   modules/fablib
+   modules/slice
+   modules/node
+   modules/component
+   modules/interface
+   modules/network_service
+   modules/facility_port.rst
+   modules/resources.rst
 
 
 .. _FABRIC testbed: https://fabric-testbed.net/
