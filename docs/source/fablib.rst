@@ -65,7 +65,7 @@ FacilityPort
 .. automodule:: facility_port
    :members:
 
-.. autoclass:: facility_port.NetworkService
+.. autoclass:: facility_port.FacilityPort
    :members:
 
 
