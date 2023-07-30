@@ -137,7 +137,7 @@ Most of FABLib's functionality comes wrapped in these classes:
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
