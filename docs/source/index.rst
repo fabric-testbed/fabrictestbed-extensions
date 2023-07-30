@@ -119,6 +119,13 @@ Most of FABLib's functionality comes wrapped in these classes:
    :maxdepth: 1
 
    fablib
+   slice
+   node
+   component
+   interface
+   network_service
+   facility_port.rst
+   resources.rst
 
 
 .. _FABRIC testbed: https://fabric-testbed.net/
