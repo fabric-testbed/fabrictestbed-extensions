@@ -18,6 +18,11 @@ or run into trouble, you can discuss them at FABRIC forums:
 https://learn.fabric-testbed.net/forums/.
 
 
+.. _FABRIC testbed: https://fabric-testbed.net/
+.. _Jupyter: https://jupyter.org/
+.. _JupyterHub: https://jupyter.org/hub
+      
+
 Installing FABlib
 -----------------
 
@@ -129,11 +134,6 @@ Most of FABLib's functionality comes wrapped in these classes:
    network_service
    facility_port.rst
    resources.rst
-
-
-.. _FABRIC testbed: https://fabric-testbed.net/
-.. _Jupyter: https://jupyter.org/
-.. _JupyterHub: https://jupyter.org/hub
 
 
 Indices and tables
