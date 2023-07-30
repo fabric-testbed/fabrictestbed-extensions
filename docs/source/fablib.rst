@@ -1,50 +1,50 @@
 FablibManager
 =============
 
-.. automodule:: fablib
+.. automodule:: fabrictestbed_extensions.fablib.fablib
    :members:
 
-.. autoclass:: fablib.FablibManager
+.. autoclass:: fabrictestbed_extensions.fablib.fablib.FablibManager
    :members:
 
 
 Slice
 =====
 
-.. automodule:: slice
+.. automodule:: fabrictestbed_extensions.fablib.slice
    :members:
 
-.. autoclass:: slice.Slice
+.. autoclass:: fabrictestbed_extensions.fablib.slice.Slice
    :members:
 
 
 Node
 ====
 
-.. automodule:: node
+.. automodule:: fabrictestbed_extensions.fablib.node
    :members:
 
-.. autoclass:: node.Node
+.. autoclass:: fabrictestbed_extensions.fablib.node.Node
    :members:
 
 
 Component
 =========
 
-.. automodule:: component
+.. automodule:: fabrictestbed_extensions.fablib.component
    :members:
 
-.. autoclass:: component.Component
+.. autoclass:: fabrictestbed_extensions.fablib.component.Component
    :members:
 
 
 Interface
 =========
 
-.. automodule:: interface
+.. automodule:: fabrictestbed_extensions.fablib.interface
    :members:
 
-.. autoclass:: interface.Interface
+.. autoclass:: fabrictestbed_extensions.fablib.interface.Interface
    :members:
 
 
@@ -52,28 +52,28 @@ Interface
 NetworkService
 ==============
 
-.. automodule:: network_service
+.. automodule:: fabrictestbed_extensions.fablib.network_service
    :members:
 
-.. autoclass:: network_service.NetworkService
+.. autoclass:: fabrictestbed_extensions.fablib.network_service.NetworkService
    :members:
 
 
 FacilityPort
 ============
 
-.. automodule:: facility_port
+.. automodule:: fabrictestbed_extensions.fablib.facility_port
    :members:
 
-.. autoclass:: facility_port.FacilityPort
+.. autoclass:: fabrictestbed_extensions.fablib.facility_port.FacilityPort
    :members:
 
 
 Resources
 =========
 
-.. automodule:: resources
+.. automodule:: fabrictestbed_extensions.fablib.resources
    :members:
 
-.. autoclass:: resources.Resources
+.. autoclass:: fabrictestbed_extensions.fablib.resources.Resources
    :members:
