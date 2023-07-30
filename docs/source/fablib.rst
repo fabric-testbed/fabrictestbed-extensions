@@ -6,3 +6,4 @@ FablibManager
 
 .. autoclass:: fabrictestbed_extensions.fablib.fablib.FablibManager
    :members:
+   :special-members:

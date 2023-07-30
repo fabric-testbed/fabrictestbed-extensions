@@ -6,3 +6,4 @@ NetworkService
 
 .. autoclass:: fabrictestbed_extensions.fablib.network_service.NetworkService
    :members:
+   :special-members:

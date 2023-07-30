@@ -6,3 +6,4 @@ Node
 
 .. autoclass:: fabrictestbed_extensions.fablib.node.Node
    :members:
+   :special-members:

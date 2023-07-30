@@ -6,3 +6,4 @@ Slice
 
 .. autoclass:: fabrictestbed_extensions.fablib.slice.Slice
    :members:
+   :special-members:

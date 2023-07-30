@@ -6,3 +6,4 @@ FacilityPort
 
 .. autoclass:: fabrictestbed_extensions.fablib.facility_port.FacilityPort
    :members:
+   :special-members:

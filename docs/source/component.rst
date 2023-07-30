@@ -6,3 +6,4 @@ Component
 
 .. autoclass:: fabrictestbed_extensions.fablib.component.Component
    :members:
+   :special-members:
