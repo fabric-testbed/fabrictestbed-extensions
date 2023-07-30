@@ -113,6 +113,9 @@ above.  Currently, contents of the configuration file will override
 values set using environment variables.
 
 
+FABLib classes
+--------------
+
 Most of FABLib's functionality comes wrapped in these classes:
 
 .. toctree::
