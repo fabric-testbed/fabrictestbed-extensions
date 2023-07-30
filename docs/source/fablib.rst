@@ -1,5 +1,5 @@
 FablibManager
--------------
+=============
 
 .. automodule:: fablib
    :members:
@@ -9,7 +9,7 @@ FablibManager
 
 
 Slice
------
+=====
 
 .. automodule:: slice
    :members:
@@ -19,7 +19,7 @@ Slice
 
 
 Node
-----
+====
 
 .. automodule:: node
    :members:
@@ -29,7 +29,7 @@ Node
 
 
 Component
----------
+=========
 
 .. automodule:: component
    :members:
@@ -39,7 +39,7 @@ Component
 
 
 Interface
----------
+=========
 
 .. automodule:: interface
    :members:
@@ -50,7 +50,7 @@ Interface
 
 
 NetworkService
---------------
+==============
 
 .. automodule:: network_service
    :members:
@@ -60,7 +60,7 @@ NetworkService
 
 
 Resources
----------
+=========
 
 .. automodule:: resources
    :members:
