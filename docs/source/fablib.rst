@@ -1,5 +1,3 @@
-`fabrictestbed_extensions/fablib` stuff.
-
 .. automodule:: fablib
 
 ``FablibManager``
