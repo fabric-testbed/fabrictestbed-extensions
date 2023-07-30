@@ -28,8 +28,8 @@ Node
    :members:
 
 
-``Component``
-----------------------------
+Component
+---------
 
 .. automodule:: component
    :members:
