@@ -113,15 +113,18 @@ above.  Currently, contents of the configuration file will override
 values set using environment variables.
 
 
-.. _FABRIC testbed: https://fabric-testbed.net/
-.. _Jupyter: https://jupyter.org/
-.. _JupyterHub: https://jupyter.org/hub
-
+Most of FABLib's functionality comes wrapped in these classes:
 
 .. toctree::
    :maxdepth: 1
 
    fablib
+
+
+.. _FABRIC testbed: https://fabric-testbed.net/
+.. _Jupyter: https://jupyter.org/
+.. _JupyterHub: https://jupyter.org/hub
+
 
 Indices and tables
 ==================
