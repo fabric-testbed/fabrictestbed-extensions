@@ -48,51 +48,16 @@ Interface
    :members:
 
 
+
+NetworkService
+--------------
+
 .. automodule:: network_service
-
-
-``NetworkService``
-------------------------------------
+   :members:
 
 .. autoclass:: network_service.NetworkService
+   :members:
 
-  .. automethod:: __str__
-
-  .. automethod:: toJson
-
-  .. automethod:: toDict
-
-  .. automethod:: show
-
-  .. automethod:: get_fim_network_service
-
-  .. automethod:: get_slice
-
-  .. automethod:: get_name
-
-  .. automethod:: get_interfaces
-
-  .. automethod:: get_interface
-
-  .. automethod:: has_interface
-
-  .. automethod:: get_layer
-
-  .. automethod:: get_type
-
-  .. automethod:: get_error_message
-
-  .. automethod:: get_gateway
-
-  .. automethod:: get_available_ips
-
-  .. automethod:: get_subnet
-
-  .. automethod:: get_reservation_id
-
-  .. automethod:: get_reservation_state
-
-  .. automethod:: get_public_ips
 
 .. automodule:: resources
 
