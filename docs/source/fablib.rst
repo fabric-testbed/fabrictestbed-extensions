@@ -1,7 +1,8 @@
-.. automodule:: fablib
-
 FablibManager
 -------------
+
+.. automodule:: fablib
+   :members:
 
 .. autoclass:: fablib.FablibManager
    :members:
