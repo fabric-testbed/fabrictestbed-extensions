@@ -726,8 +726,9 @@ class Node:
 
     def set_site(self, site):
         """
-        Sets the hostname of this fablib node on the FABRIC node.
-        :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
+        Sets the site of this fablib node on FABRIC.
+
+        :param site: the site
         :type host_name: String
         """
         # example: host_name='renc-w2.fabric-testbed.net'
