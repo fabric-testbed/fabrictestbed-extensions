@@ -683,6 +683,7 @@ class Node:
     def get_slice(self) -> Slice:
         """
         Gets the fablib slice associated with this node.
+
         :return: the fablib slice on this node
         :rtype: Slice
         """
