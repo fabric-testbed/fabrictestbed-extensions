@@ -2303,7 +2303,7 @@ class Node:
         mtu: str = None,
     ):
         """
-        Deprecated
+        .. deprecated:: 1.1.3.
         """
         # TODO: Add docstring after doc networking classes
         if cidr:
@@ -2403,7 +2403,7 @@ class Node:
         interface: str = None,
     ):
         """
-        Deprecated
+        .. deprecated:: 1.1.3.
         """
         # TODO: Add docstring after doc networking classes
 
