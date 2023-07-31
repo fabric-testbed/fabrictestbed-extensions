@@ -786,6 +786,7 @@ class Node:
     def get_management_ip(self) -> str or None:
         """
         Gets the management IP on the FABRIC node.
+
         :return: management IP
         :rtype: String
         """
