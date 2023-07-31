@@ -715,6 +715,7 @@ class Node:
     def get_ram(self) -> int or None:
         """
         Gets the amount of RAM on the FABRIC node.
+
         :return: the amount of RAM on the node
         :rtype: int
         """
