@@ -28,6 +28,7 @@ import concurrent.futures
 import ipaddress
 import json
 import logging
+import re
 import select
 import threading
 import time
@@ -704,7 +705,7 @@ class Node:
         :rtype: String
         """
         try:
-            return self.get_fim_node().labels.instance
+            return self.get_fim_node().get_property(pname="label_allocations").instance
         except:
             return None
 
@@ -2804,6 +2805,9 @@ class Node:
 
             # Get CPU Info for the VM and Host on which VM resides
             cpu_info = self.poa(operation="cpuinfo")
+            logging.getLogger().info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
+            logging.getLogger().info(f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}")
+
             pinned_cpus = cpu_info.get(self.get_host()).get('pinned_cpus')
 
             # Find Numa Node for the NIC
@@ -2859,6 +2863,8 @@ class Node:
         try:
             # Get CPU Info for the VM and Host on which VM resides
             numa_info = self.poa(operation="numainfo")
+            logging.getLogger().info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
+            logging.getLogger().info(f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}")
 
             total_available_memory = 0
 
@@ -2869,12 +2875,18 @@ class Node:
                 numa_node = c.get_numa_node()
 
                 numa_nodes.append(numa_node)
+                logging.getLogger().info(f"Numa Node {numa_node} for component: {c.get_name()}")
 
                 # Free Memory for the Numa Node
-                numa_memory_free = numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
+                numa_memory_free_str = numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
+                logging.getLogger().info(f"Numa Node {numa_node} free memory: {numa_memory_free_str}")
+                numa_memory_free = int(re.search(r'\d+', numa_memory_free_str).group())
 
                 # Memory allocated to VM on the Numa Node
+                logging.getLogger().info(f"VM memory: {numa_info.get(self.get_instance_name())}")
+                logging.getLogger().info(f"VM memory: {numa_info.get(self.get_instance_name()).get(f'Node {numa_node}')}")
                 vm_mem = numa_info.get(self.get_instance_name()).get(f"Node {numa_node}").get("Total")
+                logging.getLogger().info(f"VM memory: {vm_mem}")
 
                 # Exclude VM memory
                 available_memory_on_node = numa_memory_free - vm_mem
