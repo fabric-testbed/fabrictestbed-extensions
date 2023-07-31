@@ -928,8 +928,10 @@ class Node:
     def get_private_key(self) -> str:
         """
         Gets the private key on the fablib node.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the private key on the node
         :rtype: String
         """
