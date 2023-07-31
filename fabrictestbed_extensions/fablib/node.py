@@ -804,6 +804,7 @@ class Node:
     def get_reservation_id(self) -> str or None:
         """
         Gets the reservation ID on the FABRIC node.
+
         :return: reservation ID on the node
         :rtype: String
         """
