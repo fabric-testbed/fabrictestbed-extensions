@@ -907,6 +907,7 @@ class Node:
     def get_username(self) -> str:
         """
         Gets the username on this fablib node.
+
         :return: the username on this node
         :rtype: String
         """
