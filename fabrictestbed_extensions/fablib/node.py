@@ -454,31 +454,41 @@ class Node:
         """
         Lists all the interfaces in the node with their attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        :param output: Output format.  Options are:
 
-        fields: json output will include all available fields/columns.
+                - ``"text"``: string formatted with tabular
 
-        Example: fields=['Name','MAC']
+                - ``"pandas"``: pandas dataframe
 
-        filter_function:  A lambda function to filter data by field values.
+                - ``"json"``: string in json format
 
-        Example: filter_function=lambda s: s['Node'] == 'Node1'
-
-        :param output: output format
         :type output: str
-        :param fields: list of fields (table columns) to show
+
+        :param fields: List of fields (table columns) to show.  JSON
+            output will include all available fields/columns.
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param filter_function: lambda function
+
+        :param filter_function: A lambda function to filter data by
+            field values.
         :type filter_function: lambda
+
         :return: table in format specified by output parameter
         :rtype: Object
+
+        Example of ``fields``::
+
+            fields=['Name','MAC']
+
+        Example of ``filter_function``::
+
+            filter_function=lambda s: s['Node'] == 'Node1'
         """
 
         if str(self.get_reservation_state()) != "Active":
