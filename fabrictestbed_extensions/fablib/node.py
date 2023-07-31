@@ -954,8 +954,10 @@ class Node:
     def get_private_key_passphrase(self) -> str:
         """
         Gets the private key passphrase on the FABLIB slice.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the private key passphrase
         :rtype: String
         """
