@@ -1629,12 +1629,18 @@ class Node:
     ):
         """
         Download a remote file from the node to a local destination.
-        :param local_file_path: the destination path for the remote file
+
+        :param local_file_path: the destination path for the remote
+            file
         :type local_file_path: str
-        :param remote_file_path: the path to the remote file to download
+
+        :param remote_file_path: the path to the remote file to
+            download
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
         """
