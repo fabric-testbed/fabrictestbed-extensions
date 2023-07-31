@@ -381,9 +381,6 @@ class Node:
         that determine the format of the output that is returned and
         (optionally) displayed/printed.
 
-        output: 'text': string formatted with tabular 'pandas': pandas
-        dataframe 'json': string in json format
-
         fields: json output will include all available fields/columns.
 
         Example: fields=['Name','Model']
@@ -393,7 +390,12 @@ class Node:
 
         Example: filter_function=lambda s: s['Model'] == 'NIC_Basic'
 
-        :param output: output format
+        :param output: output format. Output can be one of:
+
+            - ``"text"``: string formatted with tabular
+            - ``"pandas"``: pandas dataframe
+            - ``"json"``: string in json format
+
         :type output: str
 
         :param fields: list of fields (table columns) to show
