@@ -755,6 +755,7 @@ class Node:
     def get_host(self) -> str or None:
         """
         Gets the hostname on the FABRIC node.
+
         :return: the hostname on the node
         :rtype: String
         """
