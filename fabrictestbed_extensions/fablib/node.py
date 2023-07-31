@@ -691,11 +691,16 @@ class Node:
 
     def set_image(self, image: str, username: str = None, image_type: str = "qcow2"):
         """
-        Sets the image information of this fablib node on the FABRIC node.
+        Sets the image information of this fablib node on the FABRIC
+        node.
+
         :param image: the image reference to set
         :type image: String
-        :param username: the username of this fablib node. Currently unused.
+
+        :param username: the username of this fablib node.  Currently
+            unused.
         :type username: String
+
         :param image_type: the image type to set
         :type image_type: String
         """
