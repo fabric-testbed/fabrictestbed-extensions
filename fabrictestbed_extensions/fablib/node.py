@@ -2022,6 +2022,7 @@ class Node:
     def flush_os_interface(self, os_iface: str):
         """
         Flush the configuration of an interface in the node
+
         :param os_iface: the name of the interface to flush
         :type os_iface: String
         """
