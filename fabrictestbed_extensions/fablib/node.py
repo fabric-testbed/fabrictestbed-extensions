@@ -653,6 +653,7 @@ class Node:
     def set_instance_type(self, instance_type: str):
         """
         Sets the instance type of this fablib node on the FABRIC node.
+
         :param instance_type: the name of the instance type to set
         :type instance_type: String
         """
