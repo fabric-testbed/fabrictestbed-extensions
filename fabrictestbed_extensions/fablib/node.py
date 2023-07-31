@@ -2834,18 +2834,21 @@ class Node:
             # Exclude any Pinned CPUs
             available_cpus = list(set(numa_cpu_range) - set(pinned_cpus))
 
+            number_of_cpus_to_pin = len(result_list)
+            number_of_available_cpus = len(available_cpus)
+
             # Verify Requested CPUs do not exceed Available CPUs
-            if len(result_list) < len(available_cpus):
-                raise Exception(f"Not enough Host CPUs available to pin! Requested CPUs: {len(result_list)} "
-                                f"Available CPUs: {len(available_cpus)}")
+            if number_of_cpus_to_pin > number_of_available_cpus:
+                logging.getLogger().warning(f"Not enough Host CPUs available to pin! "
+                                            f"Requested CPUs: {number_of_cpus_to_pin} "
+                                            f"Available CPUs: {number_of_available_cpus}")
+                number_of_cpus_to_pin = number_of_available_cpus
 
             # Build the VCPU to CPU Mapping
             vcpu_cpu_map = []
-            idx = 0
-            for x in result_list:
-                temp = {'vcpu': str(x), 'cpu': available_cpus[idx]}
+            for x in range(number_of_cpus_to_pin):
+                temp = {'vcpu': result_list[x], 'cpu': available_cpus[x]}
                 vcpu_cpu_map.append(temp)
-                idx += 1
 
             logging.getLogger().info(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
                                      f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}")
@@ -2887,7 +2890,6 @@ class Node:
                 if numa_node in numa_nodes:
                     continue
 
-                numa_nodes.append(numa_node)
                 logging.getLogger().info(f"Numa Node {numa_node} for component: {c.get_name()}")
 
                 # Free Memory for the Numa Node
@@ -2904,6 +2906,11 @@ class Node:
 
                 # Exclude VM memory
                 available_memory_on_node = int(numa_memory_free) - int(vm_mem)
+
+                if available_memory_on_node <= 0:
+                    continue
+
+                numa_nodes.append(numa_node)
 
                 # Compute the total available Memory
                 total_available_memory += available_memory_on_node

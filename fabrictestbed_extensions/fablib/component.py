@@ -406,7 +406,12 @@ class Component:
         Get the Numa Node assigned to the device
         """
         try:
-            return self.get_fim_component().get_property(pname="label_allocations").numa
+            numa = self.get_fim_component().get_property(pname="label_allocations").numa
+            if numa is not None:
+                if isinstance(numa, str):
+                    return numa
+                if isinstance(numa, list):
+                    return numa[0]
         except Exception as e:
             logging.error(f"get_numa_node failed: {e}")
             return None
