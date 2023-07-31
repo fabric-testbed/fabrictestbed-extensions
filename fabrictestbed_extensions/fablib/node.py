@@ -687,6 +687,7 @@ class Node:
     def get_name(self) -> str or None:
         """
         Gets the name of the FABRIC node.
+
         :return: the name of the node
         :rtype: String
         """
