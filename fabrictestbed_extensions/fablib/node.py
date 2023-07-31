@@ -721,6 +721,7 @@ class Node:
     def get_disk(self) -> int or None:
         """
         Gets the amount of disk space on the FABRIC node.
+
         :return: the amount of disk space on the node
         :rtype: int
         """
