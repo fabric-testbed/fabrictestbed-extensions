@@ -979,6 +979,7 @@ class Node:
     def get_components(self) -> List[Component]:
         """
         Gets a list of components associated with this node.
+
         :return: a list of components on this node
         :rtype: List[Component]
         """
