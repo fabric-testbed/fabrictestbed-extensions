@@ -841,6 +841,7 @@ class Node:
     def get_interfaces(self) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
