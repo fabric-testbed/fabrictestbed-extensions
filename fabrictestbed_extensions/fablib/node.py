@@ -1881,17 +1881,24 @@ class Node:
         retry_interval: int = 10,
     ):
         """
-        Downloads a directory from remote location on the node.
-        Makes a gzipped tarball of a directory and downloads it from a node. Then
-        unzips and tars the directory at the local_directory_path
-        :param local_directory_path: the path to the directory to upload
+        Downloads a directory from remote location on the node.  Makes
+        a gzipped tarball of a directory and downloads it from a node.
+        Then unzips and tars the directory at the local_directory_path
+
+        :param local_directory_path: the path to the directory to
+            upload
         :type local_directory_path: str
-        :param remote_directory_path: the destination path of the directory on the node
+
+        :param remote_directory_path: the destination path of the
+            directory on the node
         :type remote_directory_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         import os
