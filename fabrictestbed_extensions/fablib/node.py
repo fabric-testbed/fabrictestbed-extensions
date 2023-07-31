@@ -1848,17 +1848,25 @@ class Node:
         retry: int = 3,
         retry_interval: int = 10,
     ):
-        """ "
-        Creates a thread that calls node.download_directory. Results from the thread can be
-        retrieved with by calling thread.result()
-        :param local_directory_path: the path to the directory to upload
+        """
+        Creates a thread that calls node.download_directory.  Results
+        from the thread can be retrieved with by calling
+        thread.result()
+
+        :param local_directory_path: the path to the directory to
+            upload
         :type local_directory_path: str
-        :param remote_directory_path: the destination path of the directory on the node
+
+        :param remote_directory_path: the destination path of the
+            directory on the node
         :type remote_directory_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         return (
