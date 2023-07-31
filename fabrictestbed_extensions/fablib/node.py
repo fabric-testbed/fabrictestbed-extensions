@@ -908,8 +908,10 @@ class Node:
     def get_public_key(self) -> str:
         """
         Gets the public key on fablib node.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the public key on the node
         :rtype: String
         """
