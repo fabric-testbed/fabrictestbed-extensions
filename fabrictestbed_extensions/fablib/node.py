@@ -31,12 +31,14 @@ import logging
 import select
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import jinja2
 import paramiko
 from IPython.core.display_functions import display
+from fabric_cf.orchestrator.orchestrator_proxy import Status
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -692,6 +694,17 @@ class Node:
         """
         try:
             return self.get_fim_node().name
+        except:
+            return None
+
+    def get_instance_name(self) -> str or None:
+        """
+        Gets the instance name of the FABRIC node.
+        :return: the instance name of the node
+        :rtype: String
+        """
+        try:
+            return self.get_fim_node().labels.instance
         except:
             return None
 
@@ -2735,3 +2748,150 @@ class Node:
                     subnet=self.get_fablib_manager().FABNETV6_SUBNET,
                     next_hop=net.get_gateway(),
                 )
+
+    def poa(self, operation: str, vcpu_cpu_map: List[Dict[str, str]] = None,
+            node_set: List[str] = None, keys: List[str] = None) -> Union[Dict, str]:
+
+        status, poa_info = self.get_fablib_manager().get_slice_manager().poa(sliver_id=self.get_reservation_id(),
+                                                                             operation=operation,
+                                                                             vcpu_cpu_map=vcpu_cpu_map,
+                                                                             node_set=node_set, keys=keys)
+        logger = logging.getLogger()
+        if status != Status.OK:
+            raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
+
+        logger.info(f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}")
+
+        poa_state = "Nascent"
+        poa_info_status = None
+        attempt = 0
+        while poa_state != "Success" and poa_state != "Failed":
+            status, poa_info_status = self.get_fablib_manager().get_slice_manager().get_poas(poa_id=poa_info[0].poa_id)
+            attempt += 1
+            if status != Status.OK:
+                raise Exception(f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}")
+            poa_state = poa_info_status[0].state
+            logger.info(
+                f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
+                f"Checking POA Status attempt: {attempt} current state: {poa_state}")
+            time.sleep(10)
+
+        if poa_info_status[0].state == "Failed":
+            raise Exception(f"POA - {poa_info[0].poa_id}/{operation} failed with error: - {poa_info_status[0].error}")
+
+        if poa_info_status[0].info.get(operation) is not None:
+            return poa_info_status[0].info.get(operation)
+        else:
+            return poa_info_status[0].state
+
+    def pin_cpu(self, component_name: str, cpu_range_to_pin: str):
+        """
+        Pin the cpus for the VM to the numa node associated with the component
+        @param component_name: Component Name
+        @param cpu_range_to_pin: range of the cpus to pin; example: 0-1 or 0
+        """
+        try:
+            start, end = map(int, cpu_range_to_pin.split("-"))
+            result_list = list(range(start, end + 1))
+
+            allocated_cpu_list = list(range(0, self.get_cores()))
+            set_cpu = set(allocated_cpu_list)
+            if any(item not in set_cpu for item in result_list):
+                raise Exception(f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node")
+
+            # Get CPU Info for the VM and Host on which VM resides
+            cpu_info = self.poa(operation="cpuinfo")
+            pinned_cpus = cpu_info.get(self.get_host()).get('pinned_cpus')
+
+            # Find Numa Node for the NIC
+            numa_node = self.get_component(name=component_name).get_numa_node()
+
+            # Find CPUs assigned to the numa node
+            numa_cpu_range_str = cpu_info.get(self.get_host()).get(f"NUMA node{numa_node} CPU(s):")
+
+            # Determine the CPU range belonging to the Numa Node
+            numa_cpu_range = []
+            for r in numa_cpu_range_str.split(","):
+                start, end = map(int, r.split("-"))
+                numa_cpu_range.extend(map(str, range(start, end + 1)))
+
+            # Exclude any Pinned CPUs
+            available_cpus = list(set(numa_cpu_range) - set(pinned_cpus))
+
+            # Verify Requested CPUs do not exceed Available CPUs
+            if len(result_list) < len(available_cpus):
+                raise Exception(f"Not enough Host CPUs available to pin! Requested CPUs: {len(result_list)} "
+                                f"Available CPUs: {len(available_cpus)}")
+
+            # Build the VCPU to CPU Mapping
+            vcpu_cpu_map = []
+            idx = 0
+            for x in result_list:
+                temp = {'vcpu': str(x), 'cpu': available_cpus[idx]}
+                vcpu_cpu_map.append(temp)
+                idx += 1
+
+            logging.getLogger().debug(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
+                                      f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}")
+
+            # Issue POA
+            status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
+            if status == "Failed":
+                raise Exception("POA Failed")
+            logging.getLogger().debug(f"CPU Pinning complete for node: {self.get_name()}")
+        except Exception as e:
+            logging.getLogger().error(traceback.format_exc())
+            logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
+
+    def os_reboot(self):
+        status = self.poa(operation="reboot")
+        if status == "Failed":
+            raise Exception("Failed to reboot the server")
+        logging.getLogger().debug(f"Node: {self.get_name()} rebooted!")
+
+    def numa_tune(self):
+        """
+        Pin the memory for the VM to the numa node associated with the components
+        """
+        try:
+            # Get CPU Info for the VM and Host on which VM resides
+            numa_info = self.poa(operation="numainfo")
+
+            total_available_memory = 0
+
+            numa_nodes = []
+
+            for c in self.get_components():
+                # Find Numa Node for the NIC
+                numa_node = self.get_component(name=c.get_name()).get_numa_node()
+
+                numa_nodes.append(numa_node)
+
+                # Free Memory for the Numa Node
+                numa_memory_free = numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
+
+                # Memory allocated to VM on the Numa Node
+                vm_mem = numa_info.get(self.get_instance_name()).get(f"Node {numa_node}").get("Total")
+
+                # Exclude VM memory
+                available_memory_on_node = numa_memory_free - vm_mem
+
+                # Compute the total available Memory
+                total_available_memory += available_memory_on_node
+
+            requested_vm_memory = self.get_ram() * 1024
+
+            if requested_vm_memory > total_available_memory:
+                raise Exception(f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
+                                f"{requested_vm_memory} exceeds available: {total_available_memory}")
+
+            logging.getLogger().debug(f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}")
+
+            # Issue POA
+            status = self.poa(operation="numatune", node_set=numa_nodes)
+            if status == "Failed":
+                raise Exception("POA Failed")
+            logging.getLogger().debug(f"Numa tune complete for node: {self.get_name()}")
+        except Exception as e:
+            logging.getLogger().error(traceback.format_exc())
+            logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
