@@ -733,6 +733,7 @@ class Node:
     def get_image(self) -> str or None:
         """
         Gets the image reference on the FABRIC node.
+
         :return: the image reference on the node
         :rtype: String
         """
