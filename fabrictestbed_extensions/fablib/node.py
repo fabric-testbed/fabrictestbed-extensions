@@ -856,16 +856,21 @@ class Node:
     ) -> Interface or None:
         """
         Gets a particular interface associated with a FABRIC node.
-        Accepts either the interface name or a network_name. If a network name
-        is used this method will return the interface on the node that is
-        connected to the network specified.
-        If a name and network_name are both used, the interface name will
+        Accepts either the interface name or a network_name.  If a
+        network name is used this method will return the interface on
+        the node that is connected to the network specified.  If a
+        name and network_name are both used, the interface name will
         take precedence.
+
         :param name: interface name to search for
         :type name: str
+
         :param network_name: network name to search for
+
         :type name: str
+
         :raise Exception: if interface is not found
+
         :return: an interface on the node
         :rtype: Interface
         """
