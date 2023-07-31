@@ -633,10 +633,13 @@ class Node:
     def set_capacities(self, cores: int = 2, ram: int = 2, disk: int = 10):
         """
         Sets the capacities of the FABRIC node.
+
         :param cores: the number of cores to set on this node
         :type cores: int
+
         :param ram: the amount of RAM to set on this node
         :type ram: int
+
         :param disk: the amount of disk space to set on this node
         :type disk: int
         """
