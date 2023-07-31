@@ -745,6 +745,7 @@ class Node:
     def get_image_type(self) -> str or None:
         """
         Gets the image type on the FABRIC node.
+
         :return: the image type on the node
         :rtype: String
         """
