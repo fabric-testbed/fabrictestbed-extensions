@@ -2396,7 +2396,7 @@ class Node:
         interface: str = None,
     ):
         """
-        Depricated
+        Deprecated
         """
         # TODO: Add docstring after doc networking classes
 
