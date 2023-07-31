@@ -190,9 +190,9 @@ class Node:
 
     def toJson(self):
         """
-        Returns the node attributes as a json string
+        Returns the node attributes as a JSON string
 
-        :return: slice attributes as json string
+        :return: slice attributes as JSON string
         :rtype: str
         """
         return json.dumps(self.toDict(), indent=4)
