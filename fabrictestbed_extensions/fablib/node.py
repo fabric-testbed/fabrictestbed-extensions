@@ -300,27 +300,36 @@ class Node:
         """
         Show a table containing the current node attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        :param output: output format.  Options are:
 
-        fields: json output will include all available fields.
+                - ``"text"``: string formatted with tabular
 
-        Example: fields=['Name','State']
+                - ``"pandas"``: pandas dataframe
 
-        :param output: output format
+                - ``"json"``: string in json format
+
         :type output: str
-        :param fields: list of fields to show
+
+        :param fields: List of fields to show.  JSON output will
+            include all available fields.
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
+
         :param colors: True to specify state colors for pandas output
         :type colors: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
+
+        Here's an example of ``fields``::
+
+            fields=['Name','State']
         """
 
         data = self.toDict()
