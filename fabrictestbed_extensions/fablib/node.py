@@ -991,9 +991,12 @@ class Node:
     def get_component(self, name: str) -> Component:
         """
         Gets a particular component associated with this node.
+
         :param name: the name of the component to search for
         :type name: String
+
         :raise Exception: if component not found by name
+
         :return: the component on the FABRIC node
         :rtype: Component
         """
