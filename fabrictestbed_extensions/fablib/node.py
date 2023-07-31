@@ -2201,10 +2201,13 @@ class Node:
     ):
         """
         Add an IP to an interface on the node.
+
         :param addr: IP address
-        :type addr:  IPv4Address or IPv6Address
+        :type addr: IPv4Address or IPv6Address
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
