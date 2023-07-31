@@ -2097,8 +2097,10 @@ class Node:
     ):
         """
         Add a route on the node.
+
         :param subnet: The destination subnet
-        :type subnet:  IPv4Network or IPv6Network
+        :type subnet: IPv4Network or IPv6Network
+
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
         """
