@@ -698,6 +698,7 @@ class Node:
     def get_cores(self) -> int or None:
         """
         Gets the number of cores on the FABRIC node.
+
         :return: the number of cores on the node
         :rtype: int
         """
