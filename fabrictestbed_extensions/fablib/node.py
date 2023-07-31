@@ -2752,6 +2752,15 @@ class Node:
 
     def poa(self, operation: str, vcpu_cpu_map: List[Dict[str, str]] = None,
             node_set: List[str] = None, keys: List[str] = None) -> Union[Dict, str]:
+        """
+        Perform operation action on a VM; an action which is triggered by CF via the Aggregate
+        @param operation operation to be performed
+        @param vcpu_cpu_map virtual cpu to host cpu map
+        @param node_set list of numa nodes
+        @param keys list of ssh keys
+        @raises Exception in case of failure
+        @return State of POA or Dictionary containing the info, in case of INFO POAs
+        """
 
         status, poa_info = self.get_fablib_manager().get_slice_manager().poa(sliver_id=self.get_reservation_id(),
                                                                              operation=operation,
@@ -2839,7 +2848,7 @@ class Node:
                 idx += 1
 
             logging.getLogger().info(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
-                                      f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}")
+                                     f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}")
 
             # Issue POA
             status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
