@@ -820,6 +820,7 @@ class Node:
     def get_reservation_state(self) -> str or None:
         """
         Gets the reservation state on the FABRIC node.
+
         :return: the reservation state on the node
         :rtype: String
         """
