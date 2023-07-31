@@ -942,20 +942,33 @@ class Node:
     ) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
-        Example model include:
-        - NIC_Basic: A single port 100 Gbps SR-IOV Virtual Function on a Mellanox ConnectX-6
+        Example models include:
+
+        - NIC_Basic: A single port 100 Gbps SR-IOV Virtual
+          Function on a Mellanox ConnectX-6
+
         - NIC_ConnectX_5: A dual port 25 Gbps Mellanox ConnectX-5
+
         - NIC_ConnectX_6: A dual port 100 Gbps Mellanox ConnectX-6
+
         - NVME_P4510: NVMe Storage Device
+
         - GPU_TeslaT4: Tesla T4 GPU
+
         - GPU_RTX6000: RTX6000 GPU
+
         - GPU_A30: A30 GPU
+
         - GPU_A40: A40 GPU
+
         - FPGA_Xilinx_U280: Xilinx U280 GPU
+
         :param model: the name of the component model to add
         :type model: String
+
         :param name: the name of the new component
         :type name: String
+
         :return: the new component
         :rtype: Component
         """
