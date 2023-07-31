@@ -271,6 +271,20 @@ class Interface:
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
+    def get_peer_port_name(self) -> str or None:
+        """
+        If available provide the name of the attached port on the dataplane switch.
+        Only possible once the slice has been instantiated.
+        """
+        if (
+            self.fim_interface
+            and self.fim_interface.get_peers()
+            and self.fim_interface.get_peers()[0]
+        ):
+            return self.fim_interface.get_peers()[0].labels.local_name
+        else:
+            return None
+
     def get_device_name(self) -> str:
         """
         Gets a name of the device name on the node

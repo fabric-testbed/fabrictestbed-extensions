@@ -27,6 +27,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
@@ -862,6 +863,34 @@ class Slice:
         """
         return self.sm_slice.project_id
 
+    def add_port_mirror_service(
+        self,
+        name: str,
+        mirror_interface_name: str,
+        receive_interface: Interface or None = None,
+        mirror_direction: str = "both",
+    ) -> NetworkService:
+        """
+        Adds a special PortMirror service - it receives data from the dataplane
+        switch interface specified by `mirror_interface` into an interface
+        specified by `receive_interface`
+        :param name: Name of the service
+        :param mirror_interface_name: Name of the interface on the dataplane switch to mirror
+        :param receive_interface: Interface in the topology belonging to a SmartNIC component
+        :param mirror_direction: String 'rx', 'tx' or 'both' defaulting to 'both'
+        which receives the data
+        """
+        self.nodes = None
+        self.interfaces = None
+        port_mirror_service = NetworkService.new_portmirror_service(
+            slice=self,
+            name=name,
+            mirror_interface_name=mirror_interface_name,
+            receive_interface=receive_interface,
+            mirror_direction=mirror_direction,
+        )
+        return port_mirror_service
+
     def add_l2network(
         self,
         name: str = None,
@@ -1494,6 +1523,20 @@ class Slice:
 
         timeout_start = time.time()
         slice = self.sm_slice
+
+        try:
+            self.get_fablib_manager().probe_bastion_host()
+        except Exception as e:
+            print(f"Error when connecting to bastion host: {e}", file=sys.stderr)
+            # There are two choices here when it comes to propagating
+            # this error: (1) if we can continue functioning without
+            # bastion, we can return False here; (2) if we can't, we
+            # should re-raise the exception.
+            #
+            # It appears that post_boot_config(), which is invoked
+            # after wait_ssh(), needs bastion, so re-throwing the
+            # error might be the right thing to do.
+            raise e
 
         # Wait for the slice to be stable ok
         self.wait(timeout=timeout, interval=interval, progress=progress)
