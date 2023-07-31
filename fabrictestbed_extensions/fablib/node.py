@@ -824,6 +824,7 @@ class Node:
     def get_error_message(self) -> str or None:
         """
         Gets the error message on the FABRIC node.
+
         :return: the error message on the node
         :rtype: String
         """
