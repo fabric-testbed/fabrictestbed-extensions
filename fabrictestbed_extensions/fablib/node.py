@@ -942,8 +942,10 @@ class Node:
     def get_private_key_file(self) -> str:
         """
         Gets the private key file path on the fablib slice.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the private key path
         :rtype: String
         """
