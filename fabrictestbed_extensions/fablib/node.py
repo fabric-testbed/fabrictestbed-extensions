@@ -377,38 +377,43 @@ class Node:
         """
         Lists all the components in the node with their attributes.
 
-        There are several output options: "text", "pandas", and "json"
-        that determine the format of the output that is returned and
-        (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        fields: json output will include all available fields/columns.
+        :param output: output format.  Output can be one of:
 
-        Example: fields=['Name','Model']
+                - ``"text"``: string formatted with tabular
 
-        filter_function: A lambda function to filter data by field
-        values.
+                - ``"pandas"``: pandas dataframe
 
-        Example: filter_function=lambda s: s['Model'] == 'NIC_Basic'
-
-        :param output: output format. Output can be one of:
-
-            - ``"text"``: string formatted with tabular
-            - ``"pandas"``: pandas dataframe
-            - ``"json"``: string in json format
+                - ``"json"``: string in json format
 
         :type output: str
 
-        :param fields: list of fields (table columns) to show
+        :param fields: list of fields (table columns) to show.  JSON
+            output will include all available fields/columns.
         :type fields: List[str]
 
         :param quiet: True to specify printing/display
         :type quiet: bool
 
-        :param filter_function: lambda function
+        :param filter_function: A lambda function to filter data by
+            field values.
+
         :type filter_function: lambda
 
         :return: table in format specified by output parameter
         :rtype: Object
+
+
+        Here's an example of ``fields``::
+
+            fields=['Name','Model']
+
+        Here's an example of ``filter_function``::
+
+            filter_function=lambda s: s['Model'] == 'NIC_Basic'
         """
 
         components = []
