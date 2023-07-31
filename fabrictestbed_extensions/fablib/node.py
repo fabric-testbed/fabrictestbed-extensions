@@ -2282,8 +2282,10 @@ class Node:
     def ip_link_up(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
         """
         Bring up a link on an interface on the node.
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
