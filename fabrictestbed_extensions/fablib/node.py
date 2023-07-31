@@ -136,16 +136,23 @@ class Node:
         slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
     ):
         """
-        Not intended for API call. See: Slice.add_node()
-        Creates a new FABRIC node and returns a fablib node with the new node.
+        Not intended for API call.  See: Slice.add_node()
+
+        Creates a new FABRIC node and returns a fablib node with the
+        new node.
+
         :param slice: the fablib slice to build the new node on
         :type slice: Slice
+
         :param name: the name of the new node
         :type name: str
+
         :param site: the name of the site to build the node on
         :type site: str
+
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
+
         :return: a new fablib node
         :rtype: Node
         """
