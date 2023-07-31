@@ -2329,8 +2329,10 @@ class Node:
     def un_manage_interface(self, interface: Interface):
         """
         Mark an interface unmanaged by Network Manager;
-        This is needed to be run on rocky* images to avoid the
-        network configuration from being overwritten by NetworkManager
+
+        This is needed to be run on rocky* images to avoid the network
+        configuration from being overwritten by NetworkManager
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
