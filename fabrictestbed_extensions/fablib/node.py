@@ -2784,20 +2784,23 @@ class Node:
         else:
             return poa_info_status[0].state
 
-    def pin_cpu(self, component_name: str, cpu_range_to_pin: str):
+    def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
         """
         Pin the cpus for the VM to the numa node associated with the component
         @param component_name: Component Name
         @param cpu_range_to_pin: range of the cpus to pin; example: 0-1 or 0
         """
         try:
-            start, end = map(int, cpu_range_to_pin.split("-"))
-            result_list = list(range(start, end + 1))
-
             allocated_cpu_list = list(range(0, self.get_cores()))
-            set_cpu = set(allocated_cpu_list)
-            if any(item not in set_cpu for item in result_list):
-                raise Exception(f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node")
+            if cpu_range_to_pin is None:
+                result_list = allocated_cpu_list
+            else:
+                start, end = map(int, cpu_range_to_pin.split("-"))
+                result_list = list(range(start, end + 1))
+
+                set_cpu = set(allocated_cpu_list)
+                if any(item not in set_cpu for item in result_list):
+                    raise Exception(f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node")
 
             # Get CPU Info for the VM and Host on which VM resides
             cpu_info = self.poa(operation="cpuinfo")
