@@ -1045,7 +1045,8 @@ class Node:
 
     def get_ssh_command(self) -> str:
         """
-        Gets an SSH command used to access this node node from a terminal.
+        Gets an SSH command used to access this node from a terminal.
+
         :return: the SSH command to access this node
         :rtype: str
         """
