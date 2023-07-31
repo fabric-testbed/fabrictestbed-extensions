@@ -1593,19 +1593,28 @@ class Node:
         retry: int = 3,
         retry_interval: int = 10,
     ):
-        """ "
-        Creates a thread that calls node.download_file().  Results from the thread can be
-        retrieved with by calling thread.result()
-        :param local_file_path: the destination path for the remote file
+        """
+        Creates a thread that calls node.download_file().  Results
+        from the thread can be retrieved with by calling
+        thread.result()
+
+        :param local_file_path: the destination path for the remote
+            file
         :type local_file_path: str
-        :param remote_file_path: the path to the remote file to download
+
+        :param remote_file_path: the path to the remote file to
+            download
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
+
         :return: a thread that called node.download_file()
         :rtype: Thread
+
         :raise Exception: if management IP is invalid
         """
         return (
