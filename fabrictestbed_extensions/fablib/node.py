@@ -2335,8 +2335,10 @@ class Node:
     ):
         """
         Bring down a link on an interface on the node.
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
