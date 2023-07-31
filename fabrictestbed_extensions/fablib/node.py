@@ -2053,6 +2053,7 @@ class Node:
     def test_ssh(self) -> bool:
         """
         Test whether SSH is functional on the node.
+
         :return: true if SSH is working, false otherwise
         :rtype: bool
         """
