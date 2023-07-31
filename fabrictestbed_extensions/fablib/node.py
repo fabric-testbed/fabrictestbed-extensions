@@ -2532,9 +2532,12 @@ class Node:
     def get_storage(self, name: str) -> Component:
         """
         Gets a particular storage associated with this node.
+
         :param name: the name of the storage
         :type name: String
+
         :raise Exception: if storage not found by name
+
         :return: the storage on the FABRIC node
         :rtype: Component
         """
