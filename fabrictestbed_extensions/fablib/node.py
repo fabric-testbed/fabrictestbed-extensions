@@ -2881,6 +2881,7 @@ class Node:
                 numa_memory_free_str = numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
                 logging.getLogger().info(f"Numa Node {numa_node} free memory: {numa_memory_free_str}")
                 numa_memory_free = int(re.search(r'\d+', numa_memory_free_str).group())
+                logging.getLogger().info(f"Numa Node {numa_node} free memory: {numa_memory_free}")
 
                 # Memory allocated to VM on the Numa Node
                 logging.getLogger().info(f"VM memory: {numa_info.get(self.get_instance_name())}")
@@ -2889,7 +2890,7 @@ class Node:
                 logging.getLogger().info(f"VM memory: {vm_mem}")
 
                 # Exclude VM memory
-                available_memory_on_node = numa_memory_free - vm_mem
+                available_memory_on_node = int(numa_memory_free) - int(vm_mem)
 
                 # Compute the total available Memory
                 total_available_memory += available_memory_on_node
