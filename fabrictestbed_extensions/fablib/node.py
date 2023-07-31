@@ -663,11 +663,12 @@ class Node:
 
     def set_username(self, username: str = None):
         """
-        Not intended as an API call.
         Sets this fablib node's username
-        Optional username parameter. The username likely should be picked
-        to match the image type.
-        :param username: username
+
+        :note: Not intended as an API call.
+
+        :param username: Optional username parameter.  The username
+            likely should be picked to match the image type.
         """
         if username is not None:
             self.username = username
