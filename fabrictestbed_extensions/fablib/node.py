@@ -1992,8 +1992,9 @@ class Node:
 
     def get_management_os_interface(self) -> str or None:
         """
-        Gets the name of the management interface used by the node's operating
-        system.
+        Gets the name of the management interface used by the node's
+        operating system.
+
         :return: interface name
         :rtype: String
         """
