@@ -2296,7 +2296,7 @@ class Node:
         mtu: str = None,
     ):
         """
-        Depricated
+        Deprecated
         """
         # TODO: Add docstring after doc networking classes
         if cidr:
