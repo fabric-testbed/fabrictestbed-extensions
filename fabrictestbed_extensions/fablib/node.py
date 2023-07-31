@@ -2571,6 +2571,7 @@ class Node:
     def ping_test(self, dst_ip: str) -> bool:
         """
         Test a ping from the node to a destination IP
+
         :param dst_ip: destination IP String.
         :type dst_ip: String
         """
