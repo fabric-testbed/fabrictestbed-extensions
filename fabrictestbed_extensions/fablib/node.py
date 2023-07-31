@@ -122,8 +122,10 @@ class Node:
 
     def get_sliver(self) -> OrchestratorSliver:
         """
-        Not intended as API call
-        Gets the node SM sliver
+        Gets the node SM sliver.
+
+        :note: Not intended as API call.
+
         :return: SM sliver for the node
         :rtype: Sliver
         """
