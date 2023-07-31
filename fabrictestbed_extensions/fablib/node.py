@@ -2874,6 +2874,10 @@ class Node:
                 # Find Numa Node for the NIC
                 numa_node = c.get_numa_node()
 
+                # Skip Numa node if already checked
+                if numa_node in numa_nodes:
+                    continue
+
                 numa_nodes.append(numa_node)
                 logging.getLogger().info(f"Numa Node {numa_node} for component: {c.get_name()}")
 
