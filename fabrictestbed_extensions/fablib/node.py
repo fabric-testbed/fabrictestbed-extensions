@@ -2001,8 +2001,9 @@ class Node:
 
     def get_dataplane_os_interfaces(self) -> List[dict]:
         """
-        Gets a list of all the dataplane interface names used by the node's
-        operating system.
+        Gets a list of all the dataplane interface names used by the
+        node's operating system.
+
         :return: interface names
         :rtype: List[String]
         """
