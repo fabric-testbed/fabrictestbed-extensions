@@ -781,6 +781,7 @@ class Node:
     def get_site(self) -> str or None:
         """
         Gets the sitename on the FABRIC node.
+
         :return: the sitename on the node
         :rtype: String
         """
