@@ -2755,7 +2755,7 @@ class Node:
         status, poa_info = self.get_fablib_manager().get_slice_manager().poa(sliver_id=self.get_reservation_id(),
                                                                              operation=operation,
                                                                              vcpu_cpu_map=vcpu_cpu_map,
-                                                                             node_set=node_set, keys=keys)
+                                                                             node_set=node_set)
         logger = logging.getLogger()
         if status != Status.OK:
             raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
@@ -2834,14 +2834,14 @@ class Node:
                 vcpu_cpu_map.append(temp)
                 idx += 1
 
-            logging.getLogger().debug(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
+            logging.getLogger().info(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
                                       f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}")
 
             # Issue POA
             status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
             if status == "Failed":
                 raise Exception("POA Failed")
-            logging.getLogger().debug(f"CPU Pinning complete for node: {self.get_name()}")
+            logging.getLogger().info(f"CPU Pinning complete for node: {self.get_name()}")
         except Exception as e:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
@@ -2850,7 +2850,7 @@ class Node:
         status = self.poa(operation="reboot")
         if status == "Failed":
             raise Exception("Failed to reboot the server")
-        logging.getLogger().debug(f"Node: {self.get_name()} rebooted!")
+        logging.getLogger().info(f"Node: {self.get_name()} rebooted!")
 
     def numa_tune(self):
         """
@@ -2866,7 +2866,7 @@ class Node:
 
             for c in self.get_components():
                 # Find Numa Node for the NIC
-                numa_node = self.get_component(name=c.get_name()).get_numa_node()
+                numa_node = c.get_numa_node()
 
                 numa_nodes.append(numa_node)
 
@@ -2888,13 +2888,13 @@ class Node:
                 raise Exception(f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
                                 f"{requested_vm_memory} exceeds available: {total_available_memory}")
 
-            logging.getLogger().debug(f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}")
+            logging.getLogger().info(f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}")
 
             # Issue POA
             status = self.poa(operation="numatune", node_set=numa_nodes)
             if status == "Failed":
                 raise Exception("POA Failed")
-            logging.getLogger().debug(f"Numa tune complete for node: {self.get_name()}")
+            logging.getLogger().info(f"Numa tune complete for node: {self.get_name()}")
         except Exception as e:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
