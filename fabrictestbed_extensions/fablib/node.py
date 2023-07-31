@@ -918,8 +918,10 @@ class Node:
     def get_public_key_file(self) -> str:
         """
         Gets the public key file path on the fablib node.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the public key path
         :rtype: String
         """
