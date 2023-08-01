@@ -45,9 +45,11 @@ class FacilityPort:
 
     def __init__(self, slice: Slice, fim_interface: FimInterface):
         """
-        Constructor. Sets the fablib slice and FIM node based on arguments.
+        Sets the fablib slice and FIM node based on arguments.
+
         :param slice: the fablib slice to have this node on
         :type slice: Slice
+
         :param node: the FIM node that this Node represents
         :type node: Node
         """
@@ -57,8 +59,9 @@ class FacilityPort:
 
     def __str__(self):
         """
-        Creates a tabulated string describing the properties of the node.
-        Intended for printing node information.
+        Creates a tabulated string describing the properties of the
+        node.  Intended for printing node information.
+
         :return: Tabulated string of node information
         :rtype: String
         """
@@ -157,6 +160,7 @@ class FacilityPort:
     def get_slice(self) -> Slice:
         """
         Gets the fablib slice associated with this node.
+
         :return: the fablib slice on this node
         :rtype: Slice
         """
@@ -165,16 +169,22 @@ class FacilityPort:
     def get_interfaces(self) -> List[Interface]:
         """
         Gets a particular interface associated with a FABRIC node.
-        Accepts either the interface name or a network_name. If a network name
-        is used this method will return the interface on the node that is
-        connected to the network specified.
-        If a name and network_name are both used, the interface name will
+
+        Accepts either the interface name or a network_name.  If a
+        network name is used this method will return the interface on
+        the node that is connected to the network specified.  If a
+        name and network_name are both used, the interface name will
         take precedence.
+
         :param name: interface name to search for
         :type name: str
+
         :param network_name: network name to search for
+
         :type name: str
+
         :raise Exception: if interface is not found
+
         :return: an interface on the node
         :rtype: Interface
         """
