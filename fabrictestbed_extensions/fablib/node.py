@@ -1268,34 +1268,48 @@ class Node:
         """
         Runs a command on the FABRIC node.
 
-        The function uses paramiko to ssh to the FABRIC node and execute an arbitrary shell command.
-
+        The function uses paramiko to ssh to the FABRIC node and
+        execute an arbitrary shell command.
 
         :param command: the command to run
         :type command: str
+
         :param retry: the number of times to retry SSH upon failure
         :type retry: int
-        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+
+        :param retry_interval: the number of seconds to wait before
+            retrying SSH upon failure
         :type retry_interval: int
+
         :param username: username
         :type username: str
+
         :param private_key_file: path to private key file
         :type private_key_file: str
+
         :param private_key_passphrase: pass phrase
         :type private_key_passphrase: str
-        :param output_file: path to a file where the stdout/stderr will be written. None for no file output
+
+        :param output_file: path to a file where the stdout/stderr
+            will be written.  None for no file output
         :type output_file: List[str]
+
         :param output: print stdout and stderr to the screen
         :type output: bool
-        :param read_timeout: the number of seconds to wait before retrying to
-        read from stdout and stderr
+
+        :param read_timeout: the number of seconds to wait before
+            retrying to read from stdout and stderr
         :type read_timeout: int
-        :param timeout: the number of seconds to wait before terminating the
-        command using the linux timeout command. Specifying a timeout
-        encapsulates the command with the timeout command for you
+
+        :param timeout: the number of seconds to wait before
+            terminating the command using the linux timeout command.
+            Specifying a timeout encapsulates the command with the
+            timeout command for you
         :type timeout: int
-        :return: a tuple of  (stdout[Sting],stderr[String])
+
+        :return: a tuple of (stdout[Sting],stderr[String])
         :rtype: Tuple
+
         :raise Exception: if management IP is invalid
         """
         import logging
