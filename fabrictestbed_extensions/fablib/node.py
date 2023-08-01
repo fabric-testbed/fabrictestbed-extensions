@@ -3106,7 +3106,7 @@ class Node:
         """
         Get Numa Information for the Node and the host on which the VM is running
 
-        @return numa info dict
+        :return: numa info dict
         """
         """
         Host INFO looks like:
