@@ -1581,14 +1581,20 @@ class Node:
     ):
         """
         Upload a local file to a remote location on the node.
+
         :param local_file_path: the path to the file to upload
         :type local_file_path: str
-        :param remote_file_path: the destination path of the file on the node
+
+        :param remote_file_path: the destination path of the file on
+            the node
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         logging.debug(
