@@ -179,7 +179,7 @@ class Node:
     def get_node(slice: Slice = None, node=None):
         """
         Returns a new fablib node using existing FABRIC resources.
-        
+
         :note: Not intended for API call.
 
         :param slice: the fablib slice storing the existing node
