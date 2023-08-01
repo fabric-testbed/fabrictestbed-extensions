@@ -2776,7 +2776,8 @@ class Node:
         poa_state = "Nascent"
         poa_info_status = None
         attempt = 0
-        while poa_state != "Success" and poa_state != "Failed" and attempt < retry:
+        states = ["Success", "Failed"]
+        while poa_state not in states and attempt < retry:
             status, poa_info_status = self.get_fablib_manager().get_slice_manager().get_poas(poa_id=poa_info[0].poa_id)
             attempt += 1
             if status != Status.OK:
@@ -2785,6 +2786,8 @@ class Node:
             logger.info(
                 f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
                 f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}")
+            if poa_state in states:
+                break
             time.sleep(10)
 
         if poa_info_status[0].state == "Failed":
@@ -2928,8 +2931,8 @@ class Node:
                 vcpu_cpu_map.append(temp)
 
             msg = f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to " \
-                  f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}"
-            logging.getLogger().info(msg)
+                  f"Numa Node: {numa_node}"
+            logging.getLogger().info(f"{msg}  CPU Map: {vcpu_cpu_map}")
             print(msg)
 
             # Issue POA
