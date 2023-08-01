@@ -1062,9 +1062,9 @@ class FablibManager:
         :param filter_function: lambda function
         :type filter_function: lambda
         :return: table in format specified by output parameter
-        :param update
-        :param pretty_names
-        :param force_refresh
+        :param update:
+        :param pretty_names:
+        :param force_refresh:
         :rtype: Object
         """
         return self.get_resources(
@@ -1755,11 +1755,12 @@ class FablibManager:
         """
         Get the available resources.
 
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
+        Optionally update the available resources by querying the
+        FABRIC services.  Otherwise, this method returns the existing
+        information.
 
         :param update:
-        :param force_refresh
+        :param force_refresh:
         :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
@@ -1937,8 +1938,9 @@ class FablibManager:
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
-        :param slice_name
-        :param slice_id
+        :param slice_name:
+        :param slice_id:
+
         :return: a list of slices
         :rtype: List[Slice]
         """
