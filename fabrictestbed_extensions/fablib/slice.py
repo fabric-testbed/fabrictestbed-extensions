@@ -1951,7 +1951,7 @@ class Slice:
         else:
             # retrieve and validate SSH keys
             ssh_keys = list()
-            ssh_keys.append(self.get_slice_public_key())
+            ssh_keys.append(self.get_slice_public_key().strip())
             if extra_ssh_keys:
                 if isinstance(extra_ssh_keys, list):
                     ssh_keys.extend(extra_ssh_keys)
