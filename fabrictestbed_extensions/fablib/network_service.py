@@ -236,8 +236,10 @@ class NetworkService:
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
-        Instantiate a new PortMirror service
-        mirror_direction can be "rx", "tx" or "both" (non-case-sensitive)
+        Instantiate a new PortMirror service.
+
+        ``mirror_direction`` can be ``"rx"``, ``"tx"`` or ``"both"``
+        (non-case-sensitive)
         """
         # decode the direction
         if not isinstance(mirror_interface_name, str):

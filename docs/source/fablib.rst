@@ -6,4 +6,4 @@ FablibManager
 
 .. autoclass:: fabrictestbed_extensions.fablib.fablib.FablibManager
    :members:
-   :special-members:
+   :special-members: __init__, __str__
