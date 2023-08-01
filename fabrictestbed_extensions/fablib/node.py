@@ -2847,7 +2847,7 @@ class Node:
             # Build the VCPU to CPU Mapping
             vcpu_cpu_map = []
             for x in range(number_of_cpus_to_pin):
-                temp = {'vcpu': result_list[x], 'cpu': available_cpus[x]}
+                temp = {'vcpu': str(result_list[x]), 'cpu': str(available_cpus[x])}
                 vcpu_cpu_map.append(temp)
 
             logging.getLogger().info(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
@@ -2905,7 +2905,8 @@ class Node:
                 logging.getLogger().info(f"VM memory: {vm_mem}")
 
                 # Exclude VM memory
-                available_memory_on_node = int(numa_memory_free) - int(vm_mem)
+                available_memory_on_node = int(numa_memory_free) + int(vm_mem)
+                logging.getLogger().info(f"Available memory: {available_memory_on_node}")
 
                 if available_memory_on_node <= 0:
                     continue
