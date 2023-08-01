@@ -2913,10 +2913,13 @@ class Node:
 
             # Verify Requested CPUs do not exceed Available CPUs
             if number_of_cpus_to_pin > number_of_available_cpus:
-                logging.getLogger().warning(f"Not enough Host CPUs available to pin! "
-                                            f"Requested CPUs: {number_of_cpus_to_pin} "
-                                            f"Available CPUs: {number_of_available_cpus}")
+                msg = f"Not enough Host CPUs available to pin! Requested CPUs: {number_of_cpus_to_pin} " \
+                      f"Available CPUs: {number_of_available_cpus}"
+
+                logging.getLogger().warning(msg)
                 number_of_cpus_to_pin = number_of_available_cpus
+                if not number_of_cpus_to_pin:
+                    raise Exception(msg)
 
             # Build the VCPU to CPU Mapping
             vcpu_cpu_map = []
