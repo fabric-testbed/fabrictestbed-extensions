@@ -701,6 +701,7 @@ class Node:
     def get_instance_name(self) -> str or None:
         """
         Gets the instance name of the FABRIC node.
+
         :return: the instance name of the node
         :rtype: String
         """
@@ -2759,11 +2760,13 @@ class Node:
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
+
         @param operation operation to be performed
         @param vcpu_cpu_map virtual cpu to host cpu map
         @param node_set list of numa nodes
         @param keys list of ssh keys
         @raises Exception in case of failure
+
         @return State of POA or Dictionary containing the info, in case of INFO POAs
         """
         retry = 20
@@ -2820,9 +2823,13 @@ class Node:
         else:
             return poa_info_status[0].state
 
-    def get_cpu_info(self):
+    def get_cpu_info(self) -> dict:
         """
         Get CPU Information for the Node and the host on which the VM is running
+
+        @return cpu info dict
+        """
+        '''
         Host INFO looks like:
         {'Node 0': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
         'Node 1': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
@@ -2852,8 +2859,8 @@ class Node:
         {'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.7s', 'State': 'running', 'VCPU': '12'},
         {'CPU': '53', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '2.1s', 'State': 'running', 'VCPU': '13'},
         {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.3s', 'State': 'running', 'VCPU': '14'},
-        {'CPU': '49', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '15'}]
-        """
+        {'CPU': '49', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '15'}]        
+        '''
         # Get CPU Info for the VM and Host on which VM resides
         cpu_info = self.poa(operation="cpuinfo")
         logging.getLogger().info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
@@ -2864,9 +2871,13 @@ class Node:
             raise Exception("POA Failed to get CPU INFO")
         return cpu_info
 
-    def get_numa_info(self):
+    def get_numa_info(self) -> dict:
         """
         Get Numa Information for the Node and the host on which the VM is running
+
+        @return numa info dict
+        """
+        '''
         Host INFO looks like:
         {'available': '8 nodes (0-7)',
         'node 0': {'cpus': '0 1 2 3 4 5 6 7 64 65 66 67 68 69 70 71', 'free': '18366 MB', 'size': '63794 MB'},
@@ -2888,7 +2899,7 @@ class Node:
         'Node 6': {'Heap': '6', 'Huge': '0', 'Private': '32812', 'Stack': '0', 'Total': '32817'},
         'Node 7': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
         'Total': {'Heap': '6', 'Huge': '0', 'Private': '32813', 'Stack': '0', 'Total': '32818'}}
-        """
+        '''
         # Get Numa Info for the VM and Host on which VM resides
         numa_info = self.poa(operation="numainfo")
         logging.getLogger().info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
@@ -2902,6 +2913,7 @@ class Node:
     def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
         """
         Pin the cpus for the VM to the numa node associated with the component
+
         @param component_name: Component Name
         @param cpu_range_to_pin: range of the cpus to pin; example: 0-1 or 0
         """
