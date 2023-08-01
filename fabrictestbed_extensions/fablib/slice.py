@@ -871,14 +871,19 @@ class Slice:
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
-        Adds a special PortMirror service - it receives data from the dataplane
-        switch interface specified by `mirror_interface` into an interface
-        specified by `receive_interface`
+        Adds a special PortMirror service.
+
+        It receives data from the dataplane switch interface specified
+        by ``mirror_interface`` into an interface specified by
+        ``receive_interface``.
+
         :param name: Name of the service
-        :param mirror_interface_name: Name of the interface on the dataplane switch to mirror
-        :param receive_interface: Interface in the topology belonging to a SmartNIC component
-        :param mirror_direction: String 'rx', 'tx' or 'both' defaulting to 'both'
-        which receives the data
+        :param mirror_interface_name: Name of the interface on the
+            dataplane switch to mirror
+        :param receive_interface: Interface in the topology belonging
+            to a SmartNIC component
+        :param mirror_direction: String 'rx', 'tx' or 'both'
+            defaulting to 'both' which receives the data
         """
         self.nodes = None
         self.interfaces = None
