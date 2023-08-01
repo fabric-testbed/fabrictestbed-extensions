@@ -3143,10 +3143,12 @@ class Node:
 
     def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
         """
-        Pin the cpus for the VM to the numa node associated with the component
+        Pin the cpus for the VM to the numa node associated with the
+        component.
 
-        @param component_name: Component Name
-        @param cpu_range_to_pin: range of the cpus to pin; example: 0-1 or 0
+        :param component_name: Component Name
+        :param cpu_range_to_pin: range of the cpus to pin; example:
+            0-1 or 0
         """
         try:
             allocated_cpu_list = list(range(0, self.get_cores()))
