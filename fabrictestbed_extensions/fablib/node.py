@@ -2990,13 +2990,15 @@ class Node:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
 
-        @param operation operation to be performed
-        @param vcpu_cpu_map virtual cpu to host cpu map
-        @param node_set list of numa nodes
-        @param keys list of ssh keys
-        @raises Exception in case of failure
+        :param operation: operation to be performed
+        :param vcpu_cpu: map virtual cpu to host cpu map
+        :param node_set: list of numa nodes
+        :param keys list: of ssh keys
 
-        @return State of POA or Dictionary containing the info, in case of INFO POAs
+        :raise Exception: in case of failure
+
+        :return: State of POA or Dictionary containing the info, in
+                 case of INFO POAs
         """
         retry = 20
 
