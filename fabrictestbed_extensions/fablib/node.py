@@ -2761,6 +2761,7 @@ class Node:
         @raises Exception in case of failure
         @return State of POA or Dictionary containing the info, in case of INFO POAs
         """
+        retry = 20
 
         status, poa_info = self.get_fablib_manager().get_slice_manager().poa(sliver_id=self.get_reservation_id(),
                                                                              operation=operation,
@@ -2775,7 +2776,7 @@ class Node:
         poa_state = "Nascent"
         poa_info_status = None
         attempt = 0
-        while poa_state != "Success" and poa_state != "Failed":
+        while poa_state != "Success" and poa_state != "Failed" and attempt < retry:
             status, poa_info_status = self.get_fablib_manager().get_slice_manager().get_poas(poa_id=poa_info[0].poa_id)
             attempt += 1
             if status != Status.OK:
@@ -2783,7 +2784,7 @@ class Node:
             poa_state = poa_info_status[0].state
             logger.info(
                 f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
-                f"Checking POA Status attempt: {attempt} current state: {poa_state}")
+                f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}")
             time.sleep(10)
 
         if poa_info_status[0].state == "Failed":
@@ -2923,8 +2924,10 @@ class Node:
                 temp = {'vcpu': str(result_list[x]), 'cpu': str(available_cpus[x])}
                 vcpu_cpu_map.append(temp)
 
-            logging.getLogger().info(f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
-                                     f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}")
+            msg = f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to " \
+                  f"Numa Node: {numa_node} CPU Map: {vcpu_cpu_map}"
+            logging.getLogger().info(msg)
+            print(msg)
 
             # Issue POA
             status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
@@ -2994,7 +2997,9 @@ class Node:
                 raise Exception(f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
                                 f"{requested_vm_memory} exceeds available: {total_available_memory}")
 
-            logging.getLogger().info(f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}")
+            msg = f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}"
+            logging.getLogger().info(msg)
+            print(msg)
 
             # Issue POA
             status = self.poa(operation="numatune", node_set=numa_nodes)

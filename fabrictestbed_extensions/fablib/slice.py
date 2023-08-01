@@ -692,7 +692,7 @@ class Slice:
         :rtype: String
         """
         if "slice_public_key" in self.slice_key.keys():
-            return self.slice_key["slice_public_key"]
+            return self.slice_key["slice_public_key"].strip()
         else:
             return None
 
