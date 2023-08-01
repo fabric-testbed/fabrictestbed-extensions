@@ -28,14 +28,17 @@ import concurrent.futures
 import ipaddress
 import json
 import logging
+import re
 import select
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import jinja2
 import paramiko
+from fabric_cf.orchestrator.orchestrator_proxy import Status
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
@@ -767,6 +770,18 @@ class Node:
         """
         try:
             return self.get_fim_node().name
+        except:
+            return None
+
+    def get_instance_name(self) -> str or None:
+        """
+        Gets the instance name of the FABRIC node.
+
+        :return: the instance name of the node
+        :rtype: String
+        """
+        try:
+            return self.get_fim_node().get_property(pname="label_allocations").instance
         except:
             return None
 
@@ -2964,3 +2979,344 @@ class Node:
                     subnet=self.get_fablib_manager().FABNETV6_SUBNET,
                     next_hop=net.get_gateway(),
                 )
+
+    def poa(
+        self,
+        operation: str,
+        vcpu_cpu_map: List[Dict[str, str]] = None,
+        node_set: List[str] = None,
+        keys: List[str] = None,
+    ) -> Union[Dict, str]:
+        """
+        Perform operation action on a VM; an action which is triggered by CF via the Aggregate
+
+        @param operation operation to be performed
+        @param vcpu_cpu_map virtual cpu to host cpu map
+        @param node_set list of numa nodes
+        @param keys list of ssh keys
+        @raises Exception in case of failure
+
+        @return State of POA or Dictionary containing the info, in case of INFO POAs
+        """
+        retry = 20
+
+        status, poa_info = (
+            self.get_fablib_manager()
+            .get_slice_manager()
+            .poa(
+                sliver_id=self.get_reservation_id(),
+                operation=operation,
+                vcpu_cpu_map=vcpu_cpu_map,
+                node_set=node_set,
+            )
+        )
+        logger = logging.getLogger()
+        if status != Status.OK:
+            raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
+
+        logger.info(
+            f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}"
+        )
+
+        poa_state = "Nascent"
+        poa_info_status = None
+        attempt = 0
+        states = ["Success", "Failed"]
+        while poa_state not in states and attempt < retry:
+            status, poa_info_status = (
+                self.get_fablib_manager()
+                .get_slice_manager()
+                .get_poas(poa_id=poa_info[0].poa_id)
+            )
+            attempt += 1
+            if status != Status.OK:
+                raise Exception(
+                    f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}"
+                )
+            poa_state = poa_info_status[0].state
+            logger.info(
+                f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
+                f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}"
+            )
+            if poa_state in states:
+                break
+            time.sleep(10)
+
+        if poa_info_status[0].state == "Failed":
+            raise Exception(
+                f"POA - {poa_info[0].poa_id}/{operation} failed with error: - {poa_info_status[0].error}"
+            )
+
+        if poa_info_status[0].info.get(operation) is not None:
+            return poa_info_status[0].info.get(operation)
+        else:
+            return poa_info_status[0].state
+
+    def get_cpu_info(self) -> dict:
+        """
+        Get CPU Information for the Node and the host on which the VM is running
+
+        @return cpu info dict
+        """
+        """
+        Host INFO looks like:
+        {'Node 0': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 1': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 2': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 3': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 4': {'Heap': '0', 'Huge': '0', 'Private': '1', 'Stack': '0', 'Total': '1'},
+        'Node 5': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 6': {'Heap': '6', 'Huge': '0', 'Private': '32812', 'Stack': '0', 'Total': '32817'},
+        'Node 7': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Total': {'Heap': '6', 'Huge': '0', 'Private': '32813', 'Stack': '0', 'Total': '32818'}}
+
+        VM INFO looks like:
+        In this example below, no CPU pinning has been applied so CPU Affinity lists all the CPUs
+        After the pinning has been applied, CPU Affinity would show only the pinned CPU
+        [{'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '20.2s', 'State': 'running', 'VCPU': '0'},
+        {'CPU': '118', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '9.0s', 'State': 'running', 'VCPU': '1'},
+        {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.9s', 'State': 'running', 'VCPU': '2'},
+        {'CPU': '119', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.8s', 'State': 'running', 'VCPU': '3'},
+        {'CPU': '52', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '4'},
+        {'CPU': '88', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.4s', 'State': 'running', 'VCPU': '5'},
+        {'CPU': '54', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.4s', 'State': 'running', 'VCPU': '6'},
+        {'CPU': '55', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '7'},
+        {'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.1s', 'State': 'running', 'VCPU': '8'},
+        {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.3s', 'State': 'running', 'VCPU': '9'},
+        {'CPU': '113', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.5s', 'State': 'running', 'VCPU': '10'},
+        {'CPU': '119', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.4s', 'State': 'running', 'VCPU': '11'},
+        {'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.7s', 'State': 'running', 'VCPU': '12'},
+        {'CPU': '53', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '2.1s', 'State': 'running', 'VCPU': '13'},
+        {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.3s', 'State': 'running', 'VCPU': '14'},
+        {'CPU': '49', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '15'}]        
+        """
+        # Get CPU Info for the VM and Host on which VM resides
+        cpu_info = self.poa(operation="cpuinfo")
+        logging.getLogger().info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
+        logging.getLogger().info(
+            f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}"
+        )
+        if cpu_info == "Failed":
+            raise Exception("POA Failed to get CPU INFO")
+        return cpu_info
+
+    def get_numa_info(self) -> dict:
+        """
+        Get Numa Information for the Node and the host on which the VM is running
+
+        @return numa info dict
+        """
+        """
+        Host INFO looks like:
+        {'available': '8 nodes (0-7)',
+        'node 0': {'cpus': '0 1 2 3 4 5 6 7 64 65 66 67 68 69 70 71', 'free': '18366 MB', 'size': '63794 MB'},
+        'node 1': {'cpus': '8 9 10 11 12 13 14 15 72 73 74 75 76 77 78 79', 'free': '61574 MB', 'size': '64466 MB'},
+        'node 2': {'cpus': '16 17 18 19 20 21 22 23 80 81 82 83 84 85 86 87', 'free': '654 MB', 'size': '64507 MB'},
+        'node 3': {'cpus': '24 25 26 27 28 29 30 31 88 89 90 91 92 93 94 95', 'free': '350 MB', 'size': '64495 MB'},
+        'node 4': {'cpus': '32 33 34 35 36 37 38 39 96 97 98 99 100 101 102 103', 'free': '43491 MB', 'size': '64507 MB'},
+        'node 5': {'cpus': '40 41 42 43 44 45 46 47 104 105 106 107 108 109 110 111', 'free': '46958 MB', 'size': '64507 MB'},
+        'node 6': {'cpus': '48 49 50 51 52 53 54 55 112 113 114 115 116 117 118 119', 'free': '10348 MB', 'size': '64507 MB'},
+        'node 7': {'cpus': '56 57 58 59 60 61 62 63 120 121 122 123 124 125 126 127', 'free': '63374 MB', 'size': '64506 MB'}}
+
+        VM INFO looks like:
+        {'Node 0': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 1': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 2': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 3': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 4': {'Heap': '0', 'Huge': '0', 'Private': '1', 'Stack': '0', 'Total': '1'},
+        'Node 5': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 6': {'Heap': '6', 'Huge': '0', 'Private': '32812', 'Stack': '0', 'Total': '32817'},
+        'Node 7': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Total': {'Heap': '6', 'Huge': '0', 'Private': '32813', 'Stack': '0', 'Total': '32818'}}
+        """
+        # Get Numa Info for the VM and Host on which VM resides
+        numa_info = self.poa(operation="numainfo")
+        logging.getLogger().info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
+        logging.getLogger().info(
+            f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}"
+        )
+        if numa_info == "Failed":
+            raise Exception("POA Failed to get Numa INFO")
+        return numa_info
+
+    def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
+        """
+        Pin the cpus for the VM to the numa node associated with the component
+
+        @param component_name: Component Name
+        @param cpu_range_to_pin: range of the cpus to pin; example: 0-1 or 0
+        """
+        try:
+            allocated_cpu_list = list(range(0, self.get_cores()))
+            if cpu_range_to_pin is None:
+                result_list = allocated_cpu_list
+            else:
+                start, end = map(int, cpu_range_to_pin.split("-"))
+                result_list = list(range(start, end + 1))
+
+                set_cpu = set(allocated_cpu_list)
+                if any(item not in set_cpu for item in result_list):
+                    raise Exception(
+                        f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node"
+                    )
+
+            # Get CPU Info for the VM and Host on which VM resides
+            cpu_info = self.get_cpu_info()
+
+            pinned_cpus = cpu_info.get(self.get_host()).get("pinned_cpus")
+
+            # Find Numa Node for the NIC
+            numa_node = self.get_component(name=component_name).get_numa_node()
+
+            # Find CPUs assigned to the numa node
+            numa_cpu_range_str = cpu_info.get(self.get_host()).get(
+                f"NUMA node{numa_node} CPU(s):"
+            )
+
+            # Determine the CPU range belonging to the Numa Node
+            numa_cpu_range = []
+            for r in numa_cpu_range_str.split(","):
+                start, end = map(int, r.split("-"))
+                numa_cpu_range.extend(map(str, range(start, end + 1)))
+
+            # Exclude any Pinned CPUs
+            available_cpus = list(set(numa_cpu_range) - set(pinned_cpus))
+
+            number_of_cpus_to_pin = len(result_list)
+            number_of_available_cpus = len(available_cpus)
+
+            # Verify Requested CPUs do not exceed Available CPUs
+            if number_of_cpus_to_pin > number_of_available_cpus:
+                msg = (
+                    f"Not enough Host CPUs available to pin! Requested CPUs: {number_of_cpus_to_pin} "
+                    f"Available CPUs: {number_of_available_cpus}"
+                )
+
+                logging.getLogger().warning(msg)
+                number_of_cpus_to_pin = number_of_available_cpus
+                if not number_of_cpus_to_pin:
+                    raise Exception(msg)
+
+            # Build the VCPU to CPU Mapping
+            vcpu_cpu_map = []
+            for x in range(number_of_cpus_to_pin):
+                temp = {"vcpu": str(result_list[x]), "cpu": str(available_cpus[x])}
+                vcpu_cpu_map.append(temp)
+
+            msg = (
+                f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
+                f"Numa Node: {numa_node}"
+            )
+            logging.getLogger().info(f"{msg}  CPU Map: {vcpu_cpu_map}")
+            print(msg)
+
+            # Issue POA
+            status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
+            if status == "Failed":
+                raise Exception("POA Failed")
+            logging.getLogger().info(
+                f"CPU Pinning complete for node: {self.get_name()}"
+            )
+        except Exception as e:
+            logging.getLogger().error(traceback.format_exc())
+            logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
+            raise e
+
+    def os_reboot(self):
+        status = self.poa(operation="reboot")
+        if status == "Failed":
+            raise Exception("Failed to reboot the server")
+        logging.getLogger().info(f"Node: {self.get_name()} rebooted!")
+
+    def numa_tune(self):
+        """
+        Pin the memory for the VM to the numa node associated with the components
+        """
+        try:
+            # Get CPU Info for the VM and Host on which VM resides
+            numa_info = self.get_numa_info()
+
+            total_available_memory = 0
+
+            numa_nodes = []
+
+            for c in self.get_components():
+                # Find Numa Node for the NIC
+                numa_node = c.get_numa_node()
+
+                # Skip Numa node if already checked
+                if numa_node in numa_nodes:
+                    continue
+
+                logging.getLogger().info(
+                    f"Numa Node {numa_node} for component: {c.get_name()}"
+                )
+
+                # Free Memory for the Numa Node
+                numa_memory_free_str = (
+                    numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
+                )
+                logging.getLogger().info(
+                    f"Numa Node {numa_node} free memory: {numa_memory_free_str}"
+                )
+                numa_memory_free = int(re.search(r"\d+", numa_memory_free_str).group())
+                logging.getLogger().info(
+                    f"Numa Node {numa_node} free memory: {numa_memory_free}"
+                )
+
+                # Memory allocated to VM on the Numa Node
+                logging.getLogger().info(
+                    f"VM memory: {numa_info.get(self.get_instance_name())}"
+                )
+                logging.getLogger().info(
+                    f"VM memory: {numa_info.get(self.get_instance_name()).get(f'Node {numa_node}')}"
+                )
+                vm_mem = (
+                    numa_info.get(self.get_instance_name())
+                    .get(f"Node {numa_node}")
+                    .get("Total")
+                )
+                logging.getLogger().info(f"VM memory: {vm_mem}")
+
+                # Exclude VM memory
+                available_memory_on_node = int(numa_memory_free) + int(vm_mem)
+                logging.getLogger().info(
+                    f"Available memory: {available_memory_on_node}"
+                )
+
+                if available_memory_on_node <= 0:
+                    continue
+
+                numa_nodes.append(numa_node)
+
+                # Compute the total available Memory
+                total_available_memory += available_memory_on_node
+
+            requested_vm_memory = self.get_ram() * 1024
+
+            if requested_vm_memory > total_available_memory:
+                raise Exception(
+                    f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
+                    f"{requested_vm_memory} exceeds available: {total_available_memory}"
+                )
+
+            msg = (
+                f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}"
+            )
+            logging.getLogger().info(msg)
+            print(msg)
+
+            # Issue POA
+            status = self.poa(operation="numatune", node_set=numa_nodes)
+            if status == "Failed":
+                logging.getLogger().error(
+                    f"Numa tune failed for node: {self.get_name()}"
+                )
+            else:
+                logging.getLogger().info(
+                    f"Numa tune complete for node: {self.get_name()}"
+                )
+        except Exception as e:
+            logging.getLogger().error(traceback.format_exc())
+            logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
+            raise e

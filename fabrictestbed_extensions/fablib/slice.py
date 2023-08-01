@@ -692,7 +692,7 @@ class Slice:
         :rtype: String
         """
         if "slice_public_key" in self.slice_key.keys():
-            return self.slice_key["slice_public_key"]
+            return self.slice_key["slice_public_key"].strip()
         else:
             return None
 
@@ -1970,7 +1970,7 @@ class Slice:
         else:
             # retrieve and validate SSH keys
             ssh_keys = list()
-            ssh_keys.append(self.get_slice_public_key())
+            ssh_keys.append(self.get_slice_public_key().strip())
             if extra_ssh_keys:
                 if isinstance(extra_ssh_keys, list):
                     ssh_keys.extend(extra_ssh_keys)

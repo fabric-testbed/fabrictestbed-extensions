@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#207](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/207))
 - Support for PortMirror service (PR
   [#214](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/214))
+- Support for CPU Pinning and Numa tuning (Issue [#221](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/221))
 
 ### Removed
   
