@@ -952,10 +952,13 @@ class Links(Resources):
 
 class FacilityPorts(Resources):
     link_pretty_names = {
+        "name": "Name",
         "site_name": "Site",
-        "node_id": "Link Name",
+        "node_id": "Interface Name",
         "vlan_range": "VLAN Range",
-        "link_layer": "Link Layer",
+        "local_name": "Local Name",
+        "device_name": "Device Name",
+        "region": "Region",
     }
 
     def __init__(self, fablib_manager):
@@ -975,30 +978,40 @@ class FacilityPorts(Resources):
         :rtype: String
         """
         table = []
-        for _, link in self.topology.links.items():
-            iface = link.interface_list[0]
-            site_names = iface.name.split("_")
-            if iface.type.name == "FacilityPort":
+        for fp in self.topology.facilities.values():
+            for iface in fp.interface_list:
                 table.append(
                     [
-                        tuple(site_names),
-                        link.node_id,
-                        iface.labels.vlan_range,
-                        link.layer,
+                        fp.name,
+                        fp.site,
+                        iface.node_id,
+                        iface.labels.vlan_range if iface.labels else "N/A",
+                        iface.labels.local_name
+                        if iface.labels and iface.labels.local_name
+                        else "N/A",
+                        iface.labels.device_name
+                        if iface.labels and iface.labels.device_name
+                        else "N/A",
+                        iface.labels.region
+                        if iface.labels and iface.labels.region
+                        else "N/A",
                     ]
                 )
 
         return tabulate(
             table,
             headers=[
+                "name",
                 "site_name",
                 "node_id",
                 "vlan_range",
-                "link_layer",
+                "local_name",
+                "device_name",
+                "region",
             ],
         )
 
-    def fp_to_dict(self, link: link.Link, iface: interface.Interface) -> dict:
+    def fp_to_dict(self, iface: interface.Interface, name: str, site: str) -> dict:
         """
         Converts the link resources to a dictionary.
 
@@ -1008,10 +1021,19 @@ class FacilityPorts(Resources):
         :rtype: dict
         """
         return {
-            "site_name": tuple(iface.name.split("_")),
-            "node_id": link.node_id,
+            "name": name,
+            "site_name": site,
+            "node_id": iface.node_id,
             "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
-            "link_layer": link.layer,
+            "local_name": iface.labels.local_name
+            if iface.labels and iface.labels.local_name
+            else "N/A",
+            "device_name": iface.labels.device_name
+            if iface.labels and iface.labels.device_name
+            else "N/A",
+            "region": iface.labels.region
+            if iface.labels and iface.labels.region
+            else "N/A",
         }
 
     def list_facility_ports(
@@ -1029,10 +1051,9 @@ class FacilityPorts(Resources):
         :rtype: object
         """
         table = []
-        for _, link in self.topology.links.items():
-            iface = link.interface_list[0]
-            if iface.type.name == "FacilityPort":
-                table.append(self.fp_to_dict(link, iface))
+        for fp in self.topology.facilities.values():
+            for iface in fp.interface_list:
+                table.append(self.fp_to_dict(iface, name=fp.name, site=fp.site))
 
         if pretty_names:
             pretty_names_dict = self.link_pretty_names

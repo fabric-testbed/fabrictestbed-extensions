@@ -27,11 +27,13 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from fss_utils.sshkey import FABRICSSHKey, FABRICSSHKeyException
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
@@ -709,6 +711,16 @@ class Slice:
         else:
             return None
 
+    def get_slice_public_key(self) -> str:
+        """
+        Gets the string representing the slice public key.
+
+        :return: public key
+        :rtype: String
+        """
+        with open(self.get_slice_public_key_file(), "r", encoding="utf-8") as f:
+            return f.read()
+
     def get_slice_private_key_file(self) -> str:
         """
         Gets the path to the slice private key file.
@@ -723,6 +735,16 @@ class Slice:
             return self.slice_key["slice_private_key_file"]
         else:
             return None
+
+    def get_slice_private_key(self) -> str:
+        """
+        Gets the string representing the slice private key.
+
+        :return: public key
+        :rtype: String
+        """
+        with open(self.get_slice_private_key_file(), "r", encoding="utf-8") as f:
+            return f.read()
 
     def is_dead_or_closing(self):
         if self.get_state() in ["Closing", "Dead"]:
@@ -840,6 +862,34 @@ class Slice:
         :rtype: String
         """
         return self.sm_slice.project_id
+
+    def add_port_mirror_service(
+        self,
+        name: str,
+        mirror_interface_name: str,
+        receive_interface: Interface or None = None,
+        mirror_direction: str = "both",
+    ) -> NetworkService:
+        """
+        Adds a special PortMirror service - it receives data from the dataplane
+        switch interface specified by `mirror_interface` into an interface
+        specified by `receive_interface`
+        :param name: Name of the service
+        :param mirror_interface_name: Name of the interface on the dataplane switch to mirror
+        :param receive_interface: Interface in the topology belonging to a SmartNIC component
+        :param mirror_direction: String 'rx', 'tx' or 'both' defaulting to 'both'
+        which receives the data
+        """
+        self.nodes = None
+        self.interfaces = None
+        port_mirror_service = NetworkService.new_portmirror_service(
+            slice=self,
+            name=name,
+            mirror_interface_name=mirror_interface_name,
+            receive_interface=receive_interface,
+            mirror_direction=mirror_direction,
+        )
+        return port_mirror_service
 
     def add_l2network(
         self,
@@ -1474,6 +1524,20 @@ class Slice:
         timeout_start = time.time()
         slice = self.sm_slice
 
+        try:
+            self.get_fablib_manager().probe_bastion_host()
+        except Exception as e:
+            print(f"Error when connecting to bastion host: {e}", file=sys.stderr)
+            # There are two choices here when it comes to propagating
+            # this error: (1) if we can continue functioning without
+            # bastion, we can return False here; (2) if we can't, we
+            # should re-raise the exception.
+            #
+            # It appears that post_boot_config(), which is invoked
+            # after wait_ssh(), needs bastion, so re-throwing the
+            # error might be the right thing to do.
+            raise e
+
         # Wait for the slice to be stable ok
         self.wait(timeout=timeout, interval=interval, progress=progress)
 
@@ -1671,7 +1735,7 @@ class Slice:
                         not type(net.get_subnet())
                         in [ipaddress.IPv4Network, ipaddress.IPv6Network]
                         or not type(net.get_gateway())
-                        in [ipaddress.IPv4Address, ipaddress.IPv46ddress]
+                        in [ipaddress.IPv4Address, ipaddress.IPv6Address]
                         or net.get_available_ips() == None
                     ):
                         logging.warning(
@@ -1842,6 +1906,7 @@ class Slice:
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
+        extra_ssh_keys: List[str] or None = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1858,10 +1923,13 @@ class Slice:
         :param wait_interval: how often to check on the slice resources
         :param progress: indicator for whether to show progress while waiting
         :param wait_jupyter: Special wait for jupyter notebooks.
+        :param post_boot_config:
+        :param wait_ssh:
+        :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
         :return: slice_id
         """
 
-        if self.get_state() == None:
+        if self.get_state() is None:
             modify = False
         else:
             modify = True
@@ -1881,13 +1949,30 @@ class Slice:
                 slice_id=self.slice_id, slice_graph=slice_graph
             )
         else:
+            # retrieve and validate SSH keys
+            ssh_keys = list()
+            ssh_keys.append(self.get_slice_public_key())
+            if extra_ssh_keys:
+                if isinstance(extra_ssh_keys, list):
+                    ssh_keys.extend(extra_ssh_keys)
+                else:
+                    logging.error(
+                        "Extra SSH keys must be provided as a list of strings."
+                    )
+                    raise Exception(
+                        "Extra SSH keys must be provided as a list of strings."
+                    )
+            # validate each key - this will throw an exception
+            for ssh_key in ssh_keys:
+                # this will throw an informative exception
+                FABRICSSHKey.get_key_length(ssh_key)
             (
                 return_status,
                 slice_reservations,
             ) = self.fablib_manager.get_slice_manager().create(
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
-                ssh_key=self.get_slice_public_key(),
+                ssh_key=ssh_keys,
             )
             if return_status == Status.OK:
                 logging.info(
