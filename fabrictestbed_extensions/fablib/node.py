@@ -3058,7 +3058,7 @@ class Node:
         """
         Get CPU Information for the Node and the host on which the VM is running
 
-        @return cpu info dict
+        :return: cpu info dict
         """
         """
         Host INFO looks like:
