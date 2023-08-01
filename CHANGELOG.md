@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Overhaul API docs (PR
   [#217](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/217),
   issue [#215](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/215))
+- Update/reformat API docstrings (PR
+  [#220](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/220))
 
 ### Added
 
