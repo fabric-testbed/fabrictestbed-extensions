@@ -1901,7 +1901,7 @@ class Node:
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
 
-        :return: a thread that called node.download_file()
+        :return: a thread that called ``node.upload_directory()``
         :rtype: Thread
 
         :raise Exception: if management IP is invalid
