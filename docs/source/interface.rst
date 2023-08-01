@@ -6,4 +6,4 @@ Interface
 
 .. autoclass:: fabrictestbed_extensions.fablib.interface.Interface
    :members:
-   :special-members:
+   :special-members: __init__, __str__
