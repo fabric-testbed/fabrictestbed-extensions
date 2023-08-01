@@ -1041,24 +1041,38 @@ class Slice:
 
         :param name: Name of the new node
         :type name: String
-        :param site: (Optional) Name of the site to deploy the node on.
-            Default to a random site.
+
+        :param site: (Optional) Name of the site to deploy the node
+            on.  Default to a random site.
         :type site: String
-        :param cores: (Optional) Number of cores in the node. Default: 2 cores
+
+        :param cores: (Optional) Number of cores in the node.
+            Default: 2 cores
         :type cores: int
-        :param ram: (Optional) Amount of ram in the node. Default: 8 GB
+
+        :param ram: (Optional) Amount of ram in the node.  Default: 8
+            GB
         :type ram: int
-        :param disk: (Optional) Amount of disk space n the node. Default: 10 GB
+
+        :param disk: (Optional) Amount of disk space n the node.
+            Default: 10 GB
         :type disk: int
-        :param image: (Optional) The image to uese for the node. Default: default_rocky_8
+
+        :param image: (Optional) The image to uese for the node.
+            Default: default_rocky_8
         :type image: String
-        :param instance_type
-        :param host: (Optional) The physical host to deploy the node. Each site
-            has worker nodes numbered 1, 2, 3, etc. Host names follow the pattern
-            in this example of STAR worker number 1: "star-w1.fabric-testbed.net".
-            Default: unset
+
+        :param instance_type:
+        :type instance_type: String
+
+        :param host: (Optional) The physical host to deploy the node.
+            Each site has worker nodes numbered 1, 2, 3, etc.  Host
+            names follow the pattern in this example of STAR worker
+            number 1: "star-w1.fabric-testbed.net".  Default: unset
         :type host: String
-        :param avoid: (Optional) A list of sites to avoid is allowing random site.
+
+        :param avoid: (Optional) A list of sites to avoid is allowing
+            random site.
         :type avoid: List[String]
 
         :return: a new node
