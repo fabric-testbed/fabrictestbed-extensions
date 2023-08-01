@@ -99,8 +99,11 @@ class Node:
 
     def __str__(self):
         """
-        Creates a tabulated string describing the properties of the node.
+        Creates a tabulated string describing the properties of the
+        node.
+
         Intended for printing node information.
+
         :return: Tabulated string of node information
         :rtype: String
         """
