@@ -1149,8 +1149,10 @@ class Node:
     def validIPAddress(self, IP: str) -> str:
         """
         Checks if the IP string is a valid IP address.
+
         :param IP: the IP string to check
         :type IP: String
+
         :return: the type of IP address the IP string is, or 'Invalid'
         :rtype: String
         """
