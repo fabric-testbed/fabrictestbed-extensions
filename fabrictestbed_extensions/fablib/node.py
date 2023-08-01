@@ -3007,8 +3007,10 @@ class Node:
             # Issue POA
             status = self.poa(operation="numatune", node_set=numa_nodes)
             if status == "Failed":
-                raise Exception("POA Failed")
-            logging.getLogger().info(f"Numa tune complete for node: {self.get_name()}")
+                logging.getLogger().error(f"Numa tune failed for node: {self.get_name()}")
+            else:
+                logging.getLogger().info(f"Numa tune complete for node: {self.get_name()}")
         except Exception as e:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
+            raise e
