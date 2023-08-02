@@ -6,11 +6,6 @@
 Welcome to fabrictestbed-extensions documentation!
 ==================================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
 fabrictestbed-extensions, otherwise known as "FABlib", is an
 implementation of a Python API for interacting with `FABRIC testbed`_.
 You would typically call FABlib APIs from your `Jupyter`_ notebooks or
@@ -22,6 +17,11 @@ articles at https://learn.fabric-testbed.net.  If you have questions
 or run into trouble, you can discuss them at FABRIC forums:
 https://learn.fabric-testbed.net/forums/.
 
+
+.. _FABRIC testbed: https://fabric-testbed.net/
+.. _Jupyter: https://jupyter.org/
+.. _JupyterHub: https://jupyter.org/hub
+      
 
 Installing FABlib
 -----------------
@@ -118,12 +118,26 @@ above.  Currently, contents of the configuration file will override
 values set using environment variables.
 
 
-.. _FABRIC testbed: https://fabric-testbed.net/
-.. _Jupyter: https://jupyter.org/
-.. _JupyterHub: https://jupyter.org/hub
+FABLib classes
+--------------
+
+Most of FABLib's functionality comes wrapped in these classes:
+
+.. toctree::
+   :maxdepth: 1
+
+   fablib
+   slice
+   node
+   component
+   interface
+   network_service
+   facility_port.rst
+   resources.rst
+
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
