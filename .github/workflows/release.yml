@@ -1,0 +1,44 @@
+# Publish the package on PyPI.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "rel*"
+
+jobs:
+  pypi-publish:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/fabrictestbed-extensions
+
+    # This permission is mandatory for trusted publishing.
+    permissions:
+      id-token: write
+
+    steps:
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+
+      - name: Build package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flit
+          python -m flit build
+
+      # See https://github.com/marketplace/actions/pypi-publish.
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
