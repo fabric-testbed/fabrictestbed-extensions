@@ -22,6 +22,8 @@ jobs:
       id-token: write
 
     steps:
+      - name: Check out sources
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
