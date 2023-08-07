@@ -689,6 +689,8 @@ class Node:
         """
         if username is not None:
             self.username = username
+        elif "default_centos9_stream" == self.get_image():
+            self.username = "cloud-user"
         elif "centos" in self.get_image():
             self.username = "centos"
         elif "ubuntu" in self.get_image():

@@ -7,7 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
+### Fixed
+- Update default username for `defaul_centos9_stream` image (Issue [#227](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/227))
 
 ## [1.5.2] - 2023-08-02
 
