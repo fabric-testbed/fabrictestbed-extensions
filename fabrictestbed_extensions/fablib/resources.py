@@ -30,8 +30,8 @@ from typing import List, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
-from fim.user import interface, link, node, composite_node
 from fim.slivers import maintenance_mode, network_node
+from fim.user import composite_node, interface, link, node
 from tabulate import tabulate
 
 
@@ -159,7 +159,7 @@ class Resources:
         fields: list[str] = None,
         quiet: bool = False,
         pretty_names=True,
-        latlon=True
+        latlon=True,
     ) -> str:
         """
         Creates a tabulated string of all the available resources at a specific site.
@@ -228,18 +228,16 @@ class Resources:
                 return str(site.maintenance_info.get(site.get_name()).state)
             if isinstance(site, node.Node):
                 return str(site.maintenance_info.get(site.name).state)
-            return str(
-                self.get_topology_site(site)
-                .maintenance_info
-                .get(site)
-                .state
-            )
+            return str(self.get_topology_site(site).maintenance_info.get(site).state)
         except Exception as e:
-            #logging.warning(f"Failed to get site state {site_name}")
+            # logging.warning(f"Failed to get site state {site_name}")
             return ""
 
-    def get_component_capacity(self, site: str or node.Node or network_node.NodeSliver,
-                               component_model_name: str) -> int:
+    def get_component_capacity(
+        self,
+        site: str or node.Node or network_node.NodeSliver,
+        component_model_name: str,
+    ) -> int:
         """
         Gets the total site capacity of a component by model name.
 
@@ -252,7 +250,9 @@ class Resources:
         """
         try:
             if isinstance(site, network_node.NodeSliver):
-                return site.attached_components_info.get_device(component_model_name).capacities.unit
+                return site.attached_components_info.get_device(
+                    component_model_name
+                ).capacities.unit
             if isinstance(site, node.Node):
                 return site.components[component_model_name].capacities.unit
             return (
@@ -264,8 +264,11 @@ class Resources:
             # logging.debug(f"Failed to get {component_model_name} capacity {site}")
             return 0
 
-    def get_component_allocated(self, site: str or node.Node or network_node.NodeSliver,
-                                component_model_name: str) -> int:
+    def get_component_allocated(
+        self,
+        site: str or node.Node or network_node.NodeSliver,
+        component_model_name: str,
+    ) -> int:
         """
         Gets gets number of currently allocated components on a the site
         by the component by model name.
@@ -279,7 +282,9 @@ class Resources:
         """
         try:
             if isinstance(site, network_node.NodeSliver):
-                return site.attached_components_info.get_device(component_model_name).capacity_allocations.unit
+                return site.attached_components_info.get_device(
+                    component_model_name
+                ).capacity_allocations.unit
             if isinstance(site, node.Node):
                 return site.components[component_model_name].capacity_allocations.unit
             return (
@@ -291,8 +296,11 @@ class Resources:
             # logging.debug(f"Failed to get {component_model_name} allocated {site}")
             return 0
 
-    def get_component_available(self, site: str or node.Node or network_node.NodeSliver,
-                                component_model_name: str) -> int:
+    def get_component_available(
+        self,
+        site: str or node.Node or network_node.NodeSliver,
+        component_model_name: str,
+    ) -> int:
         """
         Gets gets number of currently available components on the site
         by the component by model name.
@@ -312,7 +320,9 @@ class Resources:
             # logging.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(site, component_model_name)
 
-    def get_location_lat_long(self, site: str or node.Node or network_node.NodeSliver) -> Tuple[float, float]:
+    def get_location_lat_long(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> Tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -326,14 +336,14 @@ class Resources:
                 return site.get_location().to_latlon()
             if isinstance(site, node.Node):
                 return site.location.to_latlon()
-            return (
-                self.get_topology_site(site).location.to_latlon()
-            )
+            return self.get_topology_site(site).location.to_latlon()
         except Exception as e:
             # logging.warning(f"Failed to get location postal {site}")
             return 0, 0
 
-    def get_location_postal(self, site: str or node.Node or network_node.NodeSliver) -> str:
+    def get_location_postal(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> str:
         """
         Gets the location of a site by postal address
 
@@ -352,7 +362,9 @@ class Resources:
             # logging.debug(f"Failed to get location postal {site}")
             return ""
 
-    def get_host_capacity(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_host_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the number of worker hosts at the site
 
@@ -371,7 +383,9 @@ class Resources:
             # logging.debug(f"Failed to get host count {site}")
             return 0
 
-    def get_cpu_capacity(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_cpu_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total number of cpus at the site
 
@@ -390,7 +404,9 @@ class Resources:
             # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
 
-    def get_core_capacity(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_core_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total number of cores at the site
 
@@ -409,7 +425,9 @@ class Resources:
             # logging.debug(f"Failed to get core capacity {site}")
             return 0
 
-    def get_core_allocated(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_core_allocated(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the number of currently allocated cores at the site
 
@@ -428,7 +446,9 @@ class Resources:
             # logging.debug(f"Failed to get cores allocated {site}")
             return 0
 
-    def get_core_available(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_core_available(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the number of currently available cores at the site
 
@@ -443,7 +463,9 @@ class Resources:
             # logging.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity(site)
 
-    def get_ram_capacity(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_ram_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total amount of memory at the site in GB
 
@@ -462,7 +484,9 @@ class Resources:
             # logging.debug(f"Failed to get ram capacity {site}")
             return 0
 
-    def get_ram_allocated(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_ram_allocated(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of memory currently  allocated the site in GB
 
@@ -481,7 +505,9 @@ class Resources:
             # logging.debug(f"Failed to get ram allocated {site}")
             return 0
 
-    def get_ram_available(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_ram_available(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of memory currently  available the site in GB
 
@@ -496,7 +522,9 @@ class Resources:
             # logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site)
 
-    def get_disk_capacity(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_disk_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total amount of disk available the site in GB
 
@@ -515,7 +543,9 @@ class Resources:
             # logging.debug(f"Failed to get disk capacity {site}")
             return 0
 
-    def get_disk_allocated(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_disk_allocated(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of disk allocated the site in GB
 
@@ -534,7 +564,9 @@ class Resources:
             # logging.debug(f"Failed to get disk allocated {site}")
             return 0
 
-    def get_disk_available(self, site: str or node.Node or network_node.NodeSliver) -> int:
+    def get_disk_available(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of disk available the site in GB
 
@@ -620,7 +652,9 @@ class Resources:
     def site_to_json(self, site, latlon=True):
         return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(self, site: str or node.Node or network_node.NodeSliver, latlon=True):
+    def site_to_dict(
+        self, site: str or node.Node or network_node.NodeSliver, latlon=True
+    ):
         """
         Convert site information into a dictionary
 
@@ -884,7 +918,7 @@ class Resources:
         quiet=False,
         filter_function=None,
         pretty_names=True,
-        latlon=True
+        latlon=True,
     ):
         table = []
         for site_name, site in self.topology.sites.items():

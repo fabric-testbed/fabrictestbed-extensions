@@ -1077,7 +1077,7 @@ class FablibManager:
             quiet=quiet,
             filter_function=filter_function,
             pretty_names=pretty_names,
-            latlon=latlon
+            latlon=latlon,
         )
 
     def list_links(
@@ -1260,7 +1260,7 @@ class FablibManager:
                 output=output,
                 quiet=quiet,
                 pretty_names=pretty_names,
-                latlon=latlon
+                latlon=latlon,
             )
         )
 
@@ -1376,7 +1376,7 @@ class FablibManager:
             filter_function=combined_filter_function,
             update=update,
             # if filter function is not specified, no need for latlon
-            latlon=True if filter_function else False
+            latlon=True if filter_function else False,
         )
 
         sites = list(map(lambda x: x["name"], site_list))
