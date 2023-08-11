@@ -159,6 +159,7 @@ class Resources:
         fields: list[str] = None,
         quiet: bool = False,
         pretty_names=True,
+        latlon=True
     ) -> str:
         """
         Creates a tabulated string of all the available resources at a specific site.
@@ -172,7 +173,7 @@ class Resources:
         """
         site = self.topology.sites[site_name]
 
-        data = self.site_to_dict(site.get_sliver())
+        data = self.site_to_dict(site.get_sliver(), latlon=latlon)
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names
@@ -616,10 +617,16 @@ class Resources:
 
         return rtn_links
 
-    def site_to_json(self, site):
-        return json.dumps(self.site_to_dict(site), indent=4)
+    def site_to_json(self, site, latlon=True):
+        return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(self, site):
+    def site_to_dict(self, site: str or node.Node or network_node.NodeSliver, latlon=True):
+        """
+        Convert site information into a dictionary
+
+        :param site: site name or site object
+        :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
+        """
         core_a = self.get_core_available(site)
         core_c = self.get_core_capacity(site)
         ram_a = self.get_ram_available(site)
@@ -645,11 +652,11 @@ class Resources:
         u280_a = self.get_component_available(site, "FPGA-Xilinx-U280")
         u280_c = self.get_component_capacity(site, "FPGA-Xilinx-U280")
 
-        return {
-            "name": site.name,
+        d = {
+            "name": site.name if isinstance(site, node.Node) else site.get_name(),
             "state": self.get_state(site),
             "address": self.get_location_postal(site),
-            "location": self.get_location_lat_long(site),
+            "location": self.get_location_lat_long(site) if latlon else "",
             "hosts": self.get_host_capacity(site),
             "cpus": self.get_cpu_capacity(site),
             "cores_available": core_a,
@@ -689,6 +696,9 @@ class Resources:
             "fpga_u280_capacity": u280_c,
             "fpga_u280_allocated": u280_c - u280_a,
         }
+        if not latlon:
+            d.pop("location")
+        return d
 
     def site_to_dictXXX(self, site):
         site_name = site.name
@@ -874,10 +884,11 @@ class Resources:
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        latlon=True
     ):
         table = []
         for site_name, site in self.topology.sites.items():
-            table.append(self.site_to_dict(site.get_sliver()))
+            table.append(self.site_to_dict(site.get_sliver(), latlon=latlon))
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names

@@ -1034,6 +1034,7 @@ class FablibManager:
         update: bool = True,
         pretty_names: bool = True,
         force_refresh: bool = False,
+        latlon: bool = True,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1065,6 +1066,7 @@ class FablibManager:
         :param update:
         :param pretty_names:
         :param force_refresh:
+        :param latlon: convert address to latlon, makes online call to openstreetmaps.org
         :rtype: Object
         """
         return self.get_resources(
@@ -1075,6 +1077,7 @@ class FablibManager:
             quiet=quiet,
             filter_function=filter_function,
             pretty_names=pretty_names,
+            latlon=latlon
         )
 
     def list_links(
@@ -1221,6 +1224,7 @@ class FablibManager:
         fields: list[str] = None,
         quiet: bool = False,
         pretty_names=True,
+        latlon=True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1244,6 +1248,8 @@ class FablibManager:
         :type fields: List[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
+        :param latlon: convert address to lat/lon
+        :type latlon: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -1254,6 +1260,7 @@ class FablibManager:
                 output=output,
                 quiet=quiet,
                 pretty_names=pretty_names,
+                latlon=latlon
             )
         )
 
