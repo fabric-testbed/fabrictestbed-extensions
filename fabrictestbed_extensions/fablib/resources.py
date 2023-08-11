@@ -223,9 +223,7 @@ class Resources:
         site_name = ""
         try:
             if isinstance(site, node.Node):
-                site_name = site.name
-                return str(site.maintenance_info.get(site).state)
-            site_name = site
+                return str(site.maintenance_info.get(site.name).state)
             return str(
                 self.get_topology_site(site)
                 .maintenance_info
@@ -233,7 +231,7 @@ class Resources:
                 .state
             )
         except Exception as e:
-            logging.warning(f"Failed to get site state {site_name}")
+            #logging.warning(f"Failed to get site state {site_name}")
             return ""
 
     def get_component_capacity(self, site: str or node.Node, component_model_name: str) -> int:
@@ -592,6 +590,31 @@ class Resources:
         return json.dumps(self.site_to_dict(site), indent=4)
 
     def site_to_dict(self, site):
+        core_a = self.get_core_available(site)
+        core_c = self.get_core_capacity(site)
+        ram_a = self.get_ram_available(site)
+        ram_c = self.get_ram_capacity(site)
+        disk_a = self.get_disk_available(site)
+        disk_c = self.get_disk_capacity(site)
+        nic_basic_a = self.get_component_available(site, "SharedNIC-ConnectX-6")
+        nic_basic_c = self.get_component_capacity(site, "SharedNIC-ConnectX-6")
+        nic_cx6_a = self.get_component_available(site, "SmartNIC-ConnectX-6")
+        nic_cx6_c = self.get_component_capacity(site, "SmartNIC-ConnectX-6")
+        nic_cx5_a = self.get_component_available(site, "SmartNIC-ConnectX-5")
+        nic_cx5_c = self.get_component_capacity(site, "SmartNIC-ConnectX-5")
+        nvme_a = self.get_component_available(site, "NVME-P4510")
+        nvme_c = self.get_component_capacity(site, "NVME-P4510")
+        tesla_t4_a = self.get_component_available(site, "GPU-Tesla T4")
+        tesla_t4_c = self.get_component_capacity(site, "GPU-Tesla T4")
+        rtx6000_a = self.get_component_available(site, "GPU-RTX6000")
+        rtx6000_c = self.get_component_capacity(site, "GPU-RTX6000")
+        a30_a = self.get_component_available(site, "GPU-A30")
+        a30_c = self.get_component_capacity(site, "GPU-A30")
+        a40_a = self.get_component_available(site, "GPU-A40")
+        a40_c = self.get_component_capacity(site, "GPU-A40")
+        u280_a = self.get_component_available(site, "FPGA-Xilinx-U280")
+        u280_c = self.get_component_capacity(site, "FPGA-Xilinx-U280")
+
         return {
             "name": site.name,
             "state": self.get_state(site),
@@ -599,80 +622,42 @@ class Resources:
             "location": self.get_location_lat_long(site),
             "hosts": self.get_host_capacity(site),
             "cpus": self.get_cpu_capacity(site),
-            "cores_available": self.get_core_available(site),
-            "cores_capacity": self.get_core_capacity(site),
-            "cores_allocated": self.get_core_capacity(site)
-            - self.get_core_available(site),
-            "ram_available": self.get_ram_available(site),
-            "ram_capacity": self.get_ram_capacity(site),
-            "ram_allocated": self.get_ram_capacity(site)
-            - self.get_ram_available(site),
-            "disk_available": self.get_disk_available(site),
-            "disk_capacity": self.get_disk_capacity(site),
-            "disk_allocated": self.get_disk_capacity(site)
-            - self.get_disk_available(site),
-            "nic_basic_available": self.get_component_available(
-                site, "SharedNIC-ConnectX-6"
-            ),
-            "nic_basic_capacity": self.get_component_capacity(
-                site, "SharedNIC-ConnectX-6"
-            ),
-            "nic_basic_allocated": self.get_component_capacity(
-                site, "SharedNIC-ConnectX-6"
-            )
-            - self.get_component_available(site, "SharedNIC-ConnectX-6"),
-            "nic_connectx_6_available": self.get_component_available(
-                site, "SmartNIC-ConnectX-6"
-            ),
-            "nic_connectx_6_capacity": self.get_component_capacity(
-                site, "SmartNIC-ConnectX-6"
-            ),
-            "nic_connectx_6_allocated": self.get_component_capacity(
-                site, "SmartNIC-ConnectX-6"
-            )
-            - self.get_component_available(site, "SmartNIC-ConnectX-6"),
-            "nic_connectx_5_available": self.get_component_available(
-                site, "SmartNIC-ConnectX-5"
-            ),
-            "nic_connectx_5_capacity": self.get_component_capacity(
-                site, "SmartNIC-ConnectX-5"
-            ),
-            "nic_connectx_5_allocated": self.get_component_capacity(
-                site, "SmartNIC-ConnectX-5"
-            )
-            - self.get_component_available(site, "SmartNIC-ConnectX-5"),
-            "nvme_available": self.get_component_available(site, "NVME-P4510"),
-            "nvme_capacity": self.get_component_capacity(site, "NVME-P4510"),
-            "nvme_allocated": self.get_component_capacity(site, "NVME-P4510")
-            - self.get_component_available(site, "NVME-P4510"),
-            "tesla_t4_available": self.get_component_available(
-                site, "GPU-Tesla T4"
-            ),
-            "tesla_t4_capacity": self.get_component_capacity(site, "GPU-Tesla T4"),
-            "tesla_t4_allocated": self.get_component_capacity(site, "GPU-Tesla T4")
-            - self.get_component_available(site, "GPU-Tesla T4"),
-            "rtx6000_available": self.get_component_available(site, "GPU-RTX6000"),
-            "rtx6000_capacity": self.get_component_capacity(site, "GPU-RTX6000"),
-            "rtx6000_allocated": self.get_component_capacity(site, "GPU-RTX6000")
-            - self.get_component_available(site, "GPU-RTX6000"),
-            "a30_available": self.get_component_available(site, "GPU-A30"),
-            "a30_capacity": self.get_component_capacity(site, "GPU-A30"),
-            "a30_allocated": self.get_component_capacity(site, "GPU-A30")
-            - self.get_component_available(site, "GPU-A30"),
-            "a40_available": self.get_component_available(site, "GPU-A40"),
-            "a40_capacity": self.get_component_capacity(site, "GPU-A40"),
-            "a40_allocated": self.get_component_capacity(site, "GPU-A40")
-            - self.get_component_available(site, "GPU-A40"),
-            "fpga_u280_available": self.get_component_available(
-                site, "FPGA-Xilinx-U280"
-            ),
-            "fpga_u280_capacity": self.get_component_capacity(
-                site, "FPGA-Xilinx-U280"
-            ),
-            "fpga_u280_allocated": self.get_component_capacity(
-                site, "FPGA-Xilinx-U280"
-            )
-            - self.get_component_available(site, "FPGA-Xilinx-U280"),
+            "cores_available": core_a,
+            "cores_capacity": core_c,
+            "cores_allocated": core_c - core_a,
+            "ram_available": ram_a,
+            "ram_capacity": ram_c,
+            "ram_allocated": ram_c - ram_a,
+            "disk_available": disk_a,
+            "disk_capacity": disk_c,
+            "disk_allocated": disk_c - disk_a,
+            "nic_basic_available": nic_basic_a,
+            "nic_basic_capacity": nic_basic_c,
+            "nic_basic_allocated": nic_basic_c - nic_basic_a,
+            "nic_connectx_6_available": nic_cx6_a,
+            "nic_connectx_6_capacity": nic_cx6_c,
+            "nic_connectx_6_allocated": nic_cx6_c - nic_cx6_a,
+            "nic_connectx_5_available": nic_cx5_a,
+            "nic_connectx_5_capacity": nic_cx5_c,
+            "nic_connectx_5_allocated": nic_cx5_c - nic_cx5_a,
+            "nvme_available": nvme_a,
+            "nvme_capacity": nvme_c,
+            "nvme_allocated": nvme_c - nvme_a,
+            "tesla_t4_available": tesla_t4_a,
+            "tesla_t4_capacity": tesla_t4_c,
+            "tesla_t4_allocated": tesla_t4_c - tesla_t4_a,
+            "rtx6000_available": rtx6000_a,
+            "rtx6000_capacity": rtx6000_c,
+            "rtx6000_allocated": rtx6000_c - rtx6000_a,
+            "a30_available": a30_a,
+            "a30_capacity": a30_c,
+            "a30_allocated": a30_c - a30_a,
+            "a40_available": a40_a,
+            "a40_capacity": a40_c,
+            "a40_allocated": a40_c - a40_a,
+            "fpga_u280_available": u280_a,
+            "fpga_u280_capacity": u280_c,
+            "fpga_u280_allocated": u280_c - u280_a,
         }
 
     def site_to_dictXXX(self, site):
