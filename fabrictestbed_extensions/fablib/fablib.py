@@ -1336,7 +1336,6 @@ class FablibManager:
         filter_function=None,
         update: bool = True,
         unique: bool = True,
-        latlon: bool = False,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
@@ -1376,7 +1375,8 @@ class FablibManager:
             quiet=True,
             filter_function=combined_filter_function,
             update=update,
-            latlon=latlon,
+            # if filter function is not specified, no need for latlon
+            latlon=True if filter_function else False
         )
 
         sites = list(map(lambda x: x["name"], site_list))
