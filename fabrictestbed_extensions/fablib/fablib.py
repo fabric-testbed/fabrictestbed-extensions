@@ -82,14 +82,14 @@ class fablib:
         return fablib.get_default_fablib_manager().get_site_names()
 
     @staticmethod
-    def list_sites() -> object:
+    def list_sites(latlon: bool = True) -> object:
         """
         Get a string used to print a tabular list of sites with state
 
         :return: tabulated string of site state
         :rtype: str
         """
-        return fablib.get_default_fablib_manager().list_sites()
+        return fablib.get_default_fablib_manager().list_sites(latlon=latlon)
 
     @staticmethod
     def list_links() -> object:
@@ -1336,6 +1336,7 @@ class FablibManager:
         filter_function=None,
         update: bool = True,
         unique: bool = True,
+        latlon: bool = False,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
@@ -1344,6 +1345,9 @@ class FablibManager:
         :type count: int
         :param avoid: list of site names to avoid chosing
         :type site_name: List[String]
+        :param unique:
+        :param latlon: convert address to latlon if needed for the filter, False by default
+        :type latlon: bool
         :return: list of random site names.
         :rtype: List[Sting]
         """
@@ -1372,6 +1376,7 @@ class FablibManager:
             quiet=True,
             filter_function=combined_filter_function,
             update=update,
+            latlon=latlon,
         )
 
         sites = list(map(lambda x: x["name"], site_list))
