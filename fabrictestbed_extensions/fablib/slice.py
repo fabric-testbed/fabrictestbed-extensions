@@ -2044,10 +2044,6 @@ class Slice:
                     timeout=wait_timeout, interval=wait_interval, progress=progress
                 )
 
-            if self.get_state() == "ModifyOK":
-                print("Accepting the Modify ... ", end="")
-                self.modify_accept()
-
             if progress:
                 print("Running post boot config ... ", end="")
 
