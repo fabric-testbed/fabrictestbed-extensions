@@ -49,7 +49,6 @@ class HelloFabricTests(unittest.TestCase):
             # Submit the slice.
             print(f"Submitting slice '{slice_name}'..")
             slice.submit()
-            slice.post_boot_config()
 
             print(f"Slice '{slice_name}' status:")
             slice.show()
