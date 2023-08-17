@@ -30,7 +30,8 @@ from typing import List, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
-from fim.user import interface, link
+from fim.slivers import maintenance_mode, network_node
+from fim.user import composite_node, interface, link, node
 from tabulate import tabulate
 
 
@@ -105,25 +106,26 @@ class Resources:
         table = []
         for site_name, site in self.topology.sites.items():
             # logging.debug(f"site -- {site}")
+            site_sliver = site.get_sliver()
             table.append(
                 [
                     site.name,
-                    self.get_cpu_capacity(site_name),
-                    f"{self.get_core_available(site_name)}/{self.get_core_capacity(site_name)}",
-                    f"{self.get_ram_available(site_name)}/{self.get_ram_capacity(site_name)}",
-                    f"{self.get_disk_available(site_name)}/{self.get_disk_capacity(site_name)}",
-                    # self.get_host_capacity(site_name),
-                    # self.get_location_postal(site_name),
-                    # self.get_location_lat_long(site_name),
-                    f"{self.get_component_available(site_name,'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site_name,'SharedNIC-ConnectX-6')}",
-                    f"{self.get_component_available(site_name,'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site_name,'SmartNIC-ConnectX-6')}",
-                    f"{self.get_component_available(site_name,'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site_name,'SmartNIC-ConnectX-5')}",
-                    f"{self.get_component_available(site_name,'NVME-P4510')}/{self.get_component_capacity(site_name,'NVME-P4510')}",
-                    f"{self.get_component_available(site_name,'GPU-Tesla T4')}/{self.get_component_capacity(site_name,'GPU-Tesla T4')}",
-                    f"{self.get_component_available(site_name,'GPU-RTX6000')}/{self.get_component_capacity(site_name,'GPU-RTX6000')}",
-                    f"{self.get_component_available(site_name, 'GPU-A30')}/{self.get_component_capacity(site_name, 'GPU-A30')}",
-                    f"{self.get_component_available(site_name, 'GPU-A40')}/{self.get_component_capacity(site_name, 'GPU-A40')}",
-                    f"{self.get_component_available(site_name, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site_name, 'FPGA-Xilinx-U280')}",
+                    self.get_cpu_capacity(site_sliver),
+                    f"{self.get_core_available(site_sliver)}/{self.get_core_capacity(site_sliver)}",
+                    f"{self.get_ram_available(site_sliver)}/{self.get_ram_capacity(site_sliver)}",
+                    f"{self.get_disk_available(site_sliver)}/{self.get_disk_capacity(site_sliver)}",
+                    # self.get_host_capacity(site),
+                    # self.get_location_postal(site),
+                    # self.get_location_lat_long(site),
+                    f"{self.get_component_available(site_sliver,'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site_sliver,'SharedNIC-ConnectX-6')}",
+                    f"{self.get_component_available(site_sliver,'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site_sliver,'SmartNIC-ConnectX-6')}",
+                    f"{self.get_component_available(site_sliver,'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site_sliver,'SmartNIC-ConnectX-5')}",
+                    f"{self.get_component_available(site_sliver,'NVME-P4510')}/{self.get_component_capacity(site_sliver,'NVME-P4510')}",
+                    f"{self.get_component_available(site_sliver,'GPU-Tesla T4')}/{self.get_component_capacity(site_sliver,'GPU-Tesla T4')}",
+                    f"{self.get_component_available(site_sliver,'GPU-RTX6000')}/{self.get_component_capacity(site_sliver,'GPU-RTX6000')}",
+                    f"{self.get_component_available(site_sliver, 'GPU-A30')}/{self.get_component_capacity(site_sliver, 'GPU-A30')}",
+                    f"{self.get_component_available(site_sliver, 'GPU-A40')}/{self.get_component_capacity(site_sliver, 'GPU-A40')}",
+                    f"{self.get_component_available(site_sliver, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site_sliver, 'FPGA-Xilinx-U280')}",
                 ]
             )
 
@@ -157,6 +159,7 @@ class Resources:
         fields: list[str] = None,
         quiet: bool = False,
         pretty_names=True,
+        latlon=True,
     ) -> str:
         """
         Creates a tabulated string of all the available resources at a specific site.
@@ -170,7 +173,7 @@ class Resources:
         """
         site = self.topology.sites[site_name]
 
-        data = self.site_to_dict(site)
+        data = self.site_to_dict(site.get_sliver(), latlon=latlon)
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names
@@ -201,7 +204,7 @@ class Resources:
 
         return site_name_list
 
-    def get_topology_site(self, site_name: str) -> str:
+    def get_topology_site(self, site_name: str) -> node.Node:
         """
         Not recommended for most users.
         """
@@ -209,70 +212,101 @@ class Resources:
             return self.topology.sites[site_name]
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
-            return ""
+            return None
 
-    def get_state(self, site_name: str):
-        try:
-            return str(
-                self.get_topology_site(site_name)
-                .get_property("maintenance_info")
-                .get(site_name)
-                .state
-            )
-        except Exception as e:
-            logging.warning(f"Failed to get site state {site_name}")
-            return ""
-
-    def get_component_capacity(self, site_name: str, component_model_name: str) -> int:
+    def get_state(self, site: str or node.Node or network_node.NodeSliver) -> str:
         """
-        Gets gets the total site capacity of a component by model name.
+        Gets the maintenance state of the node
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site Node or NodeSliver object or name
+        :type site: String or Node or NodeSliver
+        :return: str(MaintenanceState)
+        """
+        site_name = ""
+        try:
+            if isinstance(site, network_node.NodeSliver):
+                return str(site.maintenance_info.get(site.get_name()).state)
+            if isinstance(site, node.Node):
+                return str(site.maintenance_info.get(site.name).state)
+            return str(self.get_topology_site(site).maintenance_info.get(site).state)
+        except Exception as e:
+            # logging.warning(f"Failed to get site state {site_name}")
+            return ""
+
+    def get_component_capacity(
+        self,
+        site: str or node.Node or network_node.NodeSliver,
+        component_model_name: str,
+    ) -> int:
+        """
+        Gets the total site capacity of a component by model name.
+
+        :param site: site object or sliver or site name
+        :type site: String or Node or NodeSliver
         :param component_model_name: component model name
         :type component_model_name: String
         :return: total component capacity
         :rtype: int
         """
         try:
+            if isinstance(site, network_node.NodeSliver):
+                return site.attached_components_info.get_device(
+                    component_model_name
+                ).capacities.unit
+            if isinstance(site, node.Node):
+                return site.components[component_model_name].capacities.unit
             return (
-                self.get_topology_site(site_name)
+                self.get_topology_site(site)
                 .components[component_model_name]
                 .capacities.unit
             )
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} capacity {site_name}")
+            # logging.debug(f"Failed to get {component_model_name} capacity {site}")
             return 0
 
-    def get_component_allocated(self, site_name: str, component_model_name: str) -> int:
+    def get_component_allocated(
+        self,
+        site: str or node.Node or network_node.NodeSliver,
+        component_model_name: str,
+    ) -> int:
         """
         Gets gets number of currently allocated components on a the site
         by the component by model name.
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site object or site name
+        :type site: String or Node or NodeSliver
         :param component_model_name: component model name
         :type component_model_name: String
         :return: currently allocated component of this model
         :rtype: int
         """
         try:
+            if isinstance(site, network_node.NodeSliver):
+                return site.attached_components_info.get_device(
+                    component_model_name
+                ).capacity_allocations.unit
+            if isinstance(site, node.Node):
+                return site.components[component_model_name].capacity_allocations.unit
             return (
-                self.get_topology_site(site_name)
+                self.get_topology_site(site)
                 .components[component_model_name]
                 .capacity_allocations.unit
             )
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} allocated {site_name}")
+            # logging.debug(f"Failed to get {component_model_name} allocated {site}")
             return 0
 
-    def get_component_available(self, site_name: str, component_model_name: str) -> int:
+    def get_component_available(
+        self,
+        site: str or node.Node or network_node.NodeSliver,
+        component_model_name: str,
+    ) -> int:
         """
         Gets gets number of currently available components on the site
         by the component by model name.
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site object or site name
+        :type site: String or Node or NodeSliver
         :param component_model_name: component model name
         :type component_model_name: String
         :return: currently available component of this model
@@ -280,213 +314,272 @@ class Resources:
         """
         try:
             return self.get_component_capacity(
-                site_name, component_model_name
-            ) - self.get_component_allocated(site_name, component_model_name)
+                site, component_model_name
+            ) - self.get_component_allocated(site, component_model_name)
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} available {site_name}")
-            return self.get_component_capacity(site_name, component_model_name)
+            # logging.debug(f"Failed to get {component_model_name} available {site}")
+            return self.get_component_capacity(site, component_model_name)
 
-    def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
+    def get_location_lat_long(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> Tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or site object
+        :type site: String or Node or NodeSliver
         :return: latitude and longitude of the site
         :rtype: Tuple(float,float)
         """
         try:
-            # site.get_property("location").to_latlon()
-            return (
-                self.get_topology_site(site_name).get_property("location").to_latlon()
-            )
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_location().to_latlon()
+            if isinstance(site, node.Node):
+                return site.location.to_latlon()
+            return self.get_topology_site(site).location.to_latlon()
         except Exception as e:
-            # logging.warning(f"Failed to get location postal {site_name}")
+            # logging.warning(f"Failed to get location postal {site}")
             return 0, 0
 
-    def get_location_postal(self, site_name: str) -> str:
+    def get_location_postal(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> str:
         """
         Gets the location of a site by postal address
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or site object
+        :type site: String or Node or NodeSliver
         :return: postal address of the site
         :rtype: String
         """
         try:
-            return self.get_topology_site(site_name).location.postal
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_location().postal
+            if isinstance(site, node.Node):
+                return site.location.postal
+            return self.get_topology_site(site).location.postal
         except Exception as e:
-            # logging.debug(f"Failed to get location postal {site_name}")
+            # logging.debug(f"Failed to get location postal {site}")
             return ""
 
-    def get_host_capacity(self, site_name: str) -> int:
+    def get_host_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the number of worker hosts at the site
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or site object
+        :type site: String or Node or NodeSliver
         :return: host count
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacities.unit
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacities().unit
+            if isinstance(site, node.Node):
+                return site.capacities.unit
+            return self.get_topology_site(site).capacities.unit
         except Exception as e:
-            # logging.debug(f"Failed to get host count {site_name}")
+            # logging.debug(f"Failed to get host count {site}")
             return 0
 
-    def get_cpu_capacity(self, site_name: str) -> int:
+    def get_cpu_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total number of cpus at the site
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or site object
+        :type site: String or node.Node or NodeSliver
         :return: cpu count
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacities.cpu
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacities().cpu
+            if isinstance(site, node.Node):
+                return site.capacities.cpu
+            return self.get_topology_site(site).capacities.cpu
         except Exception as e:
-            # logging.debug(f"Failed to get cpu capacity {site_name}")
+            # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
 
-    def get_core_capacity(self, site_name: str) -> int:
+    def get_core_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total number of cores at the site
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: core count
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacities.core
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacities().core
+            if isinstance(site, node.Node):
+                return site.capacities.core
+            return self.get_topology_site(site).capacities.core
         except Exception as e:
-            # logging.debug(f"Failed to get core capacity {site_name}")
+            # logging.debug(f"Failed to get core capacity {site}")
             return 0
 
-    def get_core_allocated(self, site_name: str) -> int:
+    def get_core_allocated(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the number of currently allocated cores at the site
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: core count
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacity_allocations.core
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacity_allocations().core
+            if isinstance(site, node.Node):
+                return site.capacity_allocations.core
+            return self.get_topology_site(site).capacity_allocations.core
         except Exception as e:
-            # logging.debug(f"Failed to get cores allocated {site_name}")
+            # logging.debug(f"Failed to get cores allocated {site}")
             return 0
 
-    def get_core_available(self, site_name: str) -> int:
+    def get_core_available(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the number of currently available cores at the site
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: core count
         :rtype: int
         """
         try:
-            return self.get_core_capacity(site_name) - self.get_core_allocated(
-                site_name
-            )
+            return self.get_core_capacity(site) - self.get_core_allocated(site)
         except Exception as e:
-            # logging.debug(f"Failed to get cores available {site_name}")
-            return self.get_core_capacity(site_name)
+            # logging.debug(f"Failed to get cores available {site}")
+            return self.get_core_capacity(site)
 
-    def get_ram_capacity(self, site_name: str) -> int:
+    def get_ram_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total amount of memory at the site in GB
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: ram in GB
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacities.ram
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacities().ram
+            if isinstance(site, node.Node):
+                return site.capacities.ram
+            return self.get_topology_site(site).capacities.ram
         except Exception as e:
-            # logging.debug(f"Failed to get ram capacity {site_name}")
+            # logging.debug(f"Failed to get ram capacity {site}")
             return 0
 
-    def get_ram_allocated(self, site_name: str) -> int:
+    def get_ram_allocated(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of memory currently  allocated the site in GB
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: ram in GB
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacity_allocations.ram
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacity_allocations().ram
+            if isinstance(site, node.Node):
+                return site.capacity_allocations.ram
+            return self.get_topology_site(site).capacity_allocations.ram
         except Exception as e:
-            # logging.debug(f"Failed to get ram allocated {site_name}")
+            # logging.debug(f"Failed to get ram allocated {site}")
             return 0
 
-    def get_ram_available(self, site_name: str) -> int:
+    def get_ram_available(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of memory currently  available the site in GB
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: ram in GB
         :rtype: int
         """
         try:
-            return self.get_ram_capacity(site_name) - self.get_ram_allocated(site_name)
+            return self.get_ram_capacity(site) - self.get_ram_allocated(site)
         except Exception as e:
             # logging.debug(f"Failed to get ram available {site_name}")
-            return self.get_ram_capacity(site_name)
+            return self.get_ram_capacity(site)
 
-    def get_disk_capacity(self, site_name: str) -> int:
+    def get_disk_capacity(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the total amount of disk available the site in GB
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: disk in GB
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacities.disk
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacities().disk
+            if isinstance(site, node.Node):
+                return site.capacities.disk
+            return self.get_topology_site(site).capacities.disk
         except Exception as e:
-            # logging.debug(f"Failed to get disk capacity {site_name}")
+            # logging.debug(f"Failed to get disk capacity {site}")
             return 0
 
-    def get_disk_allocated(self, site_name: str) -> int:
+    def get_disk_allocated(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of disk allocated the site in GB
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: disk in GB
         :rtype: int
         """
         try:
-            return self.get_topology_site(site_name).capacity_allocations.disk
+            if isinstance(site, network_node.NodeSliver):
+                return site.get_capacity_allocations().disk
+            if isinstance(site, node.Node):
+                return site.capacity_allocations.disk
+            return self.get_topology_site(site).capacity_allocations.disk
         except Exception as e:
-            # logging.debug(f"Failed to get disk allocated {site_name}")
+            # logging.debug(f"Failed to get disk allocated {site}")
             return 0
 
-    def get_disk_available(self, site_name: str) -> int:
+    def get_disk_available(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> int:
         """
         Gets the amount of disk available the site in GB
 
-        :param site_name: site name
-        :type site_name: String
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
         :return: disk in GB
         :rtype: int
         """
         try:
-            return self.get_disk_capacity(site_name) - self.get_disk_allocated(
-                site_name
-            )
+            return self.get_disk_capacity(site) - self.get_disk_allocated(site)
         except Exception as e:
             # logging.debug(f"Failed to get disk available {site_name}")
-            return self.get_disk_capacity(site_name)
+            return self.get_disk_capacity(site)
 
     def get_fablib_manager(self):
         return self.fablib_manager
@@ -556,93 +649,90 @@ class Resources:
 
         return rtn_links
 
-    def site_to_json(self, site):
-        return json.dumps(self.site_to_dict(site), indent=4)
+    def site_to_json(self, site, latlon=True):
+        return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(self, site):
-        site_name = site.name
-        return {
-            "name": site.name,
-            "state": self.get_state(site_name),
-            "address": self.get_location_postal(site_name),
-            "location": self.get_location_lat_long(site_name),
-            "hosts": self.get_host_capacity(site_name),
-            "cpus": self.get_cpu_capacity(site_name),
-            "cores_available": self.get_core_available(site_name),
-            "cores_capacity": self.get_core_capacity(site_name),
-            "cores_allocated": self.get_core_capacity(site_name)
-            - self.get_core_available(site_name),
-            "ram_available": self.get_ram_available(site_name),
-            "ram_capacity": self.get_ram_capacity(site_name),
-            "ram_allocated": self.get_ram_capacity(site_name)
-            - self.get_ram_available(site_name),
-            "disk_available": self.get_disk_available(site_name),
-            "disk_capacity": self.get_disk_capacity(site_name),
-            "disk_allocated": self.get_disk_capacity(site_name)
-            - self.get_disk_available(site_name),
-            "nic_basic_available": self.get_component_available(
-                site_name, "SharedNIC-ConnectX-6"
-            ),
-            "nic_basic_capacity": self.get_component_capacity(
-                site_name, "SharedNIC-ConnectX-6"
-            ),
-            "nic_basic_allocated": self.get_component_capacity(
-                site_name, "SharedNIC-ConnectX-6"
-            )
-            - self.get_component_available(site_name, "SharedNIC-ConnectX-6"),
-            "nic_connectx_6_available": self.get_component_available(
-                site_name, "SmartNIC-ConnectX-6"
-            ),
-            "nic_connectx_6_capacity": self.get_component_capacity(
-                site_name, "SmartNIC-ConnectX-6"
-            ),
-            "nic_connectx_6_allocated": self.get_component_capacity(
-                site_name, "SmartNIC-ConnectX-6"
-            )
-            - self.get_component_available(site_name, "SmartNIC-ConnectX-6"),
-            "nic_connectx_5_available": self.get_component_available(
-                site_name, "SmartNIC-ConnectX-5"
-            ),
-            "nic_connectx_5_capacity": self.get_component_capacity(
-                site_name, "SmartNIC-ConnectX-5"
-            ),
-            "nic_connectx_5_allocated": self.get_component_capacity(
-                site_name, "SmartNIC-ConnectX-5"
-            )
-            - self.get_component_available(site_name, "SmartNIC-ConnectX-5"),
-            "nvme_available": self.get_component_available(site_name, "NVME-P4510"),
-            "nvme_capacity": self.get_component_capacity(site_name, "NVME-P4510"),
-            "nvme_allocated": self.get_component_capacity(site_name, "NVME-P4510")
-            - self.get_component_available(site_name, "NVME-P4510"),
-            "tesla_t4_available": self.get_component_available(
-                site_name, "GPU-Tesla T4"
-            ),
-            "tesla_t4_capacity": self.get_component_capacity(site_name, "GPU-Tesla T4"),
-            "tesla_t4_allocated": self.get_component_capacity(site_name, "GPU-Tesla T4")
-            - self.get_component_available(site_name, "GPU-Tesla T4"),
-            "rtx6000_available": self.get_component_available(site_name, "GPU-RTX6000"),
-            "rtx6000_capacity": self.get_component_capacity(site_name, "GPU-RTX6000"),
-            "rtx6000_allocated": self.get_component_capacity(site_name, "GPU-RTX6000")
-            - self.get_component_available(site_name, "GPU-RTX6000"),
-            "a30_available": self.get_component_available(site_name, "GPU-A30"),
-            "a30_capacity": self.get_component_capacity(site_name, "GPU-A30"),
-            "a30_allocated": self.get_component_capacity(site_name, "GPU-A30")
-            - self.get_component_available(site_name, "GPU-A30"),
-            "a40_available": self.get_component_available(site_name, "GPU-A40"),
-            "a40_capacity": self.get_component_capacity(site_name, "GPU-A40"),
-            "a40_allocated": self.get_component_capacity(site_name, "GPU-A40")
-            - self.get_component_available(site_name, "GPU-A40"),
-            "fpga_u280_available": self.get_component_available(
-                site_name, "FPGA-Xilinx-U280"
-            ),
-            "fpga_u280_capacity": self.get_component_capacity(
-                site_name, "FPGA-Xilinx-U280"
-            ),
-            "fpga_u280_allocated": self.get_component_capacity(
-                site_name, "FPGA-Xilinx-U280"
-            )
-            - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
+    def site_to_dict(
+        self, site: str or node.Node or network_node.NodeSliver, latlon=True
+    ):
+        """
+        Convert site information into a dictionary
+
+        :param site: site name or site object
+        :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
+        """
+        core_a = self.get_core_available(site)
+        core_c = self.get_core_capacity(site)
+        ram_a = self.get_ram_available(site)
+        ram_c = self.get_ram_capacity(site)
+        disk_a = self.get_disk_available(site)
+        disk_c = self.get_disk_capacity(site)
+        nic_basic_a = self.get_component_available(site, "SharedNIC-ConnectX-6")
+        nic_basic_c = self.get_component_capacity(site, "SharedNIC-ConnectX-6")
+        nic_cx6_a = self.get_component_available(site, "SmartNIC-ConnectX-6")
+        nic_cx6_c = self.get_component_capacity(site, "SmartNIC-ConnectX-6")
+        nic_cx5_a = self.get_component_available(site, "SmartNIC-ConnectX-5")
+        nic_cx5_c = self.get_component_capacity(site, "SmartNIC-ConnectX-5")
+        nvme_a = self.get_component_available(site, "NVME-P4510")
+        nvme_c = self.get_component_capacity(site, "NVME-P4510")
+        tesla_t4_a = self.get_component_available(site, "GPU-Tesla T4")
+        tesla_t4_c = self.get_component_capacity(site, "GPU-Tesla T4")
+        rtx6000_a = self.get_component_available(site, "GPU-RTX6000")
+        rtx6000_c = self.get_component_capacity(site, "GPU-RTX6000")
+        a30_a = self.get_component_available(site, "GPU-A30")
+        a30_c = self.get_component_capacity(site, "GPU-A30")
+        a40_a = self.get_component_available(site, "GPU-A40")
+        a40_c = self.get_component_capacity(site, "GPU-A40")
+        u280_a = self.get_component_available(site, "FPGA-Xilinx-U280")
+        u280_c = self.get_component_capacity(site, "FPGA-Xilinx-U280")
+
+        d = {
+            "name": site.name if isinstance(site, node.Node) else site.get_name(),
+            "state": self.get_state(site),
+            "address": self.get_location_postal(site),
+            "location": self.get_location_lat_long(site) if latlon else "",
+            "hosts": self.get_host_capacity(site),
+            "cpus": self.get_cpu_capacity(site),
+            "cores_available": core_a,
+            "cores_capacity": core_c,
+            "cores_allocated": core_c - core_a,
+            "ram_available": ram_a,
+            "ram_capacity": ram_c,
+            "ram_allocated": ram_c - ram_a,
+            "disk_available": disk_a,
+            "disk_capacity": disk_c,
+            "disk_allocated": disk_c - disk_a,
+            "nic_basic_available": nic_basic_a,
+            "nic_basic_capacity": nic_basic_c,
+            "nic_basic_allocated": nic_basic_c - nic_basic_a,
+            "nic_connectx_6_available": nic_cx6_a,
+            "nic_connectx_6_capacity": nic_cx6_c,
+            "nic_connectx_6_allocated": nic_cx6_c - nic_cx6_a,
+            "nic_connectx_5_available": nic_cx5_a,
+            "nic_connectx_5_capacity": nic_cx5_c,
+            "nic_connectx_5_allocated": nic_cx5_c - nic_cx5_a,
+            "nvme_available": nvme_a,
+            "nvme_capacity": nvme_c,
+            "nvme_allocated": nvme_c - nvme_a,
+            "tesla_t4_available": tesla_t4_a,
+            "tesla_t4_capacity": tesla_t4_c,
+            "tesla_t4_allocated": tesla_t4_c - tesla_t4_a,
+            "rtx6000_available": rtx6000_a,
+            "rtx6000_capacity": rtx6000_c,
+            "rtx6000_allocated": rtx6000_c - rtx6000_a,
+            "a30_available": a30_a,
+            "a30_capacity": a30_c,
+            "a30_allocated": a30_c - a30_a,
+            "a40_available": a40_a,
+            "a40_capacity": a40_c,
+            "a40_allocated": a40_c - a40_a,
+            "fpga_u280_available": u280_a,
+            "fpga_u280_capacity": u280_c,
+            "fpga_u280_allocated": u280_c - u280_a,
         }
+        if not latlon:
+            d.pop("location")
+        return d
 
     def site_to_dictXXX(self, site):
         site_name = site.name
@@ -828,10 +918,11 @@ class Resources:
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        latlon=True,
     ):
         table = []
         for site_name, site in self.topology.sites.items():
-            table.append(self.site_to_dict(site))
+            table.append(self.site_to_dict(site.get_sliver(), latlon=latlon))
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names

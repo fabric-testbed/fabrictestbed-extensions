@@ -1492,7 +1492,7 @@ class Slice:
                 if slice.state == "StableOK" or slice.state == "ModifyOK":
                     if progress:
                         print(" Slice state: {}".format(slice.state))
-                    return slice
+                    break
                 if (
                     slice.state == "Closing"
                     or slice.state == "Dead"
@@ -1524,6 +1524,7 @@ class Slice:
         # Update the fim topology (wait to avoid get topology bug)
         # time.sleep(interval)
         self.update()
+        return slice
 
     def wait_ssh(self, timeout: int = 1800, interval: int = 20, progress: bool = False):
         """
