@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [1.5.4] - 2023-08-21
 
+### Changed
+
 - Some optimizations in `list_sites()`, `show_site()`, `get_random_site()`
   (PR [#230](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/230))
 - Fix `slice.wait()` to update slice ensuring slice is in `StableOK` or `StableError` state (Issue [#231](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/231))
