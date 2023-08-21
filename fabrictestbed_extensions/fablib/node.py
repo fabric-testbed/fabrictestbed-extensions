@@ -28,14 +28,17 @@ import concurrent.futures
 import ipaddress
 import json
 import logging
+import re
 import select
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import jinja2
 import paramiko
+from fabric_cf.orchestrator.orchestrator_proxy import Status
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
@@ -64,9 +67,11 @@ class Node:
 
     def __init__(self, slice: Slice, node: FimNode):
         """
-        Constructor. Sets the fablib slice and FIM node based on arguments.
+        Sets the fablib slice and FIM node based on arguments.
+
         :param slice: the fablib slice to have this node on
         :type slice: Slice
+
         :param node: the FIM node that this Node represents
         :type node: Node
         """
@@ -97,8 +102,11 @@ class Node:
 
     def __str__(self):
         """
-        Creates a tabulated string describing the properties of the node.
+        Creates a tabulated string describing the properties of the
+        node.
+
         Intended for printing node information.
+
         :return: Tabulated string of node information
         :rtype: String
         """
@@ -122,8 +130,10 @@ class Node:
 
     def get_sliver(self) -> OrchestratorSliver:
         """
-        Not intended as API call
-        Gets the node SM sliver
+        Gets the node SM sliver.
+
+        :note: Not intended as API call.
+
         :return: SM sliver for the node
         :rtype: Sliver
         """
@@ -134,16 +144,23 @@ class Node:
         slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
     ):
         """
-        Not intended for API call. See: Slice.add_node()
-        Creates a new FABRIC node and returns a fablib node with the new node.
+        Not intended for API call.  See: Slice.add_node()
+
+        Creates a new FABRIC node and returns a fablib node with the
+        new node.
+
         :param slice: the fablib slice to build the new node on
         :type slice: Slice
+
         :param name: the name of the new node
         :type name: str
+
         :param site: the name of the site to build the node on
         :type site: str
+
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
+
         :return: a new fablib node
         :rtype: Node
         """
@@ -164,12 +181,16 @@ class Node:
     @staticmethod
     def get_node(slice: Slice = None, node=None):
         """
-        Not intended for API call.
         Returns a new fablib node using existing FABRIC resources.
+
+        :note: Not intended for API call.
+
         :param slice: the fablib slice storing the existing node
         :type slice: Slice
+
         :param node: the FIM node stored in this fablib node
         :type node: Node
+
         :return: a new fablib node storing resources
         :rtype: Node
         """
@@ -177,9 +198,9 @@ class Node:
 
     def toJson(self):
         """
-        Returns the node attributes as a json string
+        Returns the node attributes as a JSON string
 
-        :return: slice attributes as json string
+        :return: slice attributes as JSON string
         :rtype: str
         """
         return json.dumps(self.toDict(), indent=4)
@@ -287,27 +308,36 @@ class Node:
         """
         Show a table containing the current node attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        :param output: output format.  Options are:
 
-        fields: json output will include all available fields.
+                - ``"text"``: string formatted with tabular
 
-        Example: fields=['Name','State']
+                - ``"pandas"``: pandas dataframe
 
-        :param output: output format
+                - ``"json"``: string in json format
+
         :type output: str
-        :param fields: list of fields to show
+
+        :param fields: List of fields to show.  JSON output will
+            include all available fields.
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
+
         :param colors: True to specify state colors for pandas output
         :type colors: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
+
+        Here's an example of ``fields``::
+
+            fields=['Name','State']
         """
 
         data = self.toDict()
@@ -371,31 +401,43 @@ class Node:
         """
         Lists all the components in the node with their attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        :param output: output format.  Output can be one of:
 
-        fields: json output will include all available fields/columns.
+                - ``"text"``: string formatted with tabular
 
-        Example: fields=['Name','Model']
+                - ``"pandas"``: pandas dataframe
 
-        filter_function:  A lambda function to filter data by field values.
+                - ``"json"``: string in json format
 
-        Example: filter_function=lambda s: s['Model'] == 'NIC_Basic'
-
-        :param output: output format
         :type output: str
-        :param fields: list of fields (table columns) to show
+
+        :param fields: list of fields (table columns) to show.  JSON
+            output will include all available fields/columns.
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param filter_function: lambda function
+
+        :param filter_function: A lambda function to filter data by
+            field values.
+
         :type filter_function: lambda
+
         :return: table in format specified by output parameter
         :rtype: Object
+
+
+        Here's an example of ``fields``::
+
+            fields=['Name','Model']
+
+        Here's an example of ``filter_function``::
+
+            filter_function=lambda s: s['Model'] == 'NIC_Basic'
         """
 
         components = []
@@ -436,31 +478,41 @@ class Node:
         """
         Lists all the interfaces in the node with their attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        :param output: Output format.  Options are:
 
-        fields: json output will include all available fields/columns.
+                - ``"text"``: string formatted with tabular
 
-        Example: fields=['Name','MAC']
+                - ``"pandas"``: pandas dataframe
 
-        filter_function:  A lambda function to filter data by field values.
+                - ``"json"``: string in json format
 
-        Example: filter_function=lambda s: s['Node'] == 'Node1'
-
-        :param output: output format
         :type output: str
-        :param fields: list of fields (table columns) to show
+
+        :param fields: List of fields (table columns) to show.  JSON
+            output will include all available fields/columns.
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param filter_function: lambda function
+
+        :param filter_function: A lambda function to filter data by
+            field values.
         :type filter_function: lambda
+
         :return: table in format specified by output parameter
         :rtype: Object
+
+        Example of ``fields``::
+
+            fields=['Name','MAC']
+
+        Example of ``filter_function``::
+
+            filter_function=lambda s: s['Node'] == 'Node1'
         """
 
         if str(self.get_reservation_state()) != "Active":
@@ -506,33 +558,44 @@ class Node:
         pretty_names=True,
     ):
         """
-        Lists all the networks attached to  the nodes with their attributes.
+        Lists all the networks attached to the nodes with their
+        attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        :param output: Output format.  Options are:
 
-        fields: json output will include all available fields/columns.
+                - ``"text"``: string formatted with tabular
 
-        Example: fields=['Name','Type']
+                - ``"pandas"``: pandas dataframe
 
-        filter_function:  A lambda function to filter data by field values.
+                - ``"json"``: string in JSON format
 
-        Example: filter_function=lambda s: s['Type'] == 'FABNetv4'
-
-        :param output: output format
         :type output: str
-        :param fields: list of fields (table columns) to show
+
+        :param fields: List of fields (table columns) to show.  JSON
+            output will include all available fields/columns.
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param filter_function: lambda function
+
+        :param filter_function: A lambda function to filter data by
+            field values.
         :type filter_function: lambda
+
         :return: table in format specified by output parameter
         :rtype: Object
+
+        Example of ``fields``::
+
+            fields=['Name','Type']
+
+        Example of ``filter_function``::
+
+            filter_function=lambda s: s['Type'] == 'FABNetv4'
         """
 
         interfaces = self.get_interfaces()
@@ -587,10 +650,13 @@ class Node:
     def set_capacities(self, cores: int = 2, ram: int = 2, disk: int = 10):
         """
         Sets the capacities of the FABRIC node.
+
         :param cores: the number of cores to set on this node
         :type cores: int
+
         :param ram: the amount of RAM to set on this node
         :type ram: int
+
         :param disk: the amount of disk space to set on this node
         :type disk: int
         """
@@ -604,6 +670,7 @@ class Node:
     def set_instance_type(self, instance_type: str):
         """
         Sets the instance type of this fablib node on the FABRIC node.
+
         :param instance_type: the name of the instance type to set
         :type instance_type: String
         """
@@ -613,14 +680,17 @@ class Node:
 
     def set_username(self, username: str = None):
         """
-        Not intended as an API call.
         Sets this fablib node's username
-        Optional username parameter. The username likely should be picked
-        to match the image type.
-        :param username: username
+
+        :note: Not intended as an API call.
+
+        :param username: Optional username parameter.  The username
+            likely should be picked to match the image type.
         """
         if username is not None:
             self.username = username
+        elif "default_centos9_stream" == self.get_image():
+            self.username = "cloud-user"
         elif "centos" in self.get_image():
             self.username = "centos"
         elif "ubuntu" in self.get_image():
@@ -642,11 +712,16 @@ class Node:
 
     def set_image(self, image: str, username: str = None, image_type: str = "qcow2"):
         """
-        Sets the image information of this fablib node on the FABRIC node.
+        Sets the image information of this fablib node on the FABRIC
+        node.
+
         :param image: the image reference to set
         :type image: String
-        :param username: the username of this fablib node. Currently unused.
+
+        :param username: the username of this fablib node.  Currently
+            unused.
         :type username: String
+
         :param image_type: the image type to set
         :type image_type: String
         """
@@ -656,7 +731,9 @@ class Node:
     def set_host(self, host_name: str = None):
         """
         Sets the hostname of this fablib node on the FABRIC node.
-        :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
+
+        :param host_name: the hostname.  example:
+            host_name='renc-w2.fabric-testbed.net'
         :type host_name: String
         """
         # example: host_name='renc-w2.fabric-testbed.net'
@@ -669,8 +746,9 @@ class Node:
 
     def set_site(self, site):
         """
-        Sets the hostname of this fablib node on the FABRIC node.
-        :param host_name: the hostname. example: host_name='renc-w2.fabric-testbed.net'
+        Sets the site of this fablib node on FABRIC.
+
+        :param site: the site
         :type host_name: String
         """
         # example: host_name='renc-w2.fabric-testbed.net'
@@ -679,6 +757,7 @@ class Node:
     def get_slice(self) -> Slice:
         """
         Gets the fablib slice associated with this node.
+
         :return: the fablib slice on this node
         :rtype: Slice
         """
@@ -687,6 +766,7 @@ class Node:
     def get_name(self) -> str or None:
         """
         Gets the name of the FABRIC node.
+
         :return: the name of the node
         :rtype: String
         """
@@ -695,9 +775,22 @@ class Node:
         except:
             return None
 
+    def get_instance_name(self) -> str or None:
+        """
+        Gets the instance name of the FABRIC node.
+
+        :return: the instance name of the node
+        :rtype: String
+        """
+        try:
+            return self.get_fim_node().get_property(pname="label_allocations").instance
+        except:
+            return None
+
     def get_cores(self) -> int or None:
         """
         Gets the number of cores on the FABRIC node.
+
         :return: the number of cores on the node
         :rtype: int
         """
@@ -709,6 +802,7 @@ class Node:
     def get_ram(self) -> int or None:
         """
         Gets the amount of RAM on the FABRIC node.
+
         :return: the amount of RAM on the node
         :rtype: int
         """
@@ -720,6 +814,7 @@ class Node:
     def get_disk(self) -> int or None:
         """
         Gets the amount of disk space on the FABRIC node.
+
         :return: the amount of disk space on the node
         :rtype: int
         """
@@ -731,6 +826,7 @@ class Node:
     def get_image(self) -> str or None:
         """
         Gets the image reference on the FABRIC node.
+
         :return: the image reference on the node
         :rtype: String
         """
@@ -742,6 +838,7 @@ class Node:
     def get_image_type(self) -> str or None:
         """
         Gets the image type on the FABRIC node.
+
         :return: the image type on the node
         :rtype: String
         """
@@ -753,6 +850,7 @@ class Node:
     def get_host(self) -> str or None:
         """
         Gets the hostname on the FABRIC node.
+
         :return: the hostname on the node
         :rtype: String
         """
@@ -770,6 +868,7 @@ class Node:
     def get_site(self) -> str or None:
         """
         Gets the sitename on the FABRIC node.
+
         :return: the sitename on the node
         :rtype: String
         """
@@ -781,6 +880,7 @@ class Node:
     def get_management_ip(self) -> str or None:
         """
         Gets the management IP on the FABRIC node.
+
         :return: management IP
         :rtype: String
         """
@@ -792,6 +892,7 @@ class Node:
     def get_reservation_id(self) -> str or None:
         """
         Gets the reservation ID on the FABRIC node.
+
         :return: reservation ID on the node
         :rtype: String
         """
@@ -807,6 +908,7 @@ class Node:
     def get_reservation_state(self) -> str or None:
         """
         Gets the reservation state on the FABRIC node.
+
         :return: the reservation state on the node
         :rtype: String
         """
@@ -822,6 +924,7 @@ class Node:
     def get_error_message(self) -> str or None:
         """
         Gets the error message on the FABRIC node.
+
         :return: the error message on the node
         :rtype: String
         """
@@ -835,6 +938,7 @@ class Node:
     def get_interfaces(self) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
@@ -850,16 +954,21 @@ class Node:
     ) -> Interface or None:
         """
         Gets a particular interface associated with a FABRIC node.
-        Accepts either the interface name or a network_name. If a network name
-        is used this method will return the interface on the node that is
-        connected to the network specified.
-        If a name and network_name are both used, the interface name will
+        Accepts either the interface name or a network_name.  If a
+        network name is used this method will return the interface on
+        the node that is connected to the network specified.  If a
+        name and network_name are both used, the interface name will
         take precedence.
+
         :param name: interface name to search for
         :type name: str
+
         :param network_name: network name to search for
+
         :type name: str
+
         :raise Exception: if interface is not found
+
         :return: an interface on the node
         :rtype: Interface
         """
@@ -882,6 +991,7 @@ class Node:
     def get_username(self) -> str:
         """
         Gets the username on this fablib node.
+
         :return: the username on this node
         :rtype: String
         """
@@ -890,8 +1000,10 @@ class Node:
     def get_public_key(self) -> str:
         """
         Gets the public key on fablib node.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the public key on the node
         :rtype: String
         """
@@ -900,8 +1012,10 @@ class Node:
     def get_public_key_file(self) -> str:
         """
         Gets the public key file path on the fablib node.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the public key path
         :rtype: String
         """
@@ -910,8 +1024,10 @@ class Node:
     def get_private_key(self) -> str:
         """
         Gets the private key on the fablib node.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the private key on the node
         :rtype: String
         """
@@ -920,8 +1036,10 @@ class Node:
     def get_private_key_file(self) -> str:
         """
         Gets the private key file path on the fablib slice.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the private key path
         :rtype: String
         """
@@ -930,8 +1048,10 @@ class Node:
     def get_private_key_passphrase(self) -> str:
         """
         Gets the private key passphrase on the FABLIB slice.
-        Important! Slice key management is underdevelopment and this
+
+        Important!  Slice key management is underdevelopment and this
         functionality will likely change going forward.
+
         :return: the private key passphrase
         :rtype: String
         """
@@ -942,20 +1062,33 @@ class Node:
     ) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
-        Example model include:
-        - NIC_Basic: A single port 100 Gbps SR-IOV Virtual Function on a Mellanox ConnectX-6
+        Example models include:
+
+        - NIC_Basic: A single port 100 Gbps SR-IOV Virtual
+          Function on a Mellanox ConnectX-6
+
         - NIC_ConnectX_5: A dual port 25 Gbps Mellanox ConnectX-5
+
         - NIC_ConnectX_6: A dual port 100 Gbps Mellanox ConnectX-6
+
         - NVME_P4510: NVMe Storage Device
+
         - GPU_TeslaT4: Tesla T4 GPU
+
         - GPU_RTX6000: RTX6000 GPU
+
         - GPU_A30: A30 GPU
+
         - GPU_A40: A40 GPU
+
         - FPGA_Xilinx_U280: Xilinx U280 GPU
+
         :param model: the name of the component model to add
         :type model: String
+
         :param name: the name of the new component
         :type name: String
+
         :return: the new component
         :rtype: Component
         """
@@ -966,6 +1099,7 @@ class Node:
     def get_components(self) -> List[Component]:
         """
         Gets a list of components associated with this node.
+
         :return: a list of components on this node
         :rtype: List[Component]
         """
@@ -978,9 +1112,12 @@ class Node:
     def get_component(self, name: str) -> Component:
         """
         Gets a particular component associated with this node.
+
         :param name: the name of the component to search for
         :type name: String
+
         :raise Exception: if component not found by name
+
         :return: the component on the FABRIC node
         :rtype: Component
         """
@@ -993,7 +1130,8 @@ class Node:
 
     def get_ssh_command(self) -> str:
         """
-        Gets an SSH command used to access this node node from a terminal.
+        Gets an SSH command used to access this node from a terminal.
+
         :return: the SSH command to access this node
         :rtype: str
         """
@@ -1033,8 +1171,10 @@ class Node:
     def validIPAddress(self, IP: str) -> str:
         """
         Checks if the IP string is a valid IP address.
+
         :param IP: the IP string to check
         :type IP: String
+
         :return: the type of IP address the IP string is, or 'Invalid'
         :rtype: String
         """
@@ -1145,34 +1285,48 @@ class Node:
         """
         Runs a command on the FABRIC node.
 
-        The function uses paramiko to ssh to the FABRIC node and execute an arbitrary shell command.
-
+        The function uses paramiko to ssh to the FABRIC node and
+        execute an arbitrary shell command.
 
         :param command: the command to run
         :type command: str
+
         :param retry: the number of times to retry SSH upon failure
         :type retry: int
-        :param retry_interval: the number of seconds to wait before retrying SSH upon failure
+
+        :param retry_interval: the number of seconds to wait before
+            retrying SSH upon failure
         :type retry_interval: int
+
         :param username: username
         :type username: str
+
         :param private_key_file: path to private key file
         :type private_key_file: str
+
         :param private_key_passphrase: pass phrase
         :type private_key_passphrase: str
-        :param output_file: path to a file where the stdout/stderr will be written. None for no file output
+
+        :param output_file: path to a file where the stdout/stderr
+            will be written.  None for no file output
         :type output_file: List[str]
+
         :param output: print stdout and stderr to the screen
         :type output: bool
-        :param read_timeout: the number of seconds to wait before retrying to
-        read from stdout and stderr
+
+        :param read_timeout: the number of seconds to wait before
+            retrying to read from stdout and stderr
         :type read_timeout: int
-        :param timeout: the number of seconds to wait before terminating the
-        command using the linux timeout command. Specifying a timeout
-        encapsulates the command with the timeout command for you
+
+        :param timeout: the number of seconds to wait before
+            terminating the command using the linux timeout command.
+            Specifying a timeout encapsulates the command with the
+            timeout command for you
         :type timeout: int
-        :return: a tuple of  (stdout[Sting],stderr[String])
+
+        :return: a tuple of (stdout[Sting],stderr[String])
         :rtype: Tuple
+
         :raise Exception: if management IP is invalid
         """
         import logging
@@ -1430,18 +1584,27 @@ class Node:
         retry_interval: int = 10,
     ):
         """
-        Creates a thread that calls node.upload_file().  Results from the thread can be
-        retrieved with by calling thread.result()
+        Creates a thread that calls ``node.upload_file()``.
+
+        Results from the thread can be retrieved with by calling
+        ``thread.result()``.
+
         :param local_file_path: the path to the file to upload
         :type local_file_path: str
-        :param remote_file_path: the destination path of the file on the node
+
+        :param remote_file_path: the destination path of the file on
+            the node
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
-        :return: a thread that called node.execute()
+
+        :return: a thread that called ``node.execute()``
         :rtype: Thread
+
         :raise Exception: if management IP is invalid
         """
         return (
@@ -1465,14 +1628,20 @@ class Node:
     ):
         """
         Upload a local file to a remote location on the node.
+
         :param local_file_path: the path to the file to upload
         :type local_file_path: str
-        :param remote_file_path: the destination path of the file on the node
+
+        :param remote_file_path: the destination path of the file on
+            the node
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         logging.debug(
@@ -1580,19 +1749,28 @@ class Node:
         retry: int = 3,
         retry_interval: int = 10,
     ):
-        """ "
-        Creates a thread that calls node.download_file().  Results from the thread can be
-        retrieved with by calling thread.result()
-        :param local_file_path: the destination path for the remote file
+        """
+        Creates a thread that calls node.download_file().  Results
+        from the thread can be retrieved with by calling
+        thread.result()
+
+        :param local_file_path: the destination path for the remote
+            file
         :type local_file_path: str
-        :param remote_file_path: the path to the remote file to download
+
+        :param remote_file_path: the path to the remote file to
+            download
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
+
         :return: a thread that called node.download_file()
         :rtype: Thread
+
         :raise Exception: if management IP is invalid
         """
         return (
@@ -1616,12 +1794,18 @@ class Node:
     ):
         """
         Download a remote file from the node to a local destination.
-        :param local_file_path: the destination path for the remote file
+
+        :param local_file_path: the destination path for the remote
+            file
         :type local_file_path: str
-        :param remote_file_path: the path to the remote file to download
+
+        :param remote_file_path: the path to the remote file to
+            download
         :type remote_file_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
         """
@@ -1733,19 +1917,29 @@ class Node:
         retry: int = 3,
         retry_interval: int = 10,
     ):
-        """ "
-        Creates a thread that calls node.upload_directory. Results from the thread can be
-        retrieved with by calling thread.result()
-        :param local_directory_path: the path to the directory to upload
+        """
+        Creates a thread that calls ``Node.upload_directory()``.
+
+        Results from the thread can be retrieved with by calling
+        ``thread.result()``.
+
+        :param local_directory_path: the path to the directory to
+            upload
         :type local_directory_path: str
-        :param remote_directory_path: the destination path of the directory on the node
+
+        :param remote_directory_path: the destination path of the
+            directory on the node
         :type remote_directory_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
-        :return: a thread that called node.download_file()
+
+        :return: a thread that called ``node.upload_directory()``
         :rtype: Thread
+
         :raise Exception: if management IP is invalid
         """
         return (
@@ -1769,16 +1963,25 @@ class Node:
     ):
         """
         Upload a directory to remote location on the node.
-        Makes a gzipped tarball of a directory and uploades it to a node. Then
-        unzips and tars the directory at the remote_directory_path
-        :param local_directory_path: the path to the directory to upload
+
+        Makes a gzipped tarball of a directory and uploads it to a
+        node.  Then unzips and untars the directory at the
+        ``remote_directory_path``.
+
+        :param local_directory_path: the path to the directory to
+            upload
         :type local_directory_path: str
-        :param remote_directory_path: the destination path of the directory on the node
+
+        :param remote_directory_path: the destination path of the
+            directory on the node
         :type remote_directory_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         import os
@@ -1835,17 +2038,25 @@ class Node:
         retry: int = 3,
         retry_interval: int = 10,
     ):
-        """ "
-        Creates a thread that calls node.download_directory. Results from the thread can be
-        retrieved with by calling thread.result()
-        :param local_directory_path: the path to the directory to upload
+        """
+        Creates a thread that calls node.download_directory.  Results
+        from the thread can be retrieved with by calling
+        thread.result()
+
+        :param local_directory_path: the path to the directory to
+            upload
         :type local_directory_path: str
-        :param remote_directory_path: the destination path of the directory on the node
+
+        :param remote_directory_path: the destination path of the
+            directory on the node
         :type remote_directory_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         return (
@@ -1868,17 +2079,24 @@ class Node:
         retry_interval: int = 10,
     ):
         """
-        Downloads a directory from remote location on the node.
-        Makes a gzipped tarball of a directory and downloads it from a node. Then
-        unzips and tars the directory at the local_directory_path
-        :param local_directory_path: the path to the directory to upload
+        Downloads a directory from remote location on the node.  Makes
+        a gzipped tarball of a directory and downloads it from a node.
+        Then unzips and tars the directory at the local_directory_path
+
+        :param local_directory_path: the path to the directory to
+            upload
         :type local_directory_path: str
-        :param remote_directory_path: the destination path of the directory on the node
+
+        :param remote_directory_path: the destination path of the
+            directory on the node
         :type remote_directory_path: str
+
         :param retry: how many times to retry SCP upon failure
         :type retry: int
+
         :param retry_interval: how often to retry SCP on failure
         :type retry_interval: int
+
         :raise Exception: if management IP is invalid
         """
         import os
@@ -1907,6 +2125,7 @@ class Node:
     def test_ssh(self) -> bool:
         """
         Test whether SSH is functional on the node.
+
         :return: true if SSH is working, false otherwise
         :rtype: bool
         """
@@ -1932,8 +2151,9 @@ class Node:
 
     def get_management_os_interface(self) -> str or None:
         """
-        Gets the name of the management interface used by the node's operating
-        system.
+        Gets the name of the management interface used by the node's
+        operating system.
+
         :return: interface name
         :rtype: String
         """
@@ -1953,8 +2173,9 @@ class Node:
 
     def get_dataplane_os_interfaces(self) -> List[dict]:
         """
-        Gets a list of all the dataplane interface names used by the node's
-        operating system.
+        Gets a list of all the dataplane interface names used by the
+        node's operating system.
+
         :return: interface names
         :rtype: List[String]
         """
@@ -1979,6 +2200,7 @@ class Node:
     def flush_os_interface(self, os_iface: str):
         """
         Flush the configuration of an interface in the node
+
         :param os_iface: the name of the interface to flush
         :type os_iface: String
         """
@@ -2010,8 +2232,10 @@ class Node:
     ):
         """
         Add a route on the node.
+
         :param subnet: The destination subnet
-        :type subnet:  IPv4Network or IPv6Network
+        :type subnet: IPv4Network or IPv6Network
+
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
         """
@@ -2089,8 +2313,10 @@ class Node:
     ):
         """
         Delete a route on the node.
+
         :param subnet: The destination subnet
-        :type subnet:  IPv4Network or IPv6Network
+        :type subnet: IPv4Network or IPv6Network
+
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
         """
@@ -2114,10 +2340,13 @@ class Node:
     ):
         """
         Add an IP to an interface on the node.
+
         :param addr: IP address
-        :type addr:  IPv4Address or IPv6Address
+        :type addr: IPv4Address or IPv6Address
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
@@ -2144,10 +2373,13 @@ class Node:
     ):
         """
         Delete an IP to an interface on the node.
+
         :param addr: IP address
-        :type addr:  IPv4Address or IPv6Address
+        :type addr: IPv4Address or IPv6Address
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
@@ -2166,11 +2398,35 @@ class Node:
             logging.warning(f"Failed to del addr: {e}")
             raise e
 
+    def un_manage_interface(self, interface: Interface):
+        """
+        Mark an interface unmanaged by Network Manager;
+
+        This is needed to be run on rocky* images to avoid the network
+        configuration from being overwritten by NetworkManager
+
+        :param interface: the FABlib interface.
+        :type interface: Interface
+        """
+
+        if interface is None:
+            return
+
+        try:
+            self.execute(
+                f"sudo nmcli dev set {interface.get_physical_os_interface_name()} managed no",
+                quiet=True,
+            )
+        except Exception as e:
+            logging.warning(f"Failed to mark interface as unmanaged: {e}")
+
     def ip_link_up(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
         """
         Bring up a link on an interface on the node.
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
@@ -2201,7 +2457,7 @@ class Node:
 
         try:
             self.execute(
-                f"{ip_command} link set dev {interface.get_physical_os_interface()} up",
+                f"{ip_command} link set dev {interface.get_physical_os_interface_name()} up",
                 quiet=True,
             )
         except Exception as e:
@@ -2222,8 +2478,10 @@ class Node:
     ):
         """
         Bring down a link on an interface on the node.
+
         :param subnet: subnet.
         :type subnet: IPv4Network or IPv6Network
+
         :param interface: the FABlib interface.
         :type interface: Interface
         """
@@ -2263,7 +2521,7 @@ class Node:
         mtu: str = None,
     ):
         """
-        Depricated
+        .. deprecated:: 1.1.3.
         """
         # TODO: Add docstring after doc networking classes
         if cidr:
@@ -2363,7 +2621,7 @@ class Node:
         interface: str = None,
     ):
         """
-        Depricated
+        .. deprecated:: 1.1.3.
         """
         # TODO: Add docstring after doc networking classes
 
@@ -2410,6 +2668,7 @@ class Node:
     def ping_test(self, dst_ip: str) -> bool:
         """
         Test a ping from the node to a destination IP
+
         :param dst_ip: destination IP String.
         :type dst_ip: String
         """
@@ -2426,9 +2685,12 @@ class Node:
     def get_storage(self, name: str) -> Component:
         """
         Gets a particular storage associated with this node.
+
         :param name: the name of the storage
         :type name: String
+
         :raise Exception: if storage not found by name
+
         :return: the storage on the FABRIC node
         :rtype: Component
         """
@@ -2440,9 +2702,13 @@ class Node:
 
     def add_storage(self, name: str, auto_mount: bool = False) -> Component:
         """
-        Creates a new FABRIC Storage component and attaches it to the Node
-        :param name: Name of the Storage volume created for the project outside the scope of the Slice
+        Creates a new FABRIC Storage component and attaches it to the
+        Node
+
+        :param name: Name of the Storage volume created for the
+            project outside the scope of the Slice
         :param auto_mount: Mount the storage volume
+
         :rtype: Component
         """
         return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
@@ -2715,3 +2981,348 @@ class Node:
                     subnet=self.get_fablib_manager().FABNETV6_SUBNET,
                     next_hop=net.get_gateway(),
                 )
+
+    def poa(
+        self,
+        operation: str,
+        vcpu_cpu_map: List[Dict[str, str]] = None,
+        node_set: List[str] = None,
+        keys: List[str] = None,
+    ) -> Union[Dict, str]:
+        """
+        Perform operation action on a VM; an action which is triggered by CF via the Aggregate
+
+        :param operation: operation to be performed
+        :param vcpu_cpu: map virtual cpu to host cpu map
+        :param node_set: list of numa nodes
+        :param keys list: of ssh keys
+
+        :raise Exception: in case of failure
+
+        :return: State of POA or Dictionary containing the info, in
+                 case of INFO POAs
+        """
+        retry = 20
+
+        status, poa_info = (
+            self.get_fablib_manager()
+            .get_slice_manager()
+            .poa(
+                sliver_id=self.get_reservation_id(),
+                operation=operation,
+                vcpu_cpu_map=vcpu_cpu_map,
+                node_set=node_set,
+            )
+        )
+        logger = logging.getLogger()
+        if status != Status.OK:
+            raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
+
+        logger.info(
+            f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}"
+        )
+
+        poa_state = "Nascent"
+        poa_info_status = None
+        attempt = 0
+        states = ["Success", "Failed"]
+        while poa_state not in states and attempt < retry:
+            status, poa_info_status = (
+                self.get_fablib_manager()
+                .get_slice_manager()
+                .get_poas(poa_id=poa_info[0].poa_id)
+            )
+            attempt += 1
+            if status != Status.OK:
+                raise Exception(
+                    f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}"
+                )
+            poa_state = poa_info_status[0].state
+            logger.info(
+                f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
+                f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}"
+            )
+            if poa_state in states:
+                break
+            time.sleep(10)
+
+        if poa_info_status[0].state == "Failed":
+            raise Exception(
+                f"POA - {poa_info[0].poa_id}/{operation} failed with error: - {poa_info_status[0].error}"
+            )
+
+        if poa_info_status[0].info.get(operation) is not None:
+            return poa_info_status[0].info.get(operation)
+        else:
+            return poa_info_status[0].state
+
+    def get_cpu_info(self) -> dict:
+        """
+        Get CPU Information for the Node and the host on which the VM is running
+
+        :return: cpu info dict
+        """
+        """
+        Host INFO looks like:
+        {'Node 0': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 1': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 2': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 3': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 4': {'Heap': '0', 'Huge': '0', 'Private': '1', 'Stack': '0', 'Total': '1'},
+        'Node 5': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 6': {'Heap': '6', 'Huge': '0', 'Private': '32812', 'Stack': '0', 'Total': '32817'},
+        'Node 7': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Total': {'Heap': '6', 'Huge': '0', 'Private': '32813', 'Stack': '0', 'Total': '32818'}}
+
+        VM INFO looks like:
+        In this example below, no CPU pinning has been applied so CPU Affinity lists all the CPUs
+        After the pinning has been applied, CPU Affinity would show only the pinned CPU
+        [{'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '20.2s', 'State': 'running', 'VCPU': '0'},
+        {'CPU': '118', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '9.0s', 'State': 'running', 'VCPU': '1'},
+        {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.9s', 'State': 'running', 'VCPU': '2'},
+        {'CPU': '119', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.8s', 'State': 'running', 'VCPU': '3'},
+        {'CPU': '52', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '4'},
+        {'CPU': '88', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.4s', 'State': 'running', 'VCPU': '5'},
+        {'CPU': '54', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.4s', 'State': 'running', 'VCPU': '6'},
+        {'CPU': '55', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '7'},
+        {'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.1s', 'State': 'running', 'VCPU': '8'},
+        {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.3s', 'State': 'running', 'VCPU': '9'},
+        {'CPU': '113', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.5s', 'State': 'running', 'VCPU': '10'},
+        {'CPU': '119', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.4s', 'State': 'running', 'VCPU': '11'},
+        {'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.7s', 'State': 'running', 'VCPU': '12'},
+        {'CPU': '53', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '2.1s', 'State': 'running', 'VCPU': '13'},
+        {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '1.3s', 'State': 'running', 'VCPU': '14'},
+        {'CPU': '49', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '0.8s', 'State': 'running', 'VCPU': '15'}]        
+        """
+        # Get CPU Info for the VM and Host on which VM resides
+        cpu_info = self.poa(operation="cpuinfo")
+        logging.getLogger().info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
+        logging.getLogger().info(
+            f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}"
+        )
+        if cpu_info == "Failed":
+            raise Exception("POA Failed to get CPU INFO")
+        return cpu_info
+
+    def get_numa_info(self) -> dict:
+        """
+        Get Numa Information for the Node and the host on which the VM is running
+
+        :return: numa info dict
+        """
+        """
+        Host INFO looks like:
+        {'available': '8 nodes (0-7)',
+        'node 0': {'cpus': '0 1 2 3 4 5 6 7 64 65 66 67 68 69 70 71', 'free': '18366 MB', 'size': '63794 MB'},
+        'node 1': {'cpus': '8 9 10 11 12 13 14 15 72 73 74 75 76 77 78 79', 'free': '61574 MB', 'size': '64466 MB'},
+        'node 2': {'cpus': '16 17 18 19 20 21 22 23 80 81 82 83 84 85 86 87', 'free': '654 MB', 'size': '64507 MB'},
+        'node 3': {'cpus': '24 25 26 27 28 29 30 31 88 89 90 91 92 93 94 95', 'free': '350 MB', 'size': '64495 MB'},
+        'node 4': {'cpus': '32 33 34 35 36 37 38 39 96 97 98 99 100 101 102 103', 'free': '43491 MB', 'size': '64507 MB'},
+        'node 5': {'cpus': '40 41 42 43 44 45 46 47 104 105 106 107 108 109 110 111', 'free': '46958 MB', 'size': '64507 MB'},
+        'node 6': {'cpus': '48 49 50 51 52 53 54 55 112 113 114 115 116 117 118 119', 'free': '10348 MB', 'size': '64507 MB'},
+        'node 7': {'cpus': '56 57 58 59 60 61 62 63 120 121 122 123 124 125 126 127', 'free': '63374 MB', 'size': '64506 MB'}}
+
+        VM INFO looks like:
+        {'Node 0': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 1': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 2': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 3': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 4': {'Heap': '0', 'Huge': '0', 'Private': '1', 'Stack': '0', 'Total': '1'},
+        'Node 5': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Node 6': {'Heap': '6', 'Huge': '0', 'Private': '32812', 'Stack': '0', 'Total': '32817'},
+        'Node 7': {'Heap': '0', 'Huge': '0', 'Private': '0', 'Stack': '0', 'Total': '0'},
+        'Total': {'Heap': '6', 'Huge': '0', 'Private': '32813', 'Stack': '0', 'Total': '32818'}}
+        """
+        # Get Numa Info for the VM and Host on which VM resides
+        numa_info = self.poa(operation="numainfo")
+        logging.getLogger().info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
+        logging.getLogger().info(
+            f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}"
+        )
+        if numa_info == "Failed":
+            raise Exception("POA Failed to get Numa INFO")
+        return numa_info
+
+    def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
+        """
+        Pin the cpus for the VM to the numa node associated with the
+        component.
+
+        :param component_name: Component Name
+        :param cpu_range_to_pin: range of the cpus to pin; example:
+            0-1 or 0
+        """
+        try:
+            allocated_cpu_list = list(range(0, self.get_cores()))
+            if cpu_range_to_pin is None:
+                result_list = allocated_cpu_list
+            else:
+                start, end = map(int, cpu_range_to_pin.split("-"))
+                result_list = list(range(start, end + 1))
+
+                set_cpu = set(allocated_cpu_list)
+                if any(item not in set_cpu for item in result_list):
+                    raise Exception(
+                        f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node"
+                    )
+
+            # Get CPU Info for the VM and Host on which VM resides
+            cpu_info = self.get_cpu_info()
+
+            pinned_cpus = cpu_info.get(self.get_host()).get("pinned_cpus")
+
+            # Find Numa Node for the NIC
+            numa_node = self.get_component(name=component_name).get_numa_node()
+
+            # Find CPUs assigned to the numa node
+            numa_cpu_range_str = cpu_info.get(self.get_host()).get(
+                f"NUMA node{numa_node} CPU(s):"
+            )
+
+            # Determine the CPU range belonging to the Numa Node
+            numa_cpu_range = []
+            for r in numa_cpu_range_str.split(","):
+                start, end = map(int, r.split("-"))
+                numa_cpu_range.extend(map(str, range(start, end + 1)))
+
+            # Exclude any Pinned CPUs
+            available_cpus = list(set(numa_cpu_range) - set(pinned_cpus))
+
+            number_of_cpus_to_pin = len(result_list)
+            number_of_available_cpus = len(available_cpus)
+
+            # Verify Requested CPUs do not exceed Available CPUs
+            if number_of_cpus_to_pin > number_of_available_cpus:
+                msg = (
+                    f"Not enough Host CPUs available to pin! Requested CPUs: {number_of_cpus_to_pin} "
+                    f"Available CPUs: {number_of_available_cpus}"
+                )
+
+                logging.getLogger().warning(msg)
+                number_of_cpus_to_pin = number_of_available_cpus
+                if not number_of_cpus_to_pin:
+                    raise Exception(msg)
+
+            # Build the VCPU to CPU Mapping
+            vcpu_cpu_map = []
+            for x in range(number_of_cpus_to_pin):
+                temp = {"vcpu": str(result_list[x]), "cpu": str(available_cpus[x])}
+                vcpu_cpu_map.append(temp)
+
+            msg = (
+                f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
+                f"Numa Node: {numa_node}"
+            )
+            logging.getLogger().info(f"{msg}  CPU Map: {vcpu_cpu_map}")
+            print(msg)
+
+            # Issue POA
+            status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
+            if status == "Failed":
+                raise Exception("POA Failed")
+            logging.getLogger().info(
+                f"CPU Pinning complete for node: {self.get_name()}"
+            )
+        except Exception as e:
+            logging.getLogger().error(traceback.format_exc())
+            logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
+            raise e
+
+    def os_reboot(self):
+        status = self.poa(operation="reboot")
+        if status == "Failed":
+            raise Exception("Failed to reboot the server")
+        logging.getLogger().info(f"Node: {self.get_name()} rebooted!")
+
+    def numa_tune(self):
+        """
+        Pin the memory for the VM to the numa node associated with the components
+        """
+        try:
+            # Get CPU Info for the VM and Host on which VM resides
+            numa_info = self.get_numa_info()
+
+            total_available_memory = 0
+
+            numa_nodes = []
+
+            for c in self.get_components():
+                # Find Numa Node for the NIC
+                numa_node = c.get_numa_node()
+
+                # Skip Numa node if already checked
+                if numa_node in numa_nodes:
+                    continue
+
+                logging.getLogger().info(
+                    f"Numa Node {numa_node} for component: {c.get_name()}"
+                )
+
+                # Free Memory for the Numa Node
+                numa_memory_free_str = (
+                    numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
+                )
+                logging.getLogger().info(
+                    f"Numa Node {numa_node} free memory: {numa_memory_free_str}"
+                )
+                numa_memory_free = int(re.search(r"\d+", numa_memory_free_str).group())
+                logging.getLogger().info(
+                    f"Numa Node {numa_node} free memory: {numa_memory_free}"
+                )
+
+                # Memory allocated to VM on the Numa Node
+                logging.getLogger().info(
+                    f"VM memory: {numa_info.get(self.get_instance_name())}"
+                )
+                logging.getLogger().info(
+                    f"VM memory: {numa_info.get(self.get_instance_name()).get(f'Node {numa_node}')}"
+                )
+                vm_mem = (
+                    numa_info.get(self.get_instance_name())
+                    .get(f"Node {numa_node}")
+                    .get("Total")
+                )
+                logging.getLogger().info(f"VM memory: {vm_mem}")
+
+                # Exclude VM memory
+                available_memory_on_node = int(numa_memory_free) + int(vm_mem)
+                logging.getLogger().info(
+                    f"Available memory: {available_memory_on_node}"
+                )
+
+                if available_memory_on_node <= 0:
+                    continue
+
+                numa_nodes.append(numa_node)
+
+                # Compute the total available Memory
+                total_available_memory += available_memory_on_node
+
+            requested_vm_memory = self.get_ram() * 1024
+
+            if requested_vm_memory > total_available_memory:
+                raise Exception(
+                    f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
+                    f"{requested_vm_memory} exceeds available: {total_available_memory}"
+                )
+
+            msg = (
+                f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}"
+            )
+            logging.getLogger().info(msg)
+            print(msg)
+
+            # Issue POA
+            status = self.poa(operation="numatune", node_set=numa_nodes)
+            if status == "Failed":
+                logging.getLogger().error(
+                    f"Numa tune failed for node: {self.get_name()}"
+                )
+            else:
+                logging.getLogger().info(
+                    f"Numa tune complete for node: {self.get_name()}"
+                )
+        except Exception as e:
+            logging.getLogger().error(traceback.format_exc())
+            logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
+            raise e

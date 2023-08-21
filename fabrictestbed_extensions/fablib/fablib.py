@@ -84,14 +84,14 @@ class fablib:
         return fablib.get_default_fablib_manager().get_site_names()
 
     @staticmethod
-    def list_sites() -> object:
+    def list_sites(latlon: bool = True) -> object:
         """
         Get a string used to print a tabular list of sites with state
 
         :return: tabulated string of site state
         :rtype: str
         """
-        return fablib.get_default_fablib_manager().list_sites()
+        return fablib.get_default_fablib_manager().list_sites(latlon=latlon)
 
     @staticmethod
     def list_links() -> object:
@@ -611,6 +611,7 @@ class FablibManager:
         data_dir: str = None,
         output: str = None,
         execute_thread_pool_size: int = 64,
+        offline: bool = False,
     ):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
@@ -792,7 +793,9 @@ class FablibManager:
         self.resources = None
         self.links = None
         self.facility_ports = None
-        self.build_slice_manager()
+
+        if not offline:
+            self.build_slice_manager()
 
     def _validate_configuration(self):
         """
@@ -1113,16 +1116,20 @@ class FablibManager:
             "default_centos9_stream",
             "default_centos_7",
             "default_centos_8",
-            "default_cirros",
             "default_debian_10",
+            "default_debian_11",
             "default_fedora_35",
-            "default_freebsd_13_zfs",
-            "default_openbsd_7",
             "default_rocky_8",
+            "default_rocky_9",
             "default_ubuntu_18",
             "default_ubuntu_20",
             "default_ubuntu_21",
             "default_ubuntu_22",
+            "default_fedora_36",
+            "default_fedora_37",
+            "docker_rocky_8",
+            "docker_ubuntu_20",
+            "docker_ubuntu_22",
         ]
 
     def get_site_names(self) -> List[str]:
@@ -1143,6 +1150,7 @@ class FablibManager:
         update: bool = True,
         pretty_names: bool = True,
         force_refresh: bool = False,
+        latlon: bool = True,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1171,9 +1179,10 @@ class FablibManager:
         :param filter_function: lambda function
         :type filter_function: lambda
         :return: table in format specified by output parameter
-        :param update
-        :param pretty_names
-        :param force_refresh
+        :param update:
+        :param pretty_names:
+        :param force_refresh:
+        :param latlon: convert address to latlon, makes online call to openstreetmaps.org
         :rtype: Object
         """
         return self.get_resources(
@@ -1184,6 +1193,7 @@ class FablibManager:
             quiet=quiet,
             filter_function=filter_function,
             pretty_names=pretty_names,
+            latlon=latlon,
         )
 
     def list_links(
@@ -1330,6 +1340,7 @@ class FablibManager:
         fields: list[str] = None,
         quiet: bool = False,
         pretty_names=True,
+        latlon=True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1353,6 +1364,8 @@ class FablibManager:
         :type fields: List[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
+        :param latlon: convert address to lat/lon
+        :type latlon: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -1363,6 +1376,7 @@ class FablibManager:
                 output=output,
                 quiet=quiet,
                 pretty_names=pretty_names,
+                latlon=latlon,
             )
         )
 
@@ -1446,6 +1460,9 @@ class FablibManager:
         :type count: int
         :param avoid: list of site names to avoid chosing
         :type site_name: List[String]
+        :param unique:
+        :param latlon: convert address to latlon if needed for the filter, False by default
+        :type latlon: bool
         :return: list of random site names.
         :rtype: List[Sting]
         """
@@ -1474,6 +1491,8 @@ class FablibManager:
             quiet=True,
             filter_function=combined_filter_function,
             update=update,
+            # if filter function is not specified, no need for latlon
+            latlon=True if filter_function else False,
         )
 
         sites = list(map(lambda x: x["name"], site_list))
@@ -1711,6 +1730,16 @@ class FablibManager:
         """
         return self.bastion_key_filename
 
+    def get_bastion_key(self) -> str:
+        """
+        Reads the FABRIC Bastion private key file and returns the key.
+
+        :return: FABRIC Bastion key string
+        :rtype: String
+        """
+        with open(self.bastion_key_filename, "r", encoding="utf-8") as f:
+            return f.read()
+
     def get_bastion_public_addr(self) -> str:
         """
         Gets the FABRIC Bastion host address.
@@ -1739,6 +1768,57 @@ class FablibManager:
         :rtype: String
         """
         return self.bastion_private_ipv6_addr
+
+    def probe_bastion_host(self) -> bool:
+        """
+        See if bastion will admit us with our configuration.
+
+        Bastion hosts are configured to block hosts that attempts to
+        use it with too many repeated authentication failures.  We
+        want to avoid that.
+
+        Returns ``True`` if connection attempt succeeds.  Raises an
+        error in the event of failure.
+        """
+
+        bastion_client = paramiko.SSHClient()
+        bastion_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+
+        try:
+            bastion_host = self.get_bastion_public_addr()
+            bastion_username = self.get_bastion_username()
+            bastion_key_path = self.get_bastion_key_filename()
+            bastion_key_passphrase = self.bastion_passphrase
+
+            logging.info(
+                f"Probing bastion host {bastion_host} with "
+                f"username: {bastion_username}, key: {bastion_key_path}, "
+                f"key passphrase: {'hidden' if bastion_key_passphrase else None}"
+            )
+
+            result = bastion_client.connect(
+                hostname=bastion_host,
+                username=bastion_username,
+                key_filename=bastion_key_path,
+                passphrase=bastion_key_passphrase,
+                look_for_keys=False,
+            )
+
+            # Things should be fine if we are here.
+            if result is None:
+                logging.info(f"Connection with {bastion_host} appears to be working")
+                return True
+
+        # In theory paramiko can raise several types of exceptions,
+        # but in practice it has not been that precise.  Let us treat
+        # all exceptions as un-recoverable for now, and refine the
+        # behavior based on some real-world testing.
+        except (paramiko.SSHException, Exception) as e:
+            logging.error(f"Bastion connection error: {e}")
+            raise e
+
+        finally:
+            bastion_client.close()
 
     def set_slice_manager(self, slice_manager: SliceManager):
         """
@@ -1803,11 +1883,12 @@ class FablibManager:
         """
         Get the available resources.
 
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
+        Optionally update the available resources by querying the
+        FABRIC services.  Otherwise, this method returns the existing
+        information.
 
         :param update:
-        :param force_refresh
+        :param force_refresh:
         :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
@@ -1985,8 +2066,9 @@ class FablibManager:
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
-        :param slice_name
-        :param slice_id
+        :param slice_name:
+        :param slice_id:
+
         :return: a list of slices
         :rtype: List[Slice]
         """
@@ -2045,7 +2127,12 @@ class FablibManager:
                 excludes=[SliceState.Dead, SliceState.Closing], slice_name=name
             )
 
-            return slices[0]
+            if len(slices) > 0:
+                return slices[0]
+            else:
+                raise Exception(
+                    f'Unable to find slice "{name}" for this project. Check slice name spelling and project id.'
+                )
         else:
             raise Exception(
                 "get_slice requires slice name (name) or slice id (slice_id)"

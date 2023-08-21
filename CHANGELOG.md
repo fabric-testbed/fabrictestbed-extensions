@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Some optimizations in `list_sites()`, `show_site()`, `get_random_site()`
+  (PR [#230](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/230))
+- Fix `slice.wait()` to update slice ensuring slice is in `StableOK` or `StableError` state (Issue [#231](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/231))
+
+### Fixed
+- Update default username for `defaul_centos9_stream` image (Issue [#227](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/227))
+
+
+## [1.5.2] - 2023-08-02
+
 ### Fixed
 
 - Address a crash when querying NUMA properties. (Issue
@@ -21,6 +33,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+
+### Changed
+
+- Update list of OS images (PR
+  [#202](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/202))
+- List Facility Ports updated to include additional parameters (Issue
+  [#210](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/210))
+- Fail early when connection with bastion host fails (Issue
+  [#151](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/151))
+- Overhaul API docs (PR
+  [#217](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/217),
+  issue [#215](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/215))
+- Update/reformat API docstrings (PR
+  [#220](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/220))
+
+### Added
+
 - Add/update integration tests (Issues
   [#184](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/184),
   [#186](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/186),
@@ -28,6 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Make Network Interface Config Idempotant
+  (Issue [#205](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/205))
+- Methods added to retrieve SSH keys for bastion and sliver (PR
+  [#207](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/207))
+- Support for PortMirror service (PR
+  [#214](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/214))
+- Support for CPU Pinning and Numa tuning (Issue [#221](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/221))
+
+### Removed
+  
 - Remove unused `AbcFabLIB` class (Issue
   [#117](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/117))
 

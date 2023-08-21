@@ -21,12 +21,13 @@ dependencies = [
     "ipyleaflet",
     "ipycytoscape",
     "tabulate",
-    "fabrictestbed==1.5.3",
+    "fabrictestbed==1.5.6",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
     "numpy",
-    "ipython>=8.12.0"
+    "ipython>=8.12.0",
+    "fabric_fss_utils>=1.5.1"
     ]
 
 classifiers = [
