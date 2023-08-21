@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### [1.5.4] - 2023-08-21
+
 ### Changed
 
 - Some optimizations in `list_sites()`, `show_site()`, `get_random_site()`
