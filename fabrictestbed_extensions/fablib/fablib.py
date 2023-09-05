@@ -1345,8 +1345,6 @@ class FablibManager:
         :param avoid: list of site names to avoid chosing
         :type site_name: List[String]
         :param unique:
-        :param latlon: convert address to latlon if needed for the filter, False by default
-        :type latlon: bool
         :return: list of random site names.
         :rtype: List[Sting]
         """
