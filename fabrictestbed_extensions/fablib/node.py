@@ -2768,6 +2768,9 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def add_post_update_command(self, command: str):
+        """
+        Run a command after boot.
+        """
         fablib_data = self.get_fablib_data()
         if "post_update_commands" not in fablib_data:
             fablib_data["post_update_commands"] = []
