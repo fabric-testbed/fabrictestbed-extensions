@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Display and filter by PTP availability at each site based on ARM
+  information (PR [#236](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/236)).
+
 
 ### [1.5.4] - 2023-08-21
 
