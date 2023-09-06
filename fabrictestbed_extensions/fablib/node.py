@@ -2786,6 +2786,15 @@ class Node:
     def add_post_boot_upload_directory(
         self, local_directory_path: str, remote_directory_path: str = "."
     ):
+        """
+        Upload a directory to the node after boot.
+
+        :param local_directory_path: local directory.
+        :type local_directory_path: str
+        
+        :param remote_directory_path: directory on the node.
+        :type remote_directory_path: str
+        """
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" not in fablib_data:
             fablib_data["post_boot_tasks"] = []
