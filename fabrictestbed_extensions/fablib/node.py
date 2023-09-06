@@ -2806,6 +2806,15 @@ class Node:
     def add_post_boot_upload_file(
         self, local_file_path: str, remote_file_path: str = "."
     ):
+        """
+        Upload a file to the node after boot.
+
+        :param local_file_path: path to file on local filesystem.
+        :type local_file_path: str
+        
+        :param remote_file_path: path to file on the node.
+        :type remote_file_path: str
+        """
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" not in fablib_data:
             fablib_data["post_boot_tasks"] = []
