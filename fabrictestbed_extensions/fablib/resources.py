@@ -584,8 +584,9 @@ class Resources:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site)
 
-    def get_ptp_capable(self,
-                        site: str or node.Node or network_node.NodeSliver) -> bool:
+    def get_ptp_capable(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> bool:
         """
         Gets the PTP flag of the site - if it has a native PTP capability
         :param site: site name or object
