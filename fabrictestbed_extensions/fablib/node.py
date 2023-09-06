@@ -2837,6 +2837,9 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def post_boot_tasks(self):
+        """
+        Get the list of tasks to be performed on this node after boot.
+        """
         fablib_data = self.get_fablib_data()
 
         if "post_boot_tasks" in fablib_data:
