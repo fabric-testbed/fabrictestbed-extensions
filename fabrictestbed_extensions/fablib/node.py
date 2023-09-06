@@ -2824,6 +2824,12 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def add_post_boot_execute(self, command: str):
+        """
+        Execute a command on the node after boot.
+
+        :param command: command to be executed on the node.
+        :type command: str
+        """
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" not in fablib_data:
             fablib_data["post_boot_tasks"] = []
