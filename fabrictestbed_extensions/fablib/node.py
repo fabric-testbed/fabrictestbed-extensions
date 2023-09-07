@@ -2990,6 +2990,25 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def config(self, log_dir="."):
+        """
+        Run configuration tasks for this node.
+
+        Configuration tasks include:
+
+            - Setting hostname.
+
+            - Configuring interfaces.
+
+            - Configuring routes.
+
+            - Running post-boot tasks added by
+              ``add_post_boot_execute()``,
+              ``add_post_boot_upload_file()``, and
+              ``add_post_boot_upload_directory()``.
+
+            - Running post-update commands added by
+              ``add_post_update_command()``.
+        """
         self.execute(f"sudo hostnamectl set-hostname '{self.get_name()}'", quiet=True)
 
         for iface in self.get_interfaces():
