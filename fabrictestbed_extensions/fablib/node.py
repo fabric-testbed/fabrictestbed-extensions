@@ -2820,7 +2820,7 @@ class Node:
 
         :param local_directory_path: local directory.
         :type local_directory_path: str
-        
+
         :param remote_directory_path: directory on the node.
         :type remote_directory_path: str
         """
@@ -2840,7 +2840,7 @@ class Node:
 
         :param local_file_path: path to file on local filesystem.
         :type local_file_path: str
-        
+
         :param remote_file_path: path to file on the node.
         :type remote_file_path: str
         """
