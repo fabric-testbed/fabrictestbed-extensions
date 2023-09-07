@@ -3262,6 +3262,9 @@ class Node:
             raise e
 
     def os_reboot(self):
+        """
+        Reboot the node.
+        """
         status = self.poa(operation="reboot")
         if status == "Failed":
             raise Exception("Failed to reboot the server")
