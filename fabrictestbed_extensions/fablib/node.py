@@ -2993,9 +2993,11 @@ class Node:
         """
         Run configuration tasks for this node.
 
-        Use this method in order to re-apply configuration to a
-        rebooted node.  Normally this method is invoked by
-        ``Slice.submit()`` or ``Slice.modify()``.
+        .. note ::
+
+            Use this method in order to re-apply configuration to a
+            rebooted node.  Normally this method is invoked by
+            ``Slice.submit()`` or ``Slice.modify()``.
 
         Configuration tasks include:
 
