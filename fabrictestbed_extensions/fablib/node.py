@@ -2770,6 +2770,17 @@ class Node:
         subnet: IPv4Network or IPv6Network,
         next_hop: IPv4Address or IPv6Address or NetworkService,
     ):
+        """
+        Add a route.
+
+        :param subnet: an IPv4 or IPv6 address.
+
+        :type subnet:IPv4Network or IPv6Network.
+
+        :param next_hop: a gateway address (IPv4Address or
+            IPv6Address) or a NetworkService.
+        :type next_hop: IPv4Address or IPv6Address or NetworkService.
+        """
         if type(next_hop) == NetworkService:
             next_hop = next_hop.get_name()
 
