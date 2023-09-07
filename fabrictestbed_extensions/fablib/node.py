@@ -2210,6 +2210,18 @@ class Node:
         )
 
     def ip_addr_list(self, output="json", update=False):
+        """
+        Return the list of IP addresses assciated with this node.
+
+        :param output: Output format; ``"json"`` by default.
+        :param update: Setting this to ``True`` will force-update the
+            cached list of IP addresses; default is ``False``.
+
+        :returns: When ``output`` is set to ``"json"`` (which is the
+                  default), the result of running ``ip -j[son] addr
+                  list``, converted to a Python object.  Otherwise the
+                  result of ``ip addr list``.
+        """
         try:
             if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
