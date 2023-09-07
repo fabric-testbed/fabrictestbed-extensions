@@ -2231,7 +2231,7 @@ class Node:
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
                 else:
-                    stdout, stderr = self.execute(f"sudo ip list", quiet=True)
+                    stdout, stderr = self.execute(f"sudo ip addr list", quiet=True)
                     return stdout
         except Exception as e:
             logging.debug(f"Failed to get ip addr list: {e}")
