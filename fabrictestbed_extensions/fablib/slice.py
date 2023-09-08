@@ -2101,6 +2101,10 @@ class Slice:
         :param filter_function: lambda function
         :type filter_function: lambda
 
+        :param pretty_names: Use "nicer" names in column headers.
+            Default is ``True``.
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
