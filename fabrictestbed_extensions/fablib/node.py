@@ -3033,6 +3033,14 @@ class Node:
     def add_fabnet(
         self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
     ):
+        """
+        Add a simple layer 3 network to this node.
+
+        :param name: a name for the network.  Default is ``"FABNET"``.
+        :param net_type: Network type, ``"IPv4"`` or ``"IPv6"``.
+        :param nic_type: a NIC type.  Default is ``"NIC_Basic"``.
+        :param routes: a list of routes to add.  Default is ``None``.
+        """
         site = self.get_site()
 
         net_name = f"{name}_{net_type}_{site}"
