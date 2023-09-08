@@ -23,7 +23,6 @@
 
 import socket
 import time
-import unittest
 import pytest
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
