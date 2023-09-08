@@ -33,6 +33,9 @@ from fabrictestbed_extensions.fablib.fablib import FablibManager
 def fabric_slice():
     fablib = FablibManager()
 
+    # Give the slice a unique name so that slice creation will not
+    # fail (because there is an existing slice with the same name) and
+    # we will have some hints about the test that created the slice.
     time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     host = socket.gethostname()
     slice_name = f"integration test @ {time_stamp} on {host}"
