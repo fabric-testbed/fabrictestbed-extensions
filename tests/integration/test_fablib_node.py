@@ -32,6 +32,10 @@ from fabrictestbed_extensions.fablib.slice import Slice
 
 
 class FablibNodeTests(unittest.TestCase):
+    """
+    Tests for fabrictestbed_extensions.fablib.node.Node.
+    """
+    
     def setUp(self):
         self.fablib = FablibManager()
 
