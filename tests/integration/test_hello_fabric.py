@@ -23,6 +23,7 @@ class HelloFabricTests(unittest.TestCase):
         # Add a node.
         node_name = "node-1"
         site_name = fablib.get_random_site()
+        slice_name = fabric_slice.get_name()
 
         print(
             f"Adding node '{node_name}' at site '{site_name}' to slice '{slice_name}'.."
