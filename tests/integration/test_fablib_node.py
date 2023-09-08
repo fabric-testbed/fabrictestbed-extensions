@@ -56,15 +56,11 @@ class FablibNodeTests(unittest.TestCase):
         self.slice.delete()
 
     def test_list_networks(self):
-        networks = self.node.list_networks()
-        self.assertEqual(networks, "")
+        self.assertEqual(self.node.list_networks(), "")
 
     def test_list_networks_pretty(self):
-        networks = self.node.list_networks(pretty_names=True)
-        self.assertEqual(networks, "")
-
-        networks = self.node.list_networks(pretty_names=False)
-        self.assertEqual(networks, "")
+        self.assertEqual(self.node.list_networks(pretty_names=True), "")
+        self.assertEqual(self.node.list_networks(pretty_names=False), "")
 
 
 if __name__ == "__main__":
