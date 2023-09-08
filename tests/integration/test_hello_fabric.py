@@ -1,3 +1,5 @@
+import pytest
+
 import socket
 import time
 import unittest
@@ -12,12 +14,10 @@ class HelloFabricTests(unittest.TestCase):
     Run some basic tests against the testbed.
     """
 
-    def test_fablib_hello(fabric_slice):
+    def test_fablib_hello(self, fablib, fabric_slice):
         """
         Create a slice with a single node, and echo a message from the node.
         """
-        fablib = FablibManager()
-
         self.assertIsInstance(fabric_slice, Slice)
 
         # Add a node.

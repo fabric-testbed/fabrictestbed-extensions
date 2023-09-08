@@ -30,9 +30,12 @@ from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
 @pytest.fixture(scope="session")
-def fabric_slice():
-    fablib = FablibManager()
+def fablib():
+    return FablibManager()
 
+
+@pytest.fixture(scope="session")
+def fabric_slice(fablib):
     # Give the slice a unique name so that slice creation will not
     # fail (because there is an existing slice with the same name) and
     # we will have some hints about the test that created the slice.
