@@ -44,6 +44,9 @@ class FablibNodeTests(unittest.TestCase):
 
         self.slice.submit()
 
+    def tearDown(self):
+        self.slice.delete()
+
     def test_setup(self):
         self.assertIsInstance(self.fablib.get_config(), dict)
         self.assertIsInstance(self.slice, Slice)
