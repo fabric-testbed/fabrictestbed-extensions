@@ -615,17 +615,12 @@ class Node:
 
             return False
 
-        if pretty_names and len(networks) > 0:
-            pretty_names_dict = networks[0].get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
         return self.get_slice().list_networks(
             fields=fields,
             output=output,
             quiet=quiet,
             filter_function=combined_filter_function,
-            pretty_names_dict=pretty_names_dict,
+            pretty_names=pretty_names,
         )
 
     def get_networks(self):
