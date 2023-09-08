@@ -42,15 +42,14 @@ class FablibNodeTests(unittest.TestCase):
         self.slice = self.fablib.new_slice(name=slice_name)
         self.node = self.slice.add_node(name="node-1")
 
+        self.assertIsInstance(self.fablib.get_config(), dict)
+        self.assertIsInstance(self.slice, Slice)
+        self.assertIsInstance(self.node, Node)
+
         self.slice.submit()
 
     def tearDown(self):
         self.slice.delete()
-
-    def test_setup(self):
-        self.assertIsInstance(self.fablib.get_config(), dict)
-        self.assertIsInstance(self.slice, Slice)
-        self.assertIsInstance(self.node, Node)
 
     def test_list_networks(self):
         networks = self.node.list_networks()
