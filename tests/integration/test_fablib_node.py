@@ -63,6 +63,9 @@ class FablibNodeTests(unittest.TestCase):
         networks = self.node.list_networks(pretty_names=True)
         self.assertEqual(networks, "")
 
+        networks = self.node.list_networks(pretty_names=False)
+        self.assertEqual(networks, "")
+
 
 if __name__ == "__main__":
     unittest.main()
