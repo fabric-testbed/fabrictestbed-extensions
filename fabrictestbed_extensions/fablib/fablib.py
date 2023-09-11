@@ -1683,6 +1683,7 @@ class FablibManager:
                 username=bastion_username,
                 key_filename=bastion_key_path,
                 passphrase=bastion_key_passphrase,
+                allow_agent=False,
                 look_for_keys=False,
             )
 
