@@ -117,15 +117,6 @@ $ pip install flit
 $ flit build
 ```
 
-While using flit as the build backend, continuing to use [build] as
-the build frontend should work too:
-
-```
-$ pip install build
-$ python -m build
-```
-
-
 ## Releasing FABlib
 
 When it is time to release a new version of FABlib, remember to: 
@@ -171,7 +162,6 @@ For details about publishing to PyPI, see flit documentation about
 [flit]: https://flit.pypa.io/en/stable/
 [package uploads]: https://flit.pypa.io/en/latest/upload.html
 
-[build]: https://pypi.org/project/build/
 [tox]: https://pypi.org/project/tox/
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
