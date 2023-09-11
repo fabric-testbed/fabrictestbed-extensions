@@ -128,13 +128,14 @@ $ python -m build
 
 ## Releasing FABlib
 
-When it is time to release a new version of FABlib, remember to: (1)
-update the package version in `pyproject.toml`, (2) build the source
-and wheel packages, and (3) upload packages to PyPI:
+When it is time to release a new version of FABlib, remember to: 
 
-```console
-$ flit publish
-```
+1. Update the package version in `pyproject.toml`.
+2. Build the source and wheel packages, and upload packages to PyPI with:
+
+    ```console
+    $ flit publish
+    ```
 
 Continuing to use twine to publish packages is an option too:
 
