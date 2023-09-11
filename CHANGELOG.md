@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Missing docstrings for `Node.add_fabnet()` (PR
   [#240](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/240))
-
+- Version in pyproject.toml (Issue
+  [#248](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/248))
 
 ## [1.5.5]
 
