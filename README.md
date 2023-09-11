@@ -129,8 +129,8 @@ $ python -m build
 ## Releasing FABlib
 
 When it is time to release a new version of FABlib, remember to: (1)
-update the package version in top-level `__init__.py`, (2) build the
-source and wheel packages, and (3) upload packages to PyPI:
+update the package version in `pyproject.toml`, (2) build the source
+and wheel packages, and (3) upload packages to PyPI:
 
 ```console
 $ flit publish
