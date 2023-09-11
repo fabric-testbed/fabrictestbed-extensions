@@ -128,12 +128,6 @@ When it is time to release a new version of FABlib, remember to:
     $ flit publish
     ```
 
-Continuing to use twine to publish packages is an option too:
-
-```console
-$ twine upload dist/*
-```
-
 For details about publishing to PyPI, see flit documentation about
 [package uploads].
 
