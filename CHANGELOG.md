@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Missing docstrings for `Node.add_fabnet()` (PR
+  [#240](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/240))
+
+
+## [1.5.5]
+
+### Added
+
+- Display and filter by PTP availability at each site based on ARM
+  information (PR [#236](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/236)).
+- Missing docstrings for Node module (PR
+  [#237](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/237))
+
+### [1.5.4] - 2023-08-21
+
+### Changed
+
+- Some optimizations in `list_sites()`, `show_site()`, `get_random_site()`
+  (PR [#230](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/230))
+- Fix `slice.wait()` to update slice ensuring slice is in `StableOK` or `StableError` state (Issue [#231](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/231))
+
+### Fixed
+- Update default username for `defaul_centos9_stream` image (Issue [#227](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/227))
 
 ## [1.5.2] - 2023-08-02
 

@@ -689,6 +689,8 @@ class Node:
         """
         if username is not None:
             self.username = username
+        elif "default_centos9_stream" == self.get_image():
+            self.username = "cloud-user"
         elif "centos" in self.get_image():
             self.username = "centos"
         elif "ubuntu" in self.get_image():
@@ -2208,6 +2210,18 @@ class Node:
         )
 
     def ip_addr_list(self, output="json", update=False):
+        """
+        Return the list of IP addresses assciated with this node.
+
+        :param output: Output format; ``"json"`` by default.
+        :param update: Setting this to ``True`` will force-update the
+            cached list of IP addresses; default is ``False``.
+
+        :returns: When ``output`` is set to ``"json"`` (which is the
+                  default), the result of running ``ip -j[son] addr
+                  list``, converted to a Python object.  Otherwise the
+                  result of ``ip addr list``.
+        """
         try:
             if self.ip_addr_list_json is not None and update == False:
                 return self.ip_addr_list_json
@@ -2217,7 +2231,7 @@ class Node:
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
                 else:
-                    stdout, stderr = self.execute(f"sudo ip list", quiet=True)
+                    stdout, stderr = self.execute(f"sudo ip addr list", quiet=True)
                     return stdout
         except Exception as e:
             logging.debug(f"Failed to get ip addr list: {e}")
@@ -2756,6 +2770,17 @@ class Node:
         subnet: IPv4Network or IPv6Network,
         next_hop: IPv4Address or IPv6Address or NetworkService,
     ):
+        """
+        Add a route.
+
+        :param subnet: an IPv4 or IPv6 address.
+
+        :type subnet:IPv4Network or IPv6Network.
+
+        :param next_hop: a gateway address (IPv4Address or
+            IPv6Address) or a NetworkService.
+        :type next_hop: IPv4Address or IPv6Address or NetworkService.
+        """
         if type(next_hop) == NetworkService:
             next_hop = next_hop.get_name()
 
@@ -2766,6 +2791,9 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def add_post_update_command(self, command: str):
+        """
+        Run a command after boot.
+        """
         fablib_data = self.get_fablib_data()
         if "post_update_commands" not in fablib_data:
             fablib_data["post_update_commands"] = []
@@ -2774,6 +2802,9 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def get_post_update_commands(self):
+        """
+        Get the list of commands that are to be run after boot.
+        """
         fablib_data = self.get_fablib_data()
 
         if "post_update_commands" in fablib_data:
@@ -2784,6 +2815,15 @@ class Node:
     def add_post_boot_upload_directory(
         self, local_directory_path: str, remote_directory_path: str = "."
     ):
+        """
+        Upload a directory to the node after boot.
+
+        :param local_directory_path: local directory.
+        :type local_directory_path: str
+
+        :param remote_directory_path: directory on the node.
+        :type remote_directory_path: str
+        """
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" not in fablib_data:
             fablib_data["post_boot_tasks"] = []
@@ -2795,6 +2835,15 @@ class Node:
     def add_post_boot_upload_file(
         self, local_file_path: str, remote_file_path: str = "."
     ):
+        """
+        Upload a file to the node after boot.
+
+        :param local_file_path: path to file on local filesystem.
+        :type local_file_path: str
+
+        :param remote_file_path: path to file on the node.
+        :type remote_file_path: str
+        """
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" not in fablib_data:
             fablib_data["post_boot_tasks"] = []
@@ -2804,6 +2853,12 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def add_post_boot_execute(self, command: str):
+        """
+        Execute a command on the node after boot.
+
+        :param command: command to be executed on the node.
+        :type command: str
+        """
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" not in fablib_data:
             fablib_data["post_boot_tasks"] = []
@@ -2811,6 +2866,9 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def post_boot_tasks(self):
+        """
+        Get the list of tasks to be performed on this node after boot.
+        """
         fablib_data = self.get_fablib_data()
 
         if "post_boot_tasks" in fablib_data:
@@ -2932,6 +2990,31 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def config(self, log_dir="."):
+        """
+        Run configuration tasks for this node.
+
+        .. note ::
+
+            Use this method in order to re-apply configuration to a
+            rebooted node.  Normally this method is invoked by
+            ``Slice.submit()`` or ``Slice.modify()``.
+
+        Configuration tasks include:
+
+            - Setting hostname.
+
+            - Configuring interfaces.
+
+            - Configuring routes.
+
+            - Running post-boot tasks added by
+              ``add_post_boot_execute()``,
+              ``add_post_boot_upload_file()``, and
+              ``add_post_boot_upload_directory()``.
+
+            - Running post-update commands added by
+              ``add_post_update_command()``.
+        """
         self.execute(f"sudo hostnamectl set-hostname '{self.get_name()}'", quiet=True)
 
         for iface in self.get_interfaces():
@@ -2950,6 +3033,14 @@ class Node:
     def add_fabnet(
         self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
     ):
+        """
+        Add a simple layer 3 network to this node.
+
+        :param name: a name for the network.  Default is ``"FABNET"``.
+        :param net_type: Network type, ``"IPv4"`` or ``"IPv6"``.
+        :param nic_type: a NIC type.  Default is ``"NIC_Basic"``.
+        :param routes: a list of routes to add.  Default is ``None``.
+        """
         site = self.get_site()
 
         net_name = f"{name}_{net_type}_{site}"
@@ -3227,6 +3318,9 @@ class Node:
             raise e
 
     def os_reboot(self):
+        """
+        Reboot the node.
+        """
         status = self.poa(operation="reboot")
         if status == "Failed":
             raise Exception("Failed to reboot the server")
