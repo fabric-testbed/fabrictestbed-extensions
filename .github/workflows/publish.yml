@@ -57,8 +57,9 @@ jobs:
       # See https://docs.github.com/en/actions/using-workflows/using-github-cli-in-workflows
       - name: Create a GitHub release
         run: |
+          RELEASE_TAG=${{ env.GITHUB_REF_NAME }}
           RELEASE_TITLE="Release $(echo "$RELEASE_TAG" | sed 's/^rel//g')"
+          echo "RELEASE_TAG = ${RELEASE_TAG}, RELEASE_TITLE=${RELEASE_TITLE}"
           gh release create ${RELEASE_TAG} --title=${RELEASE_TITLE} --generate-notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ env.GITHUB_REF_NAME }}
