@@ -2,6 +2,8 @@
 
 name: Publish
 
+# This workflow will be triggered when a tag with prefix "rel" is
+# pushed to the repository.
 on:
   push:
     tags:
