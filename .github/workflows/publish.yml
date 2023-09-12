@@ -52,3 +52,11 @@ jobs:
       # See https://github.com/marketplace/actions/pypi-publish.
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create a GitHub release
+        run: |
+          RELEASE_TITLE="Release $(echo "$RELEASE_TAG" | sed 's/^rel//g')"
+          gh release create ${RELEASE_TAG} --title=${RELEASE_TITLE} --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ env.GITHUB_REF_NAME }}
