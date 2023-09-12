@@ -62,7 +62,7 @@ jobs:
         run: |
           RELEASE_TAG=$GITHUB_REF_NAME
           RELEASE_TITLE="Release $(echo "$RELEASE_TAG" | sed 's/^rel//g')"
-          echo "RELEASE_TAG = ${RELEASE_TAG}, RELEASE_TITLE=${RELEASE_TITLE}"
+          echo "RELEASE_TAG=${RELEASE_TAG}, RELEASE_TITLE=${RELEASE_TITLE}"
           gh release create ${RELEASE_TAG} --title="${RELEASE_TITLE}" --generate-notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
