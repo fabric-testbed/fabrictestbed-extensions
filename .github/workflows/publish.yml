@@ -53,6 +53,8 @@ jobs:
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
+      # GitHub CLI (aka "gh" command) is pre-installed in hosted runners.
+      # See https://docs.github.com/en/actions/using-workflows/using-github-cli-in-workflows
       - name: Create a GitHub release
         run: |
           RELEASE_TITLE="Release $(echo "$RELEASE_TAG" | sed 's/^rel//g')"
