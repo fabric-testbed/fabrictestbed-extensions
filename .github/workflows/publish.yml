@@ -28,8 +28,8 @@ jobs:
   publish:
     needs:
       - tests
-      
-    steps:        
+
+    steps:
       - name: Check out sources
         uses: actions/checkout@v3
 
