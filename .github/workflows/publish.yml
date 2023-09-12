@@ -16,7 +16,7 @@ jobs:
 
     environment:
       name: publish
-      url: https://test.pypi.org/p/fabrictestbed-extensions
+      url: https://pypi.org/p/fabrictestbed-extensions
 
     # This permission is mandatory for trusted publishing.
     permissions:
@@ -42,5 +42,3 @@ jobs:
       # See https://github.com/marketplace/actions/pypi-publish.
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
