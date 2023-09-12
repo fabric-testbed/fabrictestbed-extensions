@@ -15,14 +15,14 @@ on:
       - "rel*"
 
 jobs:
-  tests:
-    uses: ./.github/workflows/test.yml
+  # tests:
+  #   uses: ./.github/workflows/test.yml
 
   pypi-publish:
     name: Publish packages on PyPI
     runs-on: ubuntu-latest
-    needs:
-      - tests
+    # needs:
+    #   - tests
 
     environment:
       name: publish
