@@ -1683,6 +1683,7 @@ class FablibManager:
                 username=bastion_username,
                 key_filename=bastion_key_path,
                 passphrase=bastion_key_passphrase,
+                allow_agent=False,
                 look_for_keys=False,
             )
 
@@ -1691,12 +1692,14 @@ class FablibManager:
                 logging.info(f"Connection with {bastion_host} appears to be working")
                 return True
 
-        # In theory paramiko can raise several types of exceptions,
-        # but in practice it has not been that precise.  Let us treat
-        # all exceptions as un-recoverable for now, and refine the
-        # behavior based on some real-world testing.
-        except (paramiko.SSHException, Exception) as e:
-            logging.error(f"Bastion connection error: {e}")
+        except paramiko.SSHException as e:
+            logging.error(
+                f"Error connecting to bastion host {bastion_host} "
+                f"(hint: check your bastion key setup?): {e}"
+            )
+            raise e
+        except Exception as e:
+            logging.error(f"Error connecting to bastion host {bastion_host}: {e}")
             raise e
 
         finally:
