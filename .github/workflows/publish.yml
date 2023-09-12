@@ -28,9 +28,12 @@ jobs:
       name: publish
       url: https://pypi.org/p/fabrictestbed-extensions
 
-    # This permission is mandatory for trusted publishing.
+    # See https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
     permissions:
+      # This permission is mandatory for trusted publishing.
       id-token: write
+      # This permission allows the action to create a release.
+      contents: write
 
     steps:
       - name: Check out sources
