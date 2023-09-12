@@ -7,7 +7,6 @@ name: Publish
 on:
   push:
     tags:
-      - "v*"
       - "rel*"
 
 jobs:
