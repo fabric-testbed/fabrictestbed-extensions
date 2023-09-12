@@ -128,9 +128,29 @@ $ python -m build
 
 ## Releasing FABlib
 
-When it is time to release a new version of FABlib, remember to: (1)
-update the package version in top-level `__init__.py`, (2) build the
-source and wheel packages, and (3) upload packages to PyPI:
+The "[publish]" workflow automates building packages and publishing
+them on PyPI.  In order to publish a new FABlib version on PyPI,
+follow these steps:
+
+1. Bump up version in top-level `__init__.py`.
+2. Update changelog.
+3. Start a PR with these changes, and get it merged.
+4. Tag the release, and push the tag to GitHub:
+
+   ```console
+   $ git tag --sign --message="Great set of features" relX.Y.Z <ref>
+   $ git push <origin> --tags relX.Y.Z
+   ```
+This should trigger the publish workflow that will: (1) run unit
+tests, (2) build FABlib sdist and wheel packages, and then (3) publish
+the packages on PyPI.
+
+
+### Manual steps
+
+In order to "manually" upload FABlib packages (such as in the case of
+release candidate versions), bump up the version string in the
+appropriate place, and then do:
 
 ```console
 $ flit publish
@@ -175,3 +195,5 @@ For details about publishing to PyPI, see flit documentation about
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
 [isort]: https://pypi.org/project/isort/
+
+[publish]: ./.github/workflows/publish.yml
