@@ -22,12 +22,14 @@ jobs:
     permissions:
       id-token: write
 
-    tests:
-      uses: ./.github/workflows/test.yml
+  tests:
+    uses: ./.github/workflows/test.yml
 
-    steps:
-      needs: [tests]
-
+  publish:
+    needs:
+      - tests
+      
+    steps:        
       - name: Check out sources
         uses: actions/checkout@v3
 
