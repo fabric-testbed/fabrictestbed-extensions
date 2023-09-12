@@ -142,8 +142,8 @@ follow these steps:
    $ git push <origin> --tags relX.Y.Z
    ```
 This should trigger the publish workflow that will: (1) run unit
-tests, (2) build FABlib sdist and wheel packages, and then (3) publish
-the packages on PyPI.
+tests, (2) build FABlib sdist and wheel packages, (3) publish
+the packages on PyPI, and (4) create a GitHub release.
 
 
 ### Manual steps
