@@ -1,4 +1,9 @@
 # Publish the package on PyPI.
+#
+# https://pypi.org/project/fabrictestbed-extensions/ is configured
+# with GitHub as "trusted publisher", meaning, there is no exchange of
+# a long-term password or token between GitHub and PyPI.  See
+# documentation here: https://docs.pypi.org/trusted-publishers/
 
 name: Publish
 
