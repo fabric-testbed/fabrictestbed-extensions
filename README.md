@@ -74,7 +74,7 @@ the top-level `tests` directory.  Unit tests can be run like so, using
 [tox]:
 
 ```console
-$ pip install -e .[test]
+$ pip install tox
 $ tox
 ```
 
@@ -88,6 +88,7 @@ Tox attempts to run tests in an isolated virtual environment.  If you
 want to run some tests directly using [pytest], that is possible too:
 
 ```
+$ pip install -e .[test]
 $ pytest -s tests/integration/test_hello_fabric.py
 ```
 
