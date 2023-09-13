@@ -151,13 +151,10 @@ the packages on PyPI, and (4) create a GitHub release.
 In order to "manually" upload FABlib packages (such as in the case of
 release candidate versions), bump up the version string in the
 appropriate place, and then do:
-
-1. Update the package version in `pyproject.toml`.
-2. Build the source and wheel packages, and upload packages to PyPI with:
-
-    ```console
-    $ flit publish
-    ```
+ 
+```console
+$ flit publish
+```
 
 Continuing to use twine to publish packages is an option too:
 
