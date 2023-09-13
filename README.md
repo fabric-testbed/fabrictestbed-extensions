@@ -151,7 +151,7 @@ the packages on PyPI, and (4) create a GitHub release.
 In order to "manually" upload FABlib packages (such as in the case of
 release candidate versions), bump up the version string in the
 appropriate place, and then do:
- 
+
 ```console
 $ flit publish
 ```
