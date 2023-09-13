@@ -123,7 +123,7 @@ The "[publish]" workflow automates building packages and publishing
 them on PyPI.  In order to publish a new FABlib version on PyPI,
 follow these steps:
 
-1. Bump up version in top-level `__init__.py`.
+1. Bump up version in `pyproject.toml`.
 2. Update changelog.
 3. Start a PR with these changes, and get it merged.
 4. Tag the release, and push the tag to GitHub:
