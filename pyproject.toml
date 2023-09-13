@@ -42,8 +42,17 @@ Documentation = "https://fabric-fablib.readthedocs.io/"
 ChangeLog = "https://github.com/fabric-testbed/fabrictestbed-extensions/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-doc = ["sphinx", "furo"]
-test = ["black==23.*", "isort==5.*", "tox==4.*", "pytest", "coverage[toml]"]
+doc = [
+  "sphinx",
+  "furo"
+]
+test = [
+  "black==23.*",
+  "isort==5.*",
+  "tox==4.*",
+  "pytest",
+  "coverage[toml]"
+]
 
 [tool.coverage.run]
 branch = true
