@@ -2070,31 +2070,41 @@ class Slice:
         """
         Lists all the networks in the slice.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: "text", "pandas", and "json"
+        that determine the format of the output that is returned and
+        (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        output: 'text': string formatted with tabular 'pandas': pandas
+        dataframe 'json': string in json format
 
         fields: json output will include all available fields/columns.
 
         Example: fields=['Name','State']
 
-        filter_function:  A lambda function to filter data by field values.
+        filter_function: A lambda function to filter data by field
+        values.
 
         Example: filter_function=lambda s: s['State'] == 'Active'
 
         :param output: output format
         :type output: str
+
         :param fields: list of fields (table columns) to show
         :type fields: List[str]
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-        :param filter_function: lambda function
-        :type filter_function: lambda
+
         :param colors: True to add colors to the table when possible
         :type colors: bool
+
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+
+        :param filter_function: lambda function
+        :type filter_function: lambda
+
+        :param pretty_names: Use "nicer" names in column headers.
+            Default is ``True``.
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
