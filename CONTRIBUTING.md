@@ -109,7 +109,8 @@ follow these steps:
 1. Bump up version in `pyproject.toml`.
 2. Update `CHANGELOG.md`.
 3. Start a PR with these changes, and get it merged.
-4. Tag the release, and push the tag to GitHub:
+4. Once the PR is merged, do: `git switch main; git pull <origin> main`
+5. Tag the release, and push the tag to GitHub:
 
    ```console
    $ git tag --sign --message="Great set of features" <relX.Y.Z> <ref>
