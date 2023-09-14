@@ -23,6 +23,8 @@ submit a pull request, some tests will run against it:
 
 - Code formatting will be checked using [black] and [isort].  Be sure
   that your code is formatted with these tools.
+- FABRIC project has a policy of requiring signed commits.  Commits on
+  the PR branch will be checked to ensure that they are signed.
 - Unit tests will be run.
 - Packages will be built.
 - CHANGELOG.md will be checked for updates.
