@@ -38,12 +38,16 @@ checks for signed commits.
 ## Testing FABlib
 
 FABlib currently has a modest set of unit and integration tests, under
-`[tests]` directory.
+[tests] directory.  Install [tox] to run them in isolated virtual
+environments:
+
+```console
+$ pip install tox
+```
 
 Unit tests can be run like so, using [tox]:
 
 ```console
-$ pip install tox
 $ tox
 ```
 
@@ -53,8 +57,8 @@ Integration tests can be run like so:
 $ tox -e integration
 ```
 
-Tox attempts to run tests in an isolated virtual environment.  If you
-want to run some tests directly using [pytest], that is possible too:
+If you want to run some tests directly using [pytest], that is
+possible too:
 
 ```
 $ pip install -e .[test]
