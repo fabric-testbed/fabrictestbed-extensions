@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PR [#247](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/247))
 - Version in pyproject.toml (Issue
   [#248](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/248))
+- Separate contribution guidelines (Issue
+  [#242](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/242),
+  [#243](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/243),
+  PR [#251](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/251))
 
 
 ## [1.5.5]
