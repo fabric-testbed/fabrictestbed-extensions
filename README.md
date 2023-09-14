@@ -58,8 +58,8 @@ FABlib API docs can be found [here][fablib-api-rtd].
 ## Contributing to FABlib
 
 We welcome contributions in the form of bug reports, feature requests,
-code patches, documentation updates, etc.  If you are planning to help
-FABlib development, please review the [guidelines] .
+code patches, documentation updates, etc.  If you have ideas that can
+help FABlib, please review the [guidelines] first.
 
 
 <!-- URLs -->
