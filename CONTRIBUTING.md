@@ -112,8 +112,8 @@ follow these steps:
 4. Tag the release, and push the tag to GitHub:
 
    ```console
-   $ git tag --sign --message="Great set of features" relX.Y.Z <ref>
-   $ git push <origin> --tags relX.Y.Z
+   $ git tag --sign --message="Great set of features" <relX.Y.Z> <ref>
+   $ git push <origin> --tags <relX.Y.Z>
    ```
 This should trigger the publish workflow that will:
 
