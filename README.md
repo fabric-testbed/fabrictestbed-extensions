@@ -52,8 +52,7 @@ except Exception as e:
     print(f"Exception: {e}")
 ```
 
-Since FABlib 1.4, API docs can be found [here][fablib-api-rtd]. Older
-API docs are [here][fablib-api-old].
+FABlib API docs can be found [here][fablib-api-rtd].
 
 
 ## Contributing to FABlib
