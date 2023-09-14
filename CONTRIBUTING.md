@@ -38,7 +38,9 @@ checks for signed commits.
 ## Testing FABlib
 
 FABlib currently has a modest set of unit and integration tests, under
-`[tests]` directory.  Unit tests can be run like so, using [tox]:
+`[tests]` directory.
+
+Unit tests can be run like so, using [tox]:
 
 ```console
 $ pip install tox
