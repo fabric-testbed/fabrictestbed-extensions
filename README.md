@@ -5,14 +5,15 @@
 This repository contains implementation of a Python API, otherwise
 known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
 
-Your first encounter with FABlib however might be through FABRIC
-project's [JupyterHub][fabric-jupyter] instance. You will be presented
-with many examples on FABlib usage when you log in there. The
-[notebook sources][fabric-jupyter-examples] can be found on GitHub as
-well.
+Your first encounter with FABlib might be through FABRIC project's
+[JupyterHub instance][fabric-jupyter], where FABlib is pre-installed
+for you. You will be presented with many examples on FABlib usage when
+you log in there. The [notebook sources][fabric-jupyter-examples] can
+be found on GitHub as well.
 
-If you want to interact with FABRIC from Jupyter installed on your
-computer, see: [Install the FABRIC Python API][fablib-install].
+If you want to interact with FABRIC from Jupyter or a Python project
+on your local development environment, that is possible too.  See
+[Install the FABRIC Python API][fablib-install] for details.
 
 
 ## Installing FABlib
