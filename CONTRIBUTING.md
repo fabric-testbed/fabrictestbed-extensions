@@ -25,9 +25,9 @@ submit a pull request, some tests will run against it:
   that your code is formatted with these tools.
 - FABRIC project has a policy of requiring signed commits.  Commits on
   the PR branch will be checked to ensure that they are signed.
+- CHANGELOG.md will be checked for updates.
 - Unit tests will be run.
 - Packages will be built.
-- CHANGELOG.md will be checked for updates.
 
 
 ## Testing FABlib
