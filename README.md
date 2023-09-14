@@ -15,7 +15,9 @@ If you want to interact with FABRIC from Jupyter or a Python project
 on your local development environment, that is possible too.  See
 [Install the FABRIC Python API][fablib-install] for details.
 
-FABlib API docs can be found [here][fablib-api-rtd].
+FABlib API docs can be found [here][fablib-api-rtd].  If you have
+questions about FABRIC or FABlib usage, please ask them in FABRIC
+[forums].
 
 ## Installing FABlib
 
@@ -71,6 +73,7 @@ help FABlib, please review the [guidelines] first.
 [api-docs-badge]: https://readthedocs.org/projects/fabric-fablib/badge/?version=latest (Documentation Status)
 
 [fabric]: https://fabric-testbed.net/
+[forums]: https://learn.fabric-testbed.net/forums/
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 
