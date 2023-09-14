@@ -5,6 +5,10 @@ the form of bug reports, feature requests, code patches, documentation
 updates, and anything else that may be helpful.  Please review these
 guidelines first.
 
+FABlib is developed on its GitHub [repository], and uses GitHub issues
+and pull requests.
+
+
 ## Submitting Issues
 
 If you want to add a new feature to FABlib or report that something is
@@ -125,6 +129,8 @@ For details about publishing to PyPI, see flit documentation about
 
 
 <!-- URLs -->
+
+[repository]: https://github.com/fabric-testbed/fabrictestbed-extensions/
 
 [flit]: https://flit.pypa.io/en/stable/
 [package uploads]: https://flit.pypa.io/en/latest/upload.html
