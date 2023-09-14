@@ -32,7 +32,7 @@ submit a pull request, some tests will run against it:
 
 Most of these checks must pass before a PR is approved and merged.  We
 do not tend to be super strict about these checks, except the one that
-checks for signed commits.
+checks for signed commits.  Signed commits are mandatory.
 
 
 ## Testing FABlib
