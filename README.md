@@ -13,7 +13,8 @@ sources][fabric-jupyter-examples] can be found on GitHub as well.
 
 If you want to interact with FABRIC from Jupyter or a Python project
 on your local development environment, that is possible too.  See
-[Install the FABRIC Python API][fablib-install] for details.
+[Install the FABRIC Python API][fablib-install] and the notes below
+for details.
 
 FABlib API docs can be found [here][fablib-api-rtd].  If you have
 questions about FABRIC or FABlib usage, please ask them in FABRIC
