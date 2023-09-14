@@ -109,9 +109,12 @@ follow these steps:
    $ git tag --sign --message="Great set of features" relX.Y.Z <ref>
    $ git push <origin> --tags relX.Y.Z
    ```
-This should trigger the publish workflow that will: (1) run unit
-tests, (2) build FABlib sdist and wheel packages, (3) publish
-the packages on PyPI, and (4) create a GitHub release.
+This should trigger the publish workflow that will: 
+
+- Run unit tests, 
+- Build FABlib sdist and wheel packages, 
+- Publish the packages on PyPI, and 
+- Create a GitHub release.
 
 
 ### Manual steps
