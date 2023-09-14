@@ -57,6 +57,10 @@ computer, see: [Install the FABRIC Python API][fablib-install].
 
 ## Contributing to FABlib
 
+We welcome contributions in the form of bug reports, feature requests,
+code patches, documentation updates, etc.  If you are planning to help
+FABlib development, please review the [guidelines] .
+
 
 <!-- URLs -->
 
@@ -79,3 +83,4 @@ computer, see: [Install the FABRIC Python API][fablib-install].
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
 
+[guidelines]: ./CONTRIBUTING.md
