@@ -5,6 +5,15 @@
 This repository contains implementation of a Python API, otherwise
 known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
 
+Your first encounter with FABlib however might be through FABRIC
+project's [JupyterHub][fabric-jupyter] instance. You will be presented
+with many examples on FABlib usage when you log in there. The
+[notebook sources][fabric-jupyter-examples] can be found on GitHub as
+well.
+
+If you want to interact with FABRIC from Jupyter installed on your
+computer, see: [Install the FABRIC Python API][fablib-install].
+
 
 ## Installing FABlib
 
@@ -42,17 +51,8 @@ except Exception as e:
     print(f"Exception: {e}")
 ```
 
-Your first encounter with FABlib however might be through FABRIC
-project's [JupyterHub][fabric-jupyter] instance. You will be presented
-with many examples on FABlib usage when you log in there. The
-[notebook sources][fabric-jupyter-examples] can be found on GitHub as
-well.
-
 Since FABlib 1.4, API docs can be found [here][fablib-api-rtd]. Older
 API docs are [here][fablib-api-old].
-
-If you want to interact with FABRIC from Jupyter installed on your
-computer, see: [Install the FABRIC Python API][fablib-install].
 
 
 ## Contributing to FABlib
