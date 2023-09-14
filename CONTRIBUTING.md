@@ -1,5 +1,10 @@
 # Contributing to FABlib
 
+Thank you for considering to help FABlib!  We welcome contributions in
+the form of bug reports, feature requests, code patches, documentation
+updates, and anything else that may be helpful.  Please review these
+guidelines first.
+
 ## Submitting Pull Requests
 
 Contributions to FABlib are made with GitHub Pull Requests. When you
