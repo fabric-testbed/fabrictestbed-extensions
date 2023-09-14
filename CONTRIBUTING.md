@@ -45,7 +45,7 @@ environments:
 $ pip install tox
 ```
 
-Unit tests can be run like so, using [tox]:
+Unit tests can be run like so:
 
 ```console
 $ tox
