@@ -67,7 +67,7 @@ help FABlib, please review the [guidelines] first.
 <!-- URLs -->
 
 [pypy]: https://pypi.org/project/fabrictestbed-extensions/
-[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions?style=plastic (PyPI)
+[pypi-badge]: https://img.shields.io/pypi/v/fabrictestbed-extensions (PyPI)
 
 [api-docs]: https://fabric-fablib.readthedocs.io/en/latest/?badge=latest
 [api-docs-badge]: https://readthedocs.org/projects/fabric-fablib/badge/?version=latest (Documentation Status)
