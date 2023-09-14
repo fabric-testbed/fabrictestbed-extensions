@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Update default username for `defaul_centos9_stream` image (Issue [#227](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/227))
 
+
 ## [1.5.2] - 2023-08-02
 
 ### Fixed
@@ -44,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Address a crash when querying NUMA properties. (Issue
   [#191](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/191),
   PR [#192](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/192))
+
+### Changed
+
+- FablibManager validates ssh keys (PR
+  [#136](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/136))
+
+### Added
+
 
 ### Changed
 
@@ -65,6 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#184](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/184),
   [#186](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/186),
   PR [#187](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/187))
+
+### Removed
+
 - Make Network Interface Config Idempotant
   (Issue [#205](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/205))
 - Methods added to retrieve SSH keys for bastion and sliver (PR

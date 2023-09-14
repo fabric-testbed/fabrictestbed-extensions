@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import pathlib
 import random
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
@@ -47,6 +48,7 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
+from fabrictestbed_extensions.fablib.exceptions import FablibConfigurationError
 from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
 from fabrictestbed_extensions.fablib.slice import Slice
 
@@ -815,13 +817,127 @@ class FablibManager:
             if not hasattr(self, attr) or getattr(self, attr) is None:
                 errors.append(f"{value} is not set")
 
-        if errors:
-            # TODO: define custom exception class to report errors,
-            # and emit a more helpful error message with hints about
-            # setting up environment variables or configuration file.
-            raise AttributeError(
-                f"Error initializing {self.__class__.__name__}: {errors}"
+        # Validate ssh keys and certs.  We check that:
+        #
+        #  - Keys and certs exists.
+        #  - Keys are of the right type (RSA or ECDSA).
+        #  - If keys are password protected, we must know the
+        #    passwords.
+        if not hasattr(self, "bastion_key_filename"):
+            errors.append("bastion key filename is not known")
+        elif self.bastion_key_filename is None:
+            errors.append("bastion key filename is set to None")
+        else:
+            # Check that we have a usable bastion key and passphrase.
+            errors += self._check_key_and_cert(
+                ssh_key_file=self.get_bastion_key_filename(),
+                ssh_key_pass=self.bastion_passphrase,
+                ssh_cert_file=None,
+                usage_site="bastion",
             )
+
+        if self.get_default_slice_private_key_file() is None:
+            errors.append("sliver key filename is set to None")
+        else:
+            # Check that we have a usable slice/sliver private key, the
+            # necessary passphrase to unlock the key, and a public key
+            # (also known as a certificate).
+            errors += self._check_key_and_cert(
+                ssh_key_file=self.get_default_slice_private_key_file(),
+                ssh_key_pass=self.get_default_slice_private_key_passphrase(),
+                ssh_cert_file=self.get_default_slice_public_key_file(),
+                usage_site="sliver",
+            )
+
+        if errors:
+            raise FablibConfigurationError(
+                message=f"Error initializing {self.__class__.__name__}",
+                errors=errors,
+            )
+
+    @staticmethod
+    def _check_key_and_cert(
+        ssh_key_file, ssh_key_pass=None, ssh_cert_file=None, usage_site=None
+    ):
+        """
+        Given an SSH key and cert, ensure that we can use them.
+
+        FABRIC accepts RSA keys of length 3072 bits or longer, and
+        ECDSA keys of length 256 bits or longer.
+
+        https://learn.fabric-testbed.net/knowledge-base/logging-into-fabric-vms/
+
+        This method checks that they keys and certs are usable, and
+        conforms to FABRIC policy regarding key types and their
+        lengths.  This method is messy, because paramiko does not
+        offer an easy API for querying ssh keys.
+
+        https://github.com/paramiko/paramiko/issues/1303
+        """
+        errors = []
+        key = None
+        rsa_key_error = None
+        ecdsa_key_error = None
+
+        # If we can't read the key file, give up early.
+        try:
+            pathlib.Path(ssh_key_file).read_bytes()
+        except Exception as e:
+            errors.append(
+                f"Error opening {usage_site} key '{ssh_key_file}' (error: {e})"
+            )
+            return errors
+
+        # Do we have an RSA key?
+        try:
+            # We depend on the fact passing the wrong type of key file
+            # to the wrong class or passing the wrong password will
+            # raise an exception.
+            key = paramiko.RSAKey.from_private_key_file(ssh_key_file, ssh_key_pass)
+            bits = key.get_bits()
+            if bits < 3072:
+                errors.append(
+                    f"Key size for {usage_site} RSA key '{ssh_key_file}' is {bits}. Need >= 3072"
+                )
+        except Exception as e:
+            rsa_key_error = (
+                f"Error reading {usage_site} SSH key: '{ssh_key_file}' (error: {e})"
+            )
+
+        if key is None:
+            # Do we have an ECDSA key, then?
+            try:
+                key = paramiko.ECDSAKey.from_private_key_file(
+                    ssh_key_file, ssh_key_pass
+                )
+                bits = key.get_bits()
+                if bits < 256:
+                    errors.append(
+                        f"Key size for {usage_site} ECDSA key '{ssh_key_file}' is {bits}. Need >= 256"
+                    )
+            except Exception as e:
+                ecdsa_key_error = (
+                    f"Error reading {usage_site} SSH key: '{ssh_key_file}' (error: {e})"
+                )
+
+        # If key is still none, we have an error.
+        if key is None:
+            if rsa_key_error and ecdsa_key_error:
+                errors.append(f"SSH key '{ssh_key_file}' is neither RSA nor ECDSA")
+                return errors
+            if rsa_key_error:
+                errors.append(rsa_key_error)
+            if ecdsa_key_error:
+                errors.append(ecdsa_key_error)
+
+        if key and ssh_cert_file:
+            try:
+                key.load_certificate(ssh_cert_file)
+            except Exception as e:
+                errors.append(f"Error loading {usage_site} cert '{ssh_cert_file}': {e}")
+
+        # Return all the errors we've accumulated so far.
+        return errors
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor

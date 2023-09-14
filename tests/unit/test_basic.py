@@ -5,6 +5,7 @@ import unittest
 
 from fabrictestbed.util.constants import Constants
 
+from fabrictestbed_extensions.fablib.exceptions import FablibConfigurationError
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
@@ -20,7 +21,7 @@ class FablibManagerTests(unittest.TestCase):
         Constants.FABRIC_CREDMGR_HOST,
         Constants.FABRIC_ORCHESTRATOR_HOST,
         Constants.FABRIC_PROJECT_ID,
-        # Constants.FABRIC_TOKEN_LOCATION,
+        Constants.FABRIC_TOKEN_LOCATION,
         FablibManager.FABRIC_BASTION_HOST,
         FablibManager.FABRIC_BASTION_USERNAME,
         FablibManager.FABRIC_BASTION_KEY_LOCATION,
@@ -42,37 +43,74 @@ class FablibManagerTests(unittest.TestCase):
 
     def test_fablib_manager_no_env_vars(self):
         # Test with no required env vars set.
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        with self.assertRaises(FablibConfigurationError) as ctx:
+            FablibManager(fabric_rc=self.rcfile.name)
+
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        expected_errors = [
+            "orchestrator host is not set",
+            "credmanager host is not set",
+            "FABRIC token is not set",
+            "project ID is not set",
+            "bastion username is not set",
+            "bastion key file is not set",
+            "bastion host address is not set",
+            "bastion key filename is set to None",
+            "sliver key filename is set to None",
+        ]
+
+        self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_one_env_var(self):
         # Test with some required env vars set.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
-            self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+            self.assertRaises(
+                FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+            )
 
     def test_fablib_manager_all_env_vars(self):
-        # Test with all required configuration except
-        # FABRIC_TOKEN_LOCATION.
+        # Test with all required configuration set to something.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        with self.assertRaises(FablibConfigurationError) as ctx:
+            FablibManager(fabric_rc=self.rcfile.name)
+
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        # SSH keys are invalid, so expect some errors.
+        expected_errors = [
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
+            "sliver key filename is set to None",
+        ]
+
+        self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_test_only_cm_host(self):
         os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_orchestrator_host(self):
         os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_project_id(self):
         os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_token_location(self):
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            FablibConfigurationError, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_with_no_token_file(self):
         # Should fail when token location is not a valid path.
@@ -86,9 +124,18 @@ class FablibManagerTests(unittest.TestCase):
         # FablibManager() without a valid token or token location
         # should raise a "ValueError: Invalid value for
         # `refresh_token`, must not be `None`"
-        self.assertRaises(ValueError, FablibManager, fabric_rc=self.rcfile.name)
+        with self.assertRaises(FablibConfigurationError) as ctx:
+            FablibManager(fabric_rc=self.rcfile.name)
 
-    def test_fablib_manager_test_with_dummy_token(self):
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+        expected_errors = [
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
+            "sliver key filename is set to None",
+        ]
+
+        self.assertEqual(ctx.exception.errors, expected_errors)
+
+    def test_fablib_manager_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
         # complicates writing a test for it.  It eventually makes a
         # network call to credential manager API, but it is not right
@@ -105,7 +152,19 @@ class FablibManagerTests(unittest.TestCase):
         path = pathlib.Path(__file__).parent / "data" / "dummy-token.json"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = f"{path}"
 
-        self.assertRaises(ValueError, FablibManager, fabric_rc=self.rcfile.name)
+        with self.assertRaises(FablibConfigurationError) as ctx:
+            FablibManager(fabric_rc=self.rcfile.name)
+
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        # TODO: use some actual ssh keys so that so that we get
+        # the actual error about invalid token.
+        expected_errors = [
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
+            "sliver key filename is set to None",
+        ]
+
+        self.assertEqual(ctx.exception.errors, expected_errors)
 
     def test_fablib_manager_with_empty_config(self):
         # Check that an empty configuration file will cause
@@ -113,8 +172,24 @@ class FablibManagerTests(unittest.TestCase):
         rcfile = tempfile.NamedTemporaryFile()
         rcfile.flush()
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager(fabric_rc=rcfile.name)
+
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        expected_errors = [
+            "orchestrator host is not set",
+            "credmanager host is not set",
+            "FABRIC token is not set",
+            "project ID is not set",
+            "bastion username is not set",
+            "bastion key file is not set",
+            "bastion host address is not set",
+            "bastion key filename is set to None",
+            "sliver key filename is set to None",
+        ]
+
+        self.assertEqual(expected_errors, ctx.exception.errors)
 
     def test_fablib_manager_with_some_config(self):
         # Test with some configuration in the rc file.
@@ -128,15 +203,77 @@ class FablibManagerTests(unittest.TestCase):
 
         rcfile.flush()
 
-        with self.assertRaises(AttributeError) as ctx:
+        with self.assertRaises(FablibConfigurationError) as ctx:
             FablibManager(fabric_rc=rcfile.name)
 
         # Check that the error is what we expected.
-        self.assertIsInstance(ctx.exception, AttributeError)
+        self.assertIsInstance(ctx.exception, FablibConfigurationError)
 
-        # Check that the error message is what we expected: the only
-        # error should be about missing token.
-        self.assertEqual(
-            str(ctx.exception),
-            "Error initializing FablibManager: ['FABRIC token is not set']",
+        # TODO - (1) check that the token is a readable file.  Leave
+        # the validation to FABRIC API; (2) use our own exception
+        # class that holds a list of error strings.  The assertEqual
+        # below is unweildy; (3) Improve error messages.  What key are
+        # we talking about?  Public or private key? Bastion or
+        # slice/sliver key?
+
+        self.assertEqual(ctx.exception.message, "Error initializing FablibManager")
+
+        expected_errors = [
+            "Error opening bastion key 'dummy' (error: [Errno 2] No such file or directory: 'dummy')",
+            "sliver key filename is set to None",
+        ]
+
+        self.assertEqual(ctx.exception.errors, expected_errors)
+
+
+class FablibManagerSSHKeyTests(unittest.TestCase):
+    """
+    Tests for SSH key validation.
+    """
+
+    TEST_DATA_PATH = pathlib.Path(__file__).parent / "data"
+
+    # Generated with: ssh-keygen -t dsa -f id_dsa -C "test DSA key"
+    TEST_DSA_PRIVATE_KEY = TEST_DATA_PATH / "id_dsa"
+    TEST_DSA_PUBLIC_KEY = TEST_DATA_PATH / "id_dsa.pub"
+
+    # Generated with: ssh-keygen -t ecdsa -f id_ecdsa -C "test ECDSA key"
+    TEST_ECDSA_PRIVATE_KEY = TEST_DATA_PATH / "id_ecdsa"
+    TEST_ECDSA_PUBLIC_KEY = TEST_DATA_PATH / "id_ecdsa.pub"
+
+    # Generated with: ssh-keygen -t rsa -f id_rsa -C "test RSA key"
+    TEST_RSA_PRIVATE_KEY = TEST_DATA_PATH / "id_rsa"
+    TEST_RSA_PUBLIC_KEY = TEST_DATA_PATH / "id_rsa.pub"
+
+    def test_dsa(self):
+        """
+        FABRIC does not admit DSA keys.
+        """
+        errors = FablibManager._check_key_and_cert(
+            ssh_key_file=self.TEST_DSA_PRIVATE_KEY,
+            ssh_cert_file=self.TEST_DSA_PUBLIC_KEY,
         )
+        expected_errors = [
+            f"SSH key '{self.TEST_DSA_PRIVATE_KEY}' is neither RSA nor ECDSA"
+        ]
+        self.assertEqual(errors, expected_errors)
+
+    def test_ecdsa(self):
+        """
+        ECDSA keys generated with defaults should be good.
+        """
+        errors = FablibManager._check_key_and_cert(
+            ssh_key_file=self.TEST_ECDSA_PRIVATE_KEY,
+            ssh_cert_file=self.TEST_ECDSA_PUBLIC_KEY,
+        )
+        self.assertEqual(errors, [])
+
+    def test_rsa(self):
+        """
+        RSA keys generated with defaults should be good.
+        """
+        errors = FablibManager._check_key_and_cert(
+            ssh_key_file=self.TEST_RSA_PRIVATE_KEY,
+            ssh_cert_file=self.TEST_RSA_PUBLIC_KEY,
+        )
+        self.assertEqual(errors, [])
