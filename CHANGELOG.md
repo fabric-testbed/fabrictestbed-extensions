@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Offer a hint when bastion probe fails (Issue
   [#246](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/246),
   PR [#247](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/247))
+- Version in pyproject.toml (Issue
+  [#248](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/248))
 
 
 ## [1.5.5]

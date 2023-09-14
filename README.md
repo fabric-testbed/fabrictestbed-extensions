@@ -74,7 +74,7 @@ the top-level `tests` directory.  Unit tests can be run like so, using
 [tox]:
 
 ```console
-$ pip install -e .[test]
+$ pip install tox
 $ tox
 ```
 
@@ -88,6 +88,7 @@ Tox attempts to run tests in an isolated virtual environment.  If you
 want to run some tests directly using [pytest], that is possible too:
 
 ```
+$ pip install -e .[test]
 $ pytest -s tests/integration/test_hello_fabric.py
 ```
 
@@ -132,8 +133,8 @@ The "[publish]" workflow automates building packages and publishing
 them on PyPI.  In order to publish a new FABlib version on PyPI,
 follow these steps:
 
-1. Bump up version in top-level `__init__.py`.
-2. Update changelog.
+1. Bump up version in `pyproject.toml`.
+2. Update `CHANGELOG.md`.
 3. Start a PR with these changes, and get it merged.
 4. Tag the release, and push the tag to GitHub:
 
