@@ -5,6 +5,13 @@ the form of bug reports, feature requests, code patches, documentation
 updates, and anything else that may be helpful.  Please review these
 guidelines first.
 
+## Submitting Issues
+
+If you want to add a new feature to FABlib or report that something is
+broken, please submit an issue via GitHub.  If you find a bug, please
+describe it in enough detail so that we can quickly reproduce them.
+
+
 ## Submitting Pull Requests
 
 Contributions to FABlib are made with GitHub Pull Requests. When you
