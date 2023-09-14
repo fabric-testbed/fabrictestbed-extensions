@@ -38,7 +38,7 @@ checks for signed commits.
 ## Testing FABlib
 
 FABlib currently has a modest set of unit and integration tests, under
-`tests/unit` directory.  Unit tests can be run like so, using [tox]:
+`[tests]` directory.  Unit tests can be run like so, using [tox]:
 
 ```console
 $ pip install tox
@@ -149,5 +149,7 @@ For details about publishing to PyPI, see flit documentation about
 [pytest]: https://pypi.org/project/pytest/
 [black]: https://pypi.org/project/black/
 [isort]: https://pypi.org/project/isort/
+
+[tests]: ./tests/
 
 [publish]: ./.github/workflows/publish.yml
