@@ -15,6 +15,7 @@ If you want to interact with FABRIC from Jupyter or a Python project
 on your local development environment, that is possible too.  See
 [Install the FABRIC Python API][fablib-install] for details.
 
+FABlib API docs can be found [here][fablib-api-rtd].
 
 ## Installing FABlib
 
@@ -51,8 +52,6 @@ try:
 except Exception as e:
     print(f"Exception: {e}")
 ```
-
-FABlib API docs can be found [here][fablib-api-rtd].
 
 
 ## Contributing to FABlib
