@@ -8,8 +8,8 @@ known as "FABlib", for intereacting with [FABRIC][fabric] testbed.
 Your first encounter with FABlib might be through FABRIC project's
 [JupyterHub instance][fabric-jupyter], where FABlib is pre-installed
 for you. You will be presented with many examples on FABlib usage when
-you log in there. The [notebook sources][fabric-jupyter-examples] can
-be found on GitHub as well.
+you log in there. Those [notebook sources][fabric-jupyter-examples]
+can be found on GitHub as well.
 
 If you want to interact with FABRIC from Jupyter or a Python project
 on your local development environment, that is possible too.  See
