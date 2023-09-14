@@ -53,6 +53,7 @@ except Exception as e:
     print(f"Exception: {e}")
 ```
 
+Please note that some [configuration] is required for this to work.
 
 ## Contributing to FABlib
 
@@ -81,5 +82,7 @@ help FABlib, please review the [guidelines] first.
 
 [fablib-api-rtd]: https://fabric-fablib.readthedocs.io/en/latest/
 [fablib-api-old]: https://learn.fabric-testbed.net/docs/fablib/fablib.html
+
+[configuration]: https://fabric-fablib.readthedocs.io/en/latest/#configuring-fablib
 
 [guidelines]: ./CONTRIBUTING.md
