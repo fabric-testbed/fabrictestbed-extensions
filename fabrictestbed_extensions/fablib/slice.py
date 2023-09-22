@@ -2037,7 +2037,7 @@ class Slice:
         elif wait:
             self.update()
 
-            self.wait()
+            self.wait(timeout=wait_timeout, interval=wait_interval)
 
             if wait_ssh:
                 self.wait_ssh(
