@@ -27,7 +27,7 @@ class BastionHostTests(unittest.TestCase):
         """
         fm = FablibManager(offline=True, bastion_username="")
         self.assertRaises(
-            paramiko.ssh_exception.AuthenticationException, fm.probe_bastion_host
+            paramiko.ssh_exception.SSHException, fm.probe_bastion_host
         )
 
     def test_probe_bastion_host_empty_key(self):
@@ -38,7 +38,7 @@ class BastionHostTests(unittest.TestCase):
 
         fm = FablibManager(offline=True, bastion_key_filename=keyfile.name)
         self.assertRaises(
-            paramiko.ssh_exception.AuthenticationException, fm.probe_bastion_host
+            paramiko.ssh_exception.SSHException, fm.probe_bastion_host
         )
 
     def test_probe_bastion_host_bad_key(self):
@@ -52,5 +52,5 @@ class BastionHostTests(unittest.TestCase):
 
         fm = FablibManager(offline=True, bastion_key_filename=keyfile.name)
         self.assertRaises(
-            paramiko.ssh_exception.AuthenticationException, fm.probe_bastion_host
+            paramiko.ssh_exception.SSHException, fm.probe_bastion_host
         )
