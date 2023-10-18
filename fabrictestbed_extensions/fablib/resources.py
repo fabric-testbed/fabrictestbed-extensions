@@ -757,6 +757,15 @@ class Resources:
         }
         if not latlon:
             d.pop("location")
+
+        # Prettify the dict's keys so that `fields` and
+        # `filter_function` arguments to list_sites() will work.
+        for k, v in d.items():
+            pretty_key = self.site_pretty_names.get(k)
+            if not pretty_key:
+                continue
+            d[pretty_key] = d.pop(k)
+
         return d
 
     def site_to_dictXXX(self, site):
