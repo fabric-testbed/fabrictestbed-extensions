@@ -42,7 +42,7 @@ class FablibTests(unittest.TestCase):
 
     def test_fablib_list_sites_with_fields(self):
         fablib = FablibManager()
-        fablib.list_sites(fields=["Name", "ConnectX-5 Available", "NVMe Total"])
+        fablib.list_sites(fields=["Name", "ConnectX-5 Available", "NVMe Available"])
 
     def test_fablib_list_sites_with_filter_function(self):
         fablib = FablibManager()
