@@ -22,6 +22,20 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+This module exports ``FablibManager`` class and a ``fablib`` class,
+which allows you to, among other things:
+
+    - Query FABRIC testbed resources.
+
+    - Create, modify, and delete slices.
+
+    - Manage the SSH keys you use with FABRIC.
+
+They also contain some helpful utility methods.
+"""
+
 from __future__ import annotations
 
 import json
