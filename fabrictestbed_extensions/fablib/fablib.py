@@ -66,6 +66,10 @@ from fabrictestbed_extensions.fablib.slice import Slice
 
 
 class fablib:
+    """
+    Convenience static methods to work with FABRIC testbed.
+    """
+
     default_fablib_manager = None
 
     @staticmethod
