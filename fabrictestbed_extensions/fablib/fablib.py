@@ -630,13 +630,49 @@ class FablibManager:
         offline: bool = False,
     ):
         """
-        Constructor. Builds FablibManager.  Tries to get configuration from:
+        FablibManager constructor.
 
-         - constructor parameters (high priority)
-         - fabric_rc file (middle priority)
-         - environment variables (low priority)
-         - defaults (if needed and possible)
+        A FablibManager object can be managed to query FABRIC testbed
+        for available resources, create and configure slices, manage
+        SSH keys in nodes in slices and FABRIC's bastion host, etc.
 
+        Tries to get configuration from:
+
+            - constructor parameters (high priority)
+
+            - fabric_rc file (middle priority)
+
+            - environment variables (low priority)
+
+            - defaults (if needed and possible)
+
+        :param fabric_rc: Path to fablib configuration file.  Defaults
+            to ``"${HOME}/work/fabric_config/fabric_rc"``.
+        :param credmgr_host: Name of credential manager host.
+        :param orchestrator_host: Name of FABRIC orchestrator host.
+        :param fabric_token: Path to the file that contains your
+            FABRIC auth token.
+        :param project_id: Your FABRIC project ID, obtained from
+            https://cm.fabric-testbed.net/, usually via FABRIC portal.
+        :param bastion_username: Your username on FABRIC bastion host,
+            obtained from FABRIC portal.
+        :param bastion_key_filename: Path to your bastion SSH key.
+        :param log_file: Path where fablib logs are written; defaults
+            to ``"/tmp/fablib/fablib.log"``.
+        :param log_level: Level of detail in the logs written.
+            Defaults to ``"DEBUG"``; other possible log levels are
+            ``"INFO"``, ``"WARNING"``, ``"ERROR"``, and
+            ``"CRITICAL"``, in reducing order of verbosity.
+        :param data_dir: directory for fablib to store temporary data.
+        :param output: Format of fablib output; can be either
+            ``"pandas"`` or ``"text"``.  Defaults to ``"pandas"`` in a
+            Jupyter notebook environment; ``"text"`` otherwise.
+        :param execute_thread_pool_size: Number of worker threads in
+            the thread pool fablib uses to execute commands in nodes.
+            Defaults to 64.
+        :param offline: Avoid using FABRIC services when initializing.
+            This is ``False`` by default, and set to ``True`` only in
+            some unit tests.
         """
 
         if output != None:
