@@ -42,6 +42,9 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# Use __init__ method’s docstrings in class docs.  Other options are
+# "class" and "both".
+autoclass_content = "init"
 
 # -- Options for HTML output -------------------------------------------------
 
