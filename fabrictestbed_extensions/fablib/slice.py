@@ -22,6 +22,11 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+TODO: do we have a good definition of a "slice"?
+"""
+
 from __future__ import annotations
 
 import ipaddress
