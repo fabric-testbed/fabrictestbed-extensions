@@ -630,21 +630,24 @@ class FablibManager:
         offline: bool = False,
     ):
         """
-        FablibManager constructor.
+        ``FablibManager`` is the main interface to FABRIC services.
 
-        A FablibManager object can be managed to query FABRIC testbed
-        for available resources, create and configure slices, manage
-        SSH keys in nodes in slices and FABRIC's bastion host, etc.
-
-        Tries to get configuration from:
+        A ``FablibManager`` object is used to query FABRIC testbed for
+        available resources, create and configure slices, manage SSH
+        keys in nodes in slices and FABRIC's bastion host, etc.  This
+        requires some configuration, which is gathered from:
 
             - constructor parameters (high priority)
 
-            - fabric_rc file (middle priority)
+            - a configuration file (medium priority)
 
             - environment variables (low priority)
 
-            - defaults (if needed and possible)
+            - defaults (if needed, and when possible)
+
+        Typically you would use the configuration file located at
+        ``"${HOME}/work/fabric_config/fabric_rc"``, and/or environment
+        variables.
 
         :param fabric_rc: Path to fablib configuration file.  Defaults
             to ``"${HOME}/work/fabric_config/fabric_rc"``.
