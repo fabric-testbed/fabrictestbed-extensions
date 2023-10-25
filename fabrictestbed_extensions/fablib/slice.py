@@ -24,7 +24,10 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-TODO: do we have a good definition of a "slice"?
+The ``slice`` module provides methods to manage FABRIC slices.
+
+In FABRIC testbed terminology, a "slice" is related collection of
+nodes, links, and other components that a project creates.
 """
 
 from __future__ import annotations
