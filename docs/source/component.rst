@@ -1,4 +1,4 @@
-Component
+component
 =========
 
 .. automodule:: fabrictestbed_extensions.fablib.component

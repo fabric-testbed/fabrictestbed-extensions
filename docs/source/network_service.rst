@@ -1,5 +1,5 @@
-NetworkService
-==============
+network_service
+===============
 
 .. automodule:: fabrictestbed_extensions.fablib.network_service
    :members:

@@ -1,4 +1,4 @@
-Node
+node
 ====
 
 .. automodule:: fabrictestbed_extensions.fablib.node

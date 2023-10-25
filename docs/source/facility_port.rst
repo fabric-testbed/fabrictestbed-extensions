@@ -1,5 +1,5 @@
-FacilityPort
-============
+facility_port
+=============
 
 .. automodule:: fabrictestbed_extensions.fablib.facility_port
    :members:

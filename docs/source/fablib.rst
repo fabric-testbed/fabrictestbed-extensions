@@ -1,5 +1,5 @@
-FablibManager
-=============
+fablib
+======
 
 .. automodule:: fabrictestbed_extensions.fablib.fablib
    :members:

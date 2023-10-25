@@ -1,4 +1,4 @@
-Slice
+slice
 =====
 
 .. automodule:: fabrictestbed_extensions.fablib.slice

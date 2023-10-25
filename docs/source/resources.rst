@@ -1,4 +1,4 @@
-Resources
+resources
 =========
 
 .. automodule:: fabrictestbed_extensions.fablib.resources

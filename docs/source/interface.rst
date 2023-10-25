@@ -1,4 +1,4 @@
-Interface
+interface
 =========
 
 .. automodule:: fabrictestbed_extensions.fablib.interface
