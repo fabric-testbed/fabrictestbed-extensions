@@ -22,6 +22,13 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+This module contains methods to work with FABRIC `network services`_.
+
+.. _`network services`: https://learn.fabric-testbed.net/knowledge-base/glossary/#network_service
+"""
+
 from __future__ import annotations
 
 import logging
