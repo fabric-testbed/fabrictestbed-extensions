@@ -24,12 +24,9 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-This module contains methods to work with FABRIC resources.
+This module contains methods to work with FABRIC `resources`_.
 
-A FABRIC resource is a physical or virtual entity that can be
-provisioned by the Control Framework for use in an experiment (i.e.,
-experimental resources) or for collecting measurements about
-experiments (i.e., measurement resources).
+.. _`resources`: https://learn.fabric-testbed.net/knowledge-base/glossary/#resource
 """
 
 from __future__ import annotations
