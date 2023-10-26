@@ -22,6 +22,18 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+This module contains methods to work with FABRIC components.
+
+A FABRIC component is a virtualized piece of hardware that a user may
+add to a virtual machine (VM) to expand the VM’s capabilities.
+Examples include graphical processing units (GPUs), network
+identification cards (NICs), storage access such as nonvolatile memory
+express (NVME).  Components represent a more fine-grained type of
+resource.
+"""
+
 from __future__ import annotations
 
 import json
