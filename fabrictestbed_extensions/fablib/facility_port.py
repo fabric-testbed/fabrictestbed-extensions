@@ -52,13 +52,11 @@ class FacilityPort:
 
     def __init__(self, slice: Slice, fim_interface: FimInterface):
         """
-        Sets the fablib slice and FIM node based on arguments.
-
         :param slice: the fablib slice to have this node on
         :type slice: Slice
 
-        :param node: the FIM node that this Node represents
-        :type node: Node
+        :param fim_interface:
+        :type fim_interface: FimInterface
         """
         super().__init__()
         self.fim_interface = fim_interface
