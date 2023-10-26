@@ -26,8 +26,29 @@
 """
 The ``slice`` module provides methods to manage FABRIC slices.
 
-In FABRIC testbed terminology, a "slice" is related collection of
-nodes, links, and other components that a project creates.
+In FABRIC terminology, a "slice" is a logically related collection of
+resources (nodes, networks, services, etc.) that you create when
+running an experiment.
+
+You would create and use a slice like so::
+
+    from ipaddress import IPv4Address
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+    fablib = FablibManager()
+
+    # Create a slice and add resources to it, creating a topology.
+    slice = fablib.new_slice(name="MySlice")
+    node1 = slice.add_node(name="node1", site="TACC")
+    net1 = slice.add_l2network(name="net1", subnet=IPv4Network("192.168.1.0/24"))
+
+    # Do more setup, and then run your experiment.
+
+    # Delete the slice after you are done.
+    slice.delete()
+
+See FABRIC project's Jupyter notebook examples for more complete code
+samples.
 """
 
 from __future__ import annotations
