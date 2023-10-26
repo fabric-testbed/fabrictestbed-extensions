@@ -22,6 +22,15 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+Methods to manage FABRIC nodes.
+
+A FABRIC node is an individual element (e.g., virtual machine) in a
+topology that is connected to other nodes to represent the physical
+and logical structure of a network.
+"""
+
 from __future__ import annotations
 
 import concurrent.futures
