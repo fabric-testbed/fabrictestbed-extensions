@@ -59,11 +59,15 @@ class Interface:
 
     def __init__(self, component: Component = None, fim_interface: FimInterface = None):
         """
-        Constructor. Sets keyword arguments as instance fields.
+        .. note::
+
+            Objects of this class are not created directly.
 
         :param component: the component to set on this interface
         :type component: Component
-        :param fim_interface: the FABRIC information model interface to set on this fablib interface
+
+        :param fim_interface: the FABRIC information model interface
+            to set on this fablib interface
         :type fim_interface: FimInterface
         """
         super().__init__()
