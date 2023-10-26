@@ -24,17 +24,12 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-This module contains methods to work with FABRIC components.
+This module contains methods to work with FABRIC components_.
 
-A FABRIC component is a virtualized piece of hardware that a user may
-add to a virtual machine (VM) to expand the VM’s capabilities.
-Examples include graphical processing units (GPUs), network
-identification cards (NICs), storage access such as nonvolatile memory
-express (NVME).  Components represent a more fine-grained type of
-resource.
+.. _components: https://learn.fabric-testbed.net/knowledge-base/glossary/#component
 
-You normally would not create ``Component`` objects directly with a
-constructor call; they are created when you invoke
+You normally would not create :class:`Component` objects directly with
+a constructor call; they are created when you invoke
 :py:func:`fabrictestbed_extensions.fablib.node.Node.add_component()`,
 like so::
 
