@@ -322,12 +322,15 @@ class Component:
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
         """
-        Not intended for API use
+        Typically invoked when you add a component to a ``Node``.
 
-        Constructor. Sets the FIM component and fablib node to the inputted values.
+        .. note ::
+
+            ``Component`` constructer is not meant to be directly used.
 
         :param node: the fablib node to build the component on
         :type node: Node
+
         :param fim_component: the FIM component this object represents
         :type fim_component: FIMComponent
         """

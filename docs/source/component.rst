@@ -6,4 +6,4 @@ component
 
 .. autoclass:: fabrictestbed_extensions.fablib.component.Component
    :members:
-   :special-members: __init__, __str__
+   :special-members: __str__
