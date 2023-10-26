@@ -24,11 +24,26 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-Methods to manage FABRIC nodes.
+This module contains methods to work with FABRIC nodes.
 
 A FABRIC node is an individual element (e.g., virtual machine) in a
 topology that is connected to other nodes to represent the physical
 and logical structure of a network.
+
+Once you create a FABRIC slice, you would add a node and operate on it
+like so::
+
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+    fablib = FablibManager()
+
+    slice = fablib.new_slice(name="MySlice")
+    node = slice.add_node(name="node1")
+    slice.submit();
+
+    node.execute('echo Hello, FABRIC from node `hostname -s`')
+
+    slice.delete()
 """
 
 from __future__ import annotations
