@@ -32,6 +32,12 @@ Examples include graphical processing units (GPUs), network
 identification cards (NICs), storage access such as nonvolatile memory
 express (NVME).  Components represent a more fine-grained type of
 resource.
+
+You normally would not create ``Component`` objects with a directly;
+they are created when you invoke ``Node.add_component()``::
+
+    node.add_component(model='NVME_P4510', name="nvme1")
+    node.add_component(model='NIC_Basic', name="nic1")
 """
 
 from __future__ import annotations
