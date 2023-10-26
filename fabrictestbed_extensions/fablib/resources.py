@@ -91,8 +91,12 @@ class Resources:
 
     def __init__(self, fablib_manager, force_refresh: bool = False):
         """
-        Constructor
-        :return:
+        :param fablib_manager: a :class:`FablibManager` instance.
+        :type fablib_manager: fablib.FablibManager
+
+        :param force_refresh: force a refresh of available testbed
+            resources.
+        :type force_refresh: bool
         """
         super().__init__()
 
