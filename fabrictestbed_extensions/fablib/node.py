@@ -76,7 +76,7 @@ class Node:
 
     def __init__(self, slice: Slice, node: FimNode):
         """
-        Sets the fablib slice and FIM node based on arguments.
+        Node constructor, usually invoked by ``Slice.add_node()``.
 
         :param slice: the fablib slice to have this node on
         :type slice: Slice
