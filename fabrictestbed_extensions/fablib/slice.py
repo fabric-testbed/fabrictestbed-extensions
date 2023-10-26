@@ -92,7 +92,7 @@ from fabrictestbed_extensions.fablib.node import Node
 class Slice:
     def __init__(self, fablib_manager: FablibManager, name: str = None):
         """
-        Constructor. Sets the default slice state to be callable.
+        Create a FABRIC slice, and set its state to be callable.
 
         :param name: the name of this fablib slice
         :type name: str
