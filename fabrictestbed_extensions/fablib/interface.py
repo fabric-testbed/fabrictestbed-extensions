@@ -22,6 +22,11 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+Methods to work with FABRIC network interfaces.
+"""
+
 from __future__ import annotations
 
 import ipaddress
