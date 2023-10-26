@@ -22,6 +22,13 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+This module contains methods to work with FABRIC `facility ports`_.
+
+.. _`facility ports`: https://learn.fabric-testbed.net/knowledge-base/glossary/#facility_port
+"""
+
 from __future__ import annotations
 
 import json
