@@ -573,14 +573,16 @@ class NetworkService:
         self, slice: Slice = None, fim_network_service: FimNetworkService = None
     ):
         """
-        Not inteded for API use.
+        .. note::
 
-        Constructor. Sets the fablib slice and the FABRIC network service.
+            Not inteded for API use.
 
         :param slice: the fablib slice to set as instance state
         :type slice: Slice
-        :param fim_network_service: the FIM network service to set as instance state
-        :type fim_network_service: FIMNetworkService
+
+        :param fim_network_service: the FIM network service to set as
+            instance state
+        :type fim_network_service: FimNetworkService
         """
         super().__init__()
         self.fim_network_service = fim_network_service

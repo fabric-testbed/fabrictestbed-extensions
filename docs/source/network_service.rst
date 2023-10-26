@@ -6,4 +6,4 @@ network_service
 
 .. autoclass:: fabrictestbed_extensions.fablib.network_service.NetworkService
    :members:
-   :special-members: __init__, __str__
+   :special-members: __str__
