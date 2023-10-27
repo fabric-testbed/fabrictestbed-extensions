@@ -24,8 +24,8 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-This module exports ``FablibManager`` class and a ``fablib`` class,
-which allows you to, among other things:
+This module exports a :class:`FablibManager` class and a
+:class:`fablib` class, which allows you to, among other things:
 
     - Query FABRIC testbed resources.
 
