@@ -33,7 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Removed APIs to get private bastion addresses (Issue
-  [#257](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/257))
+  [#257](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/257),
+  PR [#259](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/259))
 
 
 ## [1.5.5]
