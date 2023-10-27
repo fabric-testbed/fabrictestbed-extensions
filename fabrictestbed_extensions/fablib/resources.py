@@ -24,7 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-This module contains methods to work with FABRIC `resources`_.
+Methods to work with FABRIC `resources`_.
 
 .. _`resources`: https://learn.fabric-testbed.net/knowledge-base/glossary/#resource
 """

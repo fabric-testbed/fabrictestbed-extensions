@@ -24,7 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-This module contains methods to work with FABRIC components_.
+Methods to work with FABRIC components_.
 
 .. _components: https://learn.fabric-testbed.net/knowledge-base/glossary/#component
 

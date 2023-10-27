@@ -24,7 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-This module contains methods to work with FABRIC `network services`_.
+Methods to work with FABRIC `network services`_.
 
 .. _`network services`: https://learn.fabric-testbed.net/knowledge-base/glossary/#network_service
 """
