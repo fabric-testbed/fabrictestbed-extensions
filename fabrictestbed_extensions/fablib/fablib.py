@@ -52,7 +52,10 @@ complete code samples.
 
 .. note::
 
-    Some configuration in the form of a configuration file, environment variables, or :class:`FablibManager` constructor parameters is required for the library to work.  Please see the FABRIC project's `documentation on getting started <learn>`_.
+    Some configuration in the form of a configuration file, environment
+    variables, or :class:`FablibManager` constructor parameters is
+    required for the library to work.  Please see the FABRIC project's
+    `documentation on getting started <learn>`_.
 
 .. _learn: https://learn.fabric-testbed.net/article-categories/getting-started/
 .. _examples: https://github.com/fabric-testbed/jupyter-examples/
