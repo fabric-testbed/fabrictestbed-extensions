@@ -47,8 +47,6 @@ You would create and use a slice like so::
     # Delete the slice after you are done.
     slice.delete()
 
-See FABRIC project's Jupyter notebook examples for more complete code
-samples.
 """
 
 from __future__ import annotations
