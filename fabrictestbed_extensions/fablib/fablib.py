@@ -573,6 +573,10 @@ class FablibManager:
         "CRITICAL": logging.CRITICAL,
     }
 
+    DEFAULT_FABRIC_CREDMGR_HOST = "cm.fabric-testbed.net"
+    DEFAULT_FABRIC_ORCHESTRATOR_HOST = "orchestrator.fabric-testbed.net"
+    DEFAULT_FABRIC_BASTION_HOST = "bastion.fabric-testbed.net"
+
     default_fabric_rc = os.environ["HOME"] + "/work/fabric_config/fabric_rc"
     default_log_level = "DEBUG"
     default_log_file = "/tmp/fablib/fablib.log"
@@ -783,6 +787,15 @@ class FablibManager:
 
         self.bastion_private_ipv4_addr = "0.0.0.0"
         self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
+
+        if self.credmgr_host is None:
+            self.credmgr_host = DEFAULT_FABRIC_CREDMGR_HOST
+
+        if self.orchestrator_host is None:
+            self.orchestrator_host = DEFAULT_FABRIC_ORCHESTRATOR_HOST
+
+        if self.bastion_public_addr is None:
+            self.bastion_public_addr = DEFAULT_FABRIC_BASTION_HOST
 
         self._validate_configuration()
 
