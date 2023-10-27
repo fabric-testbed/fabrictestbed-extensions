@@ -335,28 +335,6 @@ class fablib:
         return fablib.get_default_fablib_manager().get_bastion_public_addr()
 
     @staticmethod
-    def get_bastion_private_ipv4_addr() -> str:
-        """
-        Gets the FABRIC Bastion private IPv4 host address. This is the
-        internally faceing IPv4 address needed to use paramiko
-
-        :return: Bastion private IPv4 address
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_bastion_private_ipv4_addr()
-
-    @staticmethod
-    def get_bastion_private_ipv6_addr() -> str:
-        """
-        Gets the FABRIC Bastion private IPv6 host address. This is the
-        internally faceing IPv4 address needed to use paramiko
-
-        :return: Bastion private IPv6 address
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_bastion_private_ipv6_addr()
-
-    @staticmethod
     def get_slice_manager() -> SliceManager:
         """
         Not intended as API call
@@ -528,8 +506,6 @@ class FablibManager:
     FABRIC_BASTION_KEY_LOCATION = "FABRIC_BASTION_KEY_LOCATION"
     FABRIC_BASTION_HOST = "FABRIC_BASTION_HOST"
     FABRIC_BASTION_KEY_PASSWORD = "FABRIC_BASTION_KEY_PASSWORD"
-    FABRIC_BASTION_HOST_PRIVATE_IPV4 = "FABRIC_BASTION_HOST_PRIVATE_IPV4"
-    FABRIC_BASTION_HOST_PRIVATE_IPV6 = "FABRIC_BASTION_HOST_PRIVATE_IPV6"
     FABRIC_SLICE_PUBLIC_KEY_FILE = "FABRIC_SLICE_PUBLIC_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_FILE = "FABRIC_SLICE_PRIVATE_KEY_FILE"
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
@@ -659,11 +635,6 @@ class FablibManager:
         self.bastion_key_filename = os.environ.get(self.FABRIC_BASTION_KEY_LOCATION)
         self.bastion_public_addr = os.environ.get(self.FABRIC_BASTION_HOST)
 
-        # if self.FABRIC_BASTION_HOST_PRIVATE_IPV4 in os.environ:
-        #    self.bastion_private_ipv4_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV4]
-        # if self.FABRIC_BASTION_HOST_PRIVATE_IPV6 in os.environ:
-        #    self.bastion_private_ipv6_addr = os.environ[self.FABRIC_BASTION_HOST_PRIVATE_IPV6]
-
         # Slice Keys
         if self.FABRIC_SLICE_PUBLIC_KEY_FILE in os.environ:
             self.default_slice_key["slice_public_key_file"] = os.environ[
@@ -780,9 +751,6 @@ class FablibManager:
         #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
         #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
         #                        datefmt='%H:%M:%S')
-
-        self.bastion_private_ipv4_addr = "0.0.0.0"
-        self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
 
         self._validate_configuration()
 
@@ -1630,26 +1598,6 @@ class FablibManager:
         :rtype: String
         """
         return self.bastion_public_addr
-
-    def get_bastion_private_ipv4_addr(self) -> str:
-        """
-        Gets the FABRIC Bastion private IPv4 host address. This is the
-        internally faceing IPv4 address needed to use paramiko
-
-        :return: Bastion private IPv4 address
-        :rtype: String
-        """
-        return self.bastion_private_ipv4_addr
-
-    def get_bastion_private_ipv6_addr(self) -> str:
-        """
-        Gets the FABRIC Bastion private IPv6 host address. This is the
-        internally faceing IPv4 address needed to use paramiko
-
-        :return: Bastion private IPv6 address
-        :rtype: String
-        """
-        return self.bastion_private_ipv6_addr
 
     def probe_bastion_host(self) -> bool:
         """

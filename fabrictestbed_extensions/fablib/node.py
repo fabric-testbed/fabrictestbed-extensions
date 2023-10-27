@@ -1354,11 +1354,9 @@ class Node:
         # Get and test src and management_ips
         management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
         if self.validIPAddress(management_ip) == "IPv4":
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
             src_addr = ("0.0.0.0", 22)
 
         elif self.validIPAddress(management_ip) == "IPv6":
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
             src_addr = ("0:0:0:0:0:0:0:0", 22)
         else:
             logging.error("node.execute: Management IP Invalid:", exc_info=True)
