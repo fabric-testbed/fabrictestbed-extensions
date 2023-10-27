@@ -25,7 +25,8 @@
 
 """
 This module exports a :class:`FablibManager` class and a
-:class:`fablib` class, which allows you to, among other things:
+:class:`fablib` class available, which allows you to, among other
+things:
 
     - Query FABRIC testbed resources.
 
@@ -33,7 +34,24 @@ This module exports a :class:`FablibManager` class and a
 
     - Manage the SSH keys you use with FABRIC.
 
-They also contain some helpful utility methods.
+    - etc.
+
+In most cases you would need to create a :class:`FablibManager`
+instance to interact with FABRIC testbed::
+
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+    fablib = FablibManager()
+
+    slice = fablib.new_slice(name="MySlice")
+    node = slice.add_node(name="node1")
+    slice.submit();
+
+.. note::
+
+    Some configuration in the form of a configuration file, environment variables, or :class:`FablibManager` constructor parameters is required for the library to work.  Please see the FABRIC project's `documentation on getting started <learn>`_.
+
+.. _learn: https://learn.fabric-testbed.net/article-categories/getting-started/
 """
 
 from __future__ import annotations
