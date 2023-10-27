@@ -24,11 +24,9 @@
 # Author: Paul Ruth (pruth@renci.org)
 
 """
-The ``slice`` module provides methods to manage FABRIC slices.
+Methods to manage FABRIC `slices`_.
 
-In FABRIC terminology, a "slice" is a logically related collection of
-resources (nodes, networks, services, etc.) that you create when
-running an experiment.
+.. _`slices`: https://learn.fabric-testbed.net/knowledge-base/glossary/#slice
 
 You would create and use a slice like so::
 
