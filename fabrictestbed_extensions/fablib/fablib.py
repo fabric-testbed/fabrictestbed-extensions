@@ -789,13 +789,13 @@ class FablibManager:
         self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
 
         if self.credmgr_host is None:
-            self.credmgr_host = DEFAULT_FABRIC_CREDMGR_HOST
+            self.credmgr_host = self.DEFAULT_FABRIC_CREDMGR_HOST
 
         if self.orchestrator_host is None:
-            self.orchestrator_host = DEFAULT_FABRIC_ORCHESTRATOR_HOST
+            self.orchestrator_host = self.DEFAULT_FABRIC_ORCHESTRATOR_HOST
 
         if self.bastion_public_addr is None:
-            self.bastion_public_addr = DEFAULT_FABRIC_BASTION_HOST
+            self.bastion_public_addr = self.DEFAULT_FABRIC_BASTION_HOST
 
         self._validate_configuration()
 
