@@ -35,14 +35,13 @@ from fabrictestbed_extensions.fablib.fablib import FablibManager, fablib
 
 
 class L2MFLibTests(unittest.TestCase):
-
     def setUp(self):
         time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
         host = socket.gethostname()
         self.slice_name = f"integration test @ {time_stamp} on {host}"
 
     def tearDown(self):
-       fablib.get_slice(self.slice_name).delete()
+        fablib.get_slice(self.slice_name).delete()
 
     def test_add_l2_measurement_nodes(self):
         """
