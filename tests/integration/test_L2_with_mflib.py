@@ -31,10 +31,19 @@ from ipaddress import IPv4Network
 
 from mflib.mflib import MFLib
 
-from fabrictestbed_extensions.fablib.fablib import FablibManager
+from fabrictestbed_extensions.fablib.fablib import FablibManager, fablib
 
 
 class L2MFLibTests(unittest.TestCase):
+
+    def setUp(self):
+        time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        host = socket.gethostname()
+        self.slice_name = f"integration test @ {time_stamp} on {host}"
+
+    def tearDown(self):
+       fablib.get_slice(self.slice_name).delete()
+
     def test_add_l2_measurement_nodes(self):
         """
         Add measurement nodes to L2 network.
@@ -44,10 +53,6 @@ class L2MFLibTests(unittest.TestCase):
         c = fablib.get_config()
 
         self.assertIsNotNone(c)
-
-        time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        host = socket.gethostname()
-        slice_name = f"integration test @ {time_stamp} on {host}"
 
         [site1, site2] = fablib.get_random_sites(count=2)
         print(f"Sites: {site1}, {site2}")
@@ -60,7 +65,7 @@ class L2MFLibTests(unittest.TestCase):
         network_name = "net1"
 
         # Create a slice
-        slice = fablib.new_slice(name=slice_name)
+        slice = fablib.new_slice(name=self.slice_name)
 
         # Add an L2 network.
         net1 = slice.add_l2network(
