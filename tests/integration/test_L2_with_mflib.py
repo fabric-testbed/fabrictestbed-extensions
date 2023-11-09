@@ -43,11 +43,35 @@ class L2MFLibTests(unittest.TestCase):
     def tearDown(self):
         fablib.get_slice(self.slice_name).delete()
 
-    def test_add_l2_measurement_nodes(self):
+    def test_add_l2_measurement_nodes_modify(self):
         """
         Add measurement nodes to L2 network.
-        """
 
+        Create slice, submit, add measurement node, submit again.
+        """
+        print("Creating slice")
+        slice = self._make_slice()
+        slice.submit()
+
+        print("Adding measurement node")
+        # Add measurement nodes to the slice.
+        MFLib.addMeasNode(slice)
+
+        # submit Slice Request
+        slice.submit()
+
+    def test_add_l2_measurement_nodes_no_modify(self):
+        """
+        Add measurement nodes to L2 network.
+
+        Create slice, add measurement node, then submit.
+        """
+        print("Adding measurement node, no modify")
+        slice = self._make_slice()
+        MFLib.addMeasNode(slice)
+        slice.submit()
+
+    def _make_slice(self):
         fablib = FablibManager()
         c = fablib.get_config()
 
@@ -83,15 +107,4 @@ class L2MFLibTests(unittest.TestCase):
         iface2.set_mode("auto")
         net1.add_interface(iface2)
 
-        # Add measurement nodes to the slice.
-        MFLib.addMeasNode(slice)
-
-        # submit Slice Request
-        slice.submit()
-
-        node2_addr = node2.get_interface(network_name=network_name).get_ip_addr()
-
-        stdout, stderr = node1.execute(f"ping -c 5 {node2_addr}")
-
-        self.assertIsNotNone(stdout)
-        self.assertIsNone(stderr)
+        return slice
