@@ -60,6 +60,11 @@ class L2MFLibTests(unittest.TestCase):
         # submit Slice Request
         slice.submit()
 
+        nodes = slice.get_nodes()
+
+        for node in nodes:
+            self.assertIsNotNone(node.get_management_ip())
+
     def test_add_l2_measurement_nodes_no_modify(self):
         """
         Add measurement nodes to L2 network.
@@ -70,6 +75,11 @@ class L2MFLibTests(unittest.TestCase):
         slice = self._make_slice()
         MFLib.addMeasNode(slice)
         slice.submit()
+
+        nodes = slice.get_nodes()
+
+        for node in nodes:
+            self.assertIsNotNone(node.get_management_ip())
 
     def _make_slice(self):
         fablib = FablibManager()
