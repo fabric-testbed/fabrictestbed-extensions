@@ -722,6 +722,7 @@ class Interface:
             logging.error(
                 f"Failed to get ip addr show info for interface {self.get_name()}"
             )
+            return None
 
         return stdout
 
