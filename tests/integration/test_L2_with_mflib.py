@@ -40,8 +40,8 @@ class L2MFLibTests(unittest.TestCase):
         host = socket.gethostname()
         self.slice_name = f"integration test @ {time_stamp} on {host}"
 
-    def tearDown(self):
-        fablib.get_slice(self.slice_name).delete()
+    # def tearDown(self):
+    #     fablib.get_slice(self.slice_name).delete()
 
     def test_add_l2_measurement_nodes_modify(self):
         """
@@ -65,6 +65,12 @@ class L2MFLibTests(unittest.TestCase):
         for node in nodes:
             self.assertIsNotNone(node.get_management_ip())
 
+        ifaces = slice.get_interfaces()
+
+        for iface in ifaces:
+            self.assertIsNotNone(iface.get_ip_addr())
+        
+
     def test_add_l2_measurement_nodes_no_modify(self):
         """
         Add measurement nodes to L2 network.
@@ -80,6 +86,11 @@ class L2MFLibTests(unittest.TestCase):
 
         for node in nodes:
             self.assertIsNotNone(node.get_management_ip())
+
+        ifaces = slice.get_interfaces()
+
+        for iface in ifaces:
+            self.assertIsNotNone(iface.get_ip_addr())
 
     def _make_slice(self):
         fablib = FablibManager()
