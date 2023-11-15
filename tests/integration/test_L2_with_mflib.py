@@ -68,7 +68,8 @@ class L2MFLibTests(unittest.TestCase):
         ifaces = slice.get_interfaces()
 
         for iface in ifaces:
-            self.assertIsNotNone(iface.get_ip_addr())
+            self.assertIsNotNone(iface.get_ip_addr(),
+                                 f"iface {iface.get_name()} has no IP address")
         
 
     def test_add_l2_measurement_nodes_no_modify(self):
@@ -90,7 +91,8 @@ class L2MFLibTests(unittest.TestCase):
         ifaces = slice.get_interfaces()
 
         for iface in ifaces:
-            self.assertIsNotNone(iface.get_ip_addr())
+            self.assertIsNotNone(iface.get_ip_addr(),
+                                 f"iface {iface.get_name()} has no IP address")
 
     def _make_slice(self):
         fablib = FablibManager()
