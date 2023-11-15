@@ -63,7 +63,8 @@ class L2MFLibTests(unittest.TestCase):
         nodes = slice.get_nodes()
 
         for node in nodes:
-            self.assertIsNotNone(node.get_management_ip())
+            self.assertIsNotNone(node.get_management_ip(),
+                                 f"node {node.get_name()} has no management IP address")
 
         ifaces = slice.get_interfaces()
 
@@ -86,7 +87,8 @@ class L2MFLibTests(unittest.TestCase):
         nodes = slice.get_nodes()
 
         for node in nodes:
-            self.assertIsNotNone(node.get_management_ip())
+            self.assertIsNotNone(node.get_management_ip(),
+                                 f"node {node.get_name()} has no management IP address")
 
         ifaces = slice.get_interfaces()
 
