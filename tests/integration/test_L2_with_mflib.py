@@ -50,7 +50,7 @@ class L2MFLibTests(unittest.TestCase):
         Create slice, submit, add measurement node, submit again.
         """
         print("Creating slice")
-        slice = self._make_slice()
+        slice = self._make_l2_slice()
         slice.submit()
 
         print("Adding measurement node")
@@ -85,8 +85,6 @@ class L2MFLibTests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
-
-
     def test_add_l2_measurement_nodes_no_modify(self):
         """
         Add measurement nodes to L2 network.
@@ -94,7 +92,7 @@ class L2MFLibTests(unittest.TestCase):
         Create slice, add measurement node, then submit.
         """
         print("Adding measurement node, no modify")
-        slice = self._make_slice()
+        slice = self._make_l2_slice()
         MFLib.addMeasNode(slice)
 
         print("Submitting slice")
@@ -132,7 +130,7 @@ class L2MFLibTests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
-    def _make_slice(self):
+    def _make_l2_slice(self):
         fablib = FablibManager()
         c = fablib.get_config()
 
