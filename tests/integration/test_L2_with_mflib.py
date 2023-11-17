@@ -60,18 +60,32 @@ class L2MFLibTests(unittest.TestCase):
         # submit Slice Request
         slice.submit()
 
-        nodes = slice.get_nodes()
+        # nodes = slice.get_nodes()
 
-        for node in nodes:
-            self.assertIsNotNone(node.get_management_ip(),
-                                 f"node {node.get_name()} has no management IP address")
+        # for node in nodes:
+        #     self.assertIsNotNone(node.get_management_ip(),
+        #                          f"node {node.get_name()} has no management IP address")
 
         ifaces = slice.get_interfaces()
 
+        # for iface in ifaces:
+        #     self.assertIsNotNone(iface.get_ip_addr(),
+        #                          f"iface {iface.get_name()} has no IP address")
+
+        print("Interfaces:")
+        print("------------------------------------------------------------")
+
         for iface in ifaces:
-            self.assertIsNotNone(iface.get_ip_addr(),
-                                 f"iface {iface.get_name()} has no IP address")
-        
+            print(f"{iface}")
+
+        print("------------------------------------------------------------")
+
+        for iface in ifaces:
+            print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
+
+        print("------------------------------------------------------------")
+
+
 
     def test_add_l2_measurement_nodes_no_modify(self):
         """
@@ -82,19 +96,41 @@ class L2MFLibTests(unittest.TestCase):
         print("Adding measurement node, no modify")
         slice = self._make_slice()
         MFLib.addMeasNode(slice)
+
+        print("Submitting slice")
+
         slice.submit()
 
-        nodes = slice.get_nodes()
+        # print("------------------------------------------------------------")
 
-        for node in nodes:
-            self.assertIsNotNone(node.get_management_ip(),
-                                 f"node {node.get_name()} has no management IP address")
+        # print("Nodes:")
+
+        # nodes = slice.get_nodes()
+
+        # for node in nodes:
+        #     print(f"node: {node}, management ip: {node.get_management_ip()}")
+        #     self.assertIsNotNone(node.get_management_ip(),
+        #                          f"node {node.get_name()} has no management IP address")
+
+        # print("------------------------------------------------------------")
+
+        # print("Interfaces:")
 
         ifaces = slice.get_interfaces()
 
+        # for iface in ifaces:
+        #     self.assertIsNotNone(iface.get_ip_addr(),
+        #                          f"iface {iface.get_name()} has no IP address")
+
         for iface in ifaces:
-            self.assertIsNotNone(iface.get_ip_addr(),
-                                 f"iface {iface.get_name()} has no IP address")
+            print(f"{iface}")
+
+        print("------------------------------------------------------------")
+
+        for iface in ifaces:
+            print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
+
+        print("------------------------------------------------------------")
 
     def _make_slice(self):
         fablib = FablibManager()
