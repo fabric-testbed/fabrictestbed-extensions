@@ -36,12 +36,14 @@ from fabrictestbed_extensions.fablib.fablib import fablib
 
 class L2L3Tests(unittest.TestCase):
     def setUp(self):
+        # Create a slice
         time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
         host = socket.gethostname()
-        self.slice_name = f"integration test @ {time_stamp} on {host}"
+        slice_name = f"integration test @ {time_stamp} on {host}"
+        self._slice = fablib.new_slice(name=slice_name)
 
     # def tearDown(self):
-    #     fablib.get_slice(self.slice_name).delete()
+    #     self._slice.delete()
 
     def test_add_l2_l3_nodes_modify(self):
         """
@@ -49,7 +51,7 @@ class L2L3Tests(unittest.TestCase):
 
         Create slice, submit, add measurement node, submit again.
         """
-        [site1, site2] = fablib.get_random_sites(count=2)
+        [site1, site2, site3] = fablib.get_random_sites(count=3)
         # site1, site2 = "ATLA", "TACC"
         print(f"Sites: {site1}, {site2}, {site3}")
 
@@ -57,16 +59,14 @@ class L2L3Tests(unittest.TestCase):
         self.assertIsNotNone(site2)
         self.assertIsNotNone(site3)
         
-        print("Creating slice")
-        slice = self._make_l2_slice(site1, site2)
-        slice.submit()
+        print(f"Adding nodes to slice at {site1} and {site2}")
+        self._make_l2_slice(site1, site2)
+        self._slice.submit()
 
-        print("Adding measurement node")
         # Add measurement nodes to the slice.
-        MFLib.addMeasNode(slice)
-
-        # submit Slice Request
-        slice.submit()
+        print("Adding measurement node")        
+        MFLib.addMeasNode(self._slice)
+        self._slice.submit()
 
         # nodes = slice.get_nodes()
 
@@ -74,7 +74,7 @@ class L2L3Tests(unittest.TestCase):
         #     self.assertIsNotNone(node.get_management_ip(),
         #                          f"node {node.get_name()} has no management IP address")
 
-        ifaces = slice.get_interfaces()
+        ifaces = self._slice.get_interfaces()
 
         # for iface in ifaces:
         #     self.assertIsNotNone(iface.get_ip_addr(),
@@ -146,29 +146,26 @@ class L2L3Tests(unittest.TestCase):
         node2_name = "node2"
         network_name = "net1"
 
-        # Create a slice
-        slice = fablib.new_slice(name=self.slice_name)
-
         # Add an L2 network.
-        net1 = slice.add_l2network(
+        net1 = self._slice.add_l2network(
             name=network_name, subnet=IPv4Network("192.168.1.0/24")
         )
 
         # Set up node1.
-        node1 = slice.add_node(name=node1_name, site=site1)
+        node1 = self._slice.add_node(name=node1_name, site=site1)
         iface1 = node1.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
         iface1.set_mode("auto")
         net1.add_interface(iface1)
 
         # Set up node2.
-        node2 = slice.add_node(name=node2_name, site=site2)
+        node2 = self._slice.add_node(name=node2_name, site=site2)
         iface2 = node2.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
         iface2.set_mode("auto")
         net1.add_interface(iface2)
 
-        return slice
+        # return slice
 
-    def _add_l3_network(self, slice):
+    def _add_l3_network(self):
         """
         Add an L3 network to the slice.
         """
@@ -177,16 +174,16 @@ class L2L3Tests(unittest.TestCase):
         for node in slice.get_nodes():
             this_site = node.get_site()
             l3_network_name = f"l3_net_{this_site}"
-            if slice.get_l3network(name=l3_network_name) is None:
+            if self._slice.get_l3network(name=l3_network_name) is None:
                 print(f"Adding network {l3_network_name}")
-                slice.add_l3network(name=l3_network_name, type="IPv4")
+                self._slice.add_l3network(name=l3_network_name, type="IPv4")
 
         # Add another L3 network tied and a new node.
-        l3_net = slice.add_l3network(name=f"l3_network", type="IPv4")
+        l3_net = self._slice.add_l3network(name=f"l3_network", type="IPv4")
 
         # Hard-code third site for now.
         site3 = "EDC"
-        l3_node = slice.add_node(f"l3-node-1-{site3}")
+        l3_node = self._slice.add_node(f"l3-node-1-{site3}")
         iface = l3_node.node2.add_component(
             model="NIC_Basic", name="nic1"
         ).get_interfaces()[0]
