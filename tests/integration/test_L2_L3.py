@@ -142,28 +142,25 @@ class L2L3Tests(unittest.TestCase):
         """
         Make a slice with an L2 network and two nodes.
         """
-        node1_name = "node1"
-        node2_name = "node2"
-        network_name = "net1"
-
-        # Add an L2 network.
+        # Add an L2 network. 
+        network_name = "net1"       
         net1 = self._slice.add_l2network(
             name=network_name, subnet=IPv4Network("192.168.1.0/24")
         )
 
         # Set up node1.
+        node1_name = "node1"        
         node1 = self._slice.add_node(name=node1_name, site=site1)
         iface1 = node1.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
         iface1.set_mode("auto")
         net1.add_interface(iface1)
 
         # Set up node2.
+        node2_name = "node2"        
         node2 = self._slice.add_node(name=node2_name, site=site2)
         iface2 = node2.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
         iface2.set_mode("auto")
         net1.add_interface(iface2)
-
-        # return slice
 
     def _add_l3_network(self):
         """
