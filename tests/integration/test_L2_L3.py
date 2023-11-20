@@ -34,7 +34,7 @@ from mflib.mflib import MFLib
 from fabrictestbed_extensions.fablib.fablib import FablibManager, fablib
 
 
-class L2MFLibTests(unittest.TestCase):
+class L2L3Tests(unittest.TestCase):
     def setUp(self):
         time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
         host = socket.gethostname()
@@ -43,7 +43,7 @@ class L2MFLibTests(unittest.TestCase):
     # def tearDown(self):
     #     fablib.get_slice(self.slice_name).delete()
 
-    def test_add_l2_measurement_nodes_modify(self):
+    def test_add_l2_l3_nodes_modify(self):
         """
         Add measurement nodes to L2 network.
 
