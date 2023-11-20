@@ -168,3 +168,28 @@ class L2MFLibTests(unittest.TestCase):
         net1.add_interface(iface2)
 
         return slice
+
+    def _add_l3_network(self, slice):
+        """
+        Add an L3 network to the slice.
+        """
+
+        # Add an L3 network to each site in the slice.
+        for node in slice.get_nodes():
+            this_site = node.get_site()
+            l3_network_name = f"l3_net_{this_site}"
+            if slice.get_l3network(name=l3_network_name) is None:
+                print(f"Adding network {l3_network_name}")
+                slice.add_l3network(name=l3_network_name, type="IPv4")
+
+        # Add another L3 network tied and a new node.
+        l3_net = slice.add_l3network(name=f"l3_network", type="IPv4")
+
+        # Hard-code third site for now.
+        site3 = "EDC"
+        l3_node = slice.add_node(f"l3-node-1-{site3}")
+        iface = l3_node.node2.add_component(
+            model="NIC_Basic", name="nic1"
+        ).get_interfaces()[0]
+        iface.set_mode("auto")
+        l3_net.add_interface(l3_net)
