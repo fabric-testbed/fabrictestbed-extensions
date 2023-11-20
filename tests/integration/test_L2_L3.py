@@ -31,7 +31,7 @@ from ipaddress import IPv4Network
 
 from mflib.mflib import MFLib
 
-from fabrictestbed_extensions.fablib.fablib import FablibManager, fablib
+from fabrictestbed_extensions.fablib.fablib import fablib
 
 
 class L2L3Tests(unittest.TestCase):
@@ -134,11 +134,6 @@ class L2L3Tests(unittest.TestCase):
         """
         Make a slice with an L2 network and two nodes.
         """
-        fablib = FablibManager()
-        c = fablib.get_config()
-
-        self.assertIsNotNone(c)
-
         [site1, site2] = fablib.get_random_sites(count=2)
         # site1, site2 = "ATLA", "TACC"
         print(f"Sites: {site1}, {site2}")
