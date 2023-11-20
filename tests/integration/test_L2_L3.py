@@ -49,8 +49,16 @@ class L2L3Tests(unittest.TestCase):
 
         Create slice, submit, add measurement node, submit again.
         """
+        [site1, site2] = fablib.get_random_sites(count=2)
+        # site1, site2 = "ATLA", "TACC"
+        print(f"Sites: {site1}, {site2}, {site3}")
+
+        self.assertIsNotNone(site1)
+        self.assertIsNotNone(site2)
+        self.assertIsNotNone(site3)
+        
         print("Creating slice")
-        slice = self._make_l2_slice()
+        slice = self._make_l2_slice(site1, site2)
         slice.submit()
 
         print("Adding measurement node")
@@ -130,17 +138,10 @@ class L2L3Tests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
-    def _make_l2_slice(self):
+    def _make_l2_slice(self, site1, site2):
         """
         Make a slice with an L2 network and two nodes.
         """
-        [site1, site2] = fablib.get_random_sites(count=2)
-        # site1, site2 = "ATLA", "TACC"
-        print(f"Sites: {site1}, {site2}")
-
-        self.assertIsNotNone(site1)
-        self.assertIsNotNone(site2)
-
         node1_name = "node1"
         node2_name = "node2"
         network_name = "net1"
