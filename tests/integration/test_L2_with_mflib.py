@@ -131,6 +131,9 @@ class L2MFLibTests(unittest.TestCase):
         print("------------------------------------------------------------")
 
     def _make_l2_slice(self):
+        """
+        Make a slice with an L2 network and two nodes.
+        """
         fablib = FablibManager()
         c = fablib.get_config()
 
