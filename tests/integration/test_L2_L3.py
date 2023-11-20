@@ -139,8 +139,8 @@ class L2L3Tests(unittest.TestCase):
 
         self.assertIsNotNone(c)
 
-        # [site1, site2] = fablib.get_random_sites(count=2)
-        site1, site2 = "ATLA", "TACC"
+        [site1, site2] = fablib.get_random_sites(count=2)
+        # site1, site2 = "ATLA", "TACC"
         print(f"Sites: {site1}, {site2}")
 
         self.assertIsNotNone(site1)
