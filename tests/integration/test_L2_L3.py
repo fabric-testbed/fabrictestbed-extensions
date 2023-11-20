@@ -60,7 +60,7 @@ class L2L3Tests(unittest.TestCase):
         self.assertIsNotNone(site3)
         
         print(f"Adding nodes to slice at {site1} and {site2}")
-        self._make_l2_slice(site1, site2)
+        self._add_l2(site1, site2)
         self._slice.submit()
 
         # Add measurement nodes to the slice.
@@ -138,7 +138,7 @@ class L2L3Tests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
-    def _make_l2_slice(self, site1, site2):
+    def _add_l2(self, site1, site2):
         """
         Make a slice with an L2 network and two nodes.
         """
@@ -162,7 +162,7 @@ class L2L3Tests(unittest.TestCase):
         iface2.set_mode("auto")
         net1.add_interface(iface2)
 
-    def _add_l3_network(self):
+    def _add_l3(self):
         """
         Add an L3 network to the slice.
         """
