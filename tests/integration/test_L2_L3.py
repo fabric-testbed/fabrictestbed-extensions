@@ -42,8 +42,8 @@ class L2L3Tests(unittest.TestCase):
         slice_name = f"integration test @ {time_stamp} on {host}"
         self._slice = fablib.new_slice(name=slice_name)
 
-    # def tearDown(self):
-    #     self._slice.delete()
+    def tearDown(self):
+        self._slice.delete()
 
     def test_add_l2_l3_nodes_modify(self):
         """
@@ -178,11 +178,31 @@ class L2L3Tests(unittest.TestCase):
 
         l3_net_name1 = f"l3_net_{site1}"
         print(f"Adding L3 network {l3_net_name1}")
-        self._slice.add_l3network(name=l3_net_name1, type="IPv4")
+        l3_net1 = self._slice.add_l3network(name=l3_net_name1, type="IPv4")
+
+        node1 = self._slice.get_node("node1")
+        site1 = node1.get_site()
+        iface1 = node1.add_component(
+            model="NIC_Basic",
+            name=(f"nic_node1_{site1}"),
+        ).get_interfaces()[0]
+        iface1.set_mode("auto")
+
+        l3_net1.add_interface(iface1)
 
         l3_net_name2 = f"l3_net_{site2}"
         print(f"Adding L3 network {l3_net_name2}")
-        self._slice.add_l3network(name=l3_net_name2, type="IPv4")
+        l3_net2 = self._slice.add_l3network(name=l3_net_name2, type="IPv4")
+
+        node2 = self._slice.get_node("node2")
+        site2 = node2.get_site()
+        iface2 = node2.add_component(
+            model="NIC_Basic",
+            name=(f"nic_node1_{site2}"),
+        ).get_interfaces()[0]
+        iface2.set_mode("auto")
+
+        l3_net2.add_interface(iface2)
 
         # # Hard-code third site for now.
         # site3 = "EDC"
