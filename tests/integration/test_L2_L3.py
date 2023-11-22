@@ -188,37 +188,41 @@ class L2L3Tests(unittest.TestCase):
         #         print(f"Adding network {l3_network_name}")
         #         self._slice.add_l3network(name=l3_network_name, type="IPv4")
 
-        l3_net_name1 = f"l3_net_{site1}"
-        print(f"Adding L3 network {l3_net_name1}")
-        l3_net1 = self._slice.add_l3network(name=l3_net_name1, type="IPv4")
+        # l3_net_name1 = f"l3_net_{site1}"
+        # print(f"Adding L3 network {l3_net_name1}")
+        # l3_net1 = self._slice.add_l3network(name=l3_net_name1, type="IPv4")
 
-        node1 = self._slice.get_node(f"node-{site1}")
-        site1 = node1.get_site()
-        iface1 = node1.add_component(
-            model="NIC_Basic",
-            name=(f"nic_node1_{site1}"),
-        ).get_interfaces()[0]
-        iface1.set_mode("auto")
+        # node1 = self._slice.get_node(f"node-{site1}")
+        # site1 = node1.get_site()
+        # iface1 = node1.add_component(
+        #     model="NIC_Basic",
+        #     name=(f"nic_node1_{site1}"),
+        # ).get_interfaces()[0]
+        # iface1.set_mode("auto")
 
-        l3_net1.add_interface(iface1)
+        # l3_net1.add_interface(iface1)
 
-        l3_net_name2 = f"l3_net_{site2}"
-        print(f"Adding L3 network {l3_net_name2}")
-        l3_net2 = self._slice.add_l3network(name=l3_net_name2, type="IPv4")
+        self.__add_l3_to_node(site1)
 
-        node2 = self._slice.get_node(f"node-{site}")
-        site2 = node2.get_site()
-        iface2 = node2.add_component(
-            model="NIC_Basic",
-            name=(f"nic_node1_{site2}"),
-        ).get_interfaces()[0]
-        iface2.set_mode("auto")
+        # l3_net_name2 = f"l3_net_{site2}"
+        # print(f"Adding L3 network {l3_net_name2}")
+        # l3_net2 = self._slice.add_l3network(name=l3_net_name2, type="IPv4")
 
-        l3_net2.add_interface(iface2)
+        # node2 = self._slice.get_node(f"node-{site2}")
+        # site2 = node2.get_site()
+        # iface2 = node2.add_component(
+        #     model="NIC_Basic",
+        #     name=(f"nic_node1_{site2}"),
+        # ).get_interfaces()[0]
+        # iface2.set_mode("auto")
+
+        # l3_net2.add_interface(iface2)
 
         # # Hard-code third site for now.
         # site3 = "EDC"
 
+        self.__add_l3_to_node(site2)
+        
         # Add another L3 network tied and a new node.
         l3_net_name3 = f"l3_net_{site3}"
         print(f"Adding L3 network {l3_net_name3}")
@@ -227,4 +231,22 @@ class L2L3Tests(unittest.TestCase):
         node = self._slice.add_node(f"l3_node_{site3}")
         iface = node.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
         iface.set_mode("auto")
+
         l3_net.add_interface(iface)
+
+    def __add_l3_to_node(self, site):
+        l3_net_name = f"l3_net_{site}"
+        print(f"Adding L3 network {l3_net_name}")
+        
+        l3_net = self._slice.add_l3network(name=l3_net_name, type="IPv4")
+
+        node = self._slice.get_node(f"node-{site}")
+        # site = node.get_site()
+        iface = node.add_component(
+            model="NIC_Basic",
+            name=(f"nic-l3-{site}"),
+        ).get_interfaces()[0]
+        iface.set_mode("auto")
+
+        l3_net.add_interface(iface)
+        
