@@ -61,12 +61,14 @@ class L2L3Tests(unittest.TestCase):
 
         print(f"Adding nodes to slice at {site1} and {site2}")
         self._add_l2(site1, site2)
+        print(f"Submitting '{self._slice.get_name()}' [#1]")
         self._slice.submit()
 
         # Add measurement nodes to the slice.
-        print("Adding measurement node")
+        print("Adding L3 node")
         # MFLib.addMeasNode(self._slice)
         self._add_l3(site1, site2, site3)
+        print(f"Submitting '{self._slice.get_name()}' [#2]")
         self._slice.submit()
 
         # nodes = slice.get_nodes()
@@ -168,11 +170,17 @@ class L2L3Tests(unittest.TestCase):
     def __add_node_l2(self, site, net):
         # Set up a node with a NIC.
         node_name = f"node-{site}"
+        print(f"Adding node {node_name}")
         node = self._slice.add_node(name=node_name, site=site)
-        iface = node.add_component(
-            model="NIC_Basic", name=f"nic-node-{site}"
-        ).get_interfaces()[0]
+
+        iface_name = f"nic-L2-{site}"
+        print(f"Adding {iface_name} to {node_name}")
+
+        iface = node.add_component(model="NIC_Basic", name=iface_name).get_interfaces()[
+            0
+        ]
         iface.set_mode("auto")
+
         net.add_interface(iface)
 
     def _add_l3(self, site1, site2, site3):
@@ -222,7 +230,7 @@ class L2L3Tests(unittest.TestCase):
         # site3 = "EDC"
 
         self.__add_l3_to_node(site2)
-        
+
         # Add another L3 network tied and a new node.
         l3_net_name3 = f"l3_net_{site3}"
         print(f"Adding L3 network {l3_net_name3}")
@@ -237,16 +245,17 @@ class L2L3Tests(unittest.TestCase):
     def __add_l3_to_node(self, site):
         l3_net_name = f"l3_net_{site}"
         print(f"Adding L3 network {l3_net_name}")
-        
         l3_net = self._slice.add_l3network(name=l3_net_name, type="IPv4")
 
         node = self._slice.get_node(f"node-{site}")
         # site = node.get_site()
+        iface_name = f"nic-L3-{site}"
+        print(f"Adding {iface_name} to {node.get_name()}")
+
         iface = node.add_component(
             model="NIC_Basic",
-            name=(f"nic-l3-{site}"),
+            name=iface_name,
         ).get_interfaces()[0]
         iface.set_mode("auto")
 
         l3_net.add_interface(iface)
-        
