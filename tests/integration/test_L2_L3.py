@@ -119,7 +119,7 @@ class L2L3Tests(unittest.TestCase):
         self.__add_l3_to_node(site1)
         self.__add_l3_to_node(site2)
 
-        # Add another L3 network tied and a new node.
+        # Add another L3 network tied to a new node.
         self.__add_l3_node(site3)
 
     def __add_l3_to_node(self, site):
