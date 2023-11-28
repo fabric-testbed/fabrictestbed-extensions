@@ -96,6 +96,15 @@ class L2L3Tests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
+        for iface in ifaces:
+            ifname = iface.get_name()
+            node = iface.get_node().get_name()
+            site = iface.get_site()
+            self.assertIsNotNone(
+                iface.get_ip_addr(),
+                f"iface {iface} (node: {node}, site: {site}) has no IP address",
+            )
+
     def _add_l2(self, site1, site2):
         """
         Make a slice with an L2 network and two nodes.
