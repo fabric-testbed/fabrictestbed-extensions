@@ -68,6 +68,15 @@ class L2L3Tests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
+        for iface in ifaces:
+            ifname = iface.get_name()
+            node = iface.get_node().get_name()
+            site = iface.get_site()
+            self.assertIsNotNone(
+                iface.get_ip_addr(),
+                f"iface {iface} (node: {node}, site: {site}) has no IP address",
+            )
+
     def test_add_l2_l3_nodes_no_modify(self):
         # Add nodes with L2 network, add a third node, and L3 network,
         # then submit.
