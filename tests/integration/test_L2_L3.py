@@ -70,7 +70,7 @@ class L2L3Tests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
-    def test_add_l2_measurement_nodes_no_modify(self):
+    def test_add_l2_l3_nodes_no_modify(self):
         # Add nodes with L2 network, add a third node, and L3 network,
         # then submit.
 
