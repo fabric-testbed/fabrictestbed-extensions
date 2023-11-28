@@ -46,53 +46,27 @@ class L2L3Tests(unittest.TestCase):
         self._slice.delete()
 
     def test_add_l2_l3_nodes_modify(self):
-        """
-        Add measurement nodes to L2 network.
+        # Add nodes with L2 network, submit, add a third node with L3
+        # network, add L3 network to the first two nodes, submit again.
 
-        Create slice, submit, add measurement node, submit again.
-        """
         [site1, site2, site3] = fablib.get_random_sites(count=3)
-        # site1, site2 = "ATLA", "TACC"
         print(f"Sites: {site1}, {site2}, {site3}")
-
-        self.assertIsNotNone(site1)
-        self.assertIsNotNone(site2)
-        self.assertIsNotNone(site3)
 
         print(f"Adding nodes to slice at {site1} and {site2}")
         self._add_l2(site1, site2)
         print(f"Submitting '{self._slice.get_name()}' [#1]")
         self._slice.submit()
 
-        # Add measurement nodes to the slice.
-        print("Adding L3 node")
-        # MFLib.addMeasNode(self._slice)
+        print(f"Adding third node at {site3}")
         self._add_l3(site1, site2, site3)
         print(f"Submitting '{self._slice.get_name()}' [#2]")
         self._slice.submit()
 
-        # nodes = slice.get_nodes()
-
-        # for node in nodes:
-        #     self.assertIsNotNone(node.get_management_ip(),
-        #                          f"node {node.get_name()} has no management IP address")
+        print("------------------------------------------------------------")
 
         ifaces = self._slice.get_interfaces()
-
-        # for iface in ifaces:
-        #     self.assertIsNotNone(iface.get_ip_addr(),
-        #                          f"iface {iface.get_name()} has no IP address")
-
-        print("Interfaces:")
-        print("------------------------------------------------------------")
-
         for iface in ifaces:
             print(f"{iface}")
-
-        print("------------------------------------------------------------")
-
-        for iface in ifaces:
-            print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
 
         print("------------------------------------------------------------")
 
