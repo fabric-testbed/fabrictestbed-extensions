@@ -57,7 +57,7 @@ class L2L3Tests(unittest.TestCase):
         print(f"Submitting '{self._slice.get_name()}' [#1]")
         self._slice.submit()
 
-        print(f"Adding third node at {site3}")
+        print(f"Adding a third node at {site3}")
         self._add_l3(site1, site2, site3)
         print(f"Submitting '{self._slice.get_name()}' [#2]")
         self._slice.submit()
