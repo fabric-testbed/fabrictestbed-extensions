@@ -88,7 +88,7 @@ class L2L3Tests(unittest.TestCase):
         Make a slice with an L2 network and two nodes.
         """
         # Add an L2 network.
-        network_name = "net1"
+        network_name = "net-L2"
         l2_net = self._slice.add_l2network(
             name=network_name, subnet=IPv4Network("192.168.1.0/24")
         )
