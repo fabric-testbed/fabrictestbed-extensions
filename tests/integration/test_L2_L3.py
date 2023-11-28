@@ -192,13 +192,7 @@ class L2L3Tests(unittest.TestCase):
         errors = []
 
         for iface in ifaces:
-            ifname = iface.get_name()
-            node = iface.get_node().get_name()
-            site = iface.get_site()
-
             if iface.get_ip_addr() is None:
-                errors.append(
-                    f"iface {ifname} (node: {node}, site: {site}) has no IP address"
-                )
+                errors.append(f"iface {iface.get_name()} has no IP address")
 
         self.assertIs(errors, [])
