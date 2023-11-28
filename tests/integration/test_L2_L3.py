@@ -184,11 +184,6 @@ class L2L3Tests(unittest.TestCase):
 
         print("------------------------------------------------------------")
 
-        # for iface in ifaces:
-        #     print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
-
-        # print("------------------------------------------------------------")
-
         errors = []
 
         for iface in ifaces:
