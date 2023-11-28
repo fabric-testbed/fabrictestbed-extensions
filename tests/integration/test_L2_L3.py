@@ -84,11 +84,11 @@ class L2L3Tests(unittest.TestCase):
 
         print("Submitting slice")
 
-        slice.submit()
+        self._slice.submit()
+        ifaces = self._slice.get_interfaces()        
 
         print("------------------------------------------------------------")
 
-        ifaces = slice.get_interfaces()
         for iface in ifaces:
             print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
 
