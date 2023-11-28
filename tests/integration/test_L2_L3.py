@@ -127,20 +127,7 @@ class L2L3Tests(unittest.TestCase):
         node = self._slice.get_node(name=node_name)
         # node = self._slice.add_node(name=node_name, site=site)
 
-        iface_name = f"nic-L3-{site}"
-        print(f"Adding {iface_name} to {node.get_name()}")
-
-        iface = node.add_component(
-            model="NIC_Basic",
-            name=iface_name,
-        ).get_interfaces()[0]
-        iface.set_mode("auto")
-
-        l3_net_name = f"l3_net_{site}"
-        print(f"Adding L3 network {l3_net_name}, with {iface_name}")
-        l3_net = self._slice.add_l3network(name=l3_net_name, type="IPv4")
-
-        l3_net.add_interface(iface)
+        self.__add_l3_iface(site, node)
 
         # node.add_route(
         #     subnet=FablibManager.FABNETV4_SUBNET, next_hop=l3_net.get_gateway()
@@ -150,21 +137,11 @@ class L2L3Tests(unittest.TestCase):
         # # node.add_fabnet()
 
     def __add_l3_node(self, site):
-        node_name = f"l3_node_{site}"
+        node_name = f"node-L3-{site}"
         print(f"Adding node {node_name}")
         node = self._slice.add_node(name=node_name, site=site)
 
-        ifname = f"nic-L3-{site}"
-        print(f"Adding {ifname} to {node_name}")
-
-        iface = node.add_component(model="NIC_Basic", name=ifname).get_interfaces()[0]
-        iface.set_mode("auto")
-
-        l3_net_name = f"l3_net_{site}"
-        print(f"Adding L3 network {l3_net_name}, with {iface_name}")        
-        l3_net = self._slice.add_l3network(name=l3_net_name, type="IPv4")
-        
-        l3_net.add_interface(iface)
+        self.__add_l3_iface(site, node)
 
         # node.add_route(
         #     subnet=FablibManager.FABNETV4_SUBNET, next_hop=l3_net.get_gateway()
@@ -172,6 +149,19 @@ class L2L3Tests(unittest.TestCase):
 
         # # print(f"Adding fabnet to {node.get_name()}")
         # # node.add_fabnet()
+
+    def __add_l3_iface(self, site, node):
+        if_name = f"nic-L3-{site}"
+        print(f"Adding {if_name} to {node.get_name()}")
+
+        iface = node.add_component(model="NIC_Basic", name=if_name).get_interfaces()[0]
+        iface.set_mode("auto")
+
+        l3_net_name = f"net-L3-{site}"
+        print(f"Adding L3 network {l3_net_name}, with {if_name}")
+        l3_net = self._slice.add_l3network(name=l3_net_name, type="IPv4")
+
+        l3_net.add_interface(iface)
 
     def _check_interfaces(self):
         ifaces = self._slice.get_interfaces()
