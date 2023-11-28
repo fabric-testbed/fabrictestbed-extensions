@@ -129,6 +129,17 @@ class L2L3Tests(unittest.TestCase):
 
         self.__add_l3_iface(site, node)
 
+        # Other things tried:
+        
+        # print(f"Rebooting node {node.get_name()}...")
+        # node.os_reboot()
+
+        # print(f"Running post boot tasks on {node.get_name()}")
+        # node.run_post_boot_tasks()
+
+        # print(f"Running post update commands on {node.get_name()}")
+        # node.run_post_update_commands()
+        
         # node.add_route(
         #     subnet=FablibManager.FABNETV4_SUBNET, next_hop=l3_net.get_gateway()
         # )
