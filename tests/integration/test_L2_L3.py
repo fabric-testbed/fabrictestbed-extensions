@@ -200,6 +200,13 @@ class L2L3Tests(unittest.TestCase):
 
         l3_net.add_interface(iface)
 
+        # node.add_route(
+        #     subnet=FablibManager.FABNETV4_SUBNET, next_hop=l3_net.get_gateway()
+        # )
+
+        # # print(f"Adding fabnet to {node.get_name()}")
+        # # node.add_fabnet()
+
     def __add_l3_node(self, site):
         l3_net_name = f"l3_net_{site}"
         print(f"Adding L3 network {l3_net_name}")
@@ -216,3 +223,10 @@ class L2L3Tests(unittest.TestCase):
         iface.set_mode("auto")
 
         l3_net.add_interface(iface)
+
+        # node.add_route(
+        #     subnet=FablibManager.FABNETV4_SUBNET, next_hop=l3_net.get_gateway()
+        # )
+
+        # # print(f"Adding fabnet to {node.get_name()}")
+        # # node.add_fabnet()
