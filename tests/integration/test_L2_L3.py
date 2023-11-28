@@ -97,11 +97,9 @@ class L2L3Tests(unittest.TestCase):
         print("------------------------------------------------------------")
 
     def test_add_l2_measurement_nodes_no_modify(self):
-        """
-        Add measurement nodes to L2 network.
+        # Add nodes with L2 network, add a third node, and L3 network,
+        # then submit.
 
-        Create slice, add measurement node, then submit.
-        """
         print("Adding nodes, no modify")
         [site1, site2, site3] = fablib.get_random_sites(count=3)
         print(f"Sites: {site1}, {site2}, {site3}")
@@ -116,32 +114,9 @@ class L2L3Tests(unittest.TestCase):
 
         slice.submit()
 
-        # print("------------------------------------------------------------")
-
-        # print("Nodes:")
-
-        # nodes = slice.get_nodes()
-
-        # for node in nodes:
-        #     print(f"node: {node}, management ip: {node.get_management_ip()}")
-        #     self.assertIsNotNone(node.get_management_ip(),
-        #                          f"node {node.get_name()} has no management IP address")
-
-        # print("------------------------------------------------------------")
-
-        # print("Interfaces:")
-
-        ifaces = slice.get_interfaces()
-
-        # for iface in ifaces:
-        #     self.assertIsNotNone(iface.get_ip_addr(),
-        #                          f"iface {iface.get_name()} has no IP address")
-
-        # for iface in ifaces:
-        #     print(f"{iface}")
-
         print("------------------------------------------------------------")
 
+        ifaces = slice.get_interfaces()
         for iface in ifaces:
             print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
 
