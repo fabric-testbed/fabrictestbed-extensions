@@ -102,9 +102,15 @@ class L2L3Tests(unittest.TestCase):
 
         Create slice, add measurement node, then submit.
         """
-        print("Adding measurement node, no modify")
-        slice = self._make_l2_slice()
-        MFLib.addMeasNode(slice)
+        print("Adding nodes, no modify")
+        [site1, site2, site3] = fablib.get_random_sites(count=3)
+        print(f"Sites: {site1}, {site2}, {site3}")
+
+        print(f"Adding nodes and L2 network to slice at {site1} and {site2}")
+        self._add_l2(site1, site2)
+
+        print(f"Adding a node at {site3} and L3 network to slice at {site1}, {site2}")
+        self._add_l3(site1, site2, site3)
 
         print("Submitting slice")
 
@@ -131,8 +137,8 @@ class L2L3Tests(unittest.TestCase):
         #     self.assertIsNotNone(iface.get_ip_addr(),
         #                          f"iface {iface.get_name()} has no IP address")
 
-        for iface in ifaces:
-            print(f"{iface}")
+        # for iface in ifaces:
+        #     print(f"{iface}")
 
         print("------------------------------------------------------------")
 
