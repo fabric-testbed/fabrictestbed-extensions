@@ -185,7 +185,7 @@ class L2L3Tests(unittest.TestCase):
 
         node_name = f"l3_node_{site}"
         print(f"Adding node {node_name}")
-        node = self._slice.add_node(name=node_name)
+        node = self._slice.add_node(name=node_name, site=site)
 
         ifname = f"nic-L3-{site}"
         print(f"Adding {ifname} to {node_name}")
