@@ -29,8 +29,6 @@ import time
 import unittest
 from ipaddress import IPv4Network
 
-from mflib.mflib import MFLib
-
 from fabrictestbed_extensions.fablib.fablib import fablib, FablibManager
 
 
