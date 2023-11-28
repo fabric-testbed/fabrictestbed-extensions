@@ -60,22 +60,7 @@ class L2L3Tests(unittest.TestCase):
         print(f"Submitting '{self._slice.get_name()}' [#2]")
         self._slice.submit()
 
-        print("------------------------------------------------------------")
-
-        ifaces = self._slice.get_interfaces()
-        for iface in ifaces:
-            print(f"{iface}")
-
-        print("------------------------------------------------------------")
-
-        for iface in ifaces:
-            ifname = iface.get_name()
-            node = iface.get_node().get_name()
-            site = iface.get_site()
-            self.assertIsNotNone(
-                iface.get_ip_addr(),
-                f"iface {iface} (node: {node}, site: {site}) has no IP address",
-            )
+        self._check_interfaces()
 
     def test_add_l2_l3_nodes_no_modify(self):
         # Add nodes with L2 network, add a third node, and L3 network,
@@ -92,25 +77,9 @@ class L2L3Tests(unittest.TestCase):
         self._add_l3(site1, site2, site3)
 
         print("Submitting slice")
-
         self._slice.submit()
-        ifaces = self._slice.get_interfaces()        
 
-        print("------------------------------------------------------------")
-
-        for iface in ifaces:
-            print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
-
-        print("------------------------------------------------------------")
-
-        for iface in ifaces:
-            ifname = iface.get_name()
-            node = iface.get_node().get_name()
-            site = iface.get_site()
-            self.assertIsNotNone(
-                iface.get_ip_addr(),
-                f"iface {iface} (node: {node}, site: {site}) has no IP address",
-            )
+        self._check_interfaces()
 
     def _add_l2(self, site1, site2):
         """
@@ -201,3 +170,32 @@ class L2L3Tests(unittest.TestCase):
 
         # # print(f"Adding fabnet to {node.get_name()}")
         # # node.add_fabnet()
+
+    def _check_interfaces(self):
+        ifaces = self._slice.get_interfaces()
+
+        print("------------ interfaces ------------------------------------")
+
+        for iface in ifaces:
+            print(f"{iface}")
+
+        print("------------------------------------------------------------")
+
+        # for iface in ifaces:
+        #     print(f"iface: {iface.get_name()}, ip: {iface.get_ip_addr()}")
+
+        # print("------------------------------------------------------------")
+
+        errors = []
+
+        for iface in ifaces:
+            ifname = iface.get_name()
+            node = iface.get_node().get_name()
+            site = iface.get_site()
+
+            if iface.get_ip_addr() is None:
+                errors.append(
+                    f"iface {ifname} (node: {node}, site: {site}) has no IP address"
+                )
+
+        self.assertIs(errors, [])
