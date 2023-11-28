@@ -22,8 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Extracted from create_l2network_wide_area_auto.ipynb
-
 import socket
 import time
 import unittest
@@ -33,6 +31,10 @@ from fabrictestbed_extensions.fablib.fablib import fablib, FablibManager
 
 
 class L2L3Tests(unittest.TestCase):
+    # Parts of this is extracted from the notebook
+    # create_l2network_wide_area_auto.ipynb, while investigating
+    # https://github.com/fabric-testbed/fabrictestbed-extensions/issues/261
+
     def setUp(self):
         # Create a slice
         time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
