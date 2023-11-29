@@ -272,14 +272,19 @@ class L2L3Tests(unittest.TestCase):
         l3_net.add_interface(iface)
 
     def _check_interfaces(self):
+        print("============ interfaces ====================================")
+
         ifaces = self._slice.get_interfaces()
-
-        print("------------ interfaces ------------------------------------")
-
         for iface in ifaces:
             print(f"{iface}")
 
-        print("------------------------------------------------------------")
+        print("============ networks ======================================")
+
+        networks = self._slice.get_networks()
+        for network in networks:
+            print(f"{network}")
+
+        print("============================================================")
 
         errors = []
 
