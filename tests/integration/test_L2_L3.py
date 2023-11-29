@@ -45,6 +45,51 @@ class L2L3Tests(unittest.TestCase):
     def tearDown(self):
         self._slice.delete()
 
+    def test_single_node_modify(self):
+        site = fablib.get_random_site()
+
+        node_name = f"node-{site}"
+        print(f"Adding node {node_name}")
+        node = self._slice.add_node(name=node_name, site=site)
+
+        l2_net_name = "net-L2"
+        print(f"Adding network {l2_net_name}")
+        l2_net = self._slice.add_l2network(
+            name=l2_net_name, subnet=IPv4Network("192.168.1.0/24")
+        )
+
+        l2_iface_name = f"nic-L2-{site}"
+        print(f"Adding {l2_iface_name} to {node_name}")
+        l2_iface = node.add_component(
+            model="NIC_Basic", name=l2_iface_name
+        ).get_interfaces()[0]
+        l2_iface.set_mode("auto")
+
+        print(f"Adding {l2_iface_name} to {l2_net_name}")
+        l2_net.add_interface(l2_iface)
+
+        # print("Submitting slice [#1]")
+        # self._slice.submit()
+
+        l3_net_name = f"net-L3-{site}"
+        print(f"Adding network {l3_net_name}")        
+        l3_net = self._slice.add_l3network(name=l3_net_name, type="IPv4")      
+
+        l3_iface_name = f"nic-L3-{site}"
+        print(f"Adding {l3_iface_name} to {node.get_name()}")
+        l3_iface = node.add_component(
+            model="NIC_Basic", name=l3_iface_name
+        ).get_interfaces()[0]
+        l3_iface.set_mode("auto")
+ 
+        print(f"Adding {l3_iface_name} to {l3_net_name}")
+        l3_net.add_interface(l3_iface)
+
+        print("Submitting slice [#2]")
+        self._slice.submit()
+
+        self._check_interfaces()
+
     def test_add_l2_l3_nodes_modify(self):
         # Add nodes with L2 network, submit, add a third node with L3
         # network, add L3 network to the first two nodes, submit again.
