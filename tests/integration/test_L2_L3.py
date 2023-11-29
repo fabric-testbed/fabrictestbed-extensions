@@ -27,7 +27,7 @@ import time
 import unittest
 from ipaddress import IPv4Network
 
-from fabrictestbed_extensions.fablib.fablib import fablib, FablibManager
+from fabrictestbed_extensions.fablib.fablib import fablib
 
 
 class L2L3Tests(unittest.TestCase):
