@@ -57,10 +57,17 @@ class L2L3Tests(unittest.TestCase):
         print(f"Submitting '{self._slice.get_name()}' [#1]")
         self._slice.submit()
 
+        # Marker log for ease of searching/spotting.
+        import logging
+
+        logging.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+
         print(f"Adding a third node at {site3}")
         self._add_l3(site1, site2, site3)
         print(f"Submitting '{self._slice.get_name()}' [#2]")
         self._slice.submit()
+
+        logging.info("############################################################")
 
         self._check_interfaces()
 
