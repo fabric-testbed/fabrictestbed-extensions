@@ -197,4 +197,4 @@ class L2L3Tests(unittest.TestCase):
             if iface.get_ip_addr() is None:
                 errors.append(f"iface {iface.get_name()} has no IP address")
 
-        self.assertIs(errors, [])
+        self.assertEqual(errors, [])
