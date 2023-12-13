@@ -1676,7 +1676,8 @@ class Slice:
 
         for node in self.get_nodes():
             # print(f"Configuring {node.get_name()}")
-            if not node.is_instantiated():
+            # Run configuration on newly created nodes and on modify.
+            if not node.is_instantiated() or self._is_modify():
                 thread = my_thread_pool_executor.submit(node.config)
                 threads[thread] = node
 
