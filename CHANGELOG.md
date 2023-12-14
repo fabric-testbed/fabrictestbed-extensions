@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PR [#241](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/241))
 - Honor wait_timeout in slice.submit()
   ([#253](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/253))
+- Reconfigure on slice update/modify (Issue
+  [#261](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/261))
 
 ### Added
 
