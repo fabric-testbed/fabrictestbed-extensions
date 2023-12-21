@@ -549,6 +549,10 @@ class FablibManager:
         "CRITICAL": logging.CRITICAL,
     }
 
+    DEFAULT_FABRIC_CREDMGR_HOST = "cm.fabric-testbed.net"
+    DEFAULT_FABRIC_ORCHESTRATOR_HOST = "orchestrator.fabric-testbed.net"
+    DEFAULT_FABRIC_BASTION_HOST = "bastion.fabric-testbed.net"
+
     default_fabric_rc = os.environ["HOME"] + "/work/fabric_config/fabric_rc"
     default_log_level = "DEBUG"
     default_log_file = "/tmp/fablib/fablib.log"
@@ -751,6 +755,15 @@ class FablibManager:
         #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
         #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
         #                        datefmt='%H:%M:%S')
+
+        if self.credmgr_host is None:
+            self.credmgr_host = self.DEFAULT_FABRIC_CREDMGR_HOST
+
+        if self.orchestrator_host is None:
+            self.orchestrator_host = self.DEFAULT_FABRIC_ORCHESTRATOR_HOST
+
+        if self.bastion_public_addr is None:
+            self.bastion_public_addr = self.DEFAULT_FABRIC_BASTION_HOST
 
         self._validate_configuration()
 
