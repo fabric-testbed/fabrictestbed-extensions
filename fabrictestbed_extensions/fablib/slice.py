@@ -1700,8 +1700,13 @@ class Slice:
         threads = {}
 
         for node in self.get_nodes():
-            # print(f"Configuring {node.get_name()}")
-            if not node.is_instantiated():
+            # Run configuration on newly created nodes and on modify.
+            logging.info(
+                f"Configuring {node.get_name()} "
+                f"(instantiated: {node.is_instantiated()}, "
+                f"modify: {self._is_modify()})"
+            )
+            if not node.is_instantiated() or self._is_modify():
                 thread = my_thread_pool_executor.submit(node.config)
                 threads[thread] = node
 
@@ -1974,11 +1979,6 @@ class Slice:
         :return: slice_id
         """
 
-        if self.get_state() is None:
-            modify = False
-        else:
-            modify = True
-
         if not wait:
             progress = False
 
@@ -1986,7 +1986,7 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        if modify:
+        if self._is_modify():
             (
                 return_status,
                 slice_reservations,
@@ -2584,3 +2584,12 @@ class Slice:
             user_data[componenet.get_name()] = componenet.get_user_data()
 
         return user_data
+
+    def _is_modify(self) -> Bool:
+        """
+        Indicate if we should submit a modify request to orchestrator.
+        """
+        if self.get_state() is None:
+            return False
+        else:
+            return True

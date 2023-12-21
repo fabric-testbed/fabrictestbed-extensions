@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PR [#241](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/241))
 - Honor wait_timeout in slice.submit()
   ([#253](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/253))
+- Reconfigure on slice update/modify (Issue
+  [#261](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/261))
 
 ### Added
 
@@ -31,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PR [#251](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/251))
 - Module docstrings (PR
   [#256](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/256))
+
+### Changed
+
+- Use defaults for FABRIC CM, orchestrator and bastion hosts (Issue
+  [#258](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/258))
+
 
 ## [1.5.5]
 
