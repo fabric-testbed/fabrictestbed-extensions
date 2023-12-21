@@ -1675,8 +1675,13 @@ class Slice:
         threads = {}
 
         for node in self.get_nodes():
-            # print(f"Configuring {node.get_name()}")
-            if not node.is_instantiated():
+            # Run configuration on newly created nodes and on modify.
+            logging.info(
+                f"Configuring {node.get_name()} "
+                f"(instantiated: {node.is_instantiated()}, "
+                f"modify: {self._is_modify()})"
+            )
+            if not node.is_instantiated() or self._is_modify():
                 thread = my_thread_pool_executor.submit(node.config)
                 threads[thread] = node
 
@@ -1949,11 +1954,6 @@ class Slice:
         :return: slice_id
         """
 
-        if self.get_state() is None:
-            modify = False
-        else:
-            modify = True
-
         if not wait:
             progress = False
 
@@ -1961,7 +1961,7 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        if modify:
+        if self._is_modify():
             (
                 return_status,
                 slice_reservations,
@@ -2037,7 +2037,7 @@ class Slice:
         elif wait:
             self.update()
 
-            self.wait()
+            self.wait(timeout=wait_timeout, interval=wait_interval)
 
             if wait_ssh:
                 self.wait_ssh(
@@ -2070,31 +2070,41 @@ class Slice:
         """
         Lists all the networks in the slice.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: "text", "pandas", and "json"
+        that determine the format of the output that is returned and
+        (optionally) displayed/printed.
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        output: 'text': string formatted with tabular 'pandas': pandas
+        dataframe 'json': string in json format
 
         fields: json output will include all available fields/columns.
 
         Example: fields=['Name','State']
 
-        filter_function:  A lambda function to filter data by field values.
+        filter_function: A lambda function to filter data by field
+        values.
 
         Example: filter_function=lambda s: s['State'] == 'Active'
 
         :param output: output format
         :type output: str
+
         :param fields: list of fields (table columns) to show
         :type fields: List[str]
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-        :param filter_function: lambda function
-        :type filter_function: lambda
+
         :param colors: True to add colors to the table when possible
         :type colors: bool
+
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+
+        :param filter_function: lambda function
+        :type filter_function: lambda
+
+        :param pretty_names: Use "nicer" names in column headers.
+            Default is ``True``.
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -2549,3 +2559,12 @@ class Slice:
             user_data[componenet.get_name()] = componenet.get_user_data()
 
         return user_data
+
+    def _is_modify(self) -> Bool:
+        """
+        Indicate if we should submit a modify request to orchestrator.
+        """
+        if self.get_state() is None:
+            return False
+        else:
+            return True

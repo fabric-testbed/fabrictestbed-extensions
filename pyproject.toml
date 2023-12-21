@@ -4,16 +4,15 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed-extensions"
-# Bump version up in top-level __init.py__.
-dynamic = ["version"]
+version = "1.5.5"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
-    {name="Paul Ruth", email="pruth@renci.org"},
-    {name="Komal Thareja", email="kthare10@renci.org"}
-    ]
+  { name = "Paul Ruth", email = "pruth@renci.org" },
+  { name = "Komal Thareja", email = "kthare10@renci.org" },
+]
 
-readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE" }
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = [
     "ipycytoscape",
@@ -21,11 +20,7 @@ dependencies = [
     "ipyleaflet",
     "ipycytoscape",
     "tabulate",
-<<<<<<< HEAD
-    "fabrictestbed==1.6.0b8",
-=======
-    "fabrictestbed==1.5.6",
->>>>>>> b3a252062936e11154851e574343b40bf2620b0a
+    "fabrictestbed==1.6.0rc1",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
@@ -35,10 +30,10 @@ dependencies = [
     ]
 
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    ]
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
 
 [project.urls]
 Homepage = "https://fabric-testbed.net/"
@@ -47,18 +42,21 @@ Documentation = "https://fabric-fablib.readthedocs.io/"
 ChangeLog = "https://github.com/fabric-testbed/fabrictestbed-extensions/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-doc = ["sphinx", "furo"]
+doc = [
+  "sphinx",
+  "furo"
+]
 test = [
-    "black==23.*",
-    "isort==5.*",
-    "tox==4.*",
-    "pytest",
-    "coverage[toml]"
-    ]
+  "black==23.*",
+  "isort==5.*",
+  "tox==4.*",
+  "pytest",
+  "coverage[toml]"
+]
 
 [tool.coverage.run]
 branch = true
-omit = [ "fabrictestbed_extensions/tests/*" ]
+omit = ["fabrictestbed_extensions/tests/*"]
 
 [tool.black]
 src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
@@ -73,6 +71,4 @@ addopts = "-ra -q"
 # By default, run only unit tests when pytest is invoked.  Integration
 # tests will require some manual setup (namely token acquisition), and
 # thus we can't run them on CI.
-testpaths = [
-    "tests/unit/",
-]
+testpaths = ["tests/unit/"]

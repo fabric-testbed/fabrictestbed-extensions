@@ -41,6 +41,7 @@ class Resources:
         "state": "State",
         "address": "Address",
         "location": "Location",
+        "ptp_capable": "PTP Capable",
         "hosts": "Hosts",
         "cpus": "CPUs",
         "cores_available": "Cores Available",
@@ -110,6 +111,7 @@ class Resources:
             table.append(
                 [
                     site.name,
+                    f"{self.get_ptp_capable()}",
                     self.get_cpu_capacity(site_sliver),
                     f"{self.get_core_available(site_sliver)}/{self.get_core_capacity(site_sliver)}",
                     f"{self.get_ram_available(site_sliver)}/{self.get_ram_capacity(site_sliver)}",
@@ -133,6 +135,7 @@ class Resources:
             table,
             headers=[
                 "Name",
+                "PTP Capable",
                 "CPUs",
                 "Cores",
                 f"RAM ({Capacities.UNITS['ram']})",
@@ -581,6 +584,26 @@ class Resources:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site)
 
+    def get_ptp_capable(
+        self, site: str or node.Node or network_node.NodeSliver
+    ) -> bool:
+        """
+        Gets the PTP flag of the site - if it has a native PTP capability
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
+        :return: boolean flag
+        :rtype: bool
+        """
+        try:
+            if isinstance(site, network_node.NodeSliver):
+                return site.flags.ptp
+            if isinstance(site, node.Node):
+                return site.flags.ptp
+            return self.get_topology_site(site).flags.ptp
+        except Exception as e:
+            # logging.debug(f"Failed to get PTP status for {site}")
+            return False
+
     def get_fablib_manager(self):
         return self.fablib_manager
 
@@ -685,12 +708,14 @@ class Resources:
         a40_c = self.get_component_capacity(site, "GPU-A40")
         u280_a = self.get_component_available(site, "FPGA-Xilinx-U280")
         u280_c = self.get_component_capacity(site, "FPGA-Xilinx-U280")
+        ptp = self.get_ptp_capable(site)
 
         d = {
             "name": site.name if isinstance(site, node.Node) else site.get_name(),
             "state": self.get_state(site),
             "address": self.get_location_postal(site),
             "location": self.get_location_lat_long(site) if latlon else "",
+            "ptp_capable": ptp,
             "hosts": self.get_host_capacity(site),
             "cpus": self.get_cpu_capacity(site),
             "cores_available": core_a,
@@ -745,6 +770,10 @@ class Resources:
             "location": {
                 "pretty_name": "Location",
                 "value": self.get_location_lat_long(site_name),
+            },
+            "ptp": {
+                "pretty_name": "PTP Capable",
+                "value": self.get_ptp_capable(),
             },
             "hosts": {
                 "pretty_name": "Hosts",

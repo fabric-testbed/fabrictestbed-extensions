@@ -8,6 +8,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix an error in `Node.list_networks()` (Issue
+  [#239](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/239),
+  PR [#241](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/241))
+- Honor wait_timeout in slice.submit()
+  ([#253](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/253))
+- Reconfigure on slice update/modify (Issue
+  [#261](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/261))
+
+### Added
+
+- Missing docstrings for `Node.add_fabnet()` (PR
+  [#240](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/240))
+- Offer a hint when bastion probe fails (Issue
+  [#246](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/246),
+  PR [#247](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/247))
+- Version in pyproject.toml (Issue
+  [#248](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/248))
+- Separate contribution guidelines (Issue
+  [#242](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/242),
+  [#243](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/243),
+  PR [#251](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/251))
+
+### Changed
+
+- Use defaults for FABRIC CM, orchestrator and bastion hosts (Issue
+  [#258](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/258))
+
+
+## [1.5.5]
+
+### Added
+
+- Display and filter by PTP availability at each site based on ARM
+  information (PR [#236](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/236)).
+- Missing docstrings for Node module (PR
+  [#237](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/237))
+
+### [1.5.4] - 2023-08-21
+
 ### Changed
 
 - Some optimizations in `list_sites()`, `show_site()`, `get_random_site()`
