@@ -640,8 +640,6 @@ class FablibManager:
 
         # init attributes
         self.bastion_passphrase = None
-        self.log_file = self.default_log_file
-        self.log_level = self.default_log_level
         self.data_dir = None
         self.avoid = []
         self.ssh_command_line = "ssh ${Username}@${Management IP}"
@@ -771,16 +769,8 @@ class FablibManager:
         if bastion_key_filename is not None:
             self.bastion_key_filename = bastion_key_filename
 
-        if log_file is not None:
-            self.log_file = log_file
         if data_dir is not None:
             self.data_dir = data_dir
-
-        self.set_log_file(log_file=self.log_file)            
-
-        if log_level is not None:
-            self.set_log_level(log_level)
-            self._begin_logging()
 
         self.bastion_private_ipv4_addr = "0.0.0.0"
         self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
@@ -795,6 +785,20 @@ class FablibManager:
             self.bastion_public_addr = self.DEFAULT_FABRIC_BASTION_HOST
 
         self._validate_configuration()
+
+        # Set up logging.
+        self.log_file = self.default_log_file
+        self.log_level = self.default_log_level
+
+        if log_file is not None:
+            self.log_file = log_file
+        if log_level is not None:
+            self.log_level = log_level
+
+        self.set_log_file(log_file=self.log_file)
+        self.set_log_level(log_level=self.log_level)
+
+        self._begin_logging()
 
         # Create slice manager
         self.slice_manager = None
