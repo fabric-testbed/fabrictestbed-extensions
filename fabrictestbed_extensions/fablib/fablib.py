@@ -640,6 +640,8 @@ class FablibManager:
 
         # init attributes
         self.bastion_passphrase = None
+        self.log_file = self.default_log_file
+        self.log_level = self.default_log_level
         self.data_dir = None
         self.avoid = []
         self.ssh_command_line = "ssh ${Username}@${Management IP}"
@@ -787,9 +789,6 @@ class FablibManager:
         self._validate_configuration()
 
         # Set up logging.
-        self.log_file = self.default_log_file
-        self.log_level = self.default_log_level
-
         if log_file is not None:
             self.log_file = log_file
         if log_level is not None:
