@@ -783,11 +783,6 @@ class FablibManager:
             self.set_log_level(log_level)
             self._begin_logging()
 
-        # if self.log_file is not None and self.log_level is not None:
-        #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
-        #                        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-        #                        datefmt='%H:%M:%S')
-
         self.bastion_private_ipv4_addr = "0.0.0.0"
         self.bastion_private_ipv6_addr = "0:0:0:0:0:0"
 
