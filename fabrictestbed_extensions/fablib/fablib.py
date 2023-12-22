@@ -642,7 +642,6 @@ class FablibManager:
         self.bastion_passphrase = None
         self.log_file = self.default_log_file
         self.log_level = self.default_log_level
-        self.set_log_level(self.log_level)
         self.data_dir = None
         self.avoid = []
         self.ssh_command_line = "ssh ${Username}@${Management IP}"
