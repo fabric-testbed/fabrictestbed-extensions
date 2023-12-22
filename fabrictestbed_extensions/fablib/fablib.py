@@ -771,14 +771,17 @@ class FablibManager:
             self.bastion_username = bastion_username
         if bastion_key_filename is not None:
             self.bastion_key_filename = bastion_key_filename
-        if log_level is not None:
-            self.set_log_level(log_level)
+
         if log_file is not None:
             self.log_file = log_file
         if data_dir is not None:
             self.data_dir = data_dir
 
-        self.set_log_file(log_file=self.log_file)
+        self.set_log_file(log_file=self.log_file)            
+
+        if log_level is not None:
+            self.set_log_level(log_level)
+            self._begin_logging()
 
         # if self.log_file is not None and self.log_level is not None:
         #    logging.basicConfig(filename=self.log_file, level=self.LOG_LEVELS[self.log_level],
@@ -892,27 +895,6 @@ class FablibManager:
 
         self.log_level = log_level
 
-        try:
-            for handler in logging.root.handlers[:]:
-                logging.root.removeHandler(handler)
-        except Exception as e:
-            pass
-
-        try:
-            if self.log_file and not os.path.isdir(os.path.dirname(self.log_file)):
-                os.makedirs(os.path.dirname(self.log_file))
-        except Exception as e:
-            pass
-            # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
-
-        if self.log_file and self.log_level:
-            logging.basicConfig(
-                filename=self.log_file,
-                level=self.LOG_LEVELS[self.log_level],
-                format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
-                datefmt="%H:%M:%S",
-            )
-
     def get_log_level(self):
         """
         Get the current log level for logging
@@ -942,25 +924,38 @@ class FablibManager:
         """
         self.log_file = log_file
 
-        try:
-            if not os.path.isdir(os.path.dirname(self.log_file)):
-                os.makedirs(os.path.dirname(self.log_file))
-        except Exception as e:
-            pass
-            # logging.warning(f"Failed to create log_file directory: {os.path.dirname(self.log_file)}")
-
+    def _begin_logging(self):
+        """
+        Begin logging to self.log_file.
+        """
         try:
             for handler in logging.root.handlers[:]:
                 logging.root.removeHandler(handler)
-        except:
+        except Exception as e:
             pass
 
-        logging.basicConfig(
-            filename=self.log_file,
-            level=self.LOG_LEVELS[self.log_level],
-            format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
-            datefmt="%H:%M:%S",
-        )
+        try:
+            if self.log_file and not os.path.isdir(os.path.dirname(self.log_file)):
+                os.makedirs(os.path.dirname(self.log_file))
+        except Exception as e:
+            logging.warning(
+                f"Failed to create log_file directory: {os.path.dirname(self.log_file)}"
+            )
+
+        if self.log_file and self.log_level:
+            logging.basicConfig(
+                filename=self.log_file,
+                level=self.LOG_LEVELS[self.log_level],
+                format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+                datefmt="%H:%M:%S",
+            )
+
+        # logging.basicConfig(
+        #     filename=self.log_file,
+        #     level=self.LOG_LEVELS[self.log_level],
+        #     format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+        #     datefmt="%H:%M:%S",
+        # )
 
     def build_slice_manager(self) -> SliceManager:
         """
