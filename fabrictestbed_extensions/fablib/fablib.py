@@ -947,13 +947,6 @@ class FablibManager:
                 datefmt="%H:%M:%S",
             )
 
-        # logging.basicConfig(
-        #     filename=self.log_file,
-        #     level=self.LOG_LEVELS[self.log_level],
-        #     format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
-        #     datefmt="%H:%M:%S",
-        # )
-
     def build_slice_manager(self) -> SliceManager:
         """
         Not a user facing API call.
