@@ -929,6 +929,7 @@ class FablibManager:
             for handler in logging.root.handlers[:]:
                 logging.root.removeHandler(handler)
         except Exception as e:
+            print(f"Exception from removeHandler: {e}")
             pass
 
         try:
