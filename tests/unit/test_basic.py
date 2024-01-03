@@ -86,7 +86,9 @@ class FablibManagerTests(unittest.TestCase):
 
         # FablibManager() without a valid token or token location
         # should raise a "SliceManagerException: Unable to refresh tokens: no refresh token found!
-        self.assertRaises(SliceManagerException, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            SliceManagerException, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
