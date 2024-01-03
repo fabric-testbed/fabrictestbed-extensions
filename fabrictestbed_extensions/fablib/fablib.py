@@ -976,8 +976,6 @@ class FablibManager:
                 scope="all",
             )
 
-            print(f"KOMAL --- I am here")
-
             # Initialize the slice manager
             self.slice_manager.initialize()
         except Exception as e:
