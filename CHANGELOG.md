@@ -36,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use defaults for FABRIC CM, orchestrator and bastion hosts (Issue
   [#258](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/258))
-
+- Refactor logging setup (Issue
+  [#263](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/263))
 
 ## [1.5.5]
 
@@ -46,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   information (PR [#236](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/236)).
 - Missing docstrings for Node module (PR
   [#237](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/237))
+
 
 ### [1.5.4] - 2023-08-21
 
