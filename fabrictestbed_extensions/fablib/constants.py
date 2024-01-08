@@ -33,8 +33,8 @@ class Constants:
     DEFAULT_LOG_LEVEL = "DEBUG"
     DEFAULT_LOG_FILE = "/tmp/fablib/fablib.log"
     DEFAULT_DATA_DIR = "/tmp/fablib"
-    DEFAULT_FABRIC_RC = f"{os.environ['HOME']}/work/fabric_config/fabric_rc",
-    DEFAULT_TOKEN_LOCATION = f"{os.environ['HOME']}/work/.tokens.json",
+    DEFAULT_FABRIC_RC = f"{os.environ['HOME']}/work/fabric_config/fabric_rc"
+    DEFAULT_TOKEN_LOCATION = f"{os.environ['HOME']}/work/.tokens.json"
 
     FABRIC_CREDMGR_HOST = "FABRIC_CREDMGR_HOST"
     FABRIC_ORCHESTRATOR_HOST = "FABRIC_ORCHESTRATOR_HOST"
