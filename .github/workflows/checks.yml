@@ -7,6 +7,7 @@ on:
     branches:
       - "main"
   pull_request:
+  pull_request_target:
 
 permissions:
   contents: read
@@ -25,7 +26,11 @@ jobs:
           fetch-depth: 0 # since we need to diff against origin/main.
 
       # https://github.com/marketplace/actions/check-signed-commits-in-pr
+      # runs on pull_request_target and pull_request events, but
+      # pull_request_target is preferred because of the ability to
+      # leave comments on external PRs created from forks.
       - name: Check that commits are signed
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
         uses: 1Password/check-signed-commits-action@v1
 
       - name: Set up Python 3.9
