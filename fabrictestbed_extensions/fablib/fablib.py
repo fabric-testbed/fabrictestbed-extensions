@@ -526,7 +526,7 @@ class FablibManager(Config):
                          bastion_key_location=bastion_key_location, log_level=log_level, log_file=log_file,
                          data_dir=data_dir, offline=offline, **kwargs)
 
-        if output is None:
+        if output is not None:
             self.output = output
         else:
             if self.is_jupyter_notebook():
