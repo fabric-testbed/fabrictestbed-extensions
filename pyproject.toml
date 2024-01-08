@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed-extensions"
-version = "1.6.0"
+version = "1.6.1b0"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
   { name = "Paul Ruth", email = "pruth@renci.org" },
