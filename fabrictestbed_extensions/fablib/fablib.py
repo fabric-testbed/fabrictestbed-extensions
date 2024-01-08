@@ -504,12 +504,14 @@ class FablibManager(Config):
 
     ssh_thread_pool_executor = None
 
-    def __init__(self, file_path: str = f"{os.environ['HOME']}/work/fabric_config/fabric_rc",
-                 credmgr_host: str = None, orchestrator_host: str = None,
-                 token_location: str = None, project_id: str = None, bastion_username: str = None,
-                 bastion_key_location: str = None, log_level: str = "DEBUG",
-                 log_file: str = "/tmp/fablib/fablib.log", data_dir: str = "",
-                 output: str = None, execute_thread_pool_size: int = 64, offline: bool = False, **kwargs):
+    def __init__(self, fabric_rc: str = Constants.DEFAULT_FABRIC_RC,
+                 credmgr_host: str = None,
+                 orchestrator_host: str = None,
+                 token_location: str = None, project_id: str = None,
+                 bastion_username: str = None, bastion_key_location: str = None,
+                 log_level: str = Constants.DEFAULT_LOG_LEVEL, log_file: str = Constants.DEFAULT_LOG_FILE,
+                 data_dir: str = Constants.DEFAULT_DATA_DIR, output: str = None,
+                 execute_thread_pool_size: int = 64, offline: bool = False, **kwargs):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -519,7 +521,7 @@ class FablibManager(Config):
          - defaults (if needed and possible)
 
         """
-        super().__init__(file_path=file_path, credmgr_host=credmgr_host, orchestrator_host=orchestrator_host,
+        super().__init__(fabric_rc=fabric_rc, credmgr_host=credmgr_host, orchestrator_host=orchestrator_host,
                          token_location=token_location, project_id=project_id, bastion_username=bastion_username,
                          bastion_key_location=bastion_key_location, log_level=log_level, log_file=log_file,
                          data_dir=data_dir, offline=offline, **kwargs)
