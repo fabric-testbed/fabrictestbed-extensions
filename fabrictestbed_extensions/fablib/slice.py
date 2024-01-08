@@ -33,9 +33,10 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import pandas as pd
-from fss_utils.sshkey import FABRICSSHKey, FABRICSSHKeyException
+from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
+from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
 if TYPE_CHECKING:
@@ -51,7 +52,7 @@ from ipaddress import IPv4Address, ip_address
 from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
-from fabrictestbed.slice_manager import SliceState, Status
+from fabrictestbed.slice_manager import Status
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.component import Component
@@ -80,9 +81,6 @@ class Slice:
 
         self.nodes = None
         self.interfaces = None
-
-        self.slice_key = fablib_manager.get_default_slice_key()
-
         self.update_topology_count = 0
         self.update_slivers_count = 0
         self.update_slice_count = 0
@@ -163,6 +161,9 @@ class Slice:
         :type quiet: bool
         :param colors: True to specify state colors for pandas output
         :type colors: bool
+        :param pretty_names:
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -171,17 +172,17 @@ class Slice:
 
         def state_color(val):
             if val == "StableOK":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "ModifyOK":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "StableError":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             elif val == "ModifyError":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             elif val == "Configuring":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "Modifying":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             else:
                 color = ""
             return "background-color: %s" % color
@@ -202,7 +203,7 @@ class Slice:
             )
             slice_table.applymap(state_color)
 
-            if quiet == False:
+            if not quiet:
                 display(slice_table)
         else:
             slice_table = self.get_fablib_manager().show_table(
@@ -250,6 +251,9 @@ class Slice:
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
+        :param pretty_names:
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -313,6 +317,9 @@ class Slice:
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
+        :param pretty_names:
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -375,20 +382,6 @@ class Slice:
                 node_name = None
 
             table.append(iface.toDict())
-            # table.append({"Name": iface.get_name(),
-            #              "Node": node_name,
-            #              "Network": network_name,
-            #              "Bandwidth": iface.get_bandwidth(),
-            #              "VLAN": iface.get_vlan(),
-            #              "MAC": iface.get_mac(),
-            #              "Physical Device": physical_os_interface_name_threads[iface.get_name()].result(),
-            #              "Device": os_interface_threads[iface.get_name()].result(),
-            #              })
-
-        # if fields == None:
-        #    fields = ["Name", "Node", "Network",
-        #              "Bandwidth", "VLAN", "MAC",
-        #              "Device"]
         if pretty_names:
             pretty_names_dict = Interface.get_pretty_name_dict()
         else:
@@ -601,7 +594,7 @@ class Slice:
                 "Failed to get slice topology: {}, {}".format(return_status, new_topo)
             )
 
-        # Set slice attibutes
+        # Set slice attributes
         self.topology = new_topo
 
     def update_slivers(self):
@@ -676,10 +669,7 @@ class Slice:
         :return: the private key passphrase
         :rtype: String
         """
-        if "slice_private_key_passphrase" in self.slice_key.keys():
-            return self.slice_key["slice_private_key_passphrase"]
-        else:
-            return None
+        return self.fablib_manager.get_default_slice_private_key_passphrase()
 
     def get_slice_public_key(self) -> str:
         """
@@ -691,10 +681,7 @@ class Slice:
         :return: the public key
         :rtype: String
         """
-        if "slice_public_key" in self.slice_key.keys():
-            return self.slice_key["slice_public_key"].strip()
-        else:
-            return None
+        return self.fablib_manager.get_default_slice_public_key()
 
     def get_slice_public_key_file(self) -> str:
         """
@@ -706,20 +693,7 @@ class Slice:
         :return: path to public key file
         :rtype: String
         """
-        if "slice_public_key_file" in self.slice_key.keys():
-            return self.slice_key["slice_public_key_file"]
-        else:
-            return None
-
-    def get_slice_public_key(self) -> str:
-        """
-        Gets the string representing the slice public key.
-
-        :return: public key
-        :rtype: String
-        """
-        with open(self.get_slice_public_key_file(), "r", encoding="utf-8") as f:
-            return f.read()
+        return self.fablib_manager.get_default_slice_public_key_file()
 
     def get_slice_private_key_file(self) -> str:
         """
@@ -731,10 +705,7 @@ class Slice:
         :return: path to private key file
         :rtype: String
         """
-        if "slice_private_key_file" in self.slice_key.keys():
-            return self.slice_key["slice_private_key_file"]
-        else:
-            return None
+        return self.fablib_manager.get_default_slice_private_key_file()
 
     def get_slice_private_key(self) -> str:
         """
@@ -743,8 +714,7 @@ class Slice:
         :return: public key
         :rtype: String
         """
-        with open(self.get_slice_private_key_file(), "r", encoding="utf-8") as f:
-            return f.read()
+        return self.fablib_manager.get_default_slice_private_key()
 
     def is_dead_or_closing(self):
         if self.get_state() in ["Closing", "Dead"]:
@@ -820,7 +790,7 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             lease_end_time = None
         else:
             try:
@@ -841,7 +811,7 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice == None:
+        if self.sm_slice is None:
             lease_start_time = None
         else:
             try:
@@ -934,6 +904,12 @@ class Slice:
         :type interfaces: List[Interface]
         :param type: optional L2 network type "L2Bridge", "L2STS", or "L2PTP"
         :type type: String
+        :param subnet:
+        :type subnet: ipaddress
+        :param gateway:
+        :type gateway: ipaddress
+        :param user_data
+        :type user_data: dict
         :return: a new L2 network service
         :rtype: NetworkService
         """
@@ -995,6 +971,9 @@ class Slice:
         :type interfaces: List[Interface]
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
+        :param user_data
+        :type user_data: dict
+
         :return: a new L3 network service
         :rtype: NetworkService
         """
@@ -1075,6 +1054,9 @@ class Slice:
             names follow the pattern in this example of STAR worker
             number 1: "star-w1.fabric-testbed.net".  Default: unset
         :type host: String
+
+        :param user_data
+        :type user_data: dict
 
         :param avoid: (Optional) A list of sites to avoid is allowing
             random site.
@@ -1288,7 +1270,7 @@ class Slice:
 
         return []
 
-    def get_l3network(self, name: str = None) -> NetworkService or None:
+    def get_l3network(self, name: str = None) -> Union[NetworkService or None]:
         """
         Gets a particular L3 network service from this slice.
 
@@ -1472,7 +1454,9 @@ class Slice:
         :type interval: int
         :param progress: indicator for whether to print wait progress
         :type progress: bool
+
         :raises Exception: if the slice state is undesirable, or waiting times out
+
         :return: the stable slice on the slice manager
         :rtype: SMSlice
         """
@@ -1528,7 +1512,7 @@ class Slice:
 
     def wait_ssh(self, timeout: int = 1800, interval: int = 20, progress: bool = False):
         """
-        Waits for all nodes to be accesible via ssh.
+        Waits for all nodes to be accessible via ssh.
 
         :param timeout: how long to wait on slice ssh
         :type timeout: int
@@ -1536,7 +1520,9 @@ class Slice:
         :type interval: int
         :param progress: indicator for verbose output
         :type progress: bool
+
         :raises Exception: if timeout threshold reached
+
         :return: true when slice ssh successful
         :rtype: bool
         """
@@ -1623,16 +1609,6 @@ class Slice:
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
         )
 
-        # node_threads = []
-        # for node in self.get_nodes():
-        #    logging.info(f"Starting thread: {node.get_name()}_network_manager_stop")
-        #    node_thread = executor.submit(node.network_manager_stop)
-        #    node_threads.append(node_thread)
-        #    pass
-
-        # for node_thread in node_threads:
-        #    node_thread.result()
-
         for network in self.get_networks():
             network.config()
 
@@ -1643,28 +1619,17 @@ class Slice:
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        iface_threads = []
         for interface in self.get_interfaces():
             try:
-                # iface_threads.append(executor.submit(interface.ip_link_toggle))
                 interface.get_node().execute(
                     f"sudo nmcli device set {interface.get_device_name()} managed no",
                     quiet=True,
                 )
-
-                # interfaces are config in nodes (below)
-                # interface.config()
             except Exception as e:
                 logging.error(
                     f"Interface: {interface.get_name()} failed to become unmanaged"
                 )
                 logging.error(e, exc_info=True)
-
-        # for iface_thread in iface_threads:
-        #    iface_thread.result()
-
-        # if self.get_state() == "ModifyOK":
-        #    self.modify_accept()
 
         import time
 
@@ -1782,6 +1747,9 @@ class Slice:
         :type timeout: int
         :param interval: how often in seconds to check on slice state
         :type interval: int
+        :param verbose:
+        :type verbose: bool
+
         :raises Exception: if the slice state is undesirable, or waiting times out
         :return: the stable slice on the slice manager
         :rtype: SMSlice
@@ -1801,6 +1769,9 @@ class Slice:
         #    hasNetworks = False
 
         count = 0
+        hasNetworks = False
+        node_table = None
+        network_table = None
         # while not self.isStable():
         # while not self.isReady():
         while True:
@@ -1848,7 +1819,9 @@ class Slice:
 
             print(f"\nRetry: {count}, Time: {time_string}")
             logging.debug(
-                f"{self.get_name()}, update_count: {self.update_count}, update_topology_count: {self.update_topology_count}, update_slivers_count: {self.update_slivers_count},  update_slice_count: {self.update_slice_count}"
+                f"{self.get_name()}, update_count: {self.update_count}, update_topology_count: "
+                f"{self.update_topology_count}, update_slivers_count: {self.update_slivers_count},  "
+                f"update_slice_count: {self.update_slice_count}"
             )
 
             if stable:
@@ -2016,16 +1989,6 @@ class Slice:
                 )
             )
 
-        # logging.debug(f"slice_reservations: {slice_reservations}")
-        # logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        # self.slice_id = slice_reservations[0].slice_id
-
-        # time.sleep(1)
-        # self.update()
-
-        # if not wait:
-        #    return self.slice_id
-
         if (
             progress
             and wait_jupyter == "text"
@@ -2112,7 +2075,7 @@ class Slice:
         def error_color(val):
             # if 'Failure' in val:
             if val != "" and not "TicketReviewPolicy" in val:
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -2121,24 +2084,19 @@ class Slice:
 
         def highlight(x):
             if x.State == "Closed":
-                # return [f'background-color: {self.get_fablib_manager().ERROR_LIGHT_COLOR}']*(len(fields))
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
-            # elif x.State == 'None':
-            #    return ['opacity: 50%']*(len(fields))
-            # else:
-            #    return ['background-color: ']*(len(fields))
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
 
             return "background-color: %s" % color
 
         def state_color(val):
             if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "Ticketed":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "ActiveTicketed":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "Failed":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -2219,14 +2177,17 @@ class Slice:
         :type filter_function: lambda
         :param colors: True to add colors to the table when possible
         :type colors: bool
+        :param pretty_names:
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+            if val != "" and "TicketReviewPolicy" not in val:
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -2236,7 +2197,7 @@ class Slice:
         def highlight(x):
             if x.State == "Ticketed":
                 return [
-                    f"background-color: {self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                    f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"
                 ] * (len(fields))
             elif x.State == "None":
                 return ["opacity: 50%"] * (len(fields))
@@ -2245,9 +2206,9 @@ class Slice:
 
         def state_color(val):
             if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "Ticketed" or val == "Nascent" or val == "ActiveTicketed":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -2367,6 +2328,9 @@ class Slice:
         :type filter_function: lambda
         :param colors: True to add colors to the table when possible
         :type colors: bool
+        :param pretty_names:
+        :type pretty_names: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -2374,7 +2338,7 @@ class Slice:
         def error_color(val):
             # if 'Failure' in val:
             if val != "" and not "TicketReviewPolicy" in val:
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -2384,7 +2348,7 @@ class Slice:
         def highlight(x):
             if x.State == "Ticketed":
                 return [
-                    f"background-color: {self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                    f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"
                 ] * (len(fields))
             elif x.State == "None":
                 return ["opacity: 50%"] * (len(fields))
@@ -2393,9 +2357,9 @@ class Slice:
 
         def state_color(val):
             if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "Ticketed":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             else:
                 color = ""
             # return 'color: %s' % color
@@ -2406,11 +2370,6 @@ class Slice:
             table.append(node.toDict())
 
         table = sorted(table, key=lambda x: (x["name"]))
-
-        # if fields == None:
-        #    fields = ["ID", "Name", "Site", "Host",
-        #              "Cores", "RAM", "Disk", "Image",
-        #              "Username", "Management IP", "State", "Error"]
 
         if pretty_names:
             pretty_names_dict = Node.get_pretty_name_dict()
@@ -2467,6 +2426,7 @@ class Slice:
         :param wait_interval: how often to check on the slice resources
         :param progress: indicator for whether to show progress while waiting
         :param wait_jupyter: Special wait for jupyter notebooks.
+        :param post_boot_config: Flag indicating if post boot config should be applied
         """
 
         if not wait:
@@ -2490,11 +2450,6 @@ class Slice:
             )
 
         logging.debug(f"slice_reservations: {slice_reservations}")
-        # logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
-        # self.slice_id = slice_reservations[0].slice_id
-
-        # time.sleep(1)
-        # self.update()
 
         if (
             progress
@@ -2555,12 +2510,12 @@ class Slice:
         for iface in self.get_interfaces():
             user_data[iface.get_name()] = iface.get_user_data()
 
-        for componenet in self.get_components():
-            user_data[componenet.get_name()] = componenet.get_user_data()
+        for component in self.get_components():
+            user_data[component.get_name()] = component.get_user_data()
 
         return user_data
 
-    def _is_modify(self) -> Bool:
+    def _is_modify(self) -> bool:
         """
         Indicate if we should submit a modify request to orchestrator.
         """

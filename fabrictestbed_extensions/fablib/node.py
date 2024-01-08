@@ -1366,7 +1366,7 @@ class Node:
         dest_addr = (management_ip, 22)
 
         bastion_username = self.get_fablib_manager().get_bastion_username()
-        bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
+        bastion_key_file = self.get_fablib_manager().get_bastion_key_location()
 
         if username != None:
             node_username = username
@@ -1392,7 +1392,7 @@ class Node:
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_public_addr(),
+                    self.get_fablib_manager().get_bastion_host(),
                     username=bastion_username,
                     key_filename=bastion_key_file,
                 )
@@ -1670,9 +1670,9 @@ class Node:
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_public_addr(),
+                    self.get_fablib_manager().get_bastion_host(),
                     username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
                 )
 
                 bastion_transport = bastion.get_transport()
@@ -1836,9 +1836,9 @@ class Node:
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_public_addr(),
+                    self.get_fablib_manager().get_bastion_host(),
                     username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
                 )
 
                 bastion_transport = bastion.get_transport()
