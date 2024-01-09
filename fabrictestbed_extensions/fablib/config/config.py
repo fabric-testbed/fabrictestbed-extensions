@@ -100,6 +100,9 @@ class Config:
             Constants.LOG_FILE: "Log File",
             Constants.LOG_LEVEL: "Log Level",
             Constants.FABLIB_VERSION: "Version",
+            Constants.AVOID: "Sites to avoid",
+            Constants.DATA_DIR: "Data directory",
+            Constants.SSH_COMMAND_LINE: "SSH Command Line"
         }
 
     def __init__(self, fabric_rc: str = Constants.DEFAULT_FABRIC_RC,
