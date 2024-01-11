@@ -30,10 +30,10 @@ runtime:
   credmgr_host: cm.fabric-testbed.net
   orchestrator_host: orchestrator.fabric-testbed.net
   core_api_host: uis.fabric-testbed.net
-  project_id: <YOUR_PROJECT_ID>
+  project_id:
   token_location: /home/fabric/.tokens.json
   bastion_host: bastion.fabric-testbed.net
-  bastion_username: <YOU_BASTION_USERNAME>
+  bastion_username:
   bastion_key_location: /home/fabric/work/fabric_config/fabric_bastion_key
   bastion_key_passphrase:
   slice_private_key_file: /home/fabric/work/fabric_config/slice_key

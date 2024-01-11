@@ -2,11 +2,11 @@ export FABRIC_CREDMGR_HOST=cm.fabric-testbed.net
 export FABRIC_ORCHESTRATOR_HOST=orchestrator.fabric-testbed.net
 export FABRIC_CORE_API_HOST=uis.fabric-testbed.net
 
-export FABRIC_PROJECT_ID=<YOUR_PROJECT_ID>
+export FABRIC_PROJECT_ID=
 export FABRIC_TOKEN_LOCATION=/home/fabric/.tokens.json
 
 export FABRIC_BASTION_HOST=bastion.fabric-testbed.net
-export FABRIC_BASTION_USERNAME=<YOU_BASTION_USERNAME>
+export FABRIC_BASTION_USERNAME=
 
 export FABRIC_BASTION_KEY_LOCATION=/home/fabric/work/fabric_config/fabric_bastion_key
 #export FABRIC_BASTION_KEY_PASSPHRASE=
