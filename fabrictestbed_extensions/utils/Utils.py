@@ -22,9 +22,11 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
+import hashlib
 import os
 import socket
 
+import yaml
 from atomicwrites import atomic_write
 
 
@@ -48,3 +50,29 @@ class Utils:
 
         with atomic_write(file_path, overwrite=True) as f:
             f.write(data)
+
+    @staticmethod
+    def get_md5_fingerprint(key_string):
+        key_bytes = key_string.encode('utf-8')
+        md5_hash = hashlib.md5(key_bytes).hexdigest()
+        return ':'.join(a + b for a, b in zip(md5_hash[::2], md5_hash[1::2]))
+
+    @staticmethod
+    def is_yaml_file(file_path):
+        try:
+            with open(file_path, 'r') as file:
+                # Attempt to load the content as YAML
+                yaml_content = yaml.safe_load(file)
+
+                # Check if the loaded content is a dictionary or a list
+                if isinstance(yaml_content, (dict, list)):
+                    return True
+                else:
+                    return False
+
+        except yaml.YAMLError:
+            # Parsing failed, it's not a YAML file
+            return False
+        except FileNotFoundError:
+            # File not found
+            return False

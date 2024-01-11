@@ -30,8 +30,11 @@ import yaml
 import re
 import logging
 
+from atomicwrites import atomic_write
+
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions import __version__ as fablib_version
+from fabrictestbed_extensions.utils.utils import Utils
 
 
 class ConfigException(Exception):
@@ -67,21 +70,21 @@ class Config:
             Constants.DEFAULT: Constants.DEFAULT_TOKEN_LOCATION
         },
         Constants.PROJECT_ID: {
-            Constants.ENV_VAR: Constants.FABRIC_PROJECT_ID
+            Constants.ENV_VAR: Constants.FABRIC_PROJECT_ID,
         },
         Constants.BASTION_HOST: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_HOST,
             Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_HOST
         },
         Constants.BASTION_USERNAME: {
-            Constants.ENV_VAR: Constants.FABRIC_BASTION_USERNAME
+            Constants.ENV_VAR: Constants.FABRIC_BASTION_USERNAME,
         },
         Constants.BASTION_KEY_LOCATION: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_KEY_LOCATION,
             Constants.DEFAULT: Constants.DEFAULT_BASTION_KEY_LOCATION
         },
         Constants.FABLIB_VERSION: {
-            Constants.ENV_VAR: Constants.FABLIB_VERSION
+            Constants.DEFAULT: fablib_version
         },
         Constants.SLICE_PUBLIC_KEY_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_SLICE_PUBLIC_KEY_FILE,
@@ -90,6 +93,10 @@ class Config:
         Constants.SLICE_PRIVATE_KEY_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_SLICE_PRIVATE_KEY_FILE,
             Constants.DEFAULT: Constants.DEFAULT_SLICE_PRIVATE_KEY_FILE
+        },
+        Constants.AVOID: {
+            Constants.ENV_VAR: Constants.FABRIC_AVOID,
+            Constants.DEFAULT: ""
         }
     }
 
@@ -131,6 +138,8 @@ class Config:
          - defaults (if needed and possible)
 
         """
+        self.config_file_path = fabric_rc
+        self.is_yaml = False
         self.runtime_config = {}
         self.offline = offline
 
@@ -171,7 +180,12 @@ class Config:
         if self.get_ssh_command_line() is None:
             self.set_ssh_command_line(ssh_command_line="ssh ${Username}@${Management IP}")
 
-        self.__required_check()
+        self.required_check(partial=True)
+
+        # Verify that Token file exists; any other checks cannot be done without this.
+        token_location = self.get_token_location()
+        if not os.path.exists(token_location):
+            raise ConfigException(f"Token file does not exist, please provide the token at location: {token_location}!")
 
     def __load_configuration(self, file_path, **kwargs):
         """
@@ -189,7 +203,10 @@ class Config:
             if not os.path.exists(file_path):
                 raise ConfigException("Config file does not exist!")
 
-            if not self.__load_yaml_file(file_path=file_path):
+            if Utils.is_yaml_file(file_path=file_path):
+                self.__load_yaml_file(file_path=file_path)
+                self.is_yaml = True
+            else:
                 self.__load_fabric_rc_file(file_path=file_path)
 
         for k, v in kwargs.items():
@@ -214,9 +231,9 @@ class Config:
                             if key == Constants.AVOID:
                                 value = value.split(",")
                             self.runtime_config[key] = value
-
-            self.runtime_config[Constants.FABLIB_VERSION] = fablib_version
-            return True
+                    self.runtime_config[Constants.FABLIB_VERSION] = fablib_version
+                    return True
+                return False
         except yaml.YAMLError:
             return False
 
@@ -250,7 +267,7 @@ class Config:
         self.runtime_config[Constants.FABLIB_VERSION] = fablib_version
         return ret_val
 
-    def __required_check(self):
+    def required_check(self, partial: bool = False):
         """
         Validates that all the required parameters are present in the loaded config
         Tries to load the parameters from environment variable or defauls if not available in config in that order
@@ -267,6 +284,9 @@ class Config:
                 # Load defaults if available
                 elif attr_props.get(Constants.DEFAULT) is not None:
                     self.runtime_config[attr] = attr_props.get(Constants.DEFAULT)
+                # Ignore validation for this parameter if no default value exists and this partial check
+                elif attr_props.get(Constants.DEFAULT) is None and partial:
+                    continue
                 else:
                     errors.append(f"{attr} is not set")
 
@@ -279,6 +299,9 @@ class Config:
                 f"Error initializing {self.__class__.__name__}: {errors}"
             )
 
+        if not partial:
+            self.save_config()
+
     def get_config(self) -> Dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
@@ -288,18 +311,6 @@ class Config:
         :rtype: Dict[String, String]
         """
         return self.runtime_config
-
-    def get_default_slice_public_key(self) -> Union[str, None]:
-        """
-        Gets the default slice public key.
-
-        Important! Slice key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: the slice public key on this fablib object
-        :rtype: String
-        """
-        return self.runtime_config.get(Constants.SLICE_PUBLIC_KEY)
 
     def get_default_slice_public_key_file(self) -> str:
         """
@@ -655,6 +666,21 @@ class Config:
         :rtype: Dict[str, str]
         """
         return self.REQUIRED_ATTRS_PRETTY_NAMES
+
+    def save_config(self):
+        if self.is_yaml:
+            # Write the dictionary to the YAML file
+            with atomic_write(self.config_file_path, overwrite=True) as f:
+                yaml.dump(self.runtime_config, f, default_flow_style=False)
+        else:
+            with atomic_write(self.config_file_path, overwrite=True) as f:
+                for attr, attr_props in self.REQUIRED_ATTRS.items():
+                    env_var = attr_props.get(Constants.ENV_VAR)
+                    value = self.runtime_config.get(attr)
+                    if value is None:
+                        value = ""
+                    if env_var:
+                        f.write(f"export {env_var}={value}\n")
 
 
 if __name__ == '__main__':

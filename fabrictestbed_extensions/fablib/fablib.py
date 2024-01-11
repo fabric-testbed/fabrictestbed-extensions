@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import random
+import time
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
@@ -40,7 +41,7 @@ from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
 from fabrictestbed_extensions.fablib.constants import Constants
-from fabrictestbed_extensions.utils.Utils import Utils
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
@@ -546,33 +547,51 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.__setup_logging()
             self.__build_slice_manager()
-            self.validate()
+        self.required_check()
 
-    def validate(self):
-        # Verify that Token file exists
-        token_location = self.get_token_location()
-        if not os.path.exists(token_location):
-            raise ConfigException(f"Token file does not exist, please provide the token at location: {token_location}!")
+    def get_user_info(self):
+        return self.get_slice_manager().get_user_info()
+
+    def determine_bastion_username(self):
+        # Fetch User Info and Projects
+        if self.get_bastion_username() is not None:
+            return
+
+        logging.info("Fetching User's information")
+        user_info = self.get_user_info()
+        logging.debug("Updating Bastion User Name")
+        self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
+
+    def __setup_ssh_keys(self):
+        bastion_key_location = self.get_bastion_key_location()
+        sliver_private_key_location = self.get_default_slice_private_key_file()
+        sliver_public_key_location = self.get_default_slice_public_key_file()
 
         # Fetch User Info and Projects
-        user_info, projects = self.get_slice_manager().get_user_and_project_info()
+        logging.info("Fetching User's information")
 
-        # Try to automatically get the project id; Use the first project id
-        if self.get_project_id() is None or self.get_project_id() not in projects:
-            self.set_project_id(project_id=projects[0].get(Constants.UUID))
+        user_info = self.get_slice_manager().get_user_info()
 
-            logging.info(f"Project Id incorrect, using the first active project for the user: "
-                         f"{projects[0].get(Constants.UUID)}/{projects[0].get(Constants.NAME)}")
+        if (
+                self.get_bastion_username() and
+                os.path.exists(bastion_key_location) and
+                os.path.exists(sliver_private_key_location) and
+                os.path.exists(sliver_public_key_location)
+        ):
+            logging.debug("SSH Keys are set up, and no operation is needed!")
+            return
 
+        logging.info(f"User information: {user_info}")
+        logging.info("Checking Bastion host connectivity")
         # Check bastion host is reachable
         Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
 
         # Validate the bastion username is valid
         if self.get_bastion_username() is None or self.get_bastion_username() != user_info.get(Constants.BASTION_LOGIN):
+            logging.debug("Updating Bastion User Name")
             self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
 
         # Create Bastion Key if it doesn't exist
-        # TODO check expiry
         bastion_key_location = self.get_bastion_key_location()
         if not os.path.exists(bastion_key_location):
             logging.info("Bastion Key does not exist, creating a bastion key!")
@@ -581,7 +600,6 @@ class FablibManager(Config):
                                        key_type=Constants.KEY_TYPE_BASTION)
 
         # Create Sliver Key if it doesn't exist
-        # TODO check expiry
         sliver_private_key_location = self.get_default_slice_private_key_file()
         sliver_public_key_location = self.get_default_slice_public_key_file()
         if not os.path.exists(sliver_private_key_location) or not os.path.exists(sliver_public_key_location):
@@ -590,6 +608,7 @@ class FablibManager(Config):
                                        description="Bastion Key Fablib",
                                        key_type=Constants.KEY_TYPE_BASTION,
                                        public_file_path=sliver_public_key_location)
+        logging.info(f"Final config: {self.runtime_config}")
 
     def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
                               public_file_path: str = None, comment: str = "Created via API"):
@@ -662,6 +681,11 @@ class FablibManager(Config):
                 initialize=True,
                 scope="all",
             )
+            logging.debug("Slice manager initialized!")
+            # Update Project ID if not present already
+            if self.get_project_id() is None:
+                self.set_project_id(project_id=self.slice_manager.project_id)
+            self.determine_bastion_username()
         except Exception as e:
             logging.error(e, exc_info=True)
             raise e
@@ -1809,3 +1833,8 @@ class FablibManager(Config):
             for field in fields:
                 table.append([field, data[field]])
         return table
+
+
+if __name__ == '__main__':
+    fablib = FablibManager()
+    fablib.show_config()
