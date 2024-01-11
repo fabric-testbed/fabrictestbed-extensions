@@ -555,11 +555,7 @@ class FablibManager(Config):
             raise ConfigException(f"Token file does not exist, please provide the token at location: {token_location}!")
 
         # Fetch User Info and Projects
-        status, exception_info = self.get_slice_manager().get_user_and_project_info()
-        if status != Status.OK:
-            raise exception_info
-
-        user_info, projects = exception_info
+        user_info, projects = self.get_slice_manager().get_user_and_project_info()
 
         # Try to automatically get the project id; Use the first project id
         if self.get_project_id() is None or self.get_project_id() not in projects:
@@ -597,18 +593,13 @@ class FablibManager(Config):
 
     def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
                               public_file_path: str = None, comment: str = "Created via API"):
-        status, exception_keys = self.get_slice_manager().create_ssh_keys(key_type=key_type,
-                                                                          description=description,
-                                                                          comment=comment)
-        if status != Status.OK:
-            raise exception_keys
-
+        ssh_keys = self.get_slice_manager().create_ssh_keys(key_type=key_type, description=description,
+                                                            comment=comment)
         if public_file_path is None:
             public_file_path = f"{private_file_path}.pub"
 
-        Utils.save_to_file(file_path=private_file_path, data=exception_keys[0].get(Constants.PRIVATE_OPENSSH))
-        Utils.save_to_file(file_path=public_file_path, data=exception_keys[0].get(Constants.PUBLIC_OPENSSH))
-
+        Utils.save_to_file(file_path=private_file_path, data=ssh_keys[0].get(Constants.PRIVATE_OPENSSH))
+        Utils.save_to_file(file_path=public_file_path, data=ssh_keys[0].get(Constants.PUBLIC_OPENSSH))
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
