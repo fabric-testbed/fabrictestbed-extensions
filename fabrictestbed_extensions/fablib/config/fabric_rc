@@ -1,5 +1,6 @@
 export FABRIC_CREDMGR_HOST=cm.fabric-testbed.net
 export FABRIC_ORCHESTRATOR_HOST=orchestrator.fabric-testbed.net
+export FABRIC_CORE_API_HOST=uis.fabric-testbed.net
 
 export FABRIC_PROJECT_ID=<YOUR_PROJECT_ID>
 export FABRIC_TOKEN_LOCATION=/home/fabric/.tokens.json

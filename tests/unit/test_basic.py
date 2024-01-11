@@ -5,6 +5,7 @@ import unittest
 
 from fabrictestbed.slice_manager import SliceManagerException
 from fabrictestbed.util.constants import Constants
+from fabrictestbed_extensions.fablib.constants import Constants as FablibConstants
 
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
@@ -22,9 +23,9 @@ class FablibManagerTests(unittest.TestCase):
         Constants.FABRIC_ORCHESTRATOR_HOST,
         Constants.FABRIC_PROJECT_ID,
         # Constants.FABRIC_TOKEN_LOCATION,
-        FablibManager.FABRIC_BASTION_HOST,
-        FablibManager.FABRIC_BASTION_USERNAME,
-        FablibManager.FABRIC_BASTION_KEY_LOCATION,
+        FablibConstants.FABRIC_BASTION_HOST,
+        FablibConstants.FABRIC_BASTION_USERNAME,
+        FablibConstants.FABRIC_BASTION_KEY_LOCATION,
     ]
 
     def setUp(self):
@@ -45,19 +46,13 @@ class FablibManagerTests(unittest.TestCase):
         # Test with no required env vars set.
         self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
 
-    def test_fablib_manager_one_env_var(self):
-        # Test with some required env vars set.
-        for var in self.required_env_vars:
-            os.environ[var] = "dummy"
-            self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
-
     def test_fablib_manager_all_env_vars(self):
         # Test with all required configuration except
         # FABRIC_TOKEN_LOCATION.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        self.assertRaises(AttributeError, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(ConnectionError, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_cm_host(self):
         os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
@@ -79,9 +74,9 @@ class FablibManagerTests(unittest.TestCase):
         # Should fail when token location is not a valid path.
 
         # set all required env vars.
-        for var in self.required_env_vars:
-            os.environ[var] = "dummy"
-
+        os.environ[Constants.FABRIC_PROJECT_ID] = "dummy_project_id"
+        os.environ[FablibConstants.FABRIC_BASTION_HOST] = "dummy_bastion_host"
+        os.environ[FablibConstants.FABRIC_BASTION_USERNAME] = "dummy_bastion_user_name"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
 
         # FablibManager() without a valid token or token location

@@ -58,6 +58,10 @@ class Config:
             Constants.ENV_VAR: Constants.FABRIC_CREDMGR_HOST,
             Constants.DEFAULT: Constants.DEFAULT_FABRIC_CREDMGR_HOST
         },
+        Constants.CORE_API_HOST: {
+            Constants.ENV_VAR: Constants.FABRIC_CORE_API_HOST,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_CORE_API_HOST
+        },
         Constants.TOKEN_LOCATION: {
             Constants.ENV_VAR: Constants.FABRIC_TOKEN_LOCATION,
             Constants.DEFAULT: Constants.DEFAULT_TOKEN_LOCATION
@@ -66,28 +70,33 @@ class Config:
             Constants.ENV_VAR: Constants.FABRIC_PROJECT_ID
         },
         Constants.BASTION_HOST: {
-            Constants.ENV_VAR: Constants.FABRIC_BASTION_HOST
+            Constants.ENV_VAR: Constants.FABRIC_BASTION_HOST,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_HOST
         },
         Constants.BASTION_USERNAME: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_USERNAME
         },
         Constants.BASTION_KEY_LOCATION: {
-            Constants.ENV_VAR: Constants.FABRIC_BASTION_KEY_LOCATION
+            Constants.ENV_VAR: Constants.FABRIC_BASTION_KEY_LOCATION,
+            Constants.DEFAULT: Constants.DEFAULT_BASTION_KEY_LOCATION
         },
-        Constants.FABLIB_VERSION:{
+        Constants.FABLIB_VERSION: {
             Constants.ENV_VAR: Constants.FABLIB_VERSION
         },
         Constants.SLICE_PUBLIC_KEY_FILE: {
-            Constants.ENV_VAR: Constants.FABRIC_SLICE_PUBLIC_KEY_FILE
-            },
+            Constants.ENV_VAR: Constants.FABRIC_SLICE_PUBLIC_KEY_FILE,
+            Constants.DEFAULT: Constants.DEFAULT_SLICE_PUBLIC_KEY_FILE
+        },
         Constants.SLICE_PRIVATE_KEY_FILE: {
-            Constants.ENV_VAR: Constants.FABRIC_SLICE_PRIVATE_KEY_FILE
+            Constants.ENV_VAR: Constants.FABRIC_SLICE_PRIVATE_KEY_FILE,
+            Constants.DEFAULT: Constants.DEFAULT_SLICE_PRIVATE_KEY_FILE
         }
     }
 
     REQUIRED_ATTRS_PRETTY_NAMES = {
             Constants.CREDMGR_HOST: "Credential Manager",
             Constants.ORCHESTRATOR_HOST: "Orchestrator",
+            Constants.CORE_API_HOST: "Core API",
             Constants.TOKEN_LOCATION: "Token File",
             Constants.PROJECT_ID: "Project ID",
             Constants.BASTION_USERNAME: "Bastion Username",
@@ -108,6 +117,7 @@ class Config:
     def __init__(self, fabric_rc: str = Constants.DEFAULT_FABRIC_RC,
                  credmgr_host: str = None,
                  orchestrator_host: str = None,
+                 core_api_host: str = None,
                  token_location: str = None, project_id: str = None,
                  bastion_username: str = None, bastion_key_location: str = None,
                  log_level: str = Constants.DEFAULT_LOG_LEVEL, log_file: str = Constants.DEFAULT_LOG_FILE,
@@ -133,6 +143,9 @@ class Config:
 
         if orchestrator_host is not None:
             self.set_orchestrator_host(orchestrator_host=orchestrator_host)
+
+        if core_api_host is not None:
+            self.set_core_api_host(core_api_host=core_api_host)
 
         if token_location is not None:
             self.set_token_location(token_location=token_location)
@@ -326,16 +339,16 @@ class Config:
 
     def get_credmgr_host(self) -> str:
         """
-        Gets the credential manager host site value.
+        Gets the credential manager host value.
 
-        :return: the credential manager host site
+        :return: the credential manager host
         :rtype: String
         """
         return self.get_config().get(Constants.CREDMGR_HOST)
 
     def set_credmgr_host(self, credmgr_host:str):
         """
-        Sets the credential manager host site value.
+        Sets the credential manager host value.
         :param credmgr_host: credential manager host site
         :type credmgr_host: String
         """
@@ -343,7 +356,7 @@ class Config:
 
     def get_orchestrator_host(self) -> str:
         """
-        Gets the orchestrator host site value.
+        Gets the orchestrator host value.
 
         :return: the orchestrator host site
         :rtype: String
@@ -352,11 +365,28 @@ class Config:
 
     def set_orchestrator_host(self, orchestrator_host:str):
         """
-        Sets the Orchestrator host site value.
+        Sets the Orchestrator host value.
         :param orchestrator_host: Orchestrator host
         :type orchestrator_host: String
         """
         self.runtime_config[Constants.ORCHESTRATOR_HOST] = orchestrator_host
+
+    def get_core_api_host(self) -> str:
+        """
+        Gets the core_api host value.
+
+        :return: the core_api host site
+        :rtype: String
+        """
+        return self.get_config().get(Constants.CORE_API_HOST)
+
+    def set_core_api_host(self, core_api_host:str):
+        """
+        Sets the core_api host value.
+        :param core_api_host: core_api host
+        :type core_api_host: String
+        """
+        self.runtime_config[Constants.CORE_API_HOST] = core_api_host
 
     def get_token_location(self) -> str:
         """

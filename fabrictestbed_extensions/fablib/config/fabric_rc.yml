@@ -29,6 +29,7 @@
 runtime:
   credmgr_host: cm.fabric-testbed.net
   orchestrator_host: orchestrator.fabric-testbed.net
+  core_api_host: uis.fabric-testbed.net
   project_id: <YOUR_PROJECT_ID>
   token_location: /home/fabric/.tokens.json
   bastion_host: bastion.fabric-testbed.net

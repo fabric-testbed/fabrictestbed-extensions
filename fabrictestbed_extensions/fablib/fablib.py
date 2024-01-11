@@ -38,8 +38,9 @@ from IPython import get_ipython
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.config.config import Config
+from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.utils.Utils import Utils
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
@@ -507,6 +508,7 @@ class FablibManager(Config):
     def __init__(self, fabric_rc: str = Constants.DEFAULT_FABRIC_RC,
                  credmgr_host: str = None,
                  orchestrator_host: str = None,
+                 core_api_host: str = None,
                  token_location: str = None, project_id: str = None,
                  bastion_username: str = None, bastion_key_location: str = None,
                  log_level: str = Constants.DEFAULT_LOG_LEVEL, log_file: str = Constants.DEFAULT_LOG_FILE,
@@ -522,6 +524,7 @@ class FablibManager(Config):
 
         """
         super().__init__(fabric_rc=fabric_rc, credmgr_host=credmgr_host, orchestrator_host=orchestrator_host,
+                         core_api_host=core_api_host,
                          token_location=token_location, project_id=project_id, bastion_username=bastion_username,
                          bastion_key_location=bastion_key_location, log_level=log_level, log_file=log_file,
                          data_dir=data_dir, offline=offline, **kwargs)
@@ -543,6 +546,69 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.__setup_logging()
             self.__build_slice_manager()
+            self.validate()
+
+    def validate(self):
+        # Verify that Token file exists
+        token_location = self.get_token_location()
+        if not os.path.exists(token_location):
+            raise ConfigException(f"Token file does not exist, please provide the token at location: {token_location}!")
+
+        # Fetch User Info and Projects
+        status, exception_info = self.get_slice_manager().get_user_and_project_info()
+        if status != Status.OK:
+            raise exception_info
+
+        user_info, projects = exception_info
+
+        # Try to automatically get the project id; Use the first project id
+        if self.get_project_id() is None or self.get_project_id() not in projects:
+            self.set_project_id(project_id=projects[0].get(Constants.UUID))
+
+            logging.info(f"Project Id incorrect, using the first active project for the user: "
+                         f"{projects[0].get(Constants.UUID)}/{projects[0].get(Constants.NAME)}")
+
+        # Check bastion host is reachable
+        Utils.is_reachable(hostname=self.get_bastion_host())
+
+        # Validate the bastion username is valid
+        if self.get_bastion_username() is None or self.get_bastion_username() != user_info.get(Constants.BASTION_LOGIN):
+            self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
+
+        # Create Bastion Key if it doesn't exist
+        # TODO check expiry
+        bastion_key_location = self.get_bastion_key_location()
+        if not os.path.exists(bastion_key_location):
+            logging.info("Bastion Key does not exist, creating a bastion key!")
+            self.__create_and_save_key(private_file_path=bastion_key_location,
+                                       description="Bastion Key Fablib",
+                                       key_type=Constants.KEY_TYPE_BASTION)
+
+        # Create Sliver Key if it doesn't exist
+        # TODO check expiry
+        sliver_private_key_location = self.get_default_slice_private_key_file()
+        sliver_public_key_location = self.get_default_slice_public_key_file()
+        if not os.path.exists(sliver_private_key_location) or not os.path.exists(sliver_public_key_location):
+            logging.info("Sliver Key does not exist, creating a bastion key!")
+            self.__create_and_save_key(private_file_path=sliver_private_key_location,
+                                       description="Bastion Key Fablib",
+                                       key_type=Constants.KEY_TYPE_BASTION,
+                                       public_file_path=sliver_public_key_location)
+
+    def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
+                              public_file_path: str = None, comment: str = "Created via API"):
+        status, exception_keys = self.get_slice_manager().create_ssh_keys(key_type=key_type,
+                                                                          description=description,
+                                                                          comment=comment)
+        if status != Status.OK:
+            raise exception_keys
+
+        if public_file_path is None:
+            public_file_path = f"{private_file_path}.pub"
+
+        Utils.save_to_file(file_path=private_file_path, data=exception_keys[0].get(Constants.PRIVATE_OPENSSH))
+        Utils.save_to_file(file_path=public_file_path, data=exception_keys[0].get(Constants.PUBLIC_OPENSSH))
+
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
@@ -592,10 +658,14 @@ class FablibManager(Config):
                 f"initialize=True,"
                 f"scope='all'"
             )
+            Utils.is_reachable(hostname=self.get_credmgr_host())
+            Utils.is_reachable(hostname=self.get_orchestrator_host())
+            Utils.is_reachable(hostname=self.get_core_api_host())
 
             self.slice_manager = SliceManager(
                 oc_host=self.get_orchestrator_host(),
                 cm_host=self.get_credmgr_host(),
+                core_api_host=self.get_core_api_host(),
                 project_id=self.get_project_id(),
                 token_location=self.get_token_location(),
                 initialize=True,
