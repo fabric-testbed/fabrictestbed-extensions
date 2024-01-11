@@ -97,6 +97,18 @@ class Config:
         Constants.AVOID: {
             Constants.ENV_VAR: Constants.FABRIC_AVOID,
             Constants.DEFAULT: ""
+        },
+        Constants.SSH_COMMAND_LINE: {
+            Constants.ENV_VAR: Constants.FABRIC_SSH_COMMAND_LINE,
+            Constants.DEFAULT: Constants.FABRIC_SSH_COMMAND_LINE
+        },
+        Constants.LOG_LEVEL: {
+            Constants.ENV_VAR: Constants.FABRIC_LOG_LEVEL,
+            Constants.DEFAULT: Constants.DEFAULT_LOG_LEVEL
+        },
+        Constants.LOG_FILE: {
+            Constants.ENV_VAR: Constants.FABRIC_LOG_FILE,
+            Constants.DEFAULT: Constants.DEFAULT_LOG_FILE
         }
     }
 
@@ -178,7 +190,7 @@ class Config:
             self.set_data_dir(data_dir=data_dir)
 
         if self.get_ssh_command_line() is None:
-            self.set_ssh_command_line(ssh_command_line="ssh ${Username}@${Management IP}")
+            self.set_ssh_command_line(ssh_command_line=Constants.DEFAULT_FABRIC_SSH_COMMAND_LINE)
 
         self.required_check(partial=True)
 
