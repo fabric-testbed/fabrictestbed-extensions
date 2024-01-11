@@ -562,53 +562,23 @@ class FablibManager(Config):
         logging.debug("Updating Bastion User Name")
         self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
 
-    def __setup_ssh_keys(self):
-        bastion_key_location = self.get_bastion_key_location()
-        sliver_private_key_location = self.get_default_slice_private_key_file()
-        sliver_public_key_location = self.get_default_slice_public_key_file()
+    def create_bastion_keys(self, *, bastion_key_location: str = None):
+        if bastion_key_location is None:
+            bastion_key_location = self.get_bastion_key_location()
+        logging.info("Bastion Key does not exist, creating a bastion key!")
+        self.__create_and_save_key(private_file_path=bastion_key_location,
+                                   description="Bastion Key Fablib",
+                                   key_type=Constants.KEY_TYPE_BASTION)
+        logging.info(f"Bastion Key saved at location: {bastion_key_location}")
 
-        # Fetch User Info and Projects
-        logging.info("Fetching User's information")
-
-        user_info = self.get_slice_manager().get_user_info()
-
-        if (
-                self.get_bastion_username() and
-                os.path.exists(bastion_key_location) and
-                os.path.exists(sliver_private_key_location) and
-                os.path.exists(sliver_public_key_location)
-        ):
-            logging.debug("SSH Keys are set up, and no operation is needed!")
-            return
-
-        logging.info(f"User information: {user_info}")
-        logging.info("Checking Bastion host connectivity")
-        # Check bastion host is reachable
-        Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
-
-        # Validate the bastion username is valid
-        if self.get_bastion_username() is None or self.get_bastion_username() != user_info.get(Constants.BASTION_LOGIN):
-            logging.debug("Updating Bastion User Name")
-            self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
-
-        # Create Bastion Key if it doesn't exist
-        bastion_key_location = self.get_bastion_key_location()
-        if not os.path.exists(bastion_key_location):
-            logging.info("Bastion Key does not exist, creating a bastion key!")
-            self.__create_and_save_key(private_file_path=bastion_key_location,
-                                       description="Bastion Key Fablib",
-                                       key_type=Constants.KEY_TYPE_BASTION)
-
-        # Create Sliver Key if it doesn't exist
-        sliver_private_key_location = self.get_default_slice_private_key_file()
-        sliver_public_key_location = self.get_default_slice_public_key_file()
-        if not os.path.exists(sliver_private_key_location) or not os.path.exists(sliver_public_key_location):
-            logging.info("Sliver Key does not exist, creating a bastion key!")
-            self.__create_and_save_key(private_file_path=sliver_private_key_location,
-                                       description="Bastion Key Fablib",
-                                       key_type=Constants.KEY_TYPE_BASTION,
-                                       public_file_path=sliver_public_key_location)
-        logging.info(f"Final config: {self.runtime_config}")
+    def create_sliver_keys(self, *, sliver_priv_key_location: str = None):
+        if sliver_priv_key_location is None:
+            sliver_priv_key_location = self.get_default_slice_private_key_file()
+        logging.info("Creating sliver key!")
+        self.__create_and_save_key(private_file_path=sliver_priv_key_location,
+                                   description="Bastion Key Fablib",
+                                   key_type=Constants.KEY_TYPE_SLIVER)
+        logging.info(f"Sliver Keys saved at location: {sliver_priv_key_location}")
 
     def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
                               public_file_path: str = None, comment: str = "Created via API"):
@@ -661,8 +631,9 @@ class FablibManager(Config):
         """
         try:
             logging.info(
-                f"oc_host={self.get_orchestrator_host()},"
-                f"cm_host={self.get_credmgr_host()},"
+                f"orchestrator_host={self.get_orchestrator_host()},"
+                f"credmgr_host={self.get_credmgr_host()},"
+                f"core_api_host={self.get_core_api_host()},"
                 f"project_id={self.get_project_id()},"
                 f"token_location={self.get_token_location()},"
                 f"initialize=True,"

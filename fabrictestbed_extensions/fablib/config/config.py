@@ -311,9 +311,6 @@ class Config:
                 f"Error initializing {self.__class__.__name__}: {errors}"
             )
 
-        if not partial:
-            self.save_config()
-
     def get_config(self) -> Dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
