@@ -30,13 +30,13 @@ from atomicwrites import atomic_write
 
 class Utils:
     @staticmethod
-    def is_reachable(*, hostname: str):
+    def is_reachable(*, hostname: str, port: int = 443):
         try:
             # Attempt to resolve the hostname to an IP address
             ip_address = socket.gethostbyname(hostname)
 
             # Attempt to create a socket connection to the IP address and port 80
-            with socket.create_connection((ip_address, 443), timeout=5):
+            with socket.create_connection((ip_address, port), timeout=5):
                 return True
         except (socket.gaierror, socket.timeout, OSError):
             raise ConnectionError(f"Host: {hostname} is not reachable, please check your config file!")

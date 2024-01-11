@@ -565,7 +565,7 @@ class FablibManager(Config):
                          f"{projects[0].get(Constants.UUID)}/{projects[0].get(Constants.NAME)}")
 
         # Check bastion host is reachable
-        Utils.is_reachable(hostname=self.get_bastion_host())
+        Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
 
         # Validate the bastion username is valid
         if self.get_bastion_username() is None or self.get_bastion_username() != user_info.get(Constants.BASTION_LOGIN):
