@@ -110,6 +110,10 @@ class Config:
         Constants.LOG_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_LOG_FILE,
             Constants.DEFAULT: Constants.DEFAULT_LOG_FILE
+        },
+        Constants.BASTION_SSH_CONFIG_FILE: {
+            Constants.ENV_VAR: Constants.FABRIC_BASTION_SSH_CONFIG_FILE,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE
         }
     }
 
@@ -131,7 +135,8 @@ class Config:
             Constants.FABLIB_VERSION: "Version",
             Constants.AVOID: "Sites to avoid",
             Constants.DATA_DIR: "Data directory",
-            Constants.SSH_COMMAND_LINE: "SSH Command Line"
+            Constants.SSH_COMMAND_LINE: "SSH Command Line",
+            Constants.BASTION_SSH_CONFIG_FILE: "Bastion SSH Config File"
         }
 
     def __init__(self, fabric_rc: str = None,
@@ -594,6 +599,15 @@ class Config:
         :type ssh_command_line: string
         """
         self.runtime_config[Constants.SSH_COMMAND_LINE] = ssh_command_line
+
+    def get_bastion_ssh_config_file(self):
+        """
+        Gets the bastion ssh config file
+
+        :return bastion_ssh_config_file: bastion_ssh_config_file
+        :rtype bastion_ssh_config_file: string
+        """
+        return self.runtime_config.get(Constants.BASTION_SSH_CONFIG_FILE)
 
     def get_avoid(self):
         """

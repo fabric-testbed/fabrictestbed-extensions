@@ -572,7 +572,7 @@ class FablibManager(Config):
 
         if self.get_default_slice_public_key() is None or self.get_default_slice_private_key() is None:
             logging.info("Sliver keys do not exist! Please create sliver keys")
-            raise Exception("Sliver keys do not exist! Please create sliver keys")
+            self.create_sliver_keys()
 
         if self.get_bastion_username() is None:
             logging.info("Bastion User name is not specified")
@@ -581,6 +581,8 @@ class FablibManager(Config):
         if self.get_project_id() is None:
             logging.info("Project is not specified")
             raise Exception("Bastion User name is not specified")
+
+        self.create_ssh_config()
 
         print("Configuration is valid and please save the config!")
 
@@ -604,6 +606,27 @@ class FablibManager(Config):
         user_info = self.get_user_info()
         logging.debug("Updating Bastion User Name")
         self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
+
+    def create_ssh_config(self):
+        bastion_ssh_config_file = self.get_bastion_ssh_config_file()
+        if bastion_ssh_config_file is None or os.path.exists(bastion_ssh_config_file):
+            raise ConfigException("Bastion SSH Config File location not specified")
+
+        with open(bastion_ssh_config_file, 'w') as f:
+            f.write(f"""UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    ServerAliveInterval 120 
+
+    Host bastion.fabric-testbed.net
+         User {self.get_bastion_username()}
+         ForwardAgent yes
+         Hostname %h
+         IdentityFile {self.get_bastion_key_location()}
+         IdentitiesOnly yes
+
+    Host * !bastion.fabric-testbed.net
+         ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
+    """)
 
     def validate_and_update_bastion_keys(self):
         """

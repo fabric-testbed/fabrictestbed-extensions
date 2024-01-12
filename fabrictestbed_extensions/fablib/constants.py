@@ -42,6 +42,7 @@ class Constants:
     DEFAULT_SLICE_PUBLIC_KEY_FILE = f"{DEFAULT_SLICE_PRIVATE_KEY_FILE}.pub"
     DEFAULT_BASTION_KEY_LOCATION = f"{DEFAULT_FABRIC_CONFIG_DIR}/fabric_bastion_key"
     DEFAULT_FABRIC_SSH_COMMAND_LINE = "ssh ${Username}@${Management IP}"
+    DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE = f"{DEFAULT_WORK_DIR}/ssh_config"
 
     FABRIC_CREDMGR_HOST = "FABRIC_CREDMGR_HOST"
     FABRIC_ORCHESTRATOR_HOST = "FABRIC_ORCHESTRATOR_HOST"
@@ -59,6 +60,7 @@ class Constants:
     FABRIC_AVOID = "FABRIC_AVOID"
     FABRIC_SSH_COMMAND_LINE = "FABRIC_SSH_COMMAND_LINE"
     FABLIB_VERSION = "fablib_version"
+    FABRIC_BASTION_SSH_CONFIG_FILE = "FABRIC_BASTION_SSH_CONFIG_FILE"
 
     FABRIC_PRIMARY = "#27aae1"
     FABRIC_PRIMARY_LIGHT = "#cde4ef"
@@ -116,6 +118,7 @@ class Constants:
     SLICE_PRIVATE_KEY = "slice_private_key"
     SLICE_PUBLIC_KEY = "slice_public_key"
     SLICE_PRIVATE_KEY_PASSPHRASE = "slice_private_key_passphrase"
+    BASTION_SSH_CONFIG_FILE = "bastion_ssh_config_file"
 
     IMAGE_NAMES = [
             "default_centos8_stream",
