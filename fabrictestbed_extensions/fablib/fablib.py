@@ -766,10 +766,10 @@ class FablibManager(Config):
                 initialize=True,
                 scope="all",
             )
+            self.slice_manager.initialize()
             logging.debug("Slice manager initialized!")
-            # Update Project ID if not present already
-            if self.get_project_id() is None:
-                self.set_project_id(project_id=self.slice_manager.project_id)
+            # Update Project ID to be same as in Slice Manager
+            self.set_project_id(project_id=self.slice_manager.project_id)
             self.determine_bastion_username()
         except Exception as e:
             logging.error(e, exc_info=True)

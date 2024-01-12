@@ -41,8 +41,10 @@ class Constants:
     DEFAULT_SLICE_PRIVATE_KEY_FILE = f"{DEFAULT_FABRIC_CONFIG_DIR}/slice_key"
     DEFAULT_SLICE_PUBLIC_KEY_FILE = f"{DEFAULT_SLICE_PRIVATE_KEY_FILE}.pub"
     DEFAULT_BASTION_KEY_LOCATION = f"{DEFAULT_FABRIC_CONFIG_DIR}/fabric_bastion_key"
-    DEFAULT_FABRIC_SSH_COMMAND_LINE = "ssh ${Username}@${Management IP}"
-    DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE = f"{DEFAULT_WORK_DIR}/ssh_config"
+    DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE = f"{DEFAULT_FABRIC_CONFIG_DIR}/ssh_config"
+    DEFAULT_FABRIC_SSH_COMMAND_LINE = "ssh -i {{ _self_.private_ssh_key_file }} -F " + \
+                                      DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE + \
+                                      " {{ _self_.username }}@{{ _self_.management_ip }}"
 
     FABRIC_CREDMGR_HOST = "FABRIC_CREDMGR_HOST"
     FABRIC_ORCHESTRATOR_HOST = "FABRIC_ORCHESTRATOR_HOST"
