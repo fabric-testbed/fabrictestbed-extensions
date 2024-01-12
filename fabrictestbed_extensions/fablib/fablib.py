@@ -24,6 +24,7 @@
 # Author: Paul Ruth (pruth@renci.org)
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import os
@@ -506,7 +507,7 @@ class FablibManager(Config):
 
     ssh_thread_pool_executor = None
 
-    def __init__(self, fabric_rc: str = Constants.DEFAULT_FABRIC_RC,
+    def __init__(self, fabric_rc: str = None,
                  credmgr_host: str = None,
                  orchestrator_host: str = None,
                  core_api_host: str = None,
@@ -545,14 +546,56 @@ class FablibManager(Config):
 
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
-            self.__setup_logging()
+            self.setup_logging()
             self.__build_slice_manager()
         self.required_check()
 
+    def validate_config(self):
+        """
+        Validate Fablib config - checks if all the required configuration exists for slice provisioning to work successfully
+        - Checks Credential Manager Host is configured properly
+        - Checks Orchestrator Host is configured properly
+        - Checks Core API Host is configured properly
+        - Checks Bastion Host is configured properly
+        - Check Sliver keys exist
+        - Check Bastion keys exist and are not expired
+        - Check Bastion Username is configured
+        - Check Project Id is configured
+        @raises Exception if the configuration is invalid
+        """
+        Utils.is_reachable(hostname=self.get_credmgr_host(), port=443)
+        Utils.is_reachable(hostname=self.get_orchestrator_host(), port=443)
+        Utils.is_reachable(hostname=self.get_core_api_host(), port=443)
+        Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
+
+        self.validate_and_update_bastion_keys()
+
+        if self.get_default_slice_public_key() is None or self.get_default_slice_private_key() is None:
+            logging.info("Sliver keys do not exist! Please create sliver keys")
+            raise Exception("Sliver keys do not exist! Please create sliver keys")
+
+        if self.get_bastion_username() is None:
+            logging.info("Bastion User name is not specified")
+            raise Exception("Bastion User name is not specified")
+
+        if self.get_project_id() is None:
+            logging.info("Project is not specified")
+            raise Exception("Bastion User name is not specified")
+
+        print("Configuration is valid and please save the config!")
+
     def get_user_info(self):
+        """
+        Get User information
+        :return returns a dictionary containing User's Information
+        """
         return self.get_slice_manager().get_user_info()
 
     def determine_bastion_username(self):
+        """
+        Determine Bastion Username
+        Query User Information from Core API and updates the bastion username
+        """
         # Fetch User Info and Projects
         if self.get_bastion_username() is not None:
             return
@@ -562,28 +605,101 @@ class FablibManager(Config):
         logging.debug("Updating Bastion User Name")
         self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
 
-    def create_bastion_keys(self, *, bastion_key_location: str = None, store_pubkey: bool = False):
+    def validate_and_update_bastion_keys(self):
+        """
+        Validate Bastion Key; if key does not exist or is expired, it create bastion keys
+        """
+        logging.info("Fetching User's information")
+        user_info = self.get_user_info()
+        logging.debug("Updating Bastion User Name")
+        ssh_keys = user_info.get(Constants.SSH_KEYS)
+
+        current_bastion_key = self.get_bastion_key()
+        current_bastion_key_finger_print = None
+        if current_bastion_key:
+            current_bastion_key_finger_print = Utils.get_md5_fingerprint(key_string=current_bastion_key)
+
+        keys_to_remove = []
+        for key in ssh_keys:
+            expires_on = key.get(Constants.EXPIRES_ON)
+            expires_on_dt = datetime.datetime.fromisoformat(expires_on)
+            now = datetime.datetime.now(tz=datetime.timezone.utc)
+            if now > expires_on_dt:
+                keys_to_remove.append(key)
+                continue
+
+        for key in keys_to_remove:
+            ssh_keys.remove(key)
+
+        if current_bastion_key is not None and current_bastion_key_finger_print in ssh_keys:
+            logging.info(f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!")
+            print(f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!")
+            return
+
+        logging.info(f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired")
+        print(f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired")
+        self.create_bastion_keys(overwrite=True)
+
+    def create_bastion_keys(self, *, bastion_key_location: str = None, store_pubkey: bool = True,
+                            overwrite: bool = False):
+        """
+        Create Bastion Keys
+        @param bastion_key_location bastion key location
+        @param store_pubkey flag indicating if the public key should be saved
+        @param overwrite overwrite the bastion key file if it exists already
+        """
         if bastion_key_location is None:
             bastion_key_location = self.get_bastion_key_location()
+
+        if os.path.exists(bastion_key_location) and not overwrite:
+            logging.info(f"Bastion keys already exist at the location: {bastion_key_location}")
+            print(f"Bastion keys already exist at the location: {bastion_key_location}")
+            return
+
         logging.info("Bastion Key does not exist, creating a bastion key!")
         self.__create_and_save_key(private_file_path=bastion_key_location,
                                    description="Bastion Key Fablib",
                                    key_type=Constants.KEY_TYPE_BASTION,
                                    store_pubkey=store_pubkey)
         logging.info(f"Bastion Key saved at location: {bastion_key_location}")
+        print(f"Bastion Key saved at location: {bastion_key_location}")
 
-    def create_sliver_keys(self, *, sliver_priv_key_location: str = None):
+    def create_sliver_keys(self, *, sliver_priv_key_location: str = None, store_pubkey: bool = True,
+                           overwrite: bool = False):
+        """
+        Create Sliver Keys
+        @param sliver_priv_key_location bastion key location
+        @param store_pubkey flag indicating if the public key should be saved
+        @param overwrite overwrite the bastion key file if it exists already
+        """
         if sliver_priv_key_location is None:
             sliver_priv_key_location = self.get_default_slice_private_key_file()
+
+        if os.path.exists(sliver_priv_key_location) and not overwrite:
+            logging.info(f"Sliver keys already exist at the location: {sliver_priv_key_location}")
+            print(f"Sliver keys already exist at the location: {sliver_priv_key_location}")
+            return
+
         logging.info("Creating sliver key!")
         self.__create_and_save_key(private_file_path=sliver_priv_key_location,
-                                   description="Bastion Key Fablib",
+                                   description="Sliver Key Fablib",
+                                   store_pubkey=store_pubkey,
                                    key_type=Constants.KEY_TYPE_SLIVER)
         logging.info(f"Sliver Keys saved at location: {sliver_priv_key_location}")
+        print(f"Sliver Keys saved at location: {sliver_priv_key_location}")
 
     def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
-                              public_file_path: str = None, comment: str = "Created via API",
+                              public_file_path: str = None, comment: str = "ssh-key-via-api",
                               store_pubkey: bool = False):
+        """
+        Create Key and save key
+        @param private_file_path private key location
+        @param description description
+        @param key_type key type bastion or sliver
+        @param public_file_path public key location
+        @param comment comment
+        @param store_pubkey flag indicating if the public key should be saved
+        """
         ssh_keys = self.get_slice_manager().create_ssh_keys(key_type=key_type, description=description,
                                                             comment=comment, store_pubkey=store_pubkey)
         if public_file_path is None:
@@ -594,33 +710,6 @@ class FablibManager(Config):
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
-
-    def __setup_logging(self):
-        """
-        Create log file if it doesn't exist; setup logger
-        """
-        try:
-            for handler in logging.root.handlers[:]:
-                logging.root.removeHandler(handler)
-        except Exception as e:
-            print(f"Exception from removeHandler: {e}")
-            pass
-
-        try:
-            if self.get_log_file() and not os.path.isdir(os.path.dirname(self.get_log_file())):
-                os.makedirs(os.path.dirname(self.get_log_file()))
-        except Exception:
-            logging.warning(
-                f"Failed to create log_file directory: {os.path.dirname(self.get_log_file())}"
-            )
-
-        if self.get_log_file() and self.get_log_level():
-            logging.basicConfig(
-                filename=self.get_log_file(),
-                level=self.LOG_LEVELS[self.get_log_level()],
-                format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
-                datefmt="%H:%M:%S",
-            )
 
     def __build_slice_manager(self) -> SliceManager:
         """
@@ -1811,4 +1900,4 @@ class FablibManager(Config):
 if __name__ == '__main__':
     fablib = FablibManager()
     fablib.show_config()
-    fablib.create_bastion_keys()
+    fablib.validate_config()

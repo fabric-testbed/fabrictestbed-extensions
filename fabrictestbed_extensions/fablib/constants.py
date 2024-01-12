@@ -148,3 +148,6 @@ class Constants:
     KEY_TYPE_SLIVER = "sliver"
     PRIVATE_OPENSSH = "private_openssh"
     PUBLIC_OPENSSH = "public_openssh"
+    EMAIL = "email"
+    SSH_KEYS = "sshkeys"
+    EXPIRES_ON = "expires_on"

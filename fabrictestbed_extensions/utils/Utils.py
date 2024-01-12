@@ -45,11 +45,14 @@ class Utils:
 
     @staticmethod
     def save_to_file(file_path: str, data: str):
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File: {file_path} does not exist!")
-
-        with atomic_write(file_path, overwrite=True) as f:
-            f.write(data)
+        # If the file exists, use atomic_write
+        if os.path.exists(file_path):
+            with atomic_write(file_path, overwrite=True) as f:
+                f.write(data)
+        else:
+            # If the file doesn't exist, create it atomically
+            with open(file_path, 'w') as f:
+                f.write(data)
 
     @staticmethod
     def get_md5_fingerprint(key_string):

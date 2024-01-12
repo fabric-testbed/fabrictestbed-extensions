@@ -24,6 +24,7 @@
 # Author: Komal Thareja (kthare10@renci.org)
 import json
 import os
+from pathlib import Path
 from typing import Dict, Union, List
 
 import yaml
@@ -133,7 +134,7 @@ class Config:
             Constants.SSH_COMMAND_LINE: "SSH Command Line"
         }
 
-    def __init__(self, fabric_rc: str = Constants.DEFAULT_FABRIC_RC,
+    def __init__(self, fabric_rc: str = None,
                  credmgr_host: str = None,
                  orchestrator_host: str = None,
                  core_api_host: str = None,
@@ -150,6 +151,13 @@ class Config:
          - defaults (if needed and possible)
 
         """
+        if fabric_rc is None:
+            fabric_rc = Constants.DEFAULT_FABRIC_RC
+            Path(fabric_rc).touch()
+        else:
+            if not os.path.exists(fabric_rc):
+                raise ConfigException("Config file does not exist!")
+
         self.config_file_path = fabric_rc
         self.is_yaml = False
         self.runtime_config = {}
@@ -212,9 +220,6 @@ class Config:
         :raises ConfigException: if config file does not exist
         """
         if file_path:
-            if not os.path.exists(file_path):
-                raise ConfigException("Config file does not exist!")
-
             if Utils.is_yaml_file(file_path=file_path):
                 self.__load_yaml_file(file_path=file_path)
                 self.is_yaml = True
@@ -478,7 +483,7 @@ class Config:
         :return: FABRIC Bastion key string
         :rtype: String
         """
-        if self.get_bastion_key_location() is None:
+        if self.get_bastion_key_location() is None or not os.path.exists(self.get_bastion_key_location()):
             return None
         with open(self.get_bastion_key_location(), "r", encoding="utf-8") as f:
             return f.read()
@@ -634,7 +639,8 @@ class Config:
         :return: default_slice_key dictionary from superclass
         :rtype: Dict[String, String]
         """
-        if self.get_default_slice_private_key_file() is not None:
+        if self.get_default_slice_private_key_file() is not None and \
+                os.path.exists(self.get_default_slice_private_key_file()):
             with open(self.get_default_slice_private_key_file(), "r", encoding="utf-8") as f:
                 return f.read()
         return None
@@ -650,7 +656,8 @@ class Config:
         :return: default_slice_key dictionary from superclass
         :rtype: Dict[String, String]
         """
-        if self.get_default_slice_public_key_file() is not None:
+        if self.get_default_slice_public_key_file() is not None and \
+                os.path.exists(self.get_default_slice_public_key_file()):
             with open(self.get_default_slice_public_key_file(), "r", encoding="utf-8") as f:
                 return f.read()
         return None
@@ -691,6 +698,33 @@ class Config:
                     if env_var:
                         f.write(f"export {env_var}={value}\n")
 
+    def setup_logging(self):
+        """
+        Create log file if it doesn't exist; setup logger
+        """
+        try:
+            for handler in logging.root.handlers[:]:
+                logging.root.removeHandler(handler)
+        except Exception as e:
+            print(f"Exception from removeHandler: {e}")
+            pass
+
+        try:
+            if self.get_log_file() and not os.path.isdir(os.path.dirname(self.get_log_file())):
+                os.makedirs(os.path.dirname(self.get_log_file()))
+        except Exception:
+            logging.warning(
+                f"Failed to create log_file directory: {os.path.dirname(self.get_log_file())}"
+            )
+
+        if self.get_log_file() and self.get_log_level():
+            logging.basicConfig(
+                filename=self.get_log_file(),
+                level=self.LOG_LEVELS[self.get_log_level()],
+                format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+                datefmt="%H:%M:%S",
+            )
+
 
 if __name__ == '__main__':
     config1 = Config(fabric_rc="./fabric_rc", credmgr_host="abc.def.com")
@@ -700,3 +734,4 @@ if __name__ == '__main__':
     config2 = Config(fabric_rc="./fabric_rc.yml", credmgr_host="abc.def.com")
     assert config2.get_credmgr_host() == "abc.def.com"
     print(json.dumps(config2.runtime_config, indent=4))
+
