@@ -562,13 +562,14 @@ class FablibManager(Config):
         logging.debug("Updating Bastion User Name")
         self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
 
-    def create_bastion_keys(self, *, bastion_key_location: str = None):
+    def create_bastion_keys(self, *, bastion_key_location: str = None, store_pubkey: bool = False):
         if bastion_key_location is None:
             bastion_key_location = self.get_bastion_key_location()
         logging.info("Bastion Key does not exist, creating a bastion key!")
         self.__create_and_save_key(private_file_path=bastion_key_location,
                                    description="Bastion Key Fablib",
-                                   key_type=Constants.KEY_TYPE_BASTION)
+                                   key_type=Constants.KEY_TYPE_BASTION,
+                                   store_pubkey=store_pubkey)
         logging.info(f"Bastion Key saved at location: {bastion_key_location}")
 
     def create_sliver_keys(self, *, sliver_priv_key_location: str = None):
@@ -581,9 +582,10 @@ class FablibManager(Config):
         logging.info(f"Sliver Keys saved at location: {sliver_priv_key_location}")
 
     def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
-                              public_file_path: str = None, comment: str = "Created via API"):
+                              public_file_path: str = None, comment: str = "Created via API",
+                              store_pubkey: bool = False):
         ssh_keys = self.get_slice_manager().create_ssh_keys(key_type=key_type, description=description,
-                                                            comment=comment)
+                                                            comment=comment, store_pubkey=store_pubkey)
         if public_file_path is None:
             public_file_path = f"{private_file_path}.pub"
 
@@ -1809,3 +1811,4 @@ class FablibManager(Config):
 if __name__ == '__main__':
     fablib = FablibManager()
     fablib.show_config()
+    fablib.create_bastion_keys()
