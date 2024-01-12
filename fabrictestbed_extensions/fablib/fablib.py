@@ -395,7 +395,7 @@ class fablib:
 
     @staticmethod
     def get_fim_slice(
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
     ) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
@@ -415,7 +415,7 @@ class fablib:
 
     @staticmethod
     def get_slices(
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -507,15 +507,24 @@ class FablibManager(Config):
 
     ssh_thread_pool_executor = None
 
-    def __init__(self, fabric_rc: str = None,
-                 credmgr_host: str = None,
-                 orchestrator_host: str = None,
-                 core_api_host: str = None,
-                 token_location: str = None, project_id: str = None,
-                 bastion_username: str = None, bastion_key_location: str = None,
-                 log_level: str = Constants.DEFAULT_LOG_LEVEL, log_file: str = Constants.DEFAULT_LOG_FILE,
-                 data_dir: str = Constants.DEFAULT_DATA_DIR, output: str = None,
-                 execute_thread_pool_size: int = 64, offline: bool = False, **kwargs):
+    def __init__(
+        self,
+        fabric_rc: str = None,
+        credmgr_host: str = None,
+        orchestrator_host: str = None,
+        core_api_host: str = None,
+        token_location: str = None,
+        project_id: str = None,
+        bastion_username: str = None,
+        bastion_key_location: str = None,
+        log_level: str = Constants.DEFAULT_LOG_LEVEL,
+        log_file: str = Constants.DEFAULT_LOG_FILE,
+        data_dir: str = Constants.DEFAULT_DATA_DIR,
+        output: str = None,
+        execute_thread_pool_size: int = 64,
+        offline: bool = False,
+        **kwargs,
+    ):
         """
         Constructor. Builds FablibManager.  Tries to get configuration from:
 
@@ -525,11 +534,21 @@ class FablibManager(Config):
          - defaults (if needed and possible)
 
         """
-        super().__init__(fabric_rc=fabric_rc, credmgr_host=credmgr_host, orchestrator_host=orchestrator_host,
-                         core_api_host=core_api_host,
-                         token_location=token_location, project_id=project_id, bastion_username=bastion_username,
-                         bastion_key_location=bastion_key_location, log_level=log_level, log_file=log_file,
-                         data_dir=data_dir, offline=offline, **kwargs)
+        super().__init__(
+            fabric_rc=fabric_rc,
+            credmgr_host=credmgr_host,
+            orchestrator_host=orchestrator_host,
+            core_api_host=core_api_host,
+            token_location=token_location,
+            project_id=project_id,
+            bastion_username=bastion_username,
+            bastion_key_location=bastion_key_location,
+            log_level=log_level,
+            log_file=log_file,
+            data_dir=data_dir,
+            offline=offline,
+            **kwargs,
+        )
 
         if output is not None:
             self.output = output
@@ -570,7 +589,10 @@ class FablibManager(Config):
 
         self.validate_and_update_bastion_keys()
 
-        if self.get_default_slice_public_key() is None or self.get_default_slice_private_key() is None:
+        if (
+            self.get_default_slice_public_key() is None
+            or self.get_default_slice_private_key() is None
+        ):
             logging.info("Sliver keys do not exist! Please create sliver keys")
             self.create_sliver_keys()
 
@@ -605,15 +627,18 @@ class FablibManager(Config):
         logging.info("Fetching User's information")
         user_info = self.get_user_info()
         logging.debug("Updating Bastion User Name")
-        self.set_bastion_username(bastion_username=user_info.get(Constants.BASTION_LOGIN))
+        self.set_bastion_username(
+            bastion_username=user_info.get(Constants.BASTION_LOGIN)
+        )
 
     def create_ssh_config(self):
         bastion_ssh_config_file = self.get_bastion_ssh_config_file()
         if bastion_ssh_config_file is None or os.path.exists(bastion_ssh_config_file):
             raise ConfigException("Bastion SSH Config File location not specified")
 
-        with open(bastion_ssh_config_file, 'w') as f:
-            f.write(f"""UserKnownHostsFile /dev/null
+        with open(bastion_ssh_config_file, "w") as f:
+            f.write(
+                f"""UserKnownHostsFile /dev/null
     StrictHostKeyChecking no
     ServerAliveInterval 120 
 
@@ -626,7 +651,8 @@ class FablibManager(Config):
 
     Host * !bastion.fabric-testbed.net
          ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
-    """)
+    """
+            )
 
     def validate_and_update_bastion_keys(self):
         """
@@ -640,7 +666,9 @@ class FablibManager(Config):
         current_bastion_key = self.get_bastion_key()
         current_bastion_key_finger_print = None
         if current_bastion_key:
-            current_bastion_key_finger_print = Utils.get_md5_fingerprint(key_string=current_bastion_key)
+            current_bastion_key_finger_print = Utils.get_md5_fingerprint(
+                key_string=current_bastion_key
+            )
 
         keys_to_remove = []
         for key in ssh_keys:
@@ -654,17 +682,31 @@ class FablibManager(Config):
         for key in keys_to_remove:
             ssh_keys.remove(key)
 
-        if current_bastion_key is not None and current_bastion_key_finger_print in ssh_keys:
-            logging.info(f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!")
+        if (
+            current_bastion_key is not None
+            and current_bastion_key_finger_print in ssh_keys
+        ):
+            logging.info(
+                f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!"
+            )
             print(f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!")
             return
 
-        logging.info(f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired")
-        print(f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired")
+        logging.info(
+            f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired"
+        )
+        print(
+            f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired"
+        )
         self.create_bastion_keys(overwrite=True)
 
-    def create_bastion_keys(self, *, bastion_key_location: str = None, store_pubkey: bool = True,
-                            overwrite: bool = False):
+    def create_bastion_keys(
+        self,
+        *,
+        bastion_key_location: str = None,
+        store_pubkey: bool = True,
+        overwrite: bool = False,
+    ):
         """
         Create Bastion Keys
         @param bastion_key_location bastion key location
@@ -675,20 +717,29 @@ class FablibManager(Config):
             bastion_key_location = self.get_bastion_key_location()
 
         if os.path.exists(bastion_key_location) and not overwrite:
-            logging.info(f"Bastion keys already exist at the location: {bastion_key_location}")
+            logging.info(
+                f"Bastion keys already exist at the location: {bastion_key_location}"
+            )
             print(f"Bastion keys already exist at the location: {bastion_key_location}")
             return
 
         logging.info("Bastion Key does not exist, creating a bastion key!")
-        self.__create_and_save_key(private_file_path=bastion_key_location,
-                                   description="Bastion Key Fablib",
-                                   key_type=Constants.KEY_TYPE_BASTION,
-                                   store_pubkey=store_pubkey)
+        self.__create_and_save_key(
+            private_file_path=bastion_key_location,
+            description="Bastion Key Fablib",
+            key_type=Constants.KEY_TYPE_BASTION,
+            store_pubkey=store_pubkey,
+        )
         logging.info(f"Bastion Key saved at location: {bastion_key_location}")
         print(f"Bastion Key saved at location: {bastion_key_location}")
 
-    def create_sliver_keys(self, *, sliver_priv_key_location: str = None, store_pubkey: bool = True,
-                           overwrite: bool = False):
+    def create_sliver_keys(
+        self,
+        *,
+        sliver_priv_key_location: str = None,
+        store_pubkey: bool = True,
+        overwrite: bool = False,
+    ):
         """
         Create Sliver Keys
         @param sliver_priv_key_location bastion key location
@@ -699,21 +750,33 @@ class FablibManager(Config):
             sliver_priv_key_location = self.get_default_slice_private_key_file()
 
         if os.path.exists(sliver_priv_key_location) and not overwrite:
-            logging.info(f"Sliver keys already exist at the location: {sliver_priv_key_location}")
-            print(f"Sliver keys already exist at the location: {sliver_priv_key_location}")
+            logging.info(
+                f"Sliver keys already exist at the location: {sliver_priv_key_location}"
+            )
+            print(
+                f"Sliver keys already exist at the location: {sliver_priv_key_location}"
+            )
             return
 
         logging.info("Creating sliver key!")
-        self.__create_and_save_key(private_file_path=sliver_priv_key_location,
-                                   description="Sliver Key Fablib",
-                                   store_pubkey=store_pubkey,
-                                   key_type=Constants.KEY_TYPE_SLIVER)
+        self.__create_and_save_key(
+            private_file_path=sliver_priv_key_location,
+            description="Sliver Key Fablib",
+            store_pubkey=store_pubkey,
+            key_type=Constants.KEY_TYPE_SLIVER,
+        )
         logging.info(f"Sliver Keys saved at location: {sliver_priv_key_location}")
         print(f"Sliver Keys saved at location: {sliver_priv_key_location}")
 
-    def __create_and_save_key(self, private_file_path: str, description: str, key_type: str,
-                              public_file_path: str = None, comment: str = "ssh-key-via-api",
-                              store_pubkey: bool = False):
+    def __create_and_save_key(
+        self,
+        private_file_path: str,
+        description: str,
+        key_type: str,
+        public_file_path: str = None,
+        comment: str = "ssh-key-via-api",
+        store_pubkey: bool = False,
+    ):
         """
         Create Key and save key
         @param private_file_path private key location
@@ -723,13 +786,21 @@ class FablibManager(Config):
         @param comment comment
         @param store_pubkey flag indicating if the public key should be saved
         """
-        ssh_keys = self.get_slice_manager().create_ssh_keys(key_type=key_type, description=description,
-                                                            comment=comment, store_pubkey=store_pubkey)
+        ssh_keys = self.get_slice_manager().create_ssh_keys(
+            key_type=key_type,
+            description=description,
+            comment=comment,
+            store_pubkey=store_pubkey,
+        )
         if public_file_path is None:
             public_file_path = f"{private_file_path}.pub"
 
-        Utils.save_to_file(file_path=private_file_path, data=ssh_keys[0].get(Constants.PRIVATE_OPENSSH))
-        Utils.save_to_file(file_path=public_file_path, data=ssh_keys[0].get(Constants.PUBLIC_OPENSSH))
+        Utils.save_to_file(
+            file_path=private_file_path, data=ssh_keys[0].get(Constants.PRIVATE_OPENSSH)
+        )
+        Utils.save_to_file(
+            file_path=public_file_path, data=ssh_keys[0].get(Constants.PUBLIC_OPENSSH)
+        )
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
@@ -787,15 +858,15 @@ class FablibManager(Config):
         return self.get_resources().get_site_names()
 
     def list_sites(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = True,
-            pretty_names: bool = True,
-            force_refresh: bool = False,
-            latlon: bool = True,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
+        latlon: bool = True,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -845,13 +916,13 @@ class FablibManager(Config):
         )
 
     def list_links(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = True,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names=True,
     ) -> object:
         """
         Lists all the links and their attributes.
@@ -895,13 +966,13 @@ class FablibManager(Config):
         )
 
     def list_facility_ports(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = True,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names=True,
     ) -> object:
         """
         Lists all the facility ports and their attributes.
@@ -945,11 +1016,11 @@ class FablibManager(Config):
         )
 
     def show_config(
-            self,
-            output: str = None,
-            fields: list[str] = None,
-            quiet: bool = False,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
     ):
         """
         Show a table containing the current FABlib configuration parameters.
@@ -992,13 +1063,13 @@ class FablibManager(Config):
         )
 
     def show_site(
-            self,
-            site_name: str,
-            output: str = None,
-            fields: list[str] = None,
-            quiet: bool = False,
-            pretty_names=True,
-            latlon=True,
+        self,
+        site_name: str,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
+        latlon=True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1076,7 +1147,7 @@ class FablibManager(Config):
         return self.facility_ports
 
     def get_resources(
-            self, update: bool = True, force_refresh: bool = False
+        self, update: bool = True, force_refresh: bool = False
     ) -> Resources:
         """
         Get a reference to the resources object. The resources object
@@ -1091,7 +1162,7 @@ class FablibManager(Config):
         return self.resources
 
     def get_random_site(
-            self, avoid: List[str] = [], filter_function=None, update: bool = True
+        self, avoid: List[str] = [], filter_function=None, update: bool = True
     ) -> str:
         """
         Get a random site.
@@ -1110,12 +1181,12 @@ class FablibManager(Config):
         )[0]
 
     def get_random_sites(
-            self,
-            count: int = 1,
-            avoid: List[str] = [],
-            filter_function=None,
-            update: bool = True,
-            unique: bool = True,
+        self,
+        count: int = 1,
+        avoid: List[str] = [],
+        filter_function=None,
+        update: bool = True,
+        unique: bool = True,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
@@ -1141,9 +1212,9 @@ class FablibManager(Config):
                     return True
             else:
                 if (
-                        filter_function(site)
-                        and site["state"] == "Active"
-                        and site["hosts"] > 0
+                    filter_function(site)
+                    and site["state"] == "Active"
+                    and site["hosts"] > 0
                 ):
                     return True
 
@@ -1291,7 +1362,7 @@ class FablibManager(Config):
         return topology.sites[site]
 
     def get_available_resources(
-            self, update: bool = False, force_refresh: bool = False
+        self, update: bool = False, force_refresh: bool = False
     ) -> Resources:
         """
         Get the available resources.
@@ -1314,7 +1385,7 @@ class FablibManager(Config):
         return self.resources
 
     def get_fim_slices(
-            self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+        self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
     ) -> List[OrchestratorSlice]:
         """
         Gets a list of fim slices from the slice manager.
@@ -1344,13 +1415,13 @@ class FablibManager(Config):
         return return_slices
 
     def list_slices(
-            self,
-            excludes=[SliceState.Dead, SliceState.Closing],
-            output=None,
-            fields=None,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        excludes=[SliceState.Dead, SliceState.Closing],
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ):
         """
         Lists all the slices created by a user.
@@ -1405,13 +1476,13 @@ class FablibManager(Config):
         )
 
     def show_slice(
-            self,
-            name: str = None,
-            id: str = None,
-            output=None,
-            fields=None,
-            quiet=False,
-            pretty_names=True,
+        self,
+        name: str = None,
+        id: str = None,
+        output=None,
+        fields=None,
+        quiet=False,
+        pretty_names=True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1450,10 +1521,10 @@ class FablibManager(Config):
         )
 
     def get_slices(
-            self,
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-            slice_name: str = None,
-            slice_id: str = None,
+        self,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        slice_name: str = None,
+        slice_id: str = None,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -1596,7 +1667,7 @@ class FablibManager(Config):
 
     @staticmethod
     def show_table_jupyter(
-            table, headers=None, title="", title_font_size="1.25em", quiet=False
+        table, headers=None, title="", title_font_size="1.25em", quiet=False
     ):
         printable_table = pd.DataFrame(table)
 
@@ -1666,14 +1737,14 @@ class FablibManager(Config):
         return data
 
     def show_table(
-            self,
-            data,
-            fields=None,
-            title="",
-            title_font_size="1.25em",
-            output=None,
-            quiet=False,
-            pretty_names_dict={},
+        self,
+        data,
+        fields=None,
+        title="",
+        title_font_size="1.25em",
+        output=None,
+        quiet=False,
+        pretty_names_dict={},
     ):
         if output is None:
             output = self.output.lower()
@@ -1713,12 +1784,12 @@ class FablibManager(Config):
 
     @staticmethod
     def list_table_jupyter(
-            table,
-            headers=None,
-            title="",
-            title_font_size="1.25em",
-            output=None,
-            quiet=False,
+        table,
+        headers=None,
+        title="",
+        title_font_size="1.25em",
+        output=None,
+        quiet=False,
     ):
         if len(table) == 0:
             return None
@@ -1811,15 +1882,15 @@ class FablibManager(Config):
         return data
 
     def list_table(
-            self,
-            data,
-            fields=None,
-            title="",
-            title_font_size="1.25em",
-            output=None,
-            quiet=False,
-            filter_function=None,
-            pretty_names_dict={},
+        self,
+        data,
+        fields=None,
+        title="",
+        title_font_size="1.25em",
+        output=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names_dict={},
     ):
         if filter_function:
             data = list(filter(filter_function, data))
@@ -1918,9 +1989,3 @@ class FablibManager(Config):
             for field in fields:
                 table.append([field, data[field]])
         return table
-
-
-if __name__ == '__main__':
-    fablib = FablibManager()
-    fablib.show_config()
-    fablib.validate_config()

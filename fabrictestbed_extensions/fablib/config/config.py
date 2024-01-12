@@ -53,100 +53,105 @@ class Config:
 
     # Mapping of the required parameters and the corresponding Environment Variable name
     REQUIRED_ATTRS = {
-        Constants.ORCHESTRATOR_HOST:
-            {
-                Constants.ENV_VAR: Constants.FABRIC_ORCHESTRATOR_HOST,
-                Constants.DEFAULT: Constants.DEFAULT_FABRIC_ORCHESTRATOR_HOST,
-            },
+        Constants.ORCHESTRATOR_HOST: {
+            Constants.ENV_VAR: Constants.FABRIC_ORCHESTRATOR_HOST,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_ORCHESTRATOR_HOST,
+        },
         Constants.CREDMGR_HOST: {
             Constants.ENV_VAR: Constants.FABRIC_CREDMGR_HOST,
-            Constants.DEFAULT: Constants.DEFAULT_FABRIC_CREDMGR_HOST
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_CREDMGR_HOST,
         },
         Constants.CORE_API_HOST: {
             Constants.ENV_VAR: Constants.FABRIC_CORE_API_HOST,
-            Constants.DEFAULT: Constants.DEFAULT_FABRIC_CORE_API_HOST
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_CORE_API_HOST,
         },
         Constants.TOKEN_LOCATION: {
             Constants.ENV_VAR: Constants.FABRIC_TOKEN_LOCATION,
-            Constants.DEFAULT: Constants.DEFAULT_TOKEN_LOCATION
+            Constants.DEFAULT: Constants.DEFAULT_TOKEN_LOCATION,
         },
         Constants.PROJECT_ID: {
             Constants.ENV_VAR: Constants.FABRIC_PROJECT_ID,
         },
         Constants.BASTION_HOST: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_HOST,
-            Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_HOST
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_HOST,
         },
         Constants.BASTION_USERNAME: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_USERNAME,
         },
         Constants.BASTION_KEY_LOCATION: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_KEY_LOCATION,
-            Constants.DEFAULT: Constants.DEFAULT_BASTION_KEY_LOCATION
+            Constants.DEFAULT: Constants.DEFAULT_BASTION_KEY_LOCATION,
         },
-        Constants.FABLIB_VERSION: {
-            Constants.DEFAULT: fablib_version
-        },
+        Constants.FABLIB_VERSION: {Constants.DEFAULT: fablib_version},
         Constants.SLICE_PUBLIC_KEY_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_SLICE_PUBLIC_KEY_FILE,
-            Constants.DEFAULT: Constants.DEFAULT_SLICE_PUBLIC_KEY_FILE
+            Constants.DEFAULT: Constants.DEFAULT_SLICE_PUBLIC_KEY_FILE,
         },
         Constants.SLICE_PRIVATE_KEY_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_SLICE_PRIVATE_KEY_FILE,
-            Constants.DEFAULT: Constants.DEFAULT_SLICE_PRIVATE_KEY_FILE
+            Constants.DEFAULT: Constants.DEFAULT_SLICE_PRIVATE_KEY_FILE,
         },
         Constants.AVOID: {
             Constants.ENV_VAR: Constants.FABRIC_AVOID,
-            Constants.DEFAULT: ""
+            Constants.DEFAULT: "",
         },
         Constants.SSH_COMMAND_LINE: {
             Constants.ENV_VAR: Constants.FABRIC_SSH_COMMAND_LINE,
-            Constants.DEFAULT: Constants.FABRIC_SSH_COMMAND_LINE
+            Constants.DEFAULT: Constants.FABRIC_SSH_COMMAND_LINE,
         },
         Constants.LOG_LEVEL: {
             Constants.ENV_VAR: Constants.FABRIC_LOG_LEVEL,
-            Constants.DEFAULT: Constants.DEFAULT_LOG_LEVEL
+            Constants.DEFAULT: Constants.DEFAULT_LOG_LEVEL,
         },
         Constants.LOG_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_LOG_FILE,
-            Constants.DEFAULT: Constants.DEFAULT_LOG_FILE
+            Constants.DEFAULT: Constants.DEFAULT_LOG_FILE,
         },
         Constants.BASTION_SSH_CONFIG_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_SSH_CONFIG_FILE,
-            Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE
-        }
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE,
+        },
     }
 
     REQUIRED_ATTRS_PRETTY_NAMES = {
-            Constants.CREDMGR_HOST: "Credential Manager",
-            Constants.ORCHESTRATOR_HOST: "Orchestrator",
-            Constants.CORE_API_HOST: "Core API",
-            Constants.TOKEN_LOCATION: "Token File",
-            Constants.PROJECT_ID: "Project ID",
-            Constants.BASTION_USERNAME: "Bastion Username",
-            Constants.BASTION_KEY_LOCATION: "Bastion Private Key File",
-            Constants.BASTION_HOST: "Bastion Host",
-            Constants.BASTION_KEY_PASSPHRASE: "Bastion Private Key Passphrase",
-            Constants.SLICE_PUBLIC_KEY_FILE: "Slice Public Key File",
-            Constants.SLICE_PRIVATE_KEY_FILE: "Slice Private Key File",
-            Constants.SLICE_PRIVATE_KEY_PASSPHRASE: "Slice Private Key Passphrase",
-            Constants.LOG_FILE: "Log File",
-            Constants.LOG_LEVEL: "Log Level",
-            Constants.FABLIB_VERSION: "Version",
-            Constants.AVOID: "Sites to avoid",
-            Constants.DATA_DIR: "Data directory",
-            Constants.SSH_COMMAND_LINE: "SSH Command Line",
-            Constants.BASTION_SSH_CONFIG_FILE: "Bastion SSH Config File"
-        }
+        Constants.CREDMGR_HOST: "Credential Manager",
+        Constants.ORCHESTRATOR_HOST: "Orchestrator",
+        Constants.CORE_API_HOST: "Core API",
+        Constants.TOKEN_LOCATION: "Token File",
+        Constants.PROJECT_ID: "Project ID",
+        Constants.BASTION_USERNAME: "Bastion Username",
+        Constants.BASTION_KEY_LOCATION: "Bastion Private Key File",
+        Constants.BASTION_HOST: "Bastion Host",
+        Constants.BASTION_KEY_PASSPHRASE: "Bastion Private Key Passphrase",
+        Constants.SLICE_PUBLIC_KEY_FILE: "Slice Public Key File",
+        Constants.SLICE_PRIVATE_KEY_FILE: "Slice Private Key File",
+        Constants.SLICE_PRIVATE_KEY_PASSPHRASE: "Slice Private Key Passphrase",
+        Constants.LOG_FILE: "Log File",
+        Constants.LOG_LEVEL: "Log Level",
+        Constants.FABLIB_VERSION: "Version",
+        Constants.AVOID: "Sites to avoid",
+        Constants.DATA_DIR: "Data directory",
+        Constants.SSH_COMMAND_LINE: "SSH Command Line",
+        Constants.BASTION_SSH_CONFIG_FILE: "Bastion SSH Config File",
+    }
 
-    def __init__(self, fabric_rc: str = None,
-                 credmgr_host: str = None,
-                 orchestrator_host: str = None,
-                 core_api_host: str = None,
-                 token_location: str = None, project_id: str = None,
-                 bastion_username: str = None, bastion_key_location: str = None,
-                 log_level: str = Constants.DEFAULT_LOG_LEVEL, log_file: str = Constants.DEFAULT_LOG_FILE,
-                 data_dir: str = Constants.DEFAULT_DATA_DIR, offline: bool = True, **kwargs):
+    def __init__(
+        self,
+        fabric_rc: str = None,
+        credmgr_host: str = None,
+        orchestrator_host: str = None,
+        core_api_host: str = None,
+        token_location: str = None,
+        project_id: str = None,
+        bastion_username: str = None,
+        bastion_key_location: str = None,
+        log_level: str = Constants.DEFAULT_LOG_LEVEL,
+        log_file: str = Constants.DEFAULT_LOG_FILE,
+        data_dir: str = Constants.DEFAULT_DATA_DIR,
+        offline: bool = True,
+        **kwargs,
+    ):
         """
         Constructor. Tries to get configuration from:
 
@@ -203,14 +208,18 @@ class Config:
             self.set_data_dir(data_dir=data_dir)
 
         if self.get_ssh_command_line() is None:
-            self.set_ssh_command_line(ssh_command_line=Constants.DEFAULT_FABRIC_SSH_COMMAND_LINE)
+            self.set_ssh_command_line(
+                ssh_command_line=Constants.DEFAULT_FABRIC_SSH_COMMAND_LINE
+            )
 
         self.required_check(partial=True)
 
         # Verify that Token file exists; any other checks cannot be done without this.
         token_location = self.get_token_location()
         if not os.path.exists(token_location):
-            raise ConfigException(f"Token file does not exist, please provide the token at location: {token_location}!")
+            raise ConfigException(
+                f"Token file does not exist, please provide the token at location: {token_location}!"
+            )
 
     def __load_configuration(self, file_path, **kwargs):
         """
@@ -244,9 +253,12 @@ class Config:
         :rtype bool
         """
         try:
-            with open(file_path, 'r') as file:
+            with open(file_path, "r") as file:
                 config = yaml.safe_load(file)
-                if isinstance(config, dict) and config.get(Constants.RUNTIME_SECTION) is not None:
+                if (
+                    isinstance(config, dict)
+                    and config.get(Constants.RUNTIME_SECTION) is not None
+                ):
                     for key, value in config.get(Constants.RUNTIME_SECTION).items():
                         if value is not None:
                             value = value.strip().strip("'").strip('"')
@@ -272,7 +284,7 @@ class Config:
         with open(file_path, "r") as file:
             lines = file.readlines()
 
-        export_pattern = re.compile(r'^export\s+([^=]+)=(.*)$', re.IGNORECASE)
+        export_pattern = re.compile(r"^export\s+([^=]+)=(.*)$", re.IGNORECASE)
 
         for line in lines:
             match = export_pattern.match(line.strip())
@@ -302,7 +314,9 @@ class Config:
             if attr not in self.runtime_config or self.runtime_config.get(attr) is None:
                 # Load from environment variables
                 if os.environ.get(attr_props.get(Constants.ENV_VAR)) is not None:
-                    self.runtime_config[attr] = os.environ.get(attr_props.get(Constants.ENV_VAR))
+                    self.runtime_config[attr] = os.environ.get(
+                        attr_props.get(Constants.ENV_VAR)
+                    )
                 # Load defaults if available
                 elif attr_props.get(Constants.DEFAULT) is not None:
                     self.runtime_config[attr] = attr_props.get(Constants.DEFAULT)
@@ -376,7 +390,7 @@ class Config:
         """
         return self.get_config().get(Constants.CREDMGR_HOST)
 
-    def set_credmgr_host(self, credmgr_host:str):
+    def set_credmgr_host(self, credmgr_host: str):
         """
         Sets the credential manager host value.
         :param credmgr_host: credential manager host site
@@ -393,7 +407,7 @@ class Config:
         """
         return self.get_config().get(Constants.ORCHESTRATOR_HOST)
 
-    def set_orchestrator_host(self, orchestrator_host:str):
+    def set_orchestrator_host(self, orchestrator_host: str):
         """
         Sets the Orchestrator host value.
         :param orchestrator_host: Orchestrator host
@@ -410,7 +424,7 @@ class Config:
         """
         return self.get_config().get(Constants.CORE_API_HOST)
 
-    def set_core_api_host(self, core_api_host:str):
+    def set_core_api_host(self, core_api_host: str):
         """
         Sets the core_api host value.
         :param core_api_host: core_api host
@@ -427,7 +441,7 @@ class Config:
         """
         return self.get_config().get(Constants.TOKEN_LOCATION)
 
-    def set_token_location(self, token_location:str):
+    def set_token_location(self, token_location: str):
         """
         Sets the FABRIC token location.
 
@@ -488,7 +502,9 @@ class Config:
         :return: FABRIC Bastion key string
         :rtype: String
         """
-        if self.get_bastion_key_location() is None or not os.path.exists(self.get_bastion_key_location()):
+        if self.get_bastion_key_location() is None or not os.path.exists(
+            self.get_bastion_key_location()
+        ):
             return None
         with open(self.get_bastion_key_location(), "r", encoding="utf-8") as f:
             return f.read()
@@ -653,9 +669,12 @@ class Config:
         :return: default_slice_key dictionary from superclass
         :rtype: Dict[String, String]
         """
-        if self.get_default_slice_private_key_file() is not None and \
-                os.path.exists(self.get_default_slice_private_key_file()):
-            with open(self.get_default_slice_private_key_file(), "r", encoding="utf-8") as f:
+        if self.get_default_slice_private_key_file() is not None and os.path.exists(
+            self.get_default_slice_private_key_file()
+        ):
+            with open(
+                self.get_default_slice_private_key_file(), "r", encoding="utf-8"
+            ) as f:
                 return f.read()
         return None
 
@@ -670,9 +689,12 @@ class Config:
         :return: default_slice_key dictionary from superclass
         :rtype: Dict[String, String]
         """
-        if self.get_default_slice_public_key_file() is not None and \
-                os.path.exists(self.get_default_slice_public_key_file()):
-            with open(self.get_default_slice_public_key_file(), "r", encoding="utf-8") as f:
+        if self.get_default_slice_public_key_file() is not None and os.path.exists(
+            self.get_default_slice_public_key_file()
+        ):
+            with open(
+                self.get_default_slice_public_key_file(), "r", encoding="utf-8"
+            ) as f:
                 return f.read()
         return None
 
@@ -724,7 +746,9 @@ class Config:
             pass
 
         try:
-            if self.get_log_file() and not os.path.isdir(os.path.dirname(self.get_log_file())):
+            if self.get_log_file() and not os.path.isdir(
+                os.path.dirname(self.get_log_file())
+            ):
                 os.makedirs(os.path.dirname(self.get_log_file()))
         except Exception:
             logging.warning(
@@ -740,7 +764,7 @@ class Config:
             )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     config1 = Config(fabric_rc="./fabric_rc", credmgr_host="abc.def.com")
     assert config1.get_credmgr_host() == "abc.def.com"
     print(json.dumps(config1.runtime_config, indent=4))
@@ -748,4 +772,3 @@ if __name__ == '__main__':
     config2 = Config(fabric_rc="./fabric_rc.yml", credmgr_host="abc.def.com")
     assert config2.get_credmgr_host() == "abc.def.com"
     print(json.dumps(config2.runtime_config, indent=4))
-

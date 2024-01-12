@@ -41,7 +41,9 @@ class Utils:
             with socket.create_connection((ip_address, port), timeout=5):
                 return True
         except (socket.gaierror, socket.timeout, OSError):
-            raise ConnectionError(f"Host: {hostname} is not reachable, please check your config file!")
+            raise ConnectionError(
+                f"Host: {hostname} is not reachable, please check your config file!"
+            )
 
     @staticmethod
     def save_to_file(file_path: str, data: str):
@@ -51,19 +53,19 @@ class Utils:
                 f.write(data)
         else:
             # If the file doesn't exist, create it atomically
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 f.write(data)
 
     @staticmethod
     def get_md5_fingerprint(key_string):
-        key_bytes = key_string.encode('utf-8')
+        key_bytes = key_string.encode("utf-8")
         md5_hash = hashlib.md5(key_bytes).hexdigest()
-        return ':'.join(a + b for a, b in zip(md5_hash[::2], md5_hash[1::2]))
+        return ":".join(a + b for a, b in zip(md5_hash[::2], md5_hash[1::2]))
 
     @staticmethod
     def is_yaml_file(file_path):
         try:
-            with open(file_path, 'r') as file:
+            with open(file_path, "r") as file:
                 # Attempt to load the content as YAML
                 yaml_content = yaml.safe_load(file)
 

@@ -42,9 +42,11 @@ class Constants:
     DEFAULT_SLICE_PUBLIC_KEY_FILE = f"{DEFAULT_SLICE_PRIVATE_KEY_FILE}.pub"
     DEFAULT_BASTION_KEY_LOCATION = f"{DEFAULT_FABRIC_CONFIG_DIR}/fabric_bastion_key"
     DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE = f"{DEFAULT_FABRIC_CONFIG_DIR}/ssh_config"
-    DEFAULT_FABRIC_SSH_COMMAND_LINE = "ssh -i {{ _self_.private_ssh_key_file }} -F " + \
-                                      DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE + \
-                                      " {{ _self_.username }}@{{ _self_.management_ip }}"
+    DEFAULT_FABRIC_SSH_COMMAND_LINE = (
+        "ssh -i {{ _self_.private_ssh_key_file }} -F "
+        + DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE
+        + " {{ _self_.username }}@{{ _self_.management_ip }}"
+    )
 
     FABRIC_CREDMGR_HOST = "FABRIC_CREDMGR_HOST"
     FABRIC_ORCHESTRATOR_HOST = "FABRIC_ORCHESTRATOR_HOST"
@@ -123,25 +125,25 @@ class Constants:
     BASTION_SSH_CONFIG_FILE = "bastion_ssh_config_file"
 
     IMAGE_NAMES = [
-            "default_centos8_stream",
-            "default_centos9_stream",
-            "default_centos_7",
-            "default_centos_8",
-            "default_debian_10",
-            "default_debian_11",
-            "default_fedora_35",
-            "default_rocky_8",
-            "default_rocky_9",
-            "default_ubuntu_18",
-            "default_ubuntu_20",
-            "default_ubuntu_21",
-            "default_ubuntu_22",
-            "default_fedora_36",
-            "default_fedora_37",
-            "docker_rocky_8",
-            "docker_ubuntu_20",
-            "docker_ubuntu_22",
-        ]
+        "default_centos8_stream",
+        "default_centos9_stream",
+        "default_centos_7",
+        "default_centos_8",
+        "default_debian_10",
+        "default_debian_11",
+        "default_fedora_35",
+        "default_rocky_8",
+        "default_rocky_9",
+        "default_ubuntu_18",
+        "default_ubuntu_20",
+        "default_ubuntu_21",
+        "default_ubuntu_22",
+        "default_fedora_36",
+        "default_fedora_37",
+        "docker_rocky_8",
+        "docker_ubuntu_20",
+        "docker_ubuntu_22",
+    ]
 
     ENV_VAR = "env_var"
     DEFAULT = "default"

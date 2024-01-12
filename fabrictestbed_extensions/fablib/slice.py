@@ -2196,9 +2196,9 @@ class Slice:
 
         def highlight(x):
             if x.State == "Ticketed":
-                return [
-                    f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"
-                ] * (len(fields))
+                return [f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"] * (
+                    len(fields)
+                )
             elif x.State == "None":
                 return ["opacity: 50%"] * (len(fields))
             else:
@@ -2347,9 +2347,9 @@ class Slice:
 
         def highlight(x):
             if x.State == "Ticketed":
-                return [
-                    f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"
-                ] * (len(fields))
+                return [f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"] * (
+                    len(fields)
+                )
             elif x.State == "None":
                 return ["opacity: 50%"] * (len(fields))
             else:

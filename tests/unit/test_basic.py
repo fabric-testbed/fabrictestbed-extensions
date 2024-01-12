@@ -137,8 +137,3 @@ class FablibManagerTests(unittest.TestCase):
             str(ctx.exception),
             "Error initializing FablibManager: ['FABRIC token is not set']",
         )
-
-    def test_komal(self):
-        from fabrictestbed_extensions.fablib.fablib import FablibManager as fablib_manager
-        fablib = fablib_manager()
-        fablib.show_config()
