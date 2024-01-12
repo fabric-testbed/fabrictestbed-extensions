@@ -23,18 +23,17 @@
 #
 # Author: Komal Thareja (kthare10@renci.org)
 import json
+import logging
 import os
+import re
 from pathlib import Path
-from typing import Dict, Union, List
+from typing import Dict, List, Union
 
 import yaml
-import re
-import logging
-
 from atomicwrites import atomic_write
 
-from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions import __version__ as fablib_version
+from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.utils.utils import Utils
 
 

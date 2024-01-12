@@ -5,8 +5,8 @@ import unittest
 
 from fabrictestbed.slice_manager import SliceManagerException
 from fabrictestbed.util.constants import Constants
-from fabrictestbed_extensions.fablib.constants import Constants as FablibConstants
 
+from fabrictestbed_extensions.fablib.constants import Constants as FablibConstants
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
