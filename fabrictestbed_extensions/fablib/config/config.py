@@ -97,7 +97,7 @@ class Config:
         },
         Constants.SSH_COMMAND_LINE: {
             Constants.ENV_VAR: Constants.FABRIC_SSH_COMMAND_LINE,
-            Constants.DEFAULT: Constants.FABRIC_SSH_COMMAND_LINE,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_SSH_COMMAND_LINE,
         },
         Constants.LOG_LEVEL: {
             Constants.ENV_VAR: Constants.FABRIC_LOG_LEVEL,
