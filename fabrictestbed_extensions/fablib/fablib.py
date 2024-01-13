@@ -572,14 +572,23 @@ class FablibManager(Config):
     def validate_config(self):
         """
         Validate Fablib config - checks if all the required configuration exists for slice provisioning to work successfully
+
         - Checks Credential Manager Host is configured properly
+
         - Checks Orchestrator Host is configured properly
+
         - Checks Core API Host is configured properly
+
         - Checks Bastion Host is configured properly
+
         - Check Sliver keys exist
+
         - Check Bastion keys exist and are not expired
+
         - Check Bastion Username is configured
+
         - Check Project Id is configured
+
         @raises Exception if the configuration is invalid
         """
         Utils.is_reachable(hostname=self.get_credmgr_host(), port=443)
@@ -608,16 +617,18 @@ class FablibManager(Config):
 
         print("Configuration is valid and please save the config!")
 
-    def get_user_info(self):
+    def get_user_info(self) -> dict:
         """
         Get User information
+
         :return returns a dictionary containing User's Information
+        :rtype: dict
         """
         return self.get_slice_manager().get_user_info()
 
     def determine_bastion_username(self):
         """
-        Determine Bastion Username
+        Determine Bastion Username.
         Query User Information from Core API and updates the bastion username
         """
         # Fetch User Info and Projects
@@ -632,6 +643,9 @@ class FablibManager(Config):
         )
 
     def create_ssh_config(self):
+        """
+        Create SSH config file
+        """
         bastion_ssh_config_file = self.get_bastion_ssh_config_file()
         if bastion_ssh_config_file is None or os.path.exists(bastion_ssh_config_file):
             raise ConfigException("Bastion SSH Config File location not specified")
@@ -709,9 +723,15 @@ class FablibManager(Config):
     ):
         """
         Create Bastion Keys
-        @param bastion_key_location bastion key location
-        @param store_pubkey flag indicating if the public key should be saved
-        @param overwrite overwrite the bastion key file if it exists already
+
+        :param bastion_key_location: bastion key location
+        :type bastion_key_location: str
+
+        :param store_pubkey: flag indicating if the public key should be saved
+        :type store_pubkey: bool
+
+        :param overwrite: overwrite the bastion key file if it exists already
+        :type overwrite: bool
         """
         if bastion_key_location is None:
             bastion_key_location = self.get_bastion_key_location()
@@ -742,9 +762,15 @@ class FablibManager(Config):
     ):
         """
         Create Sliver Keys
-        @param sliver_priv_key_location bastion key location
-        @param store_pubkey flag indicating if the public key should be saved
-        @param overwrite overwrite the bastion key file if it exists already
+
+        :param sliver_priv_key_location: sliver key location
+        :type sliver_priv_key_location: str
+
+        :param store_pubkey: flag indicating if the public key should be saved
+        :type store_pubkey: bool
+
+        :param overwrite: overwrite the bastion key file if it exists already
+        :type overwrite: bool
         """
         if sliver_priv_key_location is None:
             sliver_priv_key_location = self.get_default_slice_private_key_file()
@@ -779,12 +805,23 @@ class FablibManager(Config):
     ):
         """
         Create Key and save key
-        @param private_file_path private key location
-        @param description description
-        @param key_type key type bastion or sliver
-        @param public_file_path public key location
-        @param comment comment
-        @param store_pubkey flag indicating if the public key should be saved
+        :param private_file_path: private key location
+        :type private_file_path: str
+
+        :param description: description
+        :type description: str
+
+        :param key_type: key type bastion or sliver
+        :type key_type: str
+
+        :param public_file_path: public key location
+        :type public_file_path: str
+
+        :param comment: comment
+        :type comment: str
+
+        :param store_pubkey flag indicating if the public key should be saved
+        :type store_pubkey: bool
         """
         ssh_keys = self.get_slice_manager().create_ssh_keys(
             key_type=key_type,

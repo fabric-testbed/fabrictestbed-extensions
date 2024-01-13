@@ -6,7 +6,7 @@ import unittest
 from fabrictestbed.slice_manager import SliceManagerException
 from fabrictestbed.util.constants import Constants
 
-from fabrictestbed_extensions.fablib.config.config import ConfigException, Config
+from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
 from fabrictestbed_extensions.fablib.constants import Constants as FablibConstants
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
@@ -29,7 +29,9 @@ class FablibManagerTests(unittest.TestCase):
         FablibConstants.FABRIC_BASTION_KEY_LOCATION,
     ]
 
-    DUMMY_TOKEN_LOCATION = str(pathlib.Path(__file__).parent / "data" / "dummy-token.json")
+    DUMMY_TOKEN_LOCATION = str(
+        pathlib.Path(__file__).parent / "data" / "dummy-token.json"
+    )
 
     def setUp(self):
         # Run each test with an empty environment.
@@ -58,7 +60,9 @@ class FablibManagerTests(unittest.TestCase):
     def test_fablib_manager_test_only_project_id(self):
         os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.DUMMY_TOKEN_LOCATION
-        self.assertRaises(SliceManagerException, FablibManager, fabric_rc=self.rcfile.name)
+        self.assertRaises(
+            SliceManagerException, FablibManager, fabric_rc=self.rcfile.name
+        )
 
     def test_fablib_manager_test_only_token_location(self):
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"
@@ -75,9 +79,7 @@ class FablibManagerTests(unittest.TestCase):
 
         # FablibManager() without a valid token or token location
         # should raise a "SliceManagerException: Unable to refresh tokens: no refresh token found!
-        self.assertRaises(
-            ConfigException, FablibManager, fabric_rc=self.rcfile.name
-        )
+        self.assertRaises(ConfigException, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_with_dummy_token(self):
         # TODO: That FablibManager() calls build_slice_manager()
@@ -128,13 +130,17 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error message is what we expected: the only
         # error should be about missing token.
         self.assertTrue(
-            "Token file does not exist, please provide the token at location" in str(ctx.exception)
+            "Token file does not exist, please provide the token at location"
+            in str(ctx.exception)
         )
 
     def test_FablibManager_no_config_no_env_var(self):
         # Instantiate Fablib manager without any config or environment variables
         # Results in using the defaults and initialization fails when token file is not found!
-        self.assertRaises(ConfigException, FablibManager, )
+        self.assertRaises(
+            ConfigException,
+            FablibManager,
+        )
 
     def test_FablibManager_no_config_no_env_var_token_location(self):
         # Instantiate Fablib manager without any config or environment variables
@@ -149,7 +155,7 @@ class FablibManagerTests(unittest.TestCase):
         # error should be about missing token.
         self.assertEqual(
             str(ctx.exception),
-            "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/Not enough segments"
+            "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/Not enough segments",
         )
 
     def test_FablibManager_no_config_no_env_var_token_location_offline(self):
@@ -161,25 +167,36 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, AttributeError)
 
-    def test_FablibManager_no_config_no_env_var_token_location_offline_project_id_bastion_user_name(self):
+    def test_FablibManager_no_config_no_env_var_token_location_offline_project_id_bastion_user_name(
+        self,
+    ):
         # Instantiate Fablib manager without any config or environment variables
         project_id = "DUMMY_PROJECT_ID"
         bastion_username = "DUMMY_BASTION_USERNAME"
 
-        fablib = FablibManager(token_location=self.DUMMY_TOKEN_LOCATION, offline=True,
-                               project_id=project_id, bastion_username=bastion_username)
+        fablib = FablibManager(
+            token_location=self.DUMMY_TOKEN_LOCATION,
+            offline=True,
+            project_id=project_id,
+            bastion_username=bastion_username,
+        )
         self.assertEqual(project_id, fablib.get_project_id())
         self.assertEqual(bastion_username, fablib.get_bastion_username())
         self.assertEqual(self.DUMMY_TOKEN_LOCATION, fablib.get_token_location())
 
         for attrs, attr_props in Config.REQUIRED_ATTRS.items():
-            if attrs not in [FablibConstants.PROJECT_ID, FablibConstants.BASTION_USERNAME,
-                             FablibConstants.TOKEN_LOCATION]:
+            if attrs not in [
+                FablibConstants.PROJECT_ID,
+                FablibConstants.BASTION_USERNAME,
+                FablibConstants.TOKEN_LOCATION,
+            ]:
                 default_value = attr_props.get(FablibConstants.DEFAULT)
                 if default_value:
                     self.assertEqual(default_value, fablib.runtime_config.get(attrs))
 
-    def test_FablibManager_no_config_no_env_var_token_location_offline_project_id_bastion_user_name_env(self):
+    def test_FablibManager_no_config_no_env_var_token_location_offline_project_id_bastion_user_name_env(
+        self,
+    ):
         # Instantiate Fablib manager without any config or environment variables
         project_id = "DUMMY_PROJECT_ID"
         bastion_username = "DUMMY_BASTION_USERNAME"
@@ -193,8 +210,11 @@ class FablibManagerTests(unittest.TestCase):
         self.assertEqual(self.DUMMY_TOKEN_LOCATION, fablib.get_token_location())
 
         for attrs, attr_props in Config.REQUIRED_ATTRS.items():
-            if attrs not in [FablibConstants.PROJECT_ID, FablibConstants.BASTION_USERNAME,
-                             FablibConstants.TOKEN_LOCATION]:
+            if attrs not in [
+                FablibConstants.PROJECT_ID,
+                FablibConstants.BASTION_USERNAME,
+                FablibConstants.TOKEN_LOCATION,
+            ]:
                 default_value = attr_props.get(FablibConstants.DEFAULT)
                 if default_value:
                     self.assertEqual(default_value, fablib.runtime_config.get(attrs))
