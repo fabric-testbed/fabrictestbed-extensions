@@ -162,10 +162,11 @@ class Config:
         """
         if fabric_rc is None:
             fabric_rc = Constants.DEFAULT_FABRIC_RC
-            Path(fabric_rc).touch()
-        else:
-            if not os.path.exists(fabric_rc):
-                raise ConfigException("Config file does not exist!")
+            if os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
+                Path(fabric_rc).touch()
+
+        if not os.path.exists(fabric_rc):
+            raise ConfigException("Config file does not exist!")
 
         self.config_file_path = fabric_rc
         self.is_yaml = False
