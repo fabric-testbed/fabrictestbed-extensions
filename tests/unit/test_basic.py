@@ -32,6 +32,9 @@ class FablibManagerTests(unittest.TestCase):
     DUMMY_TOKEN_LOCATION = str(
         pathlib.Path(__file__).parent / "data" / "dummy-token.json"
     )
+    FABRIC_RC_LOCATION = str(
+        pathlib.Path(__file__).parent / "data" / "dummy_fabric_rc"
+    )
 
     def setUp(self):
         # Run each test with an empty environment.
@@ -146,7 +149,8 @@ class FablibManagerTests(unittest.TestCase):
         # Instantiate Fablib manager without any config or environment variables
 
         with self.assertRaises(Exception) as ctx:
-            FablibManager(token_location=self.DUMMY_TOKEN_LOCATION)
+            FablibManager(token_location=self.DUMMY_TOKEN_LOCATION,
+                          fabric_rc=self.FABRIC_RC_LOCATION)
 
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, Exception)
@@ -154,15 +158,16 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error message is what we expected: the only
         # error should be about missing token.
         self.assertEqual(
-            str(ctx.exception),
             "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/Not enough segments",
+            str(ctx.exception)
         )
 
     def test_FablibManager_no_config_no_env_var_token_location_offline(self):
         # Instantiate Fablib manager without any config or environment variables
 
         with self.assertRaises(AttributeError) as ctx:
-            FablibManager(token_location=self.DUMMY_TOKEN_LOCATION, offline=True)
+            FablibManager(token_location=self.DUMMY_TOKEN_LOCATION, offline=True,
+                          fabric_rc=self.FABRIC_RC_LOCATION)
 
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, AttributeError)
@@ -179,6 +184,7 @@ class FablibManagerTests(unittest.TestCase):
             offline=True,
             project_id=project_id,
             bastion_username=bastion_username,
+            fabric_rc=self.FABRIC_RC_LOCATION
         )
         self.assertEqual(project_id, fablib.get_project_id())
         self.assertEqual(bastion_username, fablib.get_bastion_username())
@@ -204,7 +210,7 @@ class FablibManagerTests(unittest.TestCase):
         os.environ[Constants.FABRIC_PROJECT_ID] = project_id
         os.environ[FablibConstants.FABRIC_BASTION_USERNAME] = bastion_username
 
-        fablib = FablibManager()
+        fablib = FablibManager(fabric_rc=self.FABRIC_RC_LOCATION)
         self.assertEqual(project_id, fablib.get_project_id())
         self.assertEqual(bastion_username, fablib.get_bastion_username())
         self.assertEqual(self.DUMMY_TOKEN_LOCATION, fablib.get_token_location())
