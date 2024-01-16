@@ -213,7 +213,7 @@ class FablibManagerTests(unittest.TestCase):
         os.environ[Constants.FABRIC_PROJECT_ID] = project_id
         os.environ[FablibConstants.FABRIC_BASTION_USERNAME] = bastion_username
 
-        fablib = FablibManager(fabric_rc=self.FABRIC_RC_LOCATION)
+        fablib = FablibManager(fabric_rc=self.FABRIC_RC_LOCATION, offline=True)
         self.assertEqual(project_id, fablib.get_project_id())
         self.assertEqual(bastion_username, fablib.get_bastion_username())
         self.assertEqual(self.DUMMY_TOKEN_LOCATION, fablib.get_token_location())
