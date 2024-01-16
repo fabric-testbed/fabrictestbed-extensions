@@ -642,13 +642,20 @@ class FablibManager(Config):
             bastion_username=user_info.get(Constants.BASTION_LOGIN)
         )
 
-    def create_ssh_config(self):
+    def create_ssh_config(self, overwrite: bool = False):
         """
         Create SSH config file
+
+        :param overwrite: overwrite the configuration if True, return otherwise
+        :type overwrite: bool
         """
         bastion_ssh_config_file = self.get_bastion_ssh_config_file()
-        if bastion_ssh_config_file is None or os.path.exists(bastion_ssh_config_file):
+        if bastion_ssh_config_file is None:
             raise ConfigException("Bastion SSH Config File location not specified")
+
+        if os.path.exists(bastion_ssh_config_file) and not overwrite:
+            print("Bastion SSH Config file already exists, not making updates!")
+            return
 
         with open(bastion_ssh_config_file, "w") as f:
             f.write(
