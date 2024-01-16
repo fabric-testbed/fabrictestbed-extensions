@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed-extensions"
-version = "1.6.0"
+version = "1.6.2"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
   { name = "Paul Ruth", email = "pruth@renci.org" },
@@ -20,13 +20,14 @@ dependencies = [
     "ipyleaflet",
     "ipycytoscape",
     "tabulate",
-    "fabrictestbed==1.6.2",
+    "fabrictestbed==1.6.4",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
     "numpy",
     "ipython>=8.12.0",
-    "fabric_fss_utils>=1.5.1"
+    "fabric_fss_utils>=1.5.1",
+    "atomicwrites"
     ]
 
 classifiers = [

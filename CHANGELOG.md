@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Standardize and validate configuration, support for creating ssh keys (Issue
+  [#127](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/127),
 
 
 ## [1.6.0] - 2024-01-03

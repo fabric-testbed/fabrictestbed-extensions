@@ -1,0 +1,23 @@
+export FABRIC_CREDMGR_HOST=cm.fabric-testbed.net
+export FABRIC_ORCHESTRATOR_HOST=orchestrator.fabric-testbed.net
+export FABRIC_CORE_API_HOST=uis.fabric-testbed.net
+
+export FABRIC_PROJECT_ID=
+export FABRIC_TOKEN_LOCATION=/home/fabric/.tokens.json
+
+export FABRIC_BASTION_HOST=bastion.fabric-testbed.net
+export FABRIC_BASTION_USERNAME=
+
+export FABRIC_BASTION_KEY_LOCATION=/home/fabric/work/fabric_config/fabric_bastion_key
+#export FABRIC_BASTION_KEY_PASSPHRASE=
+
+export FABRIC_SLICE_PRIVATE_KEY_FILE=/home/fabric/work/fabric_config/slice_key
+export FABRIC_SLICE_PUBLIC_KEY_FILE=/home/fabric/work/fabric_config/slice_key.pub
+#export FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE=
+
+export FABRIC_LOG_FILE=/home/fabric/fablib.log
+export FABRIC_LOG_LEVEL=INFO
+
+export FABRIC_AVOID=''
+
+export FABRIC_SSH_COMMAND_LINE="ssh -i {{ _self_.private_ssh_key_file }} -F /home/fabric/work/fabric_config/ssh_config {{ _self_.username }}@{{ _self_.management_ip }}"
