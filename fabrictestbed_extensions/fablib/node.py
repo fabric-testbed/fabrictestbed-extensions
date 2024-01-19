@@ -28,6 +28,7 @@ import concurrent.futures
 import ipaddress
 import json
 import logging
+import os
 import re
 import select
 import threading
@@ -43,6 +44,7 @@ from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -3075,15 +3077,15 @@ class Node:
         operation: str,
         vcpu_cpu_map: List[Dict[str, str]] = None,
         node_set: List[str] = None,
-        keys: List[str] = None,
+        keys: List[Dict[str, str]] = None,
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
 
         :param operation: operation to be performed
-        :param vcpu_cpu: map virtual cpu to host cpu map
+        :param vcpu_cpu_map: map virtual cpu to host cpu map
         :param node_set: list of numa nodes
-        :param keys list: of ssh keys
+        :param keys: list of ssh keys
 
         :raise Exception: in case of failure
 
@@ -3417,3 +3419,53 @@ class Node:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
+
+    def add_public_key(self, *, sliver_key_name: str = None, email: str = None, sliver_public_key_file: str = None):
+        """
+        Add public key to a node;
+        - Adds user's portal public key identified by sliver_key_name to the node
+        - Adds portal public key identified by sliver_key_name for a user identified by email to the node
+        - Add public key from the file sliver_public_key_file to the node
+
+        :param sliver_key_name: Sliver Key Name on the Portal
+        :type sliver_key_name: str
+
+        :param email: Email
+        :type email: str
+
+        :param sliver_public_key_file: Public sliver key location
+        :type sliver_public_key_file: str
+
+        :raises Exception in case of errors
+        """
+        public_key_string = None
+        if sliver_key_name is None and sliver_public_key_file is None:
+            raise ValueError(f"Either sliver_key_name: {sliver_key_name} or "
+                             f"sliver_public_key_file: {sliver_public_key_file} must be specified!")
+
+        # Fetch the public key from portal
+        if sliver_key_name is not None:
+            ssh_keys = self.get_fablib_manager().get_slice_manager().get_ssh_keys(email=email)
+            found = None
+            if ssh_keys is not None and len(ssh_keys):
+                for item in ssh_keys:
+                    if sliver_key_name == item["comment"]:
+                        found = item
+                        break
+
+            if not found:
+                raise Exception(f"Sliver key: {sliver_key_name} not found!")
+            public_key_string = found["public_key"]
+
+        elif sliver_public_key_file is not None:
+            if not os.path.exists(sliver_public_key_file):
+                raise Exception(f"Key file: {sliver_public_key_file} does not exist!")
+            public_key_string = Utils.read_file_contents(file_path=sliver_public_key_file)
+
+        key_dict = {'key': public_key_string,
+                    'comment': 'key-added-by-poa-fablib'}
+
+        status = self.poa(operation="addkey", keys=[key_dict])
+        if status == "Failed":
+            raise Exception("Failed to add keys the node")
+        logging.getLogger().info(f"Key added to the node {self.get_name()}!")
