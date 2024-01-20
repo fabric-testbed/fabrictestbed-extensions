@@ -692,7 +692,9 @@ class Config:
         if self.get_default_slice_public_key_file() is not None and os.path.exists(
             self.get_default_slice_public_key_file()
         ):
-            return Utils.read_file_contents(file_path=self.get_default_slice_public_key_file())
+            return Utils.read_file_contents(
+                file_path=self.get_default_slice_public_key_file()
+            )
         return None
 
     @staticmethod
