@@ -143,7 +143,7 @@ class Node:
 
     @staticmethod
     def new_node(
-        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
+            slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -261,7 +261,7 @@ class Node:
             rtn_dict["management_ip"] = (
                 str(self.get_management_ip()).strip()
                 if str(self.get_reservation_state()) == "Active"
-                and self.get_management_ip()
+                   and self.get_management_ip()
                 else ""
             )  # str(self.get_management_ip())
         if "state" not in skip:
@@ -305,7 +305,7 @@ class Node:
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
 
     def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+            self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
         """
         Show a table containing the current node attributes.
@@ -393,12 +393,12 @@ class Node:
         return table
 
     def list_components(
-        self,
-        fields=None,
-        output=None,
-        quiet=False,
-        filter_function=None,
-        pretty_names=True,
+            self,
+            fields=None,
+            output=None,
+            quiet=False,
+            filter_function=None,
+            pretty_names=True,
     ):
         """
         Lists all the components in the node with their attributes.
@@ -470,12 +470,12 @@ class Node:
         )
 
     def list_interfaces(
-        self,
-        fields=None,
-        output=None,
-        quiet=False,
-        filter_function=None,
-        pretty_names=True,
+            self,
+            fields=None,
+            output=None,
+            quiet=False,
+            filter_function=None,
+            pretty_names=True,
     ):
         """
         Lists all the interfaces in the node with their attributes.
@@ -552,12 +552,12 @@ class Node:
         )
 
     def list_networks(
-        self,
-        fields=None,
-        output=None,
-        quiet=False,
-        filter_function=None,
-        pretty_names=True,
+            self,
+            fields=None,
+            output=None,
+            quiet=False,
+            filter_function=None,
+            pretty_names=True,
     ):
         """
         Lists all the networks attached to the nodes with their
@@ -860,8 +860,8 @@ class Node:
                 return self.host
             return (
                 self.get_fim_node()
-                .get_property(pname="label_allocations")
-                .instance_parent
+                    .get_property(pname="label_allocations")
+                    .instance_parent
             )
         except:
             return None
@@ -900,8 +900,8 @@ class Node:
         try:
             return (
                 self.get_fim_node()
-                .get_property(pname="reservation_info")
-                .reservation_id
+                    .get_property(pname="reservation_info")
+                    .reservation_id
             )
         except:
             return None
@@ -916,8 +916,8 @@ class Node:
         try:
             return (
                 self.get_fim_node()
-                .get_property(pname="reservation_info")
-                .reservation_state
+                    .get_property(pname="reservation_info")
+                    .reservation_state
             )
         except:
             return None
@@ -951,7 +951,7 @@ class Node:
         return interfaces
 
     def get_interface(
-        self, name: str = None, network_name: str = None
+            self, name: str = None, network_name: str = None
     ) -> Interface or None:
         """
         Gets a particular interface associated with a FABRIC node.
@@ -981,9 +981,9 @@ class Node:
         elif network_name is not None:
             for interface in self.get_interfaces():
                 if (
-                    interface is not None
-                    and interface.get_network() is not None
-                    and interface.get_network().get_name() == network_name
+                        interface is not None
+                        and interface.get_network() is not None
+                        and interface.get_network().get_name() == network_name
                 ):
                     return interface
 
@@ -1059,7 +1059,7 @@ class Node:
         return self.get_slice().get_private_key_passphrase()
 
     def add_component(
-        self, model: str = None, name: str = None, user_data: dict = {}
+            self, model: str = None, name: str = None, user_data: dict = {}
     ) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
@@ -1185,7 +1185,7 @@ class Node:
             return "Invalid"
 
     def get_paramiko_key(
-        self, private_key_file: str = None, get_private_key_passphrase: str = None
+            self, private_key_file: str = None, get_private_key_passphrase: str = None
     ) -> paramiko.PKey:
         # TODO: This is a bit of a hack and should probably test he keys for their types
         # rather than relying on execptions
@@ -1223,14 +1223,14 @@ class Node:
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
     def execute_thread(
-        self,
-        command: str,
-        retry: int = 3,
-        retry_interval: int = 10,
-        username: str = None,
-        private_key_file: str = None,
-        private_key_passphrase: str = None,
-        output_file: str = None,
+            self,
+            command: str,
+            retry: int = 3,
+            retry_interval: int = 10,
+            username: str = None,
+            private_key_file: str = None,
+            private_key_passphrase: str = None,
+            output_file: str = None,
     ) -> threading.Thread:
         """
         Creates a thread that calls node.execute().  Results (i.e. stdout, stderr) from the thread can be
@@ -1256,8 +1256,8 @@ class Node:
 
         return (
             self.get_fablib_manager()
-            .get_ssh_thread_pool_executor()
-            .submit(
+                .get_ssh_thread_pool_executor()
+                .submit(
                 self.execute,
                 command,
                 retry=retry,
@@ -1271,17 +1271,17 @@ class Node:
         )
 
     def execute(
-        self,
-        command: str,
-        retry: int = 3,
-        retry_interval: int = 10,
-        username: str = None,
-        private_key_file: str = None,
-        private_key_passphrase: str = None,
-        quiet: bool = False,
-        read_timeout: int = 10,
-        timeout=None,
-        output_file: str = None,
+            self,
+            command: str,
+            retry: int = 3,
+            retry_interval: int = 10,
+            username: str = None,
+            private_key_file: str = None,
+            private_key_passphrase: str = None,
+            quiet: bool = False,
+            read_timeout: int = 10,
+            timeout=None,
+            output_file: str = None,
     ):
         """
         Runs a command on the FABRIC node.
@@ -1423,7 +1423,7 @@ class Node:
 
                 if timeout is not None:
                     command = (
-                        f"sudo timeout --foreground -k 10 {timeout} " + command + "\n"
+                            f"sudo timeout --foreground -k 10 {timeout} " + command + "\n"
                     )
 
                 stdin, stdout, stderr = client.exec_command(command)
@@ -1457,9 +1457,9 @@ class Node:
                     stderr_chunks = []
 
                     while (
-                        not channel.closed
-                        or channel.recv_ready()
-                        or channel.recv_stderr_ready()
+                            not channel.closed
+                            or channel.recv_ready()
+                            or channel.recv_stderr_ready()
                     ):
                         got_chunk = False
                         readq, _, _ = select.select(
@@ -1502,10 +1502,10 @@ class Node:
                                 got_chunk = True
 
                         if (
-                            not got_chunk
-                            and stdout.channel.exit_status_ready()
-                            and not stderr.channel.recv_stderr_ready()
-                            and not stdout.channel.recv_ready()
+                                not got_chunk
+                                and stdout.channel.exit_status_ready()
+                                and not stderr.channel.recv_stderr_ready()
+                                and not stdout.channel.recv_ready()
                         ):
                             stdout.channel.shutdown_read()
                             stdout.channel.close()
@@ -1578,11 +1578,11 @@ class Node:
         raise Exception("ssh failed: Should not get here")
 
     def upload_file_thread(
-        self,
-        local_file_path: str,
-        remote_file_path: str = ".",
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_file_path: str,
+            remote_file_path: str = ".",
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Creates a thread that calls ``node.upload_file()``.
@@ -1610,8 +1610,8 @@ class Node:
         """
         return (
             self.get_fablib_manager()
-            .get_ssh_thread_pool_executor()
-            .submit(
+                .get_ssh_thread_pool_executor()
+                .submit(
                 self.upload_file,
                 local_file_path,
                 remote_file_path,
@@ -1621,11 +1621,11 @@ class Node:
         )
 
     def upload_file(
-        self,
-        local_file_path: str,
-        remote_file_path: str = ".",
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_file_path: str,
+            remote_file_path: str = ".",
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Upload a local file to a remote location on the node.
@@ -1744,11 +1744,11 @@ class Node:
         raise Exception("scp upload failed")
 
     def download_file_thread(
-        self,
-        local_file_path: str,
-        remote_file_path: str,
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_file_path: str,
+            remote_file_path: str,
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Creates a thread that calls node.download_file().  Results
@@ -1776,8 +1776,8 @@ class Node:
         """
         return (
             self.get_fablib_manager()
-            .get_ssh_thread_pool_executor()
-            .submit(
+                .get_ssh_thread_pool_executor()
+                .submit(
                 self.download_file,
                 local_file_path,
                 remote_file_path,
@@ -1787,11 +1787,11 @@ class Node:
         )
 
     def download_file(
-        self,
-        local_file_path: str,
-        remote_file_path: str,
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_file_path: str,
+            remote_file_path: str,
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Download a remote file from the node to a local destination.
@@ -1912,11 +1912,11 @@ class Node:
         raise Exception("scp download failed")
 
     def upload_directory_thread(
-        self,
-        local_directory_path: str,
-        remote_directory_path: str,
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_directory_path: str,
+            remote_directory_path: str,
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Creates a thread that calls ``Node.upload_directory()``.
@@ -1945,8 +1945,8 @@ class Node:
         """
         return (
             self.get_fablib_manager()
-            .get_ssh_thread_pool_executor()
-            .submit(
+                .get_ssh_thread_pool_executor()
+                .submit(
                 self.upload_directory,
                 local_directory_path,
                 remote_directory_path,
@@ -1956,11 +1956,11 @@ class Node:
         )
 
     def upload_directory(
-        self,
-        local_directory_path: str,
-        remote_directory_path: str,
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_directory_path: str,
+            remote_directory_path: str,
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Upload a directory to remote location on the node.
@@ -2033,11 +2033,11 @@ class Node:
         return "success"
 
     def download_directory_thread(
-        self,
-        local_directory_path: str,
-        remote_directory_path: str,
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_directory_path: str,
+            remote_directory_path: str,
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Creates a thread that calls node.download_directory.  Results
@@ -2062,8 +2062,8 @@ class Node:
         """
         return (
             self.get_fablib_manager()
-            .get_ssh_thread_pool_executor()
-            .submit(
+                .get_ssh_thread_pool_executor()
+                .submit(
                 self.download_directory,
                 local_directory_path,
                 remote_directory_path,
@@ -2073,11 +2073,11 @@ class Node:
         )
 
     def download_directory(
-        self,
-        local_directory_path: str,
-        remote_directory_path: str,
-        retry: int = 3,
-        retry_interval: int = 10,
+            self,
+            local_directory_path: str,
+            remote_directory_path: str,
+            retry: int = 3,
+            retry_interval: int = 10,
     ):
         """
         Downloads a directory from remote location on the node.  Makes
@@ -2239,9 +2239,9 @@ class Node:
             raise e
 
     def ip_route_add(
-        self,
-        subnet: Union[IPv4Network, IPv6Network],
-        gateway: Union[IPv4Address, IPv6Address],
+            self,
+            subnet: Union[IPv4Network, IPv6Network],
+            gateway: Union[IPv4Address, IPv6Address],
     ):
         """
         Add a route on the node.
@@ -2320,9 +2320,9 @@ class Node:
             logging.warning(f"Exception: {e}")
 
     def ip_route_del(
-        self,
-        subnet: Union[IPv4Network, IPv6Network],
-        gateway: Union[IPv4Address, IPv6Address],
+            self,
+            subnet: Union[IPv4Network, IPv6Network],
+            gateway: Union[IPv4Address, IPv6Address],
     ):
         """
         Delete a route on the node.
@@ -2346,10 +2346,10 @@ class Node:
             raise e
 
     def ip_addr_add(
-        self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[IPv4Network, IPv6Network],
-        interface: Interface,
+            self,
+            addr: Union[IPv4Address, IPv6Address],
+            subnet: Union[IPv4Network, IPv6Network],
+            interface: Interface,
     ):
         """
         Add an IP to an interface on the node.
@@ -2379,10 +2379,10 @@ class Node:
             raise e
 
     def ip_addr_del(
-        self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[IPv4Network, IPv6Network],
-        interface: Interface,
+            self,
+            addr: Union[IPv4Address, IPv6Address],
+            subnet: Union[IPv4Network, IPv6Network],
+            interface: Interface,
     ):
         """
         Delete an IP to an interface on the node.
@@ -2487,7 +2487,7 @@ class Node:
             raise e
 
     def ip_link_down(
-        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+            self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
     ):
         """
         Bring down a link on an interface on the node.
@@ -2526,12 +2526,12 @@ class Node:
             raise e
 
     def set_ip_os_interface(
-        self,
-        os_iface: str = None,
-        vlan: str = None,
-        ip: str = None,
-        cidr: str = None,
-        mtu: str = None,
+            self,
+            os_iface: str = None,
+            vlan: str = None,
+            ip: str = None,
+            cidr: str = None,
+            mtu: str = None,
     ):
         """
         .. deprecated:: 1.1.3.
@@ -2625,13 +2625,13 @@ class Node:
         stdout, stderr = self.execute(command, quiet=True)
 
     def add_vlan_os_interface(
-        self,
-        os_iface: str = None,
-        vlan: str = None,
-        ip: str = None,
-        cidr: str = None,
-        mtu: str = None,
-        interface: str = None,
+            self,
+            os_iface: str = None,
+            vlan: str = None,
+            ip: str = None,
+            cidr: str = None,
+            mtu: str = None,
+            interface: str = None,
     ):
         """
         .. deprecated:: 1.1.3.
@@ -2767,9 +2767,9 @@ class Node:
         self.set_user_data(user_data)
 
     def add_route(
-        self,
-        subnet: IPv4Network or IPv6Network,
-        next_hop: IPv4Address or IPv6Address or NetworkService,
+            self,
+            subnet: IPv4Network or IPv6Network,
+            next_hop: IPv4Address or IPv6Address or NetworkService,
     ):
         """
         Add a route.
@@ -2814,7 +2814,7 @@ class Node:
             return []
 
     def add_post_boot_upload_directory(
-        self, local_directory_path: str, remote_directory_path: str = "."
+            self, local_directory_path: str, remote_directory_path: str = "."
     ):
         """
         Upload a directory to the node after boot.
@@ -2834,7 +2834,7 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def add_post_boot_upload_file(
-        self, local_file_path: str, remote_file_path: str = "."
+            self, local_file_path: str, remote_file_path: str = "."
     ):
         """
         Upload a file to the node after boot.
@@ -3032,7 +3032,7 @@ class Node:
         return "Done"
 
     def add_fabnet(
-        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
+            self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
     ):
         """
         Add a simple layer 3 network to this node.
@@ -3073,11 +3073,11 @@ class Node:
                 )
 
     def poa(
-        self,
-        operation: str,
-        vcpu_cpu_map: List[Dict[str, str]] = None,
-        node_set: List[str] = None,
-        keys: List[Dict[str, str]] = None,
+            self,
+            operation: str,
+            vcpu_cpu_map: List[Dict[str, str]] = None,
+            node_set: List[str] = None,
+            keys: List[Dict[str, str]] = None,
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
@@ -3096,12 +3096,13 @@ class Node:
 
         status, poa_info = (
             self.get_fablib_manager()
-            .get_slice_manager()
-            .poa(
+                .get_slice_manager()
+                .poa(
                 sliver_id=self.get_reservation_id(),
                 operation=operation,
                 vcpu_cpu_map=vcpu_cpu_map,
                 node_set=node_set,
+                keys=keys
             )
         )
         logger = logging.getLogger()
@@ -3119,8 +3120,8 @@ class Node:
         while poa_state not in states and attempt < retry:
             status, poa_info_status = (
                 self.get_fablib_manager()
-                .get_slice_manager()
-                .get_poas(poa_id=poa_info[0].poa_id)
+                    .get_slice_manager()
+                    .get_poas(poa_id=poa_info[0].poa_id)
             )
             attempt += 1
             if status != Status.OK:
@@ -3372,8 +3373,8 @@ class Node:
                 )
                 vm_mem = (
                     numa_info.get(self.get_instance_name())
-                    .get(f"Node {numa_node}")
-                    .get("Total")
+                        .get(f"Node {numa_node}")
+                        .get("Total")
                 )
                 logging.getLogger().info(f"VM memory: {vm_mem}")
 
@@ -3420,12 +3421,13 @@ class Node:
             logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
 
-    def add_public_key(self, *, sliver_key_name: str = None, email: str = None, sliver_public_key_file: str = None):
+    def add_remove_public_key(self, *, sliver_key_name: str = None, email: str = None,
+                              sliver_public_key: str = None, remove: bool = False):
         """
-        Add public key to a node;
-        - Adds user's portal public key identified by sliver_key_name to the node
-        - Adds portal public key identified by sliver_key_name for a user identified by email to the node
-        - Add public key from the file sliver_public_key_file to the node
+        Add/Remove public key to a node;
+        - Adds/Remove user's portal public key identified by sliver_key_name to the node
+        - Adds/Remove portal public key identified by sliver_key_name for a user identified by email to the node
+        - Add/Remove public key from the sliver_public_key to the node
 
         :param sliver_key_name: Sliver Key Name on the Portal
         :type sliver_key_name: str
@@ -3433,15 +3435,17 @@ class Node:
         :param email: Email
         :type email: str
 
-        :param sliver_public_key_file: Public sliver key location
-        :type sliver_public_key_file: str
+        :param sliver_public_key: Public sliver key
+        :type sliver_public_key: str
+
+        :param remove: Flag indicating if the key should be removed
+        :type remove: bool
 
         :raises Exception in case of errors
         """
-        public_key_string = None
-        if sliver_key_name is None and sliver_public_key_file is None:
+        if sliver_key_name is None and sliver_public_key is None:
             raise ValueError(f"Either sliver_key_name: {sliver_key_name} or "
-                             f"sliver_public_key_file: {sliver_public_key_file} must be specified!")
+                             f"sliver_public_key_file: {sliver_public_key} must be specified!")
 
         # Fetch the public key from portal
         if sliver_key_name is not None:
@@ -3455,17 +3459,15 @@ class Node:
 
             if not found:
                 raise Exception(f"Sliver key: {sliver_key_name} not found!")
-            public_key_string = found["public_key"]
+            sliver_public_key = found["public_key"]
 
-        elif sliver_public_key_file is not None:
-            if not os.path.exists(sliver_public_key_file):
-                raise Exception(f"Key file: {sliver_public_key_file} does not exist!")
-            public_key_string = Utils.read_file_contents(file_path=sliver_public_key_file)
+        operation = "addkey" if not remove else "removekey"
 
-        key_dict = {'key': public_key_string,
-                    'comment': 'key-added-by-poa-fablib'}
+        key_dict = {'key': sliver_public_key,
+                    'comment': f'{operation}-by-poa-fablib'}
 
-        status = self.poa(operation="addkey", keys=[key_dict])
+        status = self.poa(operation=operation, keys=[key_dict])
         if status == "Failed":
-            raise Exception("Failed to add keys the node")
-        logging.getLogger().info(f"Key added to the node {self.get_name()}!")
+            raise Exception(f"Failed to {operation} the node")
+        logging.getLogger().info(f"{operation} to the node {self.get_name()} successful!")
+        print(f"{operation} to the node {self.get_name()} successful!")
