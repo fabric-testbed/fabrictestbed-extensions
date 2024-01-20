@@ -1370,20 +1370,20 @@ class Node:
         bastion_username = self.get_fablib_manager().get_bastion_username()
         bastion_key_file = self.get_fablib_manager().get_bastion_key_location()
 
-        if username != None:
+        if username is not None:
             node_username = username
         else:
             node_username = self.username
 
-        if private_key_file != None:
+        if private_key_file is not None:
             node_key_file = private_key_file
         else:
             node_key_file = self.get_private_key_file()
 
-        if private_key_passphrase != None:
+        if private_key_passphrase is not None:
             node_key_passphrase = private_key_passphrase
         else:
-            node_key_passphrase = self.get_private_key_file()
+            node_key_passphrase = self.get_private_key_passphrase()
 
         for attempt in range(int(retry)):
             try:
@@ -3459,7 +3459,7 @@ class Node:
 
             if not found:
                 raise Exception(f"Sliver key: {sliver_key_name} not found!")
-            sliver_public_key = found["public_key"]
+            sliver_public_key = f'{found["ssh_key_type"]} {found["public_key"]}'
 
         operation = "addkey" if not remove else "removekey"
 
