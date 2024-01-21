@@ -3421,7 +3421,68 @@ class Node:
             logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
 
-    def add_remove_public_key(
+    def add_public_key(
+        self,
+        *,
+        sliver_key_name: str = None,
+        email: str = None,
+        sliver_public_key: str = None,
+    ):
+        """
+        Add public key to a node;
+        - Adds user's portal public key identified by sliver_key_name to the node
+        - Adds portal public key identified by sliver_key_name for a user identified by email to the node
+        - Add public key from the sliver_public_key to the node
+
+        :param sliver_key_name: Sliver Key Name on the Portal
+        :type sliver_key_name: str
+
+        :param email: Email
+        :type email: str
+
+        :param sliver_public_key: Public sliver key
+        :type sliver_public_key: str
+
+        :raises Exception in case of errors
+        """
+        self.__ssh_key_helper(
+            sliver_key_name=sliver_key_name,
+            sliver_public_key=sliver_public_key,
+            email=email,
+        )
+
+    def remove_public_key(
+        self,
+        *,
+        sliver_key_name: str = None,
+        email: str = None,
+        sliver_public_key: str = None,
+    ):
+        """
+        Remove public key to a node;
+        - Remove user's portal public key identified by sliver_key_name to the node
+        - Remove portal public key identified by sliver_key_name for a user identified by email to the node
+        - Remove public key from the sliver_public_key to the node
+
+        :param sliver_key_name: Sliver Key Name on the Portal
+        :type sliver_key_name: str
+
+        :param email: Email
+        :type email: str
+
+        :param sliver_public_key: Public sliver key
+        :type sliver_public_key: str
+
+        :raises Exception in case of errors
+        """
+        self.__ssh_key_helper(
+            sliver_key_name=sliver_key_name,
+            email=email,
+            sliver_public_key=sliver_public_key,
+            remove=True,
+        )
+
+    def __ssh_key_helper(
         self,
         *,
         sliver_key_name: str = None,
