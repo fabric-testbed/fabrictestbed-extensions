@@ -63,7 +63,7 @@ class Utils:
         return ":".join(a + b for a, b in zip(md5_hash[::2], md5_hash[1::2]))
 
     @staticmethod
-    def is_yaml_file(file_path):
+    def is_yaml_file(file_path: str):
         try:
             with open(file_path, "r") as file:
                 # Attempt to load the content as YAML
@@ -81,3 +81,9 @@ class Utils:
         except FileNotFoundError:
             # File not found
             return False
+
+    @staticmethod
+    def read_file_contents(file_path: str) -> str:
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()

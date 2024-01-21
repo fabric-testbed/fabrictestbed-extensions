@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- fablib: Using portal sliver keys (Issue
+  [#61](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/61),
+
 - Standardize and validate configuration, support for creating ssh keys (Issue
   [#127](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/127),
 

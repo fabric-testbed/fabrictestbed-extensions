@@ -506,8 +506,7 @@ class Config:
             self.get_bastion_key_location()
         ):
             return None
-        with open(self.get_bastion_key_location(), "r", encoding="utf-8") as f:
-            return f.read()
+        return Utils.read_file_contents(file_path=self.get_bastion_key_location())
 
     def get_bastion_host(self) -> str:
         """
@@ -672,10 +671,9 @@ class Config:
         if self.get_default_slice_private_key_file() is not None and os.path.exists(
             self.get_default_slice_private_key_file()
         ):
-            with open(
-                self.get_default_slice_private_key_file(), "r", encoding="utf-8"
-            ) as f:
-                return f.read()
+            return Utils.read_file_contents(
+                file_path=self.get_default_slice_private_key_file()
+            )
         return None
 
     def get_default_slice_public_key(self) -> Union[str, None]:
@@ -692,10 +690,9 @@ class Config:
         if self.get_default_slice_public_key_file() is not None and os.path.exists(
             self.get_default_slice_public_key_file()
         ):
-            with open(
-                self.get_default_slice_public_key_file(), "r", encoding="utf-8"
-            ) as f:
-                return f.read()
+            return Utils.read_file_contents(
+                file_path=self.get_default_slice_public_key_file()
+            )
         return None
 
     @staticmethod

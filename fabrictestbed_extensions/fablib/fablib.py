@@ -685,11 +685,7 @@ class FablibManager(Config):
         ssh_keys = user_info.get(Constants.SSH_KEYS)
 
         current_bastion_key = self.get_bastion_key()
-        current_bastion_key_finger_print = None
-        if current_bastion_key:
-            current_bastion_key_finger_print = Utils.get_md5_fingerprint(
-                key_string=current_bastion_key
-            )
+        current_bastion_key_file = self.get_bastion_key_location()
 
         keys_to_remove = []
         for key in ssh_keys:
@@ -703,10 +699,14 @@ class FablibManager(Config):
         for key in keys_to_remove:
             ssh_keys.remove(key)
 
-        if (
-            current_bastion_key is not None
-            and current_bastion_key_finger_print in ssh_keys
-        ):
+        found = False
+        if current_bastion_key_file is not None:
+            current_bastion_key_name = os.path.basename(current_bastion_key_file)
+            found = any(
+                item["comment"] == current_bastion_key_name for item in ssh_keys
+            )
+
+        if current_bastion_key is not None and found:
             logging.info(
                 f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!"
             )
@@ -807,7 +807,6 @@ class FablibManager(Config):
         description: str,
         key_type: str,
         public_file_path: str = None,
-        comment: str = "ssh-key-via-api",
         store_pubkey: bool = False,
     ):
         """
@@ -824,12 +823,10 @@ class FablibManager(Config):
         :param public_file_path: public key location
         :type public_file_path: str
 
-        :param comment: comment
-        :type comment: str
-
         :param store_pubkey flag indicating if the public key should be saved
         :type store_pubkey: bool
         """
+        comment = os.path.basename(private_file_path)
         ssh_keys = self.get_slice_manager().create_ssh_keys(
             key_type=key_type,
             description=description,
