@@ -22,6 +22,31 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+Methods to manage FABRIC `slices`_.
+
+.. _`slices`: https://learn.fabric-testbed.net/knowledge-base/glossary/#slice
+
+You would create and use a slice like so::
+
+    from ipaddress import IPv4Address
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+    fablib = FablibManager()
+
+    # Create a slice and add resources to it, creating a topology.
+    slice = fablib.new_slice(name="MySlice")
+    node1 = slice.add_node(name="node1", site="TACC")
+    net1 = slice.add_l2network(name="net1", subnet=IPv4Network("192.168.1.0/24"))
+
+    # Do more setup, and then run your experiment.
+
+    # Delete the slice after you are done.
+    slice.delete()
+
+"""
+
 from __future__ import annotations
 
 import ipaddress
@@ -64,7 +89,7 @@ from fabrictestbed_extensions.fablib.node import Node
 class Slice:
     def __init__(self, fablib_manager: FablibManager, name: str = None):
         """
-        Constructor. Sets the default slice state to be callable.
+        Create a FABRIC slice, and set its state to be callable.
 
         :param name: the name of this fablib slice
         :type name: str

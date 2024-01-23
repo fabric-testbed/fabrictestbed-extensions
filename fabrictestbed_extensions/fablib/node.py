@@ -22,6 +22,27 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+Methods to work with FABRIC `nodes`_.
+
+.. _`nodes`: https://learn.fabric-testbed.net/knowledge-base/glossary/#node
+
+You would add a node and operate on it like so::
+
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+    fablib = FablibManager()
+
+    slice = fablib.new_slice(name="MySlice")
+    node = slice.add_node(name="node1")
+    slice.submit();
+
+    node.execute('echo Hello, FABRIC from node `hostname -s`')
+
+    slice.delete()
+"""
+
 from __future__ import annotations
 
 import concurrent.futures
@@ -69,7 +90,7 @@ class Node:
 
     def __init__(self, slice: Slice, node: FimNode):
         """
-        Sets the fablib slice and FIM node based on arguments.
+        Node constructor, usually invoked by ``Slice.add_node()``.
 
         :param slice: the fablib slice to have this node on
         :type slice: Slice

@@ -22,6 +22,45 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+This module exports a :class:`FablibManager` class and a
+:class:`fablib` class available, which allows you to, among other
+things:
+
+    - Query FABRIC testbed resources.
+
+    - Create, modify, and delete slices.
+
+    - Manage the SSH keys you use with FABRIC.
+
+    - etc.
+
+In most cases you would need to create a :class:`FablibManager`
+instance to interact with FABRIC testbed::
+
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
+
+    fablib = FablibManager()
+
+    slice = fablib.new_slice(name="MySlice")
+    node = slice.add_node(name="node1")
+    slice.submit();
+
+See FABRIC project's `Jupyter notebook examples <examples>`_ for more
+complete code samples.
+
+.. note::
+
+    Some configuration in the form of a configuration file, environment
+    variables, or :class:`FablibManager` constructor parameters is
+    required for the library to work.  Please see the FABRIC project's
+    `documentation on getting started <learn>`_.
+
+.. _learn: https://learn.fabric-testbed.net/article-categories/getting-started/
+.. _examples: https://github.com/fabric-testbed/jupyter-examples/
+"""
+
 from __future__ import annotations
 
 import datetime
@@ -55,6 +94,10 @@ from fabrictestbed_extensions.fablib.slice import Slice
 
 
 class fablib:
+    """
+    Convenience static methods to work with FABRIC testbed.
+    """
+
     default_fablib_manager = None
 
     @staticmethod
@@ -526,13 +569,52 @@ class FablibManager(Config):
         **kwargs,
     ):
         """
-        Constructor. Builds FablibManager.  Tries to get configuration from:
+        ``FablibManager`` is the main interface to FABRIC services.
 
-         - constructor parameters (high priority)
-         - fabric_rc file (middle priority)
-         - environment variables (low priority)
-         - defaults (if needed and possible)
+        A ``FablibManager`` object is used to query FABRIC testbed for
+        available resources, create and configure slices, manage SSH
+        keys in nodes in slices and FABRIC's bastion host, etc.  This
+        requires some configuration, which is gathered from:
 
+            - constructor parameters (high priority)
+
+            - a configuration file (medium priority)
+
+            - environment variables (low priority)
+
+            - defaults (if needed, and when possible)
+
+        Typically you would use the configuration file located at
+        ``"${HOME}/work/fabric_config/fabric_rc"``, and/or environment
+        variables.
+
+        :param fabric_rc: Path to fablib configuration file.  Defaults
+            to ``"${HOME}/work/fabric_config/fabric_rc"``.
+        :param credmgr_host: Name of credential manager host.
+        :param orchestrator_host: Name of FABRIC orchestrator host.
+        :param fabric_token: Path to the file that contains your
+            FABRIC auth token.
+        :param project_id: Your FABRIC project ID, obtained from
+            https://cm.fabric-testbed.net/, usually via FABRIC portal.
+        :param bastion_username: Your username on FABRIC bastion host,
+            obtained from FABRIC portal.
+        :param bastion_key_filename: Path to your bastion SSH key.
+        :param log_file: Path where fablib logs are written; defaults
+            to ``"/tmp/fablib/fablib.log"``.
+        :param log_level: Level of detail in the logs written.
+            Defaults to ``"DEBUG"``; other possible log levels are
+            ``"INFO"``, ``"WARNING"``, ``"ERROR"``, and
+            ``"CRITICAL"``, in reducing order of verbosity.
+        :param data_dir: directory for fablib to store temporary data.
+        :param output: Format of fablib output; can be either
+            ``"pandas"`` or ``"text"``.  Defaults to ``"pandas"`` in a
+            Jupyter notebook environment; ``"text"`` otherwise.
+        :param execute_thread_pool_size: Number of worker threads in
+            the thread pool fablib uses to execute commands in nodes.
+            Defaults to 64.
+        :param offline: Avoid using FABRIC services when initializing.
+            This is ``False`` by default, and set to ``True`` only in
+            some unit tests.
         """
         super().__init__(
             fabric_rc=fabric_rc,

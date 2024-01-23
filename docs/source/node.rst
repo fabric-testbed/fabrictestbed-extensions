@@ -1,4 +1,4 @@
-Node
+node
 ====
 
 .. automodule:: fabrictestbed_extensions.fablib.node
@@ -6,4 +6,4 @@ Node
 
 .. autoclass:: fabrictestbed_extensions.fablib.node.Node
    :members:
-   :special-members: __init__, __str__
+   :special-members: __str__

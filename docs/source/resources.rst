@@ -1,4 +1,4 @@
-Resources
+resources
 =========
 
 .. automodule:: fabrictestbed_extensions.fablib.resources
@@ -6,4 +6,4 @@ Resources
 
 .. autoclass:: fabrictestbed_extensions.fablib.resources.Resources
    :members:
-   :special-members: __init__, __str__
+   :special-members: __str__
