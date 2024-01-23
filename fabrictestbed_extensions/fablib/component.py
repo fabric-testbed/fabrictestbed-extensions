@@ -22,6 +22,21 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""
+Methods to work with FABRIC components_.
+
+.. _components: https://learn.fabric-testbed.net/knowledge-base/glossary/#component
+
+You normally would not create :class:`Component` objects directly with
+a constructor call; they are created when you invoke
+:py:func:`fabrictestbed_extensions.fablib.node.Node.add_component()`,
+like so::
+
+    node.add_component(model='NVME_P4510', name="nvme1")
+    node.add_component(model='NIC_Basic', name="nic1")
+"""
+
 from __future__ import annotations
 
 import json
@@ -310,12 +325,15 @@ class Component:
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
         """
-        Not intended for API use
+        Typically invoked when you add a component to a ``Node``.
 
-        Constructor. Sets the FIM component and fablib node to the inputted values.
+        .. note ::
+
+            ``Component`` constructer is not meant to be directly used.
 
         :param node: the fablib node to build the component on
         :type node: Node
+
         :param fim_component: the FIM component this object represents
         :type fim_component: FIMComponent
         """

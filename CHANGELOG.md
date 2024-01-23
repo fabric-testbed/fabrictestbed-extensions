@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [#242](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/242),
   [#243](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/243),
   PR [#251](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/251))
+- Module docstrings (PR
+  [#256](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/256))
 
 ### Changed
 
