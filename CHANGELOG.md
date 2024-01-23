@@ -6,7 +6,19 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+
+## [1.6.2] - 2024-01-23
+
+### Fixed
+
+- fablib: Using portal sliver keys (Issue
+  [#61](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/61),
+
+- Standardize and validate configuration, support for creating ssh keys (Issue
+  [#127](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/127),
+
+
+## [1.6.0] - 2024-01-03
 
 ### Fixed
 
@@ -38,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use defaults for FABRIC CM, orchestrator and bastion hosts (Issue
   [#258](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/258))
-
+- Refactor logging setup (Issue
+  [#263](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/263))
 
 ## [1.5.5]
 
@@ -48,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   information (PR [#236](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/236)).
 - Missing docstrings for Node module (PR
   [#237](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/237))
+
 
 ### [1.5.4] - 2023-08-21
 

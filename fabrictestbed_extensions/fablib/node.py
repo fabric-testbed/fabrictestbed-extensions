@@ -49,6 +49,7 @@ import concurrent.futures
 import ipaddress
 import json
 import logging
+import os
 import re
 import select
 import threading
@@ -64,6 +65,7 @@ from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -1387,22 +1389,22 @@ class Node:
         dest_addr = (management_ip, 22)
 
         bastion_username = self.get_fablib_manager().get_bastion_username()
-        bastion_key_file = self.get_fablib_manager().get_bastion_key_filename()
+        bastion_key_file = self.get_fablib_manager().get_bastion_key_location()
 
-        if username != None:
+        if username is not None:
             node_username = username
         else:
             node_username = self.username
 
-        if private_key_file != None:
+        if private_key_file is not None:
             node_key_file = private_key_file
         else:
             node_key_file = self.get_private_key_file()
 
-        if private_key_passphrase != None:
+        if private_key_passphrase is not None:
             node_key_passphrase = private_key_passphrase
         else:
-            node_key_passphrase = self.get_private_key_file()
+            node_key_passphrase = self.get_private_key_passphrase()
 
         for attempt in range(int(retry)):
             try:
@@ -1413,7 +1415,7 @@ class Node:
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_public_addr(),
+                    self.get_fablib_manager().get_bastion_host(),
                     username=bastion_username,
                     key_filename=bastion_key_file,
                 )
@@ -1691,9 +1693,9 @@ class Node:
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_public_addr(),
+                    self.get_fablib_manager().get_bastion_host(),
                     username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
                 )
 
                 bastion_transport = bastion.get_transport()
@@ -1857,9 +1859,9 @@ class Node:
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_public_addr(),
+                    self.get_fablib_manager().get_bastion_host(),
                     username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_filename(),
+                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
                 )
 
                 bastion_transport = bastion.get_transport()
@@ -3096,15 +3098,15 @@ class Node:
         operation: str,
         vcpu_cpu_map: List[Dict[str, str]] = None,
         node_set: List[str] = None,
-        keys: List[str] = None,
+        keys: List[Dict[str, str]] = None,
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
 
         :param operation: operation to be performed
-        :param vcpu_cpu: map virtual cpu to host cpu map
+        :param vcpu_cpu_map: map virtual cpu to host cpu map
         :param node_set: list of numa nodes
-        :param keys list: of ssh keys
+        :param keys: list of ssh keys
 
         :raise Exception: in case of failure
 
@@ -3121,6 +3123,7 @@ class Node:
                 operation=operation,
                 vcpu_cpu_map=vcpu_cpu_map,
                 node_set=node_set,
+                keys=keys,
             )
         )
         logger = logging.getLogger()
@@ -3438,3 +3441,126 @@ class Node:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
+
+    def add_public_key(
+        self,
+        *,
+        sliver_key_name: str = None,
+        email: str = None,
+        sliver_public_key: str = None,
+    ):
+        """
+        Add public key to a node;
+        - Adds user's portal public key identified by sliver_key_name to the node
+        - Adds portal public key identified by sliver_key_name for a user identified by email to the node
+        - Add public key from the sliver_public_key to the node
+
+        :param sliver_key_name: Sliver Key Name on the Portal
+        :type sliver_key_name: str
+
+        :param email: Email
+        :type email: str
+
+        :param sliver_public_key: Public sliver key
+        :type sliver_public_key: str
+
+        :raises Exception in case of errors
+        """
+        self.__ssh_key_helper(
+            sliver_key_name=sliver_key_name,
+            sliver_public_key=sliver_public_key,
+            email=email,
+        )
+
+    def remove_public_key(
+        self,
+        *,
+        sliver_key_name: str = None,
+        email: str = None,
+        sliver_public_key: str = None,
+    ):
+        """
+        Remove public key to a node;
+        - Remove user's portal public key identified by sliver_key_name to the node
+        - Remove portal public key identified by sliver_key_name for a user identified by email to the node
+        - Remove public key from the sliver_public_key to the node
+
+        :param sliver_key_name: Sliver Key Name on the Portal
+        :type sliver_key_name: str
+
+        :param email: Email
+        :type email: str
+
+        :param sliver_public_key: Public sliver key
+        :type sliver_public_key: str
+
+        :raises Exception in case of errors
+        """
+        self.__ssh_key_helper(
+            sliver_key_name=sliver_key_name,
+            email=email,
+            sliver_public_key=sliver_public_key,
+            remove=True,
+        )
+
+    def __ssh_key_helper(
+        self,
+        *,
+        sliver_key_name: str = None,
+        email: str = None,
+        sliver_public_key: str = None,
+        remove: bool = False,
+    ):
+        """
+        Add/Remove public key to a node;
+        - Adds/Remove user's portal public key identified by sliver_key_name to the node
+        - Adds/Remove portal public key identified by sliver_key_name for a user identified by email to the node
+        - Add/Remove public key from the sliver_public_key to the node
+
+        :param sliver_key_name: Sliver Key Name on the Portal
+        :type sliver_key_name: str
+
+        :param email: Email
+        :type email: str
+
+        :param sliver_public_key: Public sliver key
+        :type sliver_public_key: str
+
+        :param remove: Flag indicating if the key should be removed
+        :type remove: bool
+
+        :raises Exception in case of errors
+        """
+        if sliver_key_name is None and sliver_public_key is None:
+            raise ValueError(
+                f"Either sliver_key_name: {sliver_key_name} or "
+                f"sliver_public_key_file: {sliver_public_key} must be specified!"
+            )
+
+        # Fetch the public key from portal
+        if sliver_key_name is not None:
+            ssh_keys = (
+                self.get_fablib_manager().get_slice_manager().get_ssh_keys(email=email)
+            )
+            found = None
+            if ssh_keys is not None and len(ssh_keys):
+                for item in ssh_keys:
+                    if sliver_key_name == item["comment"]:
+                        found = item
+                        break
+
+            if not found:
+                raise Exception(f"Sliver key: {sliver_key_name} not found!")
+            sliver_public_key = f'{found["ssh_key_type"]} {found["public_key"]}'
+
+        operation = "addkey" if not remove else "removekey"
+
+        key_dict = {"key": sliver_public_key, "comment": f"{operation}-by-poa-fablib"}
+
+        status = self.poa(operation=operation, keys=[key_dict])
+        if status == "Failed":
+            raise Exception(f"Failed to {operation} the node")
+        logging.getLogger().info(
+            f"{operation} to the node {self.get_name()} successful!"
+        )
+        print(f"{operation} to the node {self.get_name()} successful!")
