@@ -962,7 +962,7 @@ class FablibManager(Config):
                 token_location=self.get_token_location(),
                 initialize=True,
                 scope="all",
-                auto_refresh=self.auto_token_refresh
+                auto_refresh=self.auto_token_refresh,
             )
             self.slice_manager.initialize()
             logging.debug("Slice manager initialized!")
