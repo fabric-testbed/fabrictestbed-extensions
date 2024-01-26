@@ -566,6 +566,7 @@ class FablibManager(Config):
         output: str = None,
         execute_thread_pool_size: int = 64,
         offline: bool = False,
+        auto_token_refresh: bool = True,
         **kwargs,
     ):
         """
@@ -615,6 +616,7 @@ class FablibManager(Config):
         :param offline: Avoid using FABRIC services when initializing.
             This is ``False`` by default, and set to ``True`` only in
             some unit tests.
+        :param auto_token_refresh: Auto refresh tokens
         """
         super().__init__(
             fabric_rc=fabric_rc,
@@ -644,6 +646,7 @@ class FablibManager(Config):
         self.resources = None
         self.links = None
         self.facility_ports = None
+        self.auto_token_refresh = auto_token_refresh
 
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
@@ -959,6 +962,7 @@ class FablibManager(Config):
                 token_location=self.get_token_location(),
                 initialize=True,
                 scope="all",
+                auto_refresh=self.auto_token_refresh,
             )
             self.slice_manager.initialize()
             logging.debug("Slice manager initialized!")
