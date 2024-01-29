@@ -1549,6 +1549,7 @@ class FablibManager(Config):
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        as_self: bool=True,
     ):
         """
         Lists all the slices created by a user.
@@ -1581,10 +1582,12 @@ class FablibManager(Config):
         :return: table in format specified by output parameter
         :param pretty_names: pretty_names
         :type pretty_names: bool
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
         :rtype: Object
         """
         table = []
-        for slice in self.get_slices(excludes=excludes):
+        for slice in self.get_slices(excludes=excludes, as_self=as_self):
             table.append(slice.toDict())
 
         if pretty_names:
@@ -1652,6 +1655,7 @@ class FablibManager(Config):
         excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
         slice_name: str = None,
         slice_id: str = None,
+        as_self: bool = True,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -1664,6 +1668,8 @@ class FablibManager(Config):
         :type excludes: List[SliceState]
         :param slice_name:
         :param slice_id:
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
 
         :return: a list of slices
         :rtype: List[Slice]
@@ -1674,7 +1680,7 @@ class FablibManager(Config):
             start = time.time()
 
         return_status, slices = self.get_slice_manager().slices(
-            excludes=excludes, name=slice_name, slice_id=slice_id, limit=200
+            excludes=excludes, name=slice_name, slice_id=slice_id, limit=200, as_self=as_self
         )
 
         if self.get_log_level() == logging.DEBUG:
@@ -1691,7 +1697,7 @@ class FablibManager(Config):
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices
 
-    def get_slice(self, name: str = None, slice_id: str = None) -> Slice:
+    def get_slice(self, name: str = None, slice_id: str = None, as_self: bool = True) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1704,6 +1710,8 @@ class FablibManager(Config):
         :type name: String
         :param slice_id: The ID of the desired slice
         :type slice_id: String
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool        
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
         :rtype: Slice
