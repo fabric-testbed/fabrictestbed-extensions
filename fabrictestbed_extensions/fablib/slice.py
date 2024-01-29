@@ -588,7 +588,7 @@ class Slice:
             excludes=[],
             slice_id=self.slice_id,
             name=self.slice_name,
-            user_only=self.user_only,
+            as_self=self.user_only,
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -629,7 +629,7 @@ class Slice:
             return_status,
             new_topo,
         ) = self.fablib_manager.get_slice_manager().get_slice_topology(
-            slice_object=self.sm_slice, user_only=self.user_only
+            slice_object=self.sm_slice, as_self=self.user_only
         )
         if return_status != Status.OK:
             raise Exception(
@@ -655,7 +655,7 @@ class Slice:
         if self.sm_slice is None:
             return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(
-            slice_object=self.sm_slice, user_only=self.user_only
+            slice_object=self.sm_slice, as_self=self.user_only
         )
         if status == Status.OK:
             self.slivers = slivers
@@ -1511,7 +1511,10 @@ class Slice:
             print("Waiting for slice .", end="")
         while time.time() < timeout_start + timeout:
             return_status, slices = self.fablib_manager.get_slice_manager().slices(
-                excludes=[], slice_id=self.slice_id, name=self.slice_name
+                excludes=[],
+                slice_id=self.slice_id,
+                name=self.slice_name,
+                as_self=self.user_only,
             )
             if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
