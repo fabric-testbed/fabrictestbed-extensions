@@ -1550,7 +1550,7 @@ class FablibManager(Config):
         :rtype: List[Slice]
         """
         return_status, slices = self.get_slice_manager().slices(
-            excludes=excludes, limit=200, user_only=user_only
+            excludes=excludes, limit=200, as_self=user_only
         )
 
         return_slices = []
@@ -1707,7 +1707,7 @@ class FablibManager(Config):
             name=slice_name,
             slice_id=slice_id,
             limit=200,
-            user_only=user_only,
+            as_self=user_only,
         )
 
         if self.get_log_level() == logging.DEBUG:
