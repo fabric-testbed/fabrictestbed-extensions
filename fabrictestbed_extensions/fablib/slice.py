@@ -87,7 +87,9 @@ from fabrictestbed_extensions.fablib.node import Node
 
 
 class Slice:
-    def __init__(self, fablib_manager: FablibManager, name: str = None, as_self: bool = True):
+    def __init__(
+        self, fablib_manager: FablibManager, name: str = None, as_self: bool = True
+    ):
         """
         Create a FABRIC slice, and set its state to be callable.
 
@@ -438,7 +440,11 @@ class Slice:
         return slice
 
     @staticmethod
-    def get_slice(fablib_manager: FablibManager, sm_slice: OrchestratorSlice = None, as_self: bool = True):
+    def get_slice(
+        fablib_manager: FablibManager,
+        sm_slice: OrchestratorSlice = None,
+        as_self: bool = True,
+    ):
         """
         Not intended for API use.
 
@@ -579,7 +585,10 @@ class Slice:
             start = time.time()
 
         return_status, slices = self.fablib_manager.get_slice_manager().slices(
-            excludes=[], slice_id=self.slice_id, name=self.slice_name, as_self=self.as_self
+            excludes=[],
+            slice_id=self.slice_id,
+            name=self.slice_name,
+            as_self=self.as_self,
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()

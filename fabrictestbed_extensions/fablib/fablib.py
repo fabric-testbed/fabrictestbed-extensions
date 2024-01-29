@@ -458,7 +458,9 @@ class fablib:
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.get_default_fablib_manager().get_fim_slice(excludes=excludes, as_self=as_self)
+        return fablib.get_default_fablib_manager().get_fim_slice(
+            excludes=excludes, as_self=as_self
+        )
 
     @staticmethod
     def get_slices(
@@ -480,10 +482,14 @@ class fablib:
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.get_default_fablib_manager().get_slices(excludes=excludes, as_self=as_self)
+        return fablib.get_default_fablib_manager().get_slices(
+            excludes=excludes, as_self=as_self
+        )
 
     @staticmethod
-    def get_slice(name: str = None, slice_id: str = None, as_self: bool = True) -> Slice:
+    def get_slice(
+        name: str = None, slice_id: str = None, as_self: bool = True
+    ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1522,7 +1528,8 @@ class FablibManager(Config):
         return self.resources
 
     def get_fim_slices(
-        self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        self,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
         as_self: bool = True,
     ) -> List[OrchestratorSlice]:
         """
@@ -1696,7 +1703,11 @@ class FablibManager(Config):
             start = time.time()
 
         return_status, slices = self.get_slice_manager().slices(
-            excludes=excludes, name=slice_name, slice_id=slice_id, limit=200, as_self=as_self
+            excludes=excludes,
+            name=slice_name,
+            slice_id=slice_id,
+            limit=200,
+            as_self=as_self,
         )
 
         if self.get_log_level() == logging.DEBUG:
@@ -1708,12 +1719,16 @@ class FablibManager(Config):
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(Slice.get_slice(self, sm_slice=slice, as_self=as_self))
+                return_slices.append(
+                    Slice.get_slice(self, sm_slice=slice, as_self=as_self)
+                )
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices
 
-    def get_slice(self, name: str = None, slice_id: str = None, as_self: bool = True) -> Slice:
+    def get_slice(
+        self, name: str = None, slice_id: str = None, as_self: bool = True
+    ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1727,7 +1742,7 @@ class FablibManager(Config):
         :param slice_id: The ID of the desired slice
         :type slice_id: String
         :param as_self: True indicates return own slices; False indicates return project slices
-        :type as_self: bool        
+        :type as_self: bool
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
         :rtype: Slice
@@ -1744,7 +1759,9 @@ class FablibManager(Config):
         elif name:
             # if getting by name then only consider active slices
             slices = self.get_slices(
-                excludes=[SliceState.Dead, SliceState.Closing], slice_name=name, as_self=as_self
+                excludes=[SliceState.Dead, SliceState.Closing],
+                slice_name=name,
+                as_self=as_self,
             )
 
             if len(slices) > 0:

@@ -1170,7 +1170,7 @@ class Node:
         try:
             return self.render_template(
                 self.get_fablib_manager().get_ssh_command_line(),
-                skip=["ssh_command", "interfaces"]
+                skip=["ssh_command", "interfaces"],
             )
         except:
             return self.get_fablib_manager().get_ssh_command_line()
