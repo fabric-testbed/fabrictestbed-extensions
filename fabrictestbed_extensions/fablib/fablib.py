@@ -1708,7 +1708,7 @@ class FablibManager(Config):
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(Slice.get_slice(self, sm_slice=slice))
+                return_slices.append(Slice.get_slice(self, sm_slice=slice, as_self=as_self))
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices
