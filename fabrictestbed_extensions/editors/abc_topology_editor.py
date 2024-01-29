@@ -121,7 +121,7 @@ class AbcTopologyEditor(ABC):
             {
                 "slice_name": slice_name,
                 "editor_slice_state": self.EXPERIMENT_STATE_UNSUBMITTED,
-                "topology": ExperimentTopology()
+                "topology": ExperimentTopology(),
                 # ssh_keys
                 # detail_levels {'detail': HIGH, {'node1': LOW, 'node2': MED}}
             }

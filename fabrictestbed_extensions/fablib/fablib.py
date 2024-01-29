@@ -438,7 +438,8 @@ class fablib:
 
     @staticmethod
     def get_fim_slice(
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        user_only: bool = True,
     ) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
@@ -451,14 +452,20 @@ class fablib:
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
+
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.get_default_fablib_manager().get_fim_slice(excludes=excludes)
+        return fablib.get_default_fablib_manager().get_fim_slice(
+            excludes=excludes, user_only=user_only
+        )
 
     @staticmethod
     def get_slices(
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        user_only: bool = True,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -469,13 +476,20 @@ class fablib:
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
+
         :return: a list of slices
         :rtype: List[Slice]
         """
-        return fablib.get_default_fablib_manager().get_slices(excludes=excludes)
+        return fablib.get_default_fablib_manager().get_slices(
+            excludes=excludes, user_only=user_only
+        )
 
     @staticmethod
-    def get_slice(name: str = None, slice_id: str = None) -> Slice:
+    def get_slice(
+        name: str = None, slice_id: str = None, user_only: bool = True
+    ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -488,12 +502,14 @@ class fablib:
         :type name: String
         :param slice_id: The ID of the desired slice
         :type slice_id: String
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
         :rtype: Slice
         """
         return fablib.get_default_fablib_manager().get_slice(
-            name=name, slice_id=slice_id
+            name=name, slice_id=slice_id, user_only=user_only
         )
 
     @staticmethod
@@ -1512,7 +1528,9 @@ class FablibManager(Config):
         return self.resources
 
     def get_fim_slices(
-        self, excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing]
+        self,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        user_only: bool = True,
     ) -> List[OrchestratorSlice]:
         """
         Gets a list of fim slices from the slice manager.
@@ -1526,11 +1544,13 @@ class FablibManager(Config):
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: List[SliceState]
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
         :return: a list of fim models of slices
         :rtype: List[Slice]
         """
         return_status, slices = self.get_slice_manager().slices(
-            excludes=excludes, limit=200
+            excludes=excludes, limit=200, user_only=user_only
         )
 
         return_slices = []
@@ -1549,6 +1569,7 @@ class FablibManager(Config):
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        user_only: bool = True,
     ):
         """
         Lists all the slices created by a user.
@@ -1581,10 +1602,12 @@ class FablibManager(Config):
         :return: table in format specified by output parameter
         :param pretty_names: pretty_names
         :type pretty_names: bool
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
         :rtype: Object
         """
         table = []
-        for slice in self.get_slices(excludes=excludes):
+        for slice in self.get_slices(excludes=excludes, user_only=user_only):
             table.append(slice.toDict())
 
         if pretty_names:
@@ -1610,6 +1633,7 @@ class FablibManager(Config):
         fields=None,
         quiet=False,
         pretty_names=True,
+        user_only: bool = True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1637,11 +1661,13 @@ class FablibManager(Config):
         :type quiet: bool
         :param pretty_names: pretty_names
         :type pretty_names: bool
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
-        slice = self.get_slice(name=name, slice_id=id)
+        slice = self.get_slice(name=name, slice_id=id, user_only=user_only)
 
         return slice.show(
             output=output, fields=fields, quiet=quiet, pretty_names=pretty_names
@@ -1652,6 +1678,7 @@ class FablibManager(Config):
         excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
         slice_name: str = None,
         slice_id: str = None,
+        user_only: bool = True,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -1664,6 +1691,8 @@ class FablibManager(Config):
         :type excludes: List[SliceState]
         :param slice_name:
         :param slice_id:
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
 
         :return: a list of slices
         :rtype: List[Slice]
@@ -1674,7 +1703,11 @@ class FablibManager(Config):
             start = time.time()
 
         return_status, slices = self.get_slice_manager().slices(
-            excludes=excludes, name=slice_name, slice_id=slice_id, limit=200
+            excludes=excludes,
+            name=slice_name,
+            slice_id=slice_id,
+            limit=200,
+            user_only=user_only,
         )
 
         if self.get_log_level() == logging.DEBUG:
@@ -1686,12 +1719,16 @@ class FablibManager(Config):
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(Slice.get_slice(self, sm_slice=slice))
+                return_slices.append(
+                    Slice.get_slice(self, sm_slice=slice, user_only=user_only)
+                )
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices
 
-    def get_slice(self, name: str = None, slice_id: str = None) -> Slice:
+    def get_slice(
+        self, name: str = None, slice_id: str = None, user_only: bool = True
+    ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1704,6 +1741,8 @@ class FablibManager(Config):
         :type name: String
         :param slice_id: The ID of the desired slice
         :type slice_id: String
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
         :rtype: Slice
@@ -1711,7 +1750,9 @@ class FablibManager(Config):
         # Get the appropriate slices list
         if slice_id:
             # if getting by slice_id consider all slices
-            slices = self.get_slices(excludes=[], slice_id=slice_id)
+            slices = self.get_slices(
+                excludes=[], slice_id=slice_id, user_only=user_only
+            )
 
             if len(slices) == 1:
                 return slices[0]
@@ -1720,7 +1761,9 @@ class FablibManager(Config):
         elif name:
             # if getting by name then only consider active slices
             slices = self.get_slices(
-                excludes=[SliceState.Dead, SliceState.Closing], slice_name=name
+                excludes=[SliceState.Dead, SliceState.Closing],
+                slice_name=name,
+                user_only=user_only,
             )
 
             if len(slices) > 0:

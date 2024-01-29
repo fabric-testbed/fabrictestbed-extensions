@@ -1117,15 +1117,21 @@ class FacilityPorts(Resources):
                         fp.site,
                         iface.node_id,
                         iface.labels.vlan_range if iface.labels else "N/A",
-                        iface.labels.local_name
-                        if iface.labels and iface.labels.local_name
-                        else "N/A",
-                        iface.labels.device_name
-                        if iface.labels and iface.labels.device_name
-                        else "N/A",
-                        iface.labels.region
-                        if iface.labels and iface.labels.region
-                        else "N/A",
+                        (
+                            iface.labels.local_name
+                            if iface.labels and iface.labels.local_name
+                            else "N/A"
+                        ),
+                        (
+                            iface.labels.device_name
+                            if iface.labels and iface.labels.device_name
+                            else "N/A"
+                        ),
+                        (
+                            iface.labels.region
+                            if iface.labels and iface.labels.region
+                            else "N/A"
+                        ),
                     ]
                 )
 
@@ -1156,15 +1162,19 @@ class FacilityPorts(Resources):
             "site_name": site,
             "node_id": iface.node_id,
             "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
-            "local_name": iface.labels.local_name
-            if iface.labels and iface.labels.local_name
-            else "N/A",
-            "device_name": iface.labels.device_name
-            if iface.labels and iface.labels.device_name
-            else "N/A",
-            "region": iface.labels.region
-            if iface.labels and iface.labels.region
-            else "N/A",
+            "local_name": (
+                iface.labels.local_name
+                if iface.labels and iface.labels.local_name
+                else "N/A"
+            ),
+            "device_name": (
+                iface.labels.device_name
+                if iface.labels and iface.labels.device_name
+                else "N/A"
+            ),
+            "region": (
+                iface.labels.region if iface.labels and iface.labels.region else "N/A"
+            ),
         }
 
     def list_facility_ports(

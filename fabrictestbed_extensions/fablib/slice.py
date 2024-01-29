@@ -87,7 +87,9 @@ from fabrictestbed_extensions.fablib.node import Node
 
 
 class Slice:
-    def __init__(self, fablib_manager: FablibManager, name: str = None):
+    def __init__(
+        self, fablib_manager: FablibManager, name: str = None, user_only: bool = True
+    ):
         """
         Create a FABRIC slice, and set its state to be callable.
 
@@ -110,6 +112,7 @@ class Slice:
         self.update_slivers_count = 0
         self.update_slice_count = 0
         self.update_count = 0
+        self.user_only = user_only
 
     def get_fablib_manager(self):
         return self.fablib_manager
@@ -437,13 +440,19 @@ class Slice:
         return slice
 
     @staticmethod
-    def get_slice(fablib_manager: FablibManager, sm_slice: OrchestratorSlice = None):
+    def get_slice(
+        fablib_manager: FablibManager,
+        sm_slice: OrchestratorSlice = None,
+        user_only: bool = True,
+    ):
         """
         Not intended for API use.
 
         Gets an existing fablib slice using a slice manager slice
         :param fablib_manager:
         :param sm_slice:
+        :param user_only: True indicates return own slices; False indicates return project slices
+        :type user_only: bool
         :return: Slice
         """
         logging.info("slice.get_slice()")
@@ -452,6 +461,7 @@ class Slice:
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.name
+        slice.user_only = user_only
 
         try:
             slice.update_topology()
@@ -519,25 +529,29 @@ class Slice:
         context["slice"] = self.toDict()
 
         context["nodes"] = {}
-        for node in self.get_nodes():
-            node_context = node.generate_template_context()
-            context["nodes"][node.get_name()] = node_context
+        if "nodes" not in skip:
+            for node in self.get_nodes():
+                node_context = node.generate_template_context()
+                context["nodes"][node.get_name()] = node_context
 
         context["components"] = {}
-        for component in self.get_components():
-            context["components"][
-                component.get_name()
-            ] = component.generate_template_context()
+        if "components" not in skip:
+            for component in self.get_components():
+                context["components"][
+                    component.get_name()
+                ] = component.generate_template_context()
 
         context["interfaces"] = {}
-        for interface in self.get_interfaces():
-            context["interfaces"][interface.get_name()] = interface.toDict()
+        if "interfaces" not in skip:
+            for interface in self.get_interfaces():
+                context["interfaces"][interface.get_name()] = interface.toDict()
 
         context["networks"] = {}
-        for network in self.get_networks():
-            context["networks"][
-                network.get_name()
-            ] = network.generate_template_context()
+        if "networks" not in skip:
+            for network in self.get_networks():
+                context["networks"][
+                    network.get_name()
+                ] = network.generate_template_context()
 
         return context
 
@@ -571,7 +585,10 @@ class Slice:
             start = time.time()
 
         return_status, slices = self.fablib_manager.get_slice_manager().slices(
-            excludes=[], slice_id=self.slice_id, name=self.slice_name
+            excludes=[],
+            slice_id=self.slice_id,
+            name=self.slice_name,
+            user_only=self.user_only,
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -612,7 +629,7 @@ class Slice:
             return_status,
             new_topo,
         ) = self.fablib_manager.get_slice_manager().get_slice_topology(
-            slice_object=self.sm_slice
+            slice_object=self.sm_slice, user_only=self.user_only
         )
         if return_status != Status.OK:
             raise Exception(
@@ -638,7 +655,7 @@ class Slice:
         if self.sm_slice is None:
             return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(
-            slice_object=self.sm_slice
+            slice_object=self.sm_slice, user_only=self.user_only
         )
         if status == Status.OK:
             self.slivers = slivers
