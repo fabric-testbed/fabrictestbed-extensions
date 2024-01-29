@@ -182,9 +182,9 @@ class Interface:
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
             "mode": str(self.get_mode()),
-            "vlan": str(self.get_vlan())
-            if self.get_vlan()
-            else "",  # str(self.get_vlan()),
+            "vlan": (
+                str(self.get_vlan()) if self.get_vlan() else ""
+            ),  # str(self.get_vlan()),
             "mac": mac,
             "physical_dev": physical_dev,
             "dev": dev,
