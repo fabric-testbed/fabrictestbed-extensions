@@ -311,14 +311,14 @@ class Node:
 
         return context
 
-    def get_template_context(self):
-        return self.get_slice().get_template_context(self, skip=["ssh_command"])
+    def get_template_context(self, skip: List[str] = ["ssh_command"]):
+        return self.get_slice().get_template_context(self, skip=skip)
 
-    def render_template(self, input_string):
+    def render_template(self, input_string, skip: List[str] = ["ssh_command"]):
         environment = jinja2.Environment()
         # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
         template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context())
+        output_string = template.render(self.get_template_context(skip=skip))
 
         return output_string
 
@@ -1169,7 +1169,8 @@ class Node:
 
         try:
             return self.render_template(
-                self.get_fablib_manager().get_ssh_command_line()
+                self.get_fablib_manager().get_ssh_command_line(),
+                skip=["ssh_command", "interfaces"]
             )
         except:
             return self.get_fablib_manager().get_ssh_command_line()
@@ -1557,7 +1558,7 @@ class Node:
 
             except Exception as e:
                 logging.warning(
-                    f"Exception in node.execute() (attempt #{attempt} of {retry}): {e}"
+                    f"Exception in node.execute() command: {command} (attempt #{attempt} of {retry}): {e}"
                 )
 
                 if attempt + 1 == retry:

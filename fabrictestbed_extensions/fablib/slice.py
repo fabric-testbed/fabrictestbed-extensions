@@ -523,25 +523,29 @@ class Slice:
         context["slice"] = self.toDict()
 
         context["nodes"] = {}
-        for node in self.get_nodes():
-            node_context = node.generate_template_context()
-            context["nodes"][node.get_name()] = node_context
+        if "nodes" not in skip:
+            for node in self.get_nodes():
+                node_context = node.generate_template_context()
+                context["nodes"][node.get_name()] = node_context
 
         context["components"] = {}
-        for component in self.get_components():
-            context["components"][
-                component.get_name()
-            ] = component.generate_template_context()
+        if "components" not in skip:
+            for component in self.get_components():
+                context["components"][
+                    component.get_name()
+                ] = component.generate_template_context()
 
         context["interfaces"] = {}
-        for interface in self.get_interfaces():
-            context["interfaces"][interface.get_name()] = interface.toDict()
+        if "interfaces" not in skip:
+            for interface in self.get_interfaces():
+                context["interfaces"][interface.get_name()] = interface.toDict()
 
         context["networks"] = {}
-        for network in self.get_networks():
-            context["networks"][
-                network.get_name()
-            ] = network.generate_template_context()
+        if "networks" not in skip:
+            for network in self.get_networks():
+                context["networks"][
+                    network.get_name()
+                ] = network.generate_template_context()
 
         return context
 
