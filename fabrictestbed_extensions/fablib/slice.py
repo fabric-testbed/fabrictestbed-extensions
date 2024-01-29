@@ -88,7 +88,7 @@ from fabrictestbed_extensions.fablib.node import Node
 
 class Slice:
     def __init__(
-        self, fablib_manager: FablibManager, name: str = None, as_self: bool = True
+        self, fablib_manager: FablibManager, name: str = None, own_slices: bool = True
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -112,7 +112,7 @@ class Slice:
         self.update_slivers_count = 0
         self.update_slice_count = 0
         self.update_count = 0
-        self.as_self = as_self
+        self.own_slices = own_slices
 
     def get_fablib_manager(self):
         return self.fablib_manager
@@ -443,7 +443,7 @@ class Slice:
     def get_slice(
         fablib_manager: FablibManager,
         sm_slice: OrchestratorSlice = None,
-        as_self: bool = True,
+        own_slices: bool = True,
     ):
         """
         Not intended for API use.
@@ -451,8 +451,8 @@ class Slice:
         Gets an existing fablib slice using a slice manager slice
         :param fablib_manager:
         :param sm_slice:
-        :param as_self: True indicates return own slices; False indicates return project slices
-        :type as_self: bool
+        :param own_slices: True indicates return own slices; False indicates return project slices
+        :type own_slices: bool
         :return: Slice
         """
         logging.info("slice.get_slice()")
@@ -461,7 +461,7 @@ class Slice:
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.name
-        slice.as_self = as_self
+        slice.own_slices = own_slices
 
         try:
             slice.update_topology()
@@ -588,7 +588,7 @@ class Slice:
             excludes=[],
             slice_id=self.slice_id,
             name=self.slice_name,
-            as_self=self.as_self,
+            own_slices=self.own_slices,
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -629,7 +629,7 @@ class Slice:
             return_status,
             new_topo,
         ) = self.fablib_manager.get_slice_manager().get_slice_topology(
-            slice_object=self.sm_slice, as_self=self.as_self
+            slice_object=self.sm_slice, own_slices=self.own_slices
         )
         if return_status != Status.OK:
             raise Exception(
@@ -655,7 +655,7 @@ class Slice:
         if self.sm_slice is None:
             return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(
-            slice_object=self.sm_slice, as_self=self.as_self
+            slice_object=self.sm_slice, own_slices=self.own_slices
         )
         if status == Status.OK:
             self.slivers = slivers
