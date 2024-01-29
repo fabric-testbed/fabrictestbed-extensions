@@ -437,13 +437,15 @@ class Slice:
         return slice
 
     @staticmethod
-    def get_slice(fablib_manager: FablibManager, sm_slice: OrchestratorSlice = None):
+    def get_slice(fablib_manager: FablibManager, sm_slice: OrchestratorSlice = None, as_self: bool = True):
         """
         Not intended for API use.
 
         Gets an existing fablib slice using a slice manager slice
         :param fablib_manager:
         :param sm_slice:
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
         :return: Slice
         """
         logging.info("slice.get_slice()")
@@ -454,7 +456,7 @@ class Slice:
         slice.slice_name = sm_slice.name
 
         try:
-            slice.update_topology()
+            slice.update_topology(as_self=as_self)
         except Exception as e:
             logging.error(
                 f"Slice {slice.slice_name} could not update topology: slice.get_slice"
@@ -462,7 +464,7 @@ class Slice:
             logging.error(e, exc_info=True)
 
         try:
-            slice.update_slivers()
+            slice.update_slivers(as_self=as_self)
         except Exception as e:
             logging.error(
                 f"Slice {slice.slice_name} could not update slivers: slice.get_slice"
@@ -553,12 +555,15 @@ class Slice:
         """
         return self.topology
 
-    def update_slice(self):
+    def update_slice(self, as_self: bool = True):
         """
         Not recommended for most users.  See Slice.update() method.
 
         Updates this slice manager slice to store the most up-to-date
         slice manager slice
+
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
 
         :raises Exception: if slice manager slice no longer exists
         """
@@ -571,7 +576,7 @@ class Slice:
             start = time.time()
 
         return_status, slices = self.fablib_manager.get_slice_manager().slices(
-            excludes=[], slice_id=self.slice_id, name=self.slice_name
+            excludes=[], slice_id=self.slice_id, name=self.slice_name, as_self=as_self
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -589,11 +594,13 @@ class Slice:
                 "Failed to get slice list: {}, {}".format(return_status, slices)
             )
 
-    def update_topology(self):
+    def update_topology(self, as_self: bool = True):
         """
         Not recommended for most users.  See Slice.update() method.
 
         Updates the fabric slice topology with the slice manager slice's topology
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
 
         :raises Exception: if topology could not be gotten from slice manager
         """
@@ -612,7 +619,7 @@ class Slice:
             return_status,
             new_topo,
         ) = self.fablib_manager.get_slice_manager().get_slice_topology(
-            slice_object=self.sm_slice
+            slice_object=self.sm_slice, as_self=as_self
         )
         if return_status != Status.OK:
             raise Exception(
@@ -622,11 +629,13 @@ class Slice:
         # Set slice attributes
         self.topology = new_topo
 
-    def update_slivers(self):
+    def update_slivers(self, as_self: bool = True):
         """
         Not recommended for most users.  See Slice.update() method.
 
         Updates the slivers with the current slice manager.
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
 
         :raises Exception: if topology could not be gotten from slice manager
         """
@@ -638,7 +647,7 @@ class Slice:
         if self.sm_slice is None:
             return
         status, slivers = self.fablib_manager.get_slice_manager().slivers(
-            slice_object=self.sm_slice
+            slice_object=self.sm_slice, as_self=as_self
         )
         if status == Status.OK:
             self.slivers = slivers
@@ -646,21 +655,24 @@ class Slice:
 
         raise Exception(f"{slivers}")
 
-    def get_sliver(self, reservation_id: str) -> OrchestratorSliver:
-        slivers = self.get_slivers()
+    def get_sliver(self, reservation_id: str, as_self: bool = True) -> OrchestratorSliver:
+        slivers = self.get_slivers(as_self=as_self)
         sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
         return sliver
 
-    def get_slivers(self) -> List[OrchestratorSliver]:
+    def get_slivers(self, as_self: bool = True) -> List[OrchestratorSliver]:
         if not self.slivers:
             logging.debug(f"get_slivers", stack_info=False)
-            self.update_slivers()
+            self.update_slivers(as_self=as_self)
 
         return self.slivers
 
-    def update(self):
+    def update(self, as_self: bool = True):
         """
         (re)Query the FABRIC services for updated information about this slice.
+
+        :param as_self: True indicates return own slices; False indicates return project slices
+        :type as_self: bool
 
         :raises Exception: if updating topology fails
         """
@@ -668,18 +680,18 @@ class Slice:
         logging.info(f"update : {self.get_name()}, count: {self.update_count}")
 
         try:
-            self.update_slice()
+            self.update_slice(as_self=as_self)
         except Exception as e:
             logging.warning(f"slice.update_slice failed: {e}")
 
         try:
-            self.update_slivers()
+            self.update_slivers(as_self=as_self)
         except Exception as e:
             logging.warning(f"slice.update_slivers failed: {e}")
 
         self.nodes = None
         self.interfaces = None
-        self.update_topology()
+        self.update_topology(as_self=as_self)
 
         if self.get_state() == "ModifyOK":
             self.modify_accept()
