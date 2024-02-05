@@ -2772,7 +2772,7 @@ class Node:
         fablib_data = {
             "instantiated": "False",
             "run_update_commands": "False",
-            "post_boot_commands": [],
+            "post_boot_commands": ["sudo ip link set up dev $(ip -o link show | awk -F ': ' '{print $2}')"],
             "post_update_commands": [],
         }
         self.set_fablib_data(fablib_data)

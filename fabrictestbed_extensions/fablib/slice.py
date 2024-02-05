@@ -49,6 +49,7 @@ You would create and use a slice like so::
 
 from __future__ import annotations
 
+import datetime
 import ipaddress
 import json
 import logging
@@ -1949,7 +1950,8 @@ class Slice:
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
-        extra_ssh_keys: List[str] or None = None,
+        extra_ssh_keys: List[str] = None,
+        lease_in_days: int = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1969,6 +1971,8 @@ class Slice:
         :param post_boot_config:
         :param wait_ssh:
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
+        :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
+                              only used for create.
         :return: slice_id
         """
 
@@ -2004,6 +2008,12 @@ class Slice:
             for ssh_key in ssh_keys:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
+
+            lease_end_time = None
+            if lease_in_days:
+                lease_end_time = (datetime.datetime.now() +
+                                  datetime.timedelta(days=lease_in_days)).strftime("%Y-%m-%d %H:%M:%S %z")
+
             (
                 return_status,
                 slice_reservations,
@@ -2011,6 +2021,7 @@ class Slice:
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
+                lease_end_time=lease_end_time
             )
             if return_status == Status.OK:
                 logging.info(
