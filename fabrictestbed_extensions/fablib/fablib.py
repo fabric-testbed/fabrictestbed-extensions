@@ -943,6 +943,11 @@ class FablibManager(Config):
         Utils.save_to_file(
             file_path=public_file_path, data=ssh_keys[0].get(Constants.PUBLIC_OPENSSH)
         )
+        # Set the permissions to the files
+        # Private Key file permissions
+        os.chmod(private_file_path, 0o600)
+        # Public Key file permissions
+        os.chmod(public_file_path, 0o644)
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
