@@ -1431,7 +1431,7 @@ class Slice:
 
         self.topology = None
 
-    def renew(self, end_date: str, days: int = None):
+    def renew(self, end_date: str = None, days: int = None):
         """
         Renews the FABRIC slice's lease to the new end date.
 
@@ -1446,6 +1446,9 @@ class Slice:
         :param days: Integer
         :raises Exception: if renewal fails
         """
+        if end_date is None and days is None:
+            raise Exception("Either end_date or days must be specified!")
+
         if days is not None:
             end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
                 "%Y-%m-%d %H:%M:%S %z"
