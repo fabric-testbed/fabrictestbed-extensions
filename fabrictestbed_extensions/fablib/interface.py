@@ -912,7 +912,7 @@ class Interface:
                 self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
         else:
             # manual mode... do nothing
-            pass
+            self.ip_link_up()
 
     def add_mirror(self, port_name: str, name: str = "mirror"):
         self.get_slice().get_fim_topology().add_port_mirror_service(
