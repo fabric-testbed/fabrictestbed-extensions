@@ -55,7 +55,7 @@ import logging
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -89,7 +89,7 @@ from fabrictestbed_extensions.fablib.node import Node
 
 class Slice:
     def __init__(
-            self, fablib_manager: FablibManager, name: str = None, user_only: bool = True
+        self, fablib_manager: FablibManager, name: str = None, user_only: bool = True
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -166,7 +166,7 @@ class Slice:
         self.get_fim_topology().load(file_name=filename)
 
     def show(
-            self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
         """
         Show a table containing the current slice attributes.
@@ -247,12 +247,12 @@ class Slice:
         return slice_table
 
     def list_components(
-            self,
-            output: str = None,
-            fields: List[str] = None,
-            quiet: bool = False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: List[str] = None,
+        quiet: bool = False,
+        filter_function=None,
+        pretty_names=True,
     ):
         """
         Lists all the components in the slice with their attributes.
@@ -313,12 +313,12 @@ class Slice:
         return table
 
     def list_interfaces(
-            self,
-            output: str = None,
-            fields: List[str] = None,
-            quiet: bool = False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: List[str] = None,
+        quiet: bool = False,
+        filter_function=None,
+        pretty_names=True,
     ):
         """
         Lists all the interfaces in the slice with their attributes.
@@ -442,9 +442,9 @@ class Slice:
 
     @staticmethod
     def get_slice(
-            fablib_manager: FablibManager,
-            sm_slice: OrchestratorSlice = None,
-            user_only: bool = True,
+        fablib_manager: FablibManager,
+        sm_slice: OrchestratorSlice = None,
+        user_only: bool = True,
     ):
         """
         Not intended for API use.
@@ -877,11 +877,11 @@ class Slice:
         return self.sm_slice.project_id
 
     def add_port_mirror_service(
-            self,
-            name: str,
-            mirror_interface_name: str,
-            receive_interface: Interface or None = None,
-            mirror_direction: str = "both",
+        self,
+        name: str,
+        mirror_interface_name: str,
+        receive_interface: Interface or None = None,
+        mirror_direction: str = "both",
     ) -> NetworkService:
         """
         Adds a special PortMirror service.
@@ -910,13 +910,13 @@ class Slice:
         return port_mirror_service
 
     def add_l2network(
-            self,
-            name: str = None,
-            interfaces: List[Interface] = [],
-            type: str = None,
-            subnet: ipaddress = None,
-            gateway: ipaddress = None,
-            user_data: dict = {},
+        self,
+        name: str = None,
+        interfaces: List[Interface] = [],
+        type: str = None,
+        subnet: ipaddress = None,
+        gateway: ipaddress = None,
+        user_data: dict = {},
     ) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
@@ -970,11 +970,11 @@ class Slice:
         return network_service
 
     def add_l3network(
-            self,
-            name: str = None,
-            interfaces: List[Interface] = [],
-            type: str = "IPv4",
-            user_data: dict = {},
+        self,
+        name: str = None,
+        interfaces: List[Interface] = [],
+        type: str = "IPv4",
+        user_data: dict = {},
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -1032,7 +1032,7 @@ class Slice:
         )
 
     def add_facility_port(
-            self, name: str = None, site: str = None, vlan: str = None
+        self, name: str = None, site: str = None, vlan: str = None
     ) -> NetworkService:
         """
         Adds a new L2 facility port to this slice
@@ -1051,17 +1051,17 @@ class Slice:
         )
 
     def add_node(
-            self,
-            name: str,
-            site: str = None,
-            cores: int = 2,
-            ram: int = 8,
-            disk: int = 10,
-            image: str = None,
-            instance_type: str = None,
-            host: str = None,
-            user_data: dict = {},
-            avoid: List[str] = [],
+        self,
+        name: str,
+        site: str = None,
+        cores: int = 2,
+        ram: int = 8,
+        disk: int = 10,
+        image: str = None,
+        instance_type: str = None,
+        host: str = None,
+        user_data: dict = {},
+        avoid: List[str] = [],
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1134,7 +1134,7 @@ class Slice:
         return node
 
     def get_object_by_reservation(
-            self, reservation_id: str
+        self, reservation_id: str
     ) -> Union[Node, NetworkService, Interface, None]:
         """
         Gets an object associated with this slice by its reservation ID.
@@ -1373,8 +1373,8 @@ class Slice:
         try:
             for net_name, net in self.get_fim_topology().network_services.items():
                 if (
-                        str(net.get_property("type"))
-                        in NetworkService.get_fim_network_service_types()
+                    str(net.get_property("type"))
+                    in NetworkService.get_fim_network_service_types()
                 ):
                     return_networks.append(
                         NetworkService(slice=self, fim_network_service=net)
@@ -1447,7 +1447,9 @@ class Slice:
         :raises Exception: if renewal fails
         """
         if days is not None:
-            end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S %z")
+            end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
+                "%Y-%m-%d %H:%M:%S %z"
+            )
 
         return_status, result = self.fablib_manager.get_slice_manager().renew(
             slice_object=self.sm_slice, new_lease_end_time=end_date
@@ -1528,10 +1530,10 @@ class Slice:
                         print(" Slice state: {}".format(slice.state))
                     break
                 if (
-                        slice.state == "Closing"
-                        or slice.state == "Dead"
-                        or slice.state == "StableError"
-                        or slice.state == "ModifyError"
+                    slice.state == "Closing"
+                    or slice.state == "Dead"
+                    or slice.state == "StableError"
+                    or slice.state == "ModifyError"
                 ):
                     if progress:
                         print(" Slice state: {}".format(slice.state))
@@ -1750,9 +1752,9 @@ class Slice:
 
         for node in self.get_nodes():
             if (
-                    node.get_reservation_state() == "Ticketed"
-                    or not node.get_reservation_state()
-                    or node.get_reservation_state() == "None"
+                node.get_reservation_state() == "Ticketed"
+                or not node.get_reservation_state()
+                or node.get_reservation_state() == "None"
             ):
                 logging.warning(
                     f"slice not ready: node {node.get_name()} status: {node.get_reservation_state()}"
@@ -1760,8 +1762,8 @@ class Slice:
                 return False
 
             if (
-                    node.get_reservation_state() == "Active"
-                    and node.get_management_ip() == None
+                node.get_reservation_state() == "Active"
+                and node.get_management_ip() == None
             ):
                 logging.warning(
                     f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
@@ -1772,11 +1774,11 @@ class Slice:
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
                     if (
-                            not type(net.get_subnet())
-                                in [ipaddress.IPv4Network, ipaddress.IPv6Network]
-                            or not type(net.get_gateway())
-                                   in [ipaddress.IPv4Address, ipaddress.IPv6Address]
-                            or net.get_available_ips() == None
+                        not type(net.get_subnet())
+                        in [ipaddress.IPv4Network, ipaddress.IPv6Network]
+                        or not type(net.get_gateway())
+                        in [ipaddress.IPv4Address, ipaddress.IPv6Address]
+                        or net.get_available_ips() == None
                     ):
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
@@ -1946,16 +1948,16 @@ class Slice:
             print(f"\nTime to print interfaces {time.time() - start:.0f} seconds")
 
     def submit(
-            self,
-            wait: bool = True,
-            wait_timeout: int = 1800,
-            wait_interval: int = 20,
-            progress: bool = True,
-            wait_jupyter: str = "text",
-            post_boot_config: bool = True,
-            wait_ssh: bool = True,
-            extra_ssh_keys: List[str] = None,
-            lease_in_days: int = None,
+        self,
+        wait: bool = True,
+        wait_timeout: int = 1800,
+        wait_interval: int = 20,
+        progress: bool = True,
+        wait_jupyter: str = "text",
+        post_boot_config: bool = True,
+        wait_ssh: bool = True,
+        extra_ssh_keys: List[str] = None,
+        lease_in_days: int = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2015,8 +2017,9 @@ class Slice:
 
             lease_end_time = None
             if lease_in_days:
-                lease_end_time = (datetime.now(timezone.utc) +
-                                  timedelta(days=lease_in_days)).strftime("%Y-%m-%d %H:%M:%S %z")
+                lease_end_time = (
+                    datetime.now(timezone.utc) + timedelta(days=lease_in_days)
+                ).strftime("%Y-%m-%d %H:%M:%S %z")
 
             (
                 return_status,
@@ -2025,7 +2028,7 @@ class Slice:
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
-                lease_end_time=lease_end_time
+                lease_end_time=lease_end_time,
             )
             if return_status == Status.OK:
                 logging.info(
@@ -2050,9 +2053,9 @@ class Slice:
             )
 
         if (
-                progress
-                and wait_jupyter == "text"
-                and self.fablib_manager.is_jupyter_notebook()
+            progress
+            and wait_jupyter == "text"
+            and self.fablib_manager.is_jupyter_notebook()
         ):
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id
@@ -2082,13 +2085,13 @@ class Slice:
         return self.slice_id
 
     def list_networks(
-            self,
-            output=None,
-            fields=None,
-            colors=False,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output=None,
+        fields=None,
+        colors=False,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ):
         """
         Lists all the networks in the slice.
@@ -2201,13 +2204,13 @@ class Slice:
         return table
 
     def list_slivers(
-            self,
-            output=None,
-            fields=None,
-            colors=False,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output=None,
+        fields=None,
+        colors=False,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ):
         """
         Lists all the slivers in the slice.
@@ -2352,13 +2355,13 @@ class Slice:
         return table
 
     def list_nodes(
-            self,
-            output=None,
-            fields=None,
-            colors=False,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output=None,
+        fields=None,
+        colors=False,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ):
         """
         Lists all the nodes in the slice.
@@ -2463,13 +2466,13 @@ class Slice:
         return table
 
     def modify(
-            self,
-            wait: int = True,
-            wait_timeout: int = 600,
-            wait_interval: int = 10,
-            progress: bool = True,
-            wait_jupyter: str = "text",
-            post_boot_config: bool = True,
+        self,
+        wait: int = True,
+        wait_timeout: int = 600,
+        wait_interval: int = 10,
+        progress: bool = True,
+        wait_jupyter: str = "text",
+        post_boot_config: bool = True,
     ):
         """
         Submits a modify slice request to FABRIC.
@@ -2512,9 +2515,9 @@ class Slice:
         logging.debug(f"slice_reservations: {slice_reservations}")
 
         if (
-                progress
-                and wait_jupyter == "text"
-                and self.fablib_manager.is_jupyter_notebook()
+            progress
+            and wait_jupyter == "text"
+            and self.fablib_manager.is_jupyter_notebook()
         ):
             self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
             return self.slice_id

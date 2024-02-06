@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Reduce the time taken for the call node.get_ssh_command() (Issue [#280](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/280))
 - Allow access to other user's slices in a project (Issue [#279](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/279))
+- Allow user to specify Lease End time for Slice creation (Issue [#51](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/51)]
+- Ubuntu images need ifaces brought up (Issue [#123](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/123)
+- Add/Remove Network Interfaces for Facility Ports (Issue [#284](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/284))
 
 ## [1.6.3] - 2024-01-26
 
