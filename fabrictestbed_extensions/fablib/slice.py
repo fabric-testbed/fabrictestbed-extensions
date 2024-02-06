@@ -230,7 +230,7 @@ class Slice:
                 quiet=True,
                 pretty_names_dict=pretty_names_dict,
             )
-            slice_table.apply(state_color)
+            slice_table.map(state_color)
 
             if not quiet:
                 display(slice_table)
@@ -2187,13 +2187,13 @@ class Slice:
 
         if table and colors:
             if pretty_names:
-                # table = table.apply(highlight, axis=1)
-                table = table.apply(state_color, subset=pd.IndexSlice[:, ["State"]])
-                table = table.apply(error_color, subset=pd.IndexSlice[:, ["Error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
-                # table = table.apply(highlight, axis=1)
-                table = table.apply(state_color, subset=pd.IndexSlice[:, ["state"]])
-                table = table.apply(error_color, subset=pd.IndexSlice[:, ["error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
 
         if table and not quiet:
             display(table)
@@ -2338,13 +2338,13 @@ class Slice:
 
         if table and colors:
             if pretty_names:
-                # table = table.apply(highlight, axis=1)
-                table = table.apply(state_color, subset=pd.IndexSlice[:, ["State"]])
-                table = table.apply(error_color, subset=pd.IndexSlice[:, ["Error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
-                # table = table.apply(highlight, axis=1)
-                table = table.apply(state_color, subset=pd.IndexSlice[:, ["state"]])
-                table = table.apply(error_color, subset=pd.IndexSlice[:, ["error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
 
         if table and not quiet:
             display(table)
@@ -2450,13 +2450,13 @@ class Slice:
 
         if table and colors:
             if pretty_names:
-                # table = table.apply(highlight, axis=1)
-                table = table.apply(state_color, subset=pd.IndexSlice[:, ["State"]])
-                table = table.apply(error_color, subset=pd.IndexSlice[:, ["Error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
-                # table = table.apply(highlight, axis=1)
-                table = table.apply(state_color, subset=pd.IndexSlice[:, ["state"]])
-                table = table.apply(error_color, subset=pd.IndexSlice[:, ["error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
         if table and not quiet:
             display(table)
 
