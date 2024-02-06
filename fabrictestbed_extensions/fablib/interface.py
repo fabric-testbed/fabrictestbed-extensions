@@ -901,6 +901,8 @@ class Interface:
 
             self.set_fablib_data(fablib_data)
 
+        self.ip_link_up()
+
         if mode in [self.CONFIG, self.AUTO]:
             subnet = self.get_network().get_subnet()
             addr = fablib_data.get(self.ADDR)
@@ -910,7 +912,7 @@ class Interface:
                 self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
         else:
             # manual mode... do nothing
-            self.ip_link_up()
+            pass
 
     def add_mirror(self, port_name: str, name: str = "mirror"):
         self.get_slice().get_fim_topology().add_port_mirror_service(
