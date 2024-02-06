@@ -2466,12 +2466,13 @@ class Node:
         :type interface: Interface
         """
 
-        if interface == None:
+        if not interface:
             return
 
+        ip_command = None
         try:
             network = interface.get_network()
-            if network == None:
+            if not network:
                 return
             elif network.get_layer() == NSLayer.L3:
                 if network.get_type() in [
@@ -2520,6 +2521,8 @@ class Node:
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        ip_command = None
+
         try:
             if interface.get_network().get_layer() == NSLayer.L3:
                 if interface.get_network().get_type() in [

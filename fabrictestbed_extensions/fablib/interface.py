@@ -475,10 +475,8 @@ class Interface:
         Bring up the link on the interface.
 
         """
-        if self.get_network() == None:
-            return
-
-        self.get_node().ip_link_up(None, self)
+        if self.get_network():
+            self.get_node().ip_link_up(None, self)
 
     def ip_link_down(self):
         """
@@ -903,7 +901,7 @@ class Interface:
 
             self.set_fablib_data(fablib_data)
 
-        if mode == self.CONFIG or mode == self.AUTO:
+        if mode in [self.CONFIG, self.AUTO]:
             subnet = self.get_network().get_subnet()
             addr = fablib_data.get(self.ADDR)
             if addr and subnet:
