@@ -55,6 +55,7 @@ import logging
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -229,7 +230,7 @@ class Slice:
                 quiet=True,
                 pretty_names_dict=pretty_names_dict,
             )
-            slice_table.applymap(state_color)
+            slice_table.map(state_color)
 
             if not quiet:
                 display(slice_table)
@@ -1430,20 +1431,29 @@ class Slice:
 
         self.topology = None
 
-    def renew(self, end_date: str):
+    def renew(self, end_date: str = None, days: int = None):
         """
         Renews the FABRIC slice's lease to the new end date.
 
         Date is in UTC and of the form: "%Y-%m-%d %H:%M:%S %z"
 
-        Example of formating a date for 1 day from now:
+        Example of formatting a date for 1 day from now:
 
         end_date = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S %z")
 
 
         :param end_date: String
+        :param days: Integer
         :raises Exception: if renewal fails
         """
+        if end_date is None and days is None:
+            raise Exception("Either end_date or days must be specified!")
+
+        if days is not None:
+            end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
+                "%Y-%m-%d %H:%M:%S %z"
+            )
+
         return_status, result = self.fablib_manager.get_slice_manager().renew(
             slice_object=self.sm_slice, new_lease_end_time=end_date
         )
@@ -1949,7 +1959,8 @@ class Slice:
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
-        extra_ssh_keys: List[str] or None = None,
+        extra_ssh_keys: List[str] = None,
+        lease_in_days: int = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1969,6 +1980,8 @@ class Slice:
         :param post_boot_config:
         :param wait_ssh:
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
+        :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
+                              only used for create.
         :return: slice_id
         """
 
@@ -2004,6 +2017,13 @@ class Slice:
             for ssh_key in ssh_keys:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
+
+            lease_end_time = None
+            if lease_in_days:
+                lease_end_time = (
+                    datetime.now(timezone.utc) + timedelta(days=lease_in_days)
+                ).strftime("%Y-%m-%d %H:%M:%S %z")
+
             (
                 return_status,
                 slice_reservations,
@@ -2011,6 +2031,7 @@ class Slice:
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
+                lease_end_time=lease_end_time,
             )
             if return_status == Status.OK:
                 logging.info(
@@ -2172,13 +2193,13 @@ class Slice:
 
         if table and colors:
             if pretty_names:
-                # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["Error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
-                # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
 
         if table and not quiet:
             display(table)
@@ -2323,13 +2344,13 @@ class Slice:
 
         if table and colors:
             if pretty_names:
-                # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["Error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
-                # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
 
         if table and not quiet:
             display(table)
@@ -2435,13 +2456,13 @@ class Slice:
 
         if table and colors:
             if pretty_names:
-                # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["State"]])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["Error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
             else:
-                # table = table.apply(highlight, axis=1)
-                table = table.applymap(state_color, subset=pd.IndexSlice[:, ["state"]])
-                table = table.applymap(error_color, subset=pd.IndexSlice[:, ["error"]])
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
         if table and not quiet:
             display(table)
 
