@@ -165,10 +165,8 @@ class Config:
             if os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
                 Path(fabric_rc).touch()
 
-        if not os.path.exists(fabric_rc):
-            raise ConfigException("Config file does not exist!")
-
-        self.config_file_path = fabric_rc
+        if fabric_rc and os.path.exists(fabric_rc):
+            self.config_file_path = fabric_rc
         self.is_yaml = False
         self.runtime_config = {}
         self.offline = offline
@@ -233,7 +231,7 @@ class Config:
 
         :raises ConfigException: if config file does not exist
         """
-        if file_path:
+        if file_path and os.path.exists(file_path):
             if Utils.is_yaml_file(file_path=file_path):
                 self.__load_yaml_file(file_path=file_path)
                 self.is_yaml = True
@@ -313,7 +311,10 @@ class Config:
         for attr, attr_props in self.REQUIRED_ATTRS.items():
             if attr not in self.runtime_config or self.runtime_config.get(attr) is None:
                 # Load from environment variables
-                if os.environ.get(attr_props.get(Constants.ENV_VAR)) is not None:
+                if (
+                    attr_props.get(Constants.ENV_VAR)
+                    and os.environ.get(attr_props.get(Constants.ENV_VAR)) is not None
+                ):
                     self.runtime_config[attr] = os.environ.get(
                         attr_props.get(Constants.ENV_VAR)
                     )
@@ -717,6 +718,10 @@ class Config:
         return self.REQUIRED_ATTRS_PRETTY_NAMES
 
     def save_config(self):
+        if self.config_file_path is None:
+            print("Config file path not set!")
+            return
+
         if self.is_yaml:
             # Write the dictionary to the YAML file
             with atomic_write(self.config_file_path, overwrite=True) as f:

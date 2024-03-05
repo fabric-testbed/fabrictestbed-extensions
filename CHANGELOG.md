@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Fixed
+- Can't instantiate FablibManager without config file (Issue [#286](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/286))
 - Reduce the time taken for the call node.get_ssh_command() (Issue [#280](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/280))
 - Allow access to other user's slices in a project (Issue [#279](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/279))
 - Allow user to specify Lease End time for Slice creation (Issue [#51](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/51)]

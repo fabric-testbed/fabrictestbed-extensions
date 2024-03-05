@@ -46,7 +46,6 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 import jinja2
-from fabric_cf.orchestrator.orchestrator_proxy import Status
 from fabrictestbed.slice_editor import Flags, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
@@ -856,7 +855,6 @@ class NetworkService:
             return gateway
         except Exception as e:
             logging.warning(f"Failed to get gateway: {e}")
-            return None
 
     def get_available_ips(
         self, count: int = 256
@@ -882,7 +880,6 @@ class NetworkService:
             return ip_list
         except Exception as e:
             logging.warning(f"Failed to get_available_ips: {e}")
-            return None
 
     def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
         """
@@ -932,7 +929,6 @@ class NetworkService:
             return subnet
         except Exception as e:
             logging.warning(f"Failed to get subnet: {e}")
-            return None
 
     def get_reservation_id(self) -> str or None:
         """
@@ -1010,8 +1006,6 @@ class NetworkService:
         for interface in self.get_fim_network_service().interface_list:
             if name in interface.name:
                 return self.get_slice().get_interface(name=interface.name)
-
-        return None
 
     def has_interface(self, interface: Interface) -> bool:
         """
@@ -1164,6 +1158,8 @@ class NetworkService:
 
     def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
         fablib_data = self.get_fablib_data()
+        if "subnet" not in fablib_data:
+            fablib_data["subnet"] = {}
         allocated_ips = fablib_data["subnet"]["allocated_ips"]
         allocated_ips.append(str(addr))
         self.set_fablib_data(fablib_data)
@@ -1188,7 +1184,7 @@ class NetworkService:
                     return host
         return None
 
-    def set_allocated_ips(self, allocated_ips: dict[IPv4Address or IPv6Address]):
+    def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
         fablib_data = self.get_fablib_data()
         allocated_ips_strs = []
         for ip in allocated_ips:
@@ -1218,18 +1214,13 @@ class NetworkService:
 
         self.fim_network_service.set_properties(labels=labels)
 
-    def set_gateway(self, gateway: IPv4Address or IPv6Address):
-        fablib_data = self.get_fablib_data()
-        fablib_data["subnet"]["gateway"] = str(gateway)
-        self.set_fablib_data(fablib_data)
-
     def init_fablib_data(self):
         fablib_data = {"instantiated": "False", "mode": "manual"}
         self.set_fablib_data(fablib_data)
 
     def is_instantiated(self):
         fablib_data = self.get_fablib_data()
-        if fablib_data["instantiated"] == "True":
+        if "instantiated" in fablib_data and fablib_data["instantiated"] == "True":
             return True
         else:
             return False
