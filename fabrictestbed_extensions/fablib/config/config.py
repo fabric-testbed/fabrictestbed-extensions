@@ -716,6 +716,10 @@ class Config:
         return self.REQUIRED_ATTRS_PRETTY_NAMES
 
     def save_config(self):
+        if self.config_file_path is None:
+            print("Config file path not set!")
+            return
+
         if self.is_yaml:
             # Write the dictionary to the YAML file
             with atomic_write(self.config_file_path, overwrite=True) as f:
