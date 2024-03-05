@@ -165,10 +165,8 @@ class Config:
             if os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
                 Path(fabric_rc).touch()
 
-        if not os.path.exists(fabric_rc):
-            raise ConfigException("Config file does not exist!")
-
-        self.config_file_path = fabric_rc
+        if fabric_rc and os.path.exists(fabric_rc):
+            self.config_file_path = fabric_rc
         self.is_yaml = False
         self.runtime_config = {}
         self.offline = offline
@@ -233,7 +231,7 @@ class Config:
 
         :raises ConfigException: if config file does not exist
         """
-        if file_path:
+        if file_path and os.path.exists(file_path):
             if Utils.is_yaml_file(file_path=file_path):
                 self.__load_yaml_file(file_path=file_path)
                 self.is_yaml = True
