@@ -984,9 +984,13 @@ class NetworkService:
             self.interfaces = []
             for interface in self.get_fim_network_service().interface_list:
                 logging.debug(f"interface: {interface}")
-                self.interfaces.append(
-                    self.get_slice().get_interface(name=interface.name)
-                )
+
+                try:
+                    self.interfaces.append(
+                        self.get_slice().get_interface(name=interface.name)
+                    )
+                except:
+                    logging.warning(f"interface not found: {interface.name}")
 
         return self.interfaces
 
@@ -1185,8 +1189,10 @@ class NetworkService:
         allocated_ips_strs = []
         for ip in allocated_ips:
             allocated_ips_strs.append(str(ip))
+
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
+
         fablib_data["subnet"]["allocated_ips"] = allocated_ips_strs
         self.set_fablib_data(fablib_data)
 
