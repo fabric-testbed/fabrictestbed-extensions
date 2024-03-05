@@ -311,7 +311,8 @@ class Config:
         for attr, attr_props in self.REQUIRED_ATTRS.items():
             if attr not in self.runtime_config or self.runtime_config.get(attr) is None:
                 # Load from environment variables
-                if os.environ.get(attr_props.get(Constants.ENV_VAR)) is not None:
+                if attr_props.get(Constants.ENV_VAR) and \
+                        os.environ.get(attr_props.get(Constants.ENV_VAR)) is not None:
                     self.runtime_config[attr] = os.environ.get(
                         attr_props.get(Constants.ENV_VAR)
                     )
