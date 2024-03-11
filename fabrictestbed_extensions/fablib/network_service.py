@@ -233,7 +233,10 @@ class NetworkService:
                     nodes_per_site[node.get_site()] += 1
                 for interface in interfaces:
                     node = interface.get_node()
-                    if interface.get_model() == "NIC_Basic" and nodes_per_site[node.get_site()] > 1:
+                    if (
+                        interface.get_model() == "NIC_Basic"
+                        and nodes_per_site[node.get_site()] > 1
+                    ):
                         if node.get_host() is None:
                             exception_list.append(
                                 f"Network type {type} does not support multiple NIC_Basic interfaces on VMs "

@@ -148,7 +148,11 @@ class FacilityPort:
             interfaces = []
             index = 1
             for v in vlan:
-                iface_tuple = (f"iface-{index}", Labels(vlan=v), Capacities(bw=bandwidth))
+                iface_tuple = (
+                    f"iface-{index}",
+                    Labels(vlan=v),
+                    Capacities(bw=bandwidth),
+                )
                 interfaces.append(iface_tuple)
             fim_facility_port = slice.get_fim_topology().add_facility(
                 name=name,

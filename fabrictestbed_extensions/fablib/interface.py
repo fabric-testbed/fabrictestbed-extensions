@@ -59,8 +59,12 @@ class Interface:
     ADDR = "addr"
     CONFIG = "config"
 
-    def __init__(self, component: Component = None, fim_interface: FimInterface = None,
-                 node: FacilityPort = None):
+    def __init__(
+        self,
+        component: Component = None,
+        fim_interface: FimInterface = None,
+        node: FacilityPort = None,
+    ):
         """
         .. note::
 
@@ -665,7 +669,7 @@ class Interface:
         """
         return self.get_node().get_slice()
 
-    def get_node(self) -> Union [Node, FacilityPort]:
+    def get_node(self) -> Union[Node, FacilityPort]:
         """
         Gets the node this interface's component is on.
 
