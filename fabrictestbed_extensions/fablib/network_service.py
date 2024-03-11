@@ -231,7 +231,6 @@ class NetworkService:
                     if isinstance(node, FacilityPort):
                         continue
                     nodes_per_site[node.get_site()] += 1
-                print(nodes_per_site)
                 for interface in interfaces:
                     node = interface.get_node()
                     if interface.get_model() == "NIC_Basic" and nodes_per_site[node.get_site()] > 1:
