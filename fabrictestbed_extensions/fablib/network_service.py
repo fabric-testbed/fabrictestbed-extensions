@@ -46,7 +46,7 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 import jinja2
-from fabrictestbed.slice_editor import Flags, Labels
+from fabrictestbed.slice_editor import Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
@@ -134,14 +134,14 @@ class NetworkService:
         facility_port_interfaces = 0
         for interface in interfaces:
             sites.add(interface.get_site())
-            if isinstance(interface.get_component(), FacilityPort):
+            if isinstance(interface.get_node(), FacilityPort):
                 includes_facility_port = True
                 facility_port_interfaces += 1
             if interface.get_model() == "NIC_Basic":
                 basic_nic_count += 1
 
         rtn_nstype = None
-        if len(sites) <= 1 and len(sites) >= 0:
+        if 1 >= len(sites) >= 0:
             rtn_nstype = NetworkService.network_service_map["L2Bridge"]
         # elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
         #    #TODO: remove this when STS works on all links.
@@ -180,6 +180,8 @@ class NetworkService:
         :rtype: bool
         """
 
+        from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+        
         sites = set([])
         nics = set([])
         nodes = set([])
@@ -224,6 +226,8 @@ class NetworkService:
                 nodes_per_site = {}
                 for interface in interfaces:
                     node = interface.get_node()
+                    if isinstance(node, FacilityPort):
+                        continue
                     if node.get_site() not in nodes_per_site:
                         nodes_per_site[node.get_site()] = 0
                     nodes_per_site[node.get_site()] += 1
