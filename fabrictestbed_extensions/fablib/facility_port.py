@@ -207,6 +207,6 @@ class FacilityPort:
         """
         ifaces = []
         for fim_interface in self.get_fim_interface().interface_list:
-            ifaces.append(Interface(node=self.fim_interface, fim_interface=fim_interface))
+            ifaces.append(Interface(node=self, fim_interface=fim_interface))
 
         return ifaces

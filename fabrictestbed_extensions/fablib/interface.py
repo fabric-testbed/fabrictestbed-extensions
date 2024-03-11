@@ -44,7 +44,6 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
-    from fim.user.node import Node as FimNode
 
 from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
@@ -58,7 +57,7 @@ class Interface:
     ADDR = "addr"
     CONFIG = "config"
 
-    def __init__(self, component: Component = None, fim_interface: FimInterface = None, node: FimNode = None):
+    def __init__(self, component: Component = None, fim_interface: FimInterface = None, node: Node = None):
         """
         .. note::
 
