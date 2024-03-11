@@ -39,7 +39,6 @@ import jinja2
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 
-
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
