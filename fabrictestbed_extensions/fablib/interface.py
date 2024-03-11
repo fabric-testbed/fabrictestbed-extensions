@@ -33,7 +33,7 @@ import ipaddress
 import json
 import logging
 from ipaddress import IPv4Address
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
+    from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
 from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
@@ -57,7 +58,12 @@ class Interface:
     ADDR = "addr"
     CONFIG = "config"
 
-    def __init__(self, component: Component = None, fim_interface: FimInterface = None):
+    def __init__(
+        self,
+        component: Component = None,
+        fim_interface: FimInterface = None,
+        node: FacilityPort = None,
+    ):
         """
         .. note::
 
@@ -69,12 +75,16 @@ class Interface:
         :param fim_interface: the FABRIC information model interface
             to set on this fablib interface
         :type fim_interface: FimInterface
+
+        :param node: the facility Port to which interface is assoicated with
+        :type node: FacilityPort
         """
         super().__init__()
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
         self.dev = None
+        self.node = node
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -532,7 +542,7 @@ class Interface:
         """
         return self.fim_interface
 
-    def get_bandwidth(self) -> str:
+    def get_bandwidth(self) -> int:
         """
         Gets the bandwidth of an interface. Basic NICs claim 0 bandwidth but
         are 100 Gbps shared by all Basic NICs on the host.
@@ -540,7 +550,7 @@ class Interface:
         :return: bandwith
         :rtype: String
         """
-        if self.get_component().get_model() == "NIC_Basic":
+        if self.get_component() and self.get_component().get_model() == "NIC_Basic":
             return 100
         else:
             return self.get_fim_interface().capacities.bw
@@ -635,7 +645,10 @@ class Interface:
         :return: the model of this interface's component
         :rtype: str
         """
-        return self.get_component().get_model()
+        if self.node:
+            return self.node.get_model()
+        else:
+            return self.get_component().get_model()
 
     def get_site(self) -> str:
         """
@@ -644,7 +657,7 @@ class Interface:
         :return: the site this interface is on
         :rtype: str
         """
-        return self.get_component().get_site()
+        return self.get_node().get_site()
 
     def get_slice(self) -> Slice:
         """
@@ -655,14 +668,17 @@ class Interface:
         """
         return self.get_node().get_slice()
 
-    def get_node(self) -> Node:
+    def get_node(self) -> Union[Node, FacilityPort]:
         """
         Gets the node this interface's component is on.
 
         :return: the node this interface is attached to
         :rtype: Node
         """
-        return self.get_component().get_node()
+        if self.node:
+            return self.node
+        else:
+            return self.get_component().get_node()
 
     def get_network(self) -> NetworkService:
         """
@@ -689,8 +705,6 @@ class Interface:
                         f"Interface network found. interface {self.get_name()}, network {self.network.get_name()}"
                     )
                     return self.network
-
-        return None
 
     # fablib.Interface.get_ip_link()
     def get_ip_link(self):
@@ -724,13 +738,11 @@ class Interface:
             stdout, stderr = self.get_node().execute(
                 f"ip -j addr show {dev}", quiet=True
             )
+            return stdout
         except Exception as e:
-            (f"Exception: {e}")
             logging.error(
-                f"Failed to get ip addr show info for interface {self.get_name()}"
+                f"Failed to get ip addr show info for interface {self.get_name()} Exception: {e}"
             )
-
-        return stdout
 
     # fablib.Interface.get_ip_addr()
     def get_ip_addr_ssh(self, dev=None):

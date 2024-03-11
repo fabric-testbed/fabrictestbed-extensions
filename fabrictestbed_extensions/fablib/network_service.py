@@ -46,7 +46,7 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 import jinja2
-from fabrictestbed.slice_editor import Flags, Labels
+from fabrictestbed.slice_editor import Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
@@ -134,14 +134,14 @@ class NetworkService:
         facility_port_interfaces = 0
         for interface in interfaces:
             sites.add(interface.get_site())
-            if isinstance(interface.get_component(), FacilityPort):
+            if isinstance(interface.get_node(), FacilityPort):
                 includes_facility_port = True
                 facility_port_interfaces += 1
             if interface.get_model() == "NIC_Basic":
                 basic_nic_count += 1
 
         rtn_nstype = None
-        if len(sites) <= 1 and len(sites) >= 0:
+        if 1 >= len(sites) >= 0:
             rtn_nstype = NetworkService.network_service_map["L2Bridge"]
         # elif basic_nic_count == 0 and len(sites) == 2 and len(interfaces) == 2:
         #    #TODO: remove this when STS works on all links.
@@ -166,7 +166,7 @@ class NetworkService:
     @staticmethod
     def validate_nstype(type, interfaces):
         """
-        Not inteded for API use
+        Not intended for API use
 
 
         Verifies the network service type against the number of interfaces.
@@ -179,6 +179,8 @@ class NetworkService:
         :return: true if the network service type is valid based on the number of interfaces
         :rtype: bool
         """
+
+        from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
         sites = set([])
         nics = set([])
@@ -197,13 +199,15 @@ class NetworkService:
         if type == NetworkService.network_service_map["L2Bridge"]:
             if len(sites) > 1:
                 raise Exception(
-                    f"Network type {type} must be empty or include interfaces from exactly one site. {len(sites)} sites requested: {sites}"
+                    f"Network type {type} must be empty or include interfaces from exactly one site. {len(sites)} "
+                    f"sites requested: {sites}"
                 )
 
         elif type == NetworkService.network_service_map["L2PTP"]:
             if not len(sites) == 2:
                 raise Exception(
-                    f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}"
+                    f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites "
+                    f"requested: {sites}"
                 )
             if "NIC_Basic" in nics:
                 raise Exception(
@@ -214,20 +218,36 @@ class NetworkService:
             exception_list = []
             if len(sites) != 2:
                 exception_list.append(
-                    f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites requested: {sites}"
+                    f"Network type {type} must include interfaces from exactly two sites. {len(sites)} sites "
+                    f"requested: {sites}"
                 )
             if len(interfaces) > 2:
                 hosts = set([])
+                nodes_per_site = {}
                 for interface in interfaces:
                     node = interface.get_node()
-                    if interface.get_model() == "NIC_Basic":
-                        if node.get_host() == None:
+                    if node.get_site() not in nodes_per_site:
+                        nodes_per_site[node.get_site()] = 0
+                    if isinstance(node, FacilityPort):
+                        continue
+                    nodes_per_site[node.get_site()] += 1
+                for interface in interfaces:
+                    node = interface.get_node()
+                    if (
+                        interface.get_model() == "NIC_Basic"
+                        and nodes_per_site[node.get_site()] > 1
+                    ):
+                        if node.get_host() is None:
                             exception_list.append(
-                                f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing on the same host. Please see Node.set_host(host_nane) to explicitily bind a nodes to a specific host. Node {node.get_name()} is unbound."
+                                f"Network type {type} does not support multiple NIC_Basic interfaces on VMs "
+                                f"residing on the same host. Please see Node.set_host(host_name) to explicitly "
+                                f"bind a nodes to a specific host. Node {node.get_name()} is unbound."
                             )
                         elif node.get_host() in hosts:
                             exception_list.append(
-                                f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing on the same host. Please see Node.set_host(host_nane) to explicitily bind a nodes to a specific host. Multiple nodes bound to {node.get_host()}."
+                                f"Network type {type} does not support multiple NIC_Basic interfaces on VMs residing "
+                                f"on the same host. Please see Node.set_host(host_name) to explicitly bind a nodes "
+                                f"to a specific host. Multiple nodes bound to {node.get_host()}."
                             )
                         else:
                             hosts.add(node.get_host())
@@ -389,15 +409,15 @@ class NetworkService:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
-            if vlan1 == None and vlan2 == None:
+            if vlan1 is None and vlan2 is None:
                 # TODO: Long term we might have multiple vlan on one property
                 # and will need to make sure they are unique.  For now this okay
                 interfaces[0].set_vlan("100")
                 interfaces[1].set_vlan("100")
-            elif vlan1 == None and vlan2 != None:
+            elif vlan1 is None and vlan2 is not None:
                 # Match VLANs if one is set.
                 interfaces[0].set_vlan(vlan2)
-            elif vlan1 != None and vlan2 == None:
+            elif vlan1 is not None and vlan2 is None:
                 # Match VLANs if one is set.
                 interfaces[1].set_vlan(vlan1)
 

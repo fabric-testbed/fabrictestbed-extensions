@@ -1032,7 +1032,7 @@ class Slice:
         )
 
     def add_facility_port(
-        self, name: str = None, site: str = None, vlan: str = None
+        self, name: str = None, site: str = None, vlan: Union[str, list] = None
     ) -> NetworkService:
         """
         Adds a new L2 facility port to this slice
