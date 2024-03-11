@@ -650,7 +650,7 @@ class Interface:
         :return: the site this interface is on
         :rtype: str
         """
-        return self.get_component().get_site()
+        return self.get_node().get_site()
 
     def get_slice(self) -> Slice:
         """
