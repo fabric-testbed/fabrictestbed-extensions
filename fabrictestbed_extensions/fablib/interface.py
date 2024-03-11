@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
+    from fim.user.node import Node as FimNode
 
 from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
@@ -57,7 +58,7 @@ class Interface:
     ADDR = "addr"
     CONFIG = "config"
 
-    def __init__(self, component: Component = None, fim_interface: FimInterface = None):
+    def __init__(self, component: Component = None, fim_interface: FimInterface = None, node: FimNode = None):
         """
         .. note::
 
@@ -69,12 +70,17 @@ class Interface:
         :param fim_interface: the FABRIC information model interface
             to set on this fablib interface
         :type fim_interface: FimInterface
+
+        :param node: the FABRIC information model node
+            to set on this fablib interface
+        :type node: FimNode
         """
         super().__init__()
         self.fim_interface = fim_interface
         self.component = component
         self.network = None
         self.dev = None
+        self.node = node
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -662,7 +668,10 @@ class Interface:
         :return: the node this interface is attached to
         :rtype: Node
         """
-        return self.get_component().get_node()
+        if self.node:
+            return self.node
+        else:
+            return self.get_component().get_node()
 
     def get_network(self) -> NetworkService:
         """

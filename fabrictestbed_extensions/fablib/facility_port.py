@@ -32,7 +32,7 @@ This module contains methods to work with FABRIC `facility ports`_.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Capacities, Labels
@@ -41,7 +41,7 @@ from tabulate import tabulate
 from fabrictestbed_extensions.fablib.interface import Interface
 
 if TYPE_CHECKING:
-    from fim.user.interface import Interface as FimInterface
+    from fim.user.node import Node as FimNode
 
     from fabrictestbed_extensions.fablib.slice import Slice
 
@@ -50,7 +50,7 @@ class FacilityPort:
     fim_interface = None
     slice = None
 
-    def __init__(self, slice: Slice, fim_interface: FimInterface):
+    def __init__(self, slice: Slice, fim_interface: FimNode):
         """
         :param slice: the fablib slice to have this node on
         :type slice: Slice
@@ -119,7 +119,7 @@ class FacilityPort:
 
         return table
 
-    def get_fim_interface(self) -> FimInterface:
+    def get_fim_interface(self) -> FimNode:
         return self.fim_interface
 
     def get_model(self) -> str:
@@ -141,19 +141,31 @@ class FacilityPort:
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        vlan: str = None,
+        vlan: Union[str, list] = None,
         bandwidth: int = 10,
     ):
-        fim_facility_port = slice.get_fim_topology().add_facility(
-            name=name,
-            site=site,
-            capacities=Capacities(bw=bandwidth),
-            labels=Labels(vlan=vlan),
-        )
+        if isinstance(vlan, list):
+            interfaces = []
+            index = 1
+            for v in vlan:
+                iface_tuple = (f"iface-{index}", Labels(vlan=v), Capacities(bw=bandwidth))
+                interfaces.append(iface_tuple)
+            fim_facility_port = slice.get_fim_topology().add_facility(
+                name=name,
+                site=site,
+                interfaces=interfaces,
+            )
+        else:
+            fim_facility_port = slice.get_fim_topology().add_facility(
+                name=name,
+                site=site,
+                capacities=Capacities(bw=bandwidth),
+                labels=Labels(vlan=vlan),
+            )
         return FacilityPort(slice, fim_facility_port)
 
     @staticmethod
-    def get_facility_port(slice: Slice = None, facility_port: FimInterface = None):
+    def get_facility_port(slice: Slice = None, facility_port: FimNode = None):
         """
 
         :param slice:
@@ -195,6 +207,6 @@ class FacilityPort:
         """
         ifaces = []
         for fim_interface in self.get_fim_interface().interface_list:
-            ifaces.append(Interface(component=self, fim_interface=fim_interface))
+            ifaces.append(Interface(node=self.fim_interface, fim_interface=fim_interface))
 
         return ifaces
