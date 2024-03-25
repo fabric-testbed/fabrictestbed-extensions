@@ -1028,7 +1028,7 @@ class FablibManager(Config):
 
         fields: json output will include all available fields/columns.
 
-        Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
+        Example: fields=['Name','ConnectX-5 Available', 'NVMe Available']
 
         filter_function:  A lambda function to filter data by field values.
 
