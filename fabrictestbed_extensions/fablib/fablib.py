@@ -798,8 +798,7 @@ class FablibManager(Config):
 
         with open(bastion_ssh_config_file, "w") as f:
             f.write(
-                f"""
-UserKnownHostsFile /dev/null
+                f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 120 
 
