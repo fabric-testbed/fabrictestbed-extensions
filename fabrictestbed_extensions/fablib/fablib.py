@@ -70,6 +70,8 @@ import os
 import random
 import time
 import warnings
+warnings.filterwarnings('always', category=DeprecationWarning)
+
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
