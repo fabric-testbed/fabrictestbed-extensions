@@ -69,6 +69,10 @@ import logging
 import os
 import random
 import time
+import warnings
+
+warnings.filterwarnings("always", category=DeprecationWarning)
+
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
 from typing import TYPE_CHECKING, Dict, List
@@ -672,7 +676,8 @@ class FablibManager(Config):
 
     def validate_config(self):
         """
-        Validate Fablib config - checks if all the required configuration exists for slice provisioning to work successfully
+        Validate and create Fablib config - checks if all the required configuration exists for slice
+        provisioning to work successfully
 
         - Checks Credential Manager Host is configured properly
 
@@ -682,9 +687,41 @@ class FablibManager(Config):
 
         - Checks Bastion Host is configured properly
 
-        - Check Sliver keys exist
+        - Check Sliver keys exist; create sliver keys if they do not exist
 
-        - Check Bastion keys exist and are not expired
+        - Check Bastion keys exist and are not expired; update/create bastion keys if expired or do not exist
+
+        - Check Bastion Username is configured
+
+        - Check Project Id is configured
+
+        .. deprecated:: 1.6.5
+           Use `verify_and_configure()` instead.
+        @raises Exception if the configuration is invalid
+        """
+        warnings.warn(
+            "This function is deprecated and will be removed in future releases, "
+            "please use 'verify_and_configure' instead.",
+            DeprecationWarning,
+        )
+        self.verify_and_configure()
+
+    def verify_and_configure(self):
+        """
+        Validate and create Fablib config - checks if all the required configuration exists for slice
+        provisioning to work successfully
+
+        - Checks Credential Manager Host is configured properly
+
+        - Checks Orchestrator Host is configured properly
+
+        - Checks Core API Host is configured properly
+
+        - Checks Bastion Host is configured properly
+
+        - Check Sliver keys exist; create sliver keys if they do not exist
+
+        - Check Bastion keys exist and are not expired; update/create bastion keys if expired or do not exist
 
         - Check Bastion Username is configured
 
@@ -758,21 +795,30 @@ class FablibManager(Config):
             print("Bastion SSH Config file already exists, not making updates!")
             return
 
+        dir_path = os.path.dirname(bastion_ssh_config_file)
+        if not os.path.exists(dir_path):
+            msg = (
+                f"Directory {dir_path} does not exist, can not create ssh_config file!"
+            )
+            print(msg)
+            logging.error(msg)
+            raise Exception(msg)
+
         with open(bastion_ssh_config_file, "w") as f:
             f.write(
                 f"""UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    ServerAliveInterval 120 
+StrictHostKeyChecking no
+ServerAliveInterval 120 
 
-    Host bastion.fabric-testbed.net
-         User {self.get_bastion_username()}
-         ForwardAgent yes
-         Hostname %h
-         IdentityFile {self.get_bastion_key_location()}
-         IdentitiesOnly yes
+Host bastion.fabric-testbed.net
+     User {self.get_bastion_username()}
+     ForwardAgent yes
+     Hostname %h
+     IdentityFile {self.get_bastion_key_location()}
+     IdentitiesOnly yes
 
-    Host * !bastion.fabric-testbed.net
-         ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
+Host * !bastion.fabric-testbed.net
+     ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
     """
             )
 
@@ -927,6 +973,14 @@ class FablibManager(Config):
         :param store_pubkey flag indicating if the public key should be saved
         :type store_pubkey: bool
         """
+        dir_path = os.path.dirname(private_file_path)
+        if not os.path.exists(dir_path):
+            msg = (
+                f"Directory {dir_path} does not exist, can not create {key_type} keys!"
+            )
+            print(msg)
+            logging.error(msg)
+            raise Exception(msg)
         comment = os.path.basename(private_file_path)
         ssh_keys = self.get_slice_manager().create_ssh_keys(
             key_type=key_type,
