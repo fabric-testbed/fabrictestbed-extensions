@@ -966,7 +966,7 @@ Host * !bastion.fabric-testbed.net
         :param store_pubkey flag indicating if the public key should be saved
         :type store_pubkey: bool
         """
-        dir_path = os.path.basename(private_file_path)
+        dir_path = os.path.dirname(private_file_path)
         if not os.path.exists(dir_path):
             msg = f"Directory {dir_path} does not exist, can not create {key_type} keys!"
             print(msg)
