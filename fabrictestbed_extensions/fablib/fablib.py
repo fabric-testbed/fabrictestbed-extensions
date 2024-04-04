@@ -70,7 +70,8 @@ import os
 import random
 import time
 import warnings
-warnings.filterwarnings('always', category=DeprecationWarning)
+
+warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
@@ -698,8 +699,11 @@ class FablibManager(Config):
            Use `verify_and_configure()` instead.
         @raises Exception if the configuration is invalid
         """
-        warnings.warn("This function is deprecated and will be removed in future releases, "
-                      "please use 'verify_and_configure' instead.", DeprecationWarning)
+        warnings.warn(
+            "This function is deprecated and will be removed in future releases, "
+            "please use 'verify_and_configure' instead.",
+            DeprecationWarning,
+        )
         self.verify_and_configure()
 
     def verify_and_configure(self):
@@ -793,7 +797,9 @@ class FablibManager(Config):
 
         dir_path = os.path.dirname(bastion_ssh_config_file)
         if not os.path.exists(dir_path):
-            msg = f"Directory {dir_path} does not exist, can not create ssh_config file!"
+            msg = (
+                f"Directory {dir_path} does not exist, can not create ssh_config file!"
+            )
             print(msg)
             logging.error(msg)
             raise Exception(msg)
@@ -969,7 +975,9 @@ Host * !bastion.fabric-testbed.net
         """
         dir_path = os.path.dirname(private_file_path)
         if not os.path.exists(dir_path):
-            msg = f"Directory {dir_path} does not exist, can not create {key_type} keys!"
+            msg = (
+                f"Directory {dir_path} does not exist, can not create {key_type} keys!"
+            )
             print(msg)
             logging.error(msg)
             raise Exception(msg)
