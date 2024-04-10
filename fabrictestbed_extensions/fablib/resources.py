@@ -303,8 +303,9 @@ class Resources:
                 return site.components[component_model_name].capacities.unit
 
             nodes = self.get_nodes(site=site)
-            for w in nodes.values():
-                component_capacity += w.components[component_model_name].unit
+            if nodes:
+                for w in nodes.values():
+                    component_capacity += w.components[component_model_name].unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
         return component_capacity
@@ -330,8 +331,9 @@ class Resources:
             if isinstance(site, node.Node):
                 return site.components[component_model_name].capacity_allocations.unit
             nodes = self.get_nodes(site=site)
-            for w in nodes.values():
-                component_allocated += w.components[component_model_name].capacity_allocations.unit
+            if nodes:
+                for w in nodes.values():
+                    component_allocated += w.components[component_model_name].capacity_allocations.unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
         return component_allocated
