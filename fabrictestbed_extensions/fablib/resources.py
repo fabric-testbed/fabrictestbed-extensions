@@ -120,27 +120,26 @@ class Resources:
         table = []
         for site_name, site in self.topology.sites.items():
             # logging.debug(f"site -- {site}")
-            site_sliver = site.get_sliver()
             table.append(
                 [
                     site.name,
-                    f"{self.get_ptp_capable(site_name)}",
-                    self.get_cpu_capacity(site_sliver),
-                    f"{self.get_core_available(site_sliver)}/{self.get_core_capacity(site_sliver)}",
-                    f"{self.get_ram_available(site_sliver)}/{self.get_ram_capacity(site_sliver)}",
-                    f"{self.get_disk_available(site_sliver)}/{self.get_disk_capacity(site_sliver)}",
+                    f"{self.get_ptp_capable(site)}",
+                    self.get_cpu_capacity(site),
+                    f"{self.get_core_available(site)}/{self.get_core_capacity(site)}",
+                    f"{self.get_ram_available(site)}/{self.get_ram_capacity(site)}",
+                    f"{self.get_disk_available(site)}/{self.get_disk_capacity(site)}",
                     # self.get_host_capacity(site),
                     # self.get_location_postal(site),
                     # self.get_location_lat_long(site),
-                    f"{self.get_component_available(site_sliver,'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site_sliver,'SharedNIC-ConnectX-6')}",
-                    f"{self.get_component_available(site_sliver,'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site_sliver,'SmartNIC-ConnectX-6')}",
-                    f"{self.get_component_available(site_sliver,'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site_sliver,'SmartNIC-ConnectX-5')}",
-                    f"{self.get_component_available(site_sliver,'NVME-P4510')}/{self.get_component_capacity(site_sliver,'NVME-P4510')}",
-                    f"{self.get_component_available(site_sliver,'GPU-Tesla T4')}/{self.get_component_capacity(site_sliver,'GPU-Tesla T4')}",
-                    f"{self.get_component_available(site_sliver,'GPU-RTX6000')}/{self.get_component_capacity(site_sliver,'GPU-RTX6000')}",
-                    f"{self.get_component_available(site_sliver, 'GPU-A30')}/{self.get_component_capacity(site_sliver, 'GPU-A30')}",
-                    f"{self.get_component_available(site_sliver, 'GPU-A40')}/{self.get_component_capacity(site_sliver, 'GPU-A40')}",
-                    f"{self.get_component_available(site_sliver, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site_sliver, 'FPGA-Xilinx-U280')}",
+                    f"{self.get_component_available(site,'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site,'SharedNIC-ConnectX-6')}",
+                    f"{self.get_component_available(site,'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site,'SmartNIC-ConnectX-6')}",
+                    f"{self.get_component_available(site,'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site,'SmartNIC-ConnectX-5')}",
+                    f"{self.get_component_available(site,'NVME-P4510')}/{self.get_component_capacity(site,'NVME-P4510')}",
+                    f"{self.get_component_available(site,'GPU-Tesla T4')}/{self.get_component_capacity(site,'GPU-Tesla T4')}",
+                    f"{self.get_component_available(site,'GPU-RTX6000')}/{self.get_component_capacity(site,'GPU-RTX6000')}",
+                    f"{self.get_component_available(site, 'GPU-A30')}/{self.get_component_capacity(site, 'GPU-A30')}",
+                    f"{self.get_component_available(site, 'GPU-A40')}/{self.get_component_capacity(site, 'GPU-A40')}",
+                    f"{self.get_component_available(site, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site, 'FPGA-Xilinx-U280')}",
                 ]
             )
 
@@ -189,7 +188,7 @@ class Resources:
         """
         site = self.topology.sites[site_name]
 
-        data = self.site_to_dict(site.get_sliver(), latlon=latlon)
+        data = self.site_to_dict(site, latlon=latlon)
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names
@@ -256,6 +255,7 @@ class Resources:
         :type site: String
         """
         try:
+            traceback.print_stack()
             from fim.graph.abc_property_graph import ABCPropertyGraph
             from fim.view_only_dict import ViewOnlyDict
             from fim.user import Node
@@ -990,7 +990,7 @@ class Resources:
     ):
         table = []
         for site_name, site in self.topology.sites.items():
-            table.append(self.site_to_dict(site.get_sliver(), latlon=latlon))
+            table.append(self.site_to_dict(site, latlon=latlon))
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names
