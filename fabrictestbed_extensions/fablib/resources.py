@@ -294,7 +294,8 @@ class Resources:
             nodes = self.get_nodes(site=site)
             if nodes:
                 for w in nodes.values():
-                    component_capacity += w.components[component_model_name].capacities.unit
+                    if component_model_name in w.components:
+                        component_capacity += w.components[component_model_name].capacities.unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
         return component_capacity
@@ -320,7 +321,8 @@ class Resources:
             nodes = self.get_nodes(site=site)
             if nodes:
                 for w in nodes.values():
-                    component_allocated += w.components[component_model_name].capacity_allocations.unit
+                    if component_model_name in w.components:
+                        component_allocated += w.components[component_model_name].capacity_allocations.unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
         return component_allocated
@@ -977,7 +979,9 @@ class Resources:
     ):
         table = []
         for site_name, site in self.topology.sites.items():
-            table.append(self.site_to_dict(site, latlon=latlon))
+            site_dict = self.site_to_dict(site, latlon=latlon)
+            if site_dict.get("hosts"):
+                table.append(site_dict)
 
         if pretty_names:
             pretty_names_dict = self.site_pretty_names
