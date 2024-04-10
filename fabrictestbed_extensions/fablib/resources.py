@@ -257,21 +257,15 @@ class Resources:
         try:
             traceback.print_stack()
             from fim.graph.abc_property_graph import ABCPropertyGraph
-            from fim.view_only_dict import ViewOnlyDict
-            from fim.user import Node
             if isinstance(site, str):
-                s = self.get_topology_site(site)
-            elif isinstance(site, network_node.NodeSliver):
-                s = site
-            else:
-                raise Exception(f"Invalid arguments: {site} is of {type(site)}, expected str or network_node.NodeSliver")
+                site = self.get_topology_site(site)
 
-            node_id_list = s.topo.graph_model.get_first_neighbor(node_id=s.node_id, rel=ABCPropertyGraph.REL_HAS,
-                                                                 node_label=ABCPropertyGraph.CLASS_NetworkNode)
+            node_id_list = site.topo.graph_model.get_first_neighbor(node_id=site.node_id, rel=ABCPropertyGraph.REL_HAS,
+                                                                    node_label=ABCPropertyGraph.CLASS_NetworkNode)
             ret = dict()
             for nid in node_id_list:
-                _, node_props = s.topo.graph_model.get_node_properties(node_id=nid)
-                n = Node(name=node_props[ABCPropertyGraph.PROP_NAME], node_id=nid, topo=s.topo)
+                _, node_props = site.topo.graph_model.get_node_properties(node_id=nid)
+                n = node.Node(name=node_props[ABCPropertyGraph.PROP_NAME], node_id=nid, topo=site.topo)
                 # exclude Facility nodes
                 from fim.user import NodeType
                 if n.type != NodeType.Facility:
@@ -298,10 +292,6 @@ class Resources:
         """
         component_capacity = 0
         try:
-            if isinstance(site, node.Node):
-                print("KOMAL -- Site is a node.Node")
-                return site.components[component_model_name].capacities.unit
-
             nodes = self.get_nodes(site=site)
             if nodes:
                 for w in nodes.values():
@@ -328,8 +318,6 @@ class Resources:
         """
         component_allocated = 0
         try:
-            if isinstance(site, node.Node):
-                return site.components[component_model_name].capacity_allocations.unit
             nodes = self.get_nodes(site=site)
             if nodes:
                 for w in nodes.values():
