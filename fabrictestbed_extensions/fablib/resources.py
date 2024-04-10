@@ -255,7 +255,6 @@ class Resources:
         :type site: String
         """
         try:
-            traceback.print_stack()
             from fim.graph.abc_property_graph import ABCPropertyGraph
             if isinstance(site, str):
                 site = self.get_topology_site(site)
@@ -295,7 +294,7 @@ class Resources:
             nodes = self.get_nodes(site=site)
             if nodes:
                 for w in nodes.values():
-                    component_capacity += w.components[component_model_name].unit
+                    component_capacity += w.components[component_model_name].capacities.unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
         return component_capacity
