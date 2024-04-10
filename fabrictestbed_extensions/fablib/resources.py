@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
+import traceback
 from typing import List, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
@@ -40,6 +41,7 @@ from fabrictestbed.slice_manager import Status
 from fim.slivers import maintenance_mode, network_node
 from fim.user import composite_node, interface, link, node
 from tabulate import tabulate
+from fim.view_only_dict import ViewOnlyDict
 
 
 class Resources:
@@ -122,7 +124,7 @@ class Resources:
             table.append(
                 [
                     site.name,
-                    f"{self.get_ptp_capable()}",
+                    f"{self.get_ptp_capable(site_name)}",
                     self.get_cpu_capacity(site_sliver),
                     f"{self.get_core_available(site_sliver)}/{self.get_core_capacity(site_sliver)}",
                     f"{self.get_ram_available(site_sliver)}/{self.get_ram_capacity(site_sliver)}",
@@ -247,6 +249,38 @@ class Resources:
             # logging.warning(f"Failed to get site state {site_name}")
             return ""
 
+    def get_nodes(self, site: str or network_node.NodeSliver) -> ViewOnlyDict:
+        """
+        Get worker nodes on a site
+        :param site: site name
+        :type site: String
+        """
+        try:
+            from fim.graph.abc_property_graph import ABCPropertyGraph
+            from fim.view_only_dict import ViewOnlyDict
+            from fim.user import Node
+            if isinstance(site, str):
+                s = self.get_topology_site(site)
+            elif isinstance(site, network_node.NodeSliver):
+                s = site
+            else:
+                raise Exception(f"Invalid arguments: {site} is of {type(site)}, expected str or network_node.NodeSliver")
+
+            node_id_list = s.topo.graph_model.get_first_neighbor(node_id=s.node_id, rel=ABCPropertyGraph.REL_HAS,
+                                                                 node_label=ABCPropertyGraph.CLASS_NetworkNode)
+            ret = dict()
+            for nid in node_id_list:
+                _, node_props = s.topo.graph_model.get_node_properties(node_id=nid)
+                n = Node(name=node_props[ABCPropertyGraph.PROP_NAME], node_id=nid, topo=s.topo)
+                # exclude Facility nodes
+                from fim.user import NodeType
+                if n.type != NodeType.Facility:
+                    ret[n.name] = n
+            return ViewOnlyDict(ret)
+        except Exception as e:
+            logging.error(f"Error occurred - {e}")
+            logging.error(traceback.format_exc())
+
     def get_component_capacity(
         self,
         site: str or node.Node or network_node.NodeSliver,
@@ -269,11 +303,13 @@ class Resources:
                 ).capacities.unit
             if isinstance(site, node.Node):
                 return site.components[component_model_name].capacities.unit
-            return (
-                self.get_topology_site(site)
-                .components[component_model_name]
-                .capacities.unit
-            )
+
+            # String
+            nodes = self.get_nodes(site=site)
+            total_comp_capacity = 0
+            for w in nodes.values():
+                total_comp_capacity += w.components[component_model_name].unit
+
         except Exception as e:
             # logging.debug(f"Failed to get {component_model_name} capacity {site}")
             return 0
@@ -627,7 +663,7 @@ class Resources:
         return_status, topology = (
             self.get_fablib_manager()
             .get_slice_manager()
-            .resources(force_refresh=force_refresh)
+            .resources(force_refresh=force_refresh, level=2)
         )
         if return_status != Status.OK:
             raise Exception(
