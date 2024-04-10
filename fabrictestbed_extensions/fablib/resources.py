@@ -296,23 +296,18 @@ class Resources:
         :return: total component capacity
         :rtype: int
         """
+        component_capacity = 0
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.attached_components_info.get_device(
-                    component_model_name
-                ).capacities.unit
             if isinstance(site, node.Node):
+                print("KOMAL -- Site is a node.Node")
                 return site.components[component_model_name].capacities.unit
 
-            # String
             nodes = self.get_nodes(site=site)
-            total_comp_capacity = 0
             for w in nodes.values():
-                total_comp_capacity += w.components[component_model_name].unit
-
+                component_capacity += w.components[component_model_name].unit
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} capacity {site}")
-            return 0
+            logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+        return component_capacity
 
     def get_component_allocated(
         self,
@@ -330,21 +325,16 @@ class Resources:
         :return: currently allocated component of this model
         :rtype: int
         """
+        component_allocated = 0
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.attached_components_info.get_device(
-                    component_model_name
-                ).capacity_allocations.unit
             if isinstance(site, node.Node):
                 return site.components[component_model_name].capacity_allocations.unit
-            return (
-                self.get_topology_site(site)
-                .components[component_model_name]
-                .capacity_allocations.unit
-            )
+            nodes = self.get_nodes(site=site)
+            for w in nodes.values():
+                component_allocated += w.components[component_model_name].capacity_allocations.unit
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} allocated {site}")
-            return 0
+            logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
+        return component_allocated
 
     def get_component_available(
         self,
