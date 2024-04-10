@@ -45,17 +45,14 @@ You would add a node and operate on it like so::
 
 from __future__ import annotations
 
-import concurrent.futures
 import ipaddress
 import json
 import logging
-import os
 import re
 import select
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import jinja2
@@ -65,7 +62,6 @@ from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
-from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -88,7 +84,7 @@ class Node:
     default_disk = 10
     default_image = "default_rocky_8"
 
-    def __init__(self, slice: Slice, node: FimNode):
+    def __init__(self, slice: Slice, node: FimNode, check: bool = False, remove: bool = True):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
 
@@ -103,6 +99,8 @@ class Node:
         self.slice = slice
         self.host = None
         self.ip_addr_list_json = None
+        self.check = check
+        self.remove = remove
 
         # Try to set the username.
         try:
@@ -164,7 +162,7 @@ class Node:
 
     @staticmethod
     def new_node(
-        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
+        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = [], check: bool = True, remove: bool = True
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -184,14 +182,21 @@ class Node:
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
 
+        :param check: Validate if the node can be provisioned on a site
+        :type check: bool
+
+        :param remove: Remove the node from the topology if it can't be provisioned
+        :type remove: bool
+
         :return: a new fablib node
         :rtype: Node
         """
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid,
+                                                                 filter_function=lambda x: x['cores_available'] > Node.default_cores and x['ram_available'] > Node.default_ram and x['disk_available'] > Node.default_disk)
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
-        node = Node(slice, slice.topology.add_node(name=name, site=site))
+        node = Node(slice, slice.topology.add_node(name=name, site=site), check=check, remove=remove)
         node.set_capacities(
             cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
         )
@@ -1080,7 +1085,7 @@ class Node:
         return self.get_slice().get_private_key_passphrase()
 
     def add_component(
-        self, model: str = None, name: str = None, user_data: dict = {}
+        self, model: str = None, name: str = None, user_data: dict = {}, check: bool = False, remove: bool = True
     ) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
@@ -1111,12 +1116,25 @@ class Node:
         :param name: the name of the new component
         :type name: String
 
+        :param check: Validate if the component can be attached to the node on the requested site
+        :type check: bool
+
+        :param remove: Remove the component from the topology if it can't be provisioned
+        :type remove: bool
+
         :return: the new component
         :rtype: Component
         """
-        return Component.new_component(
+        component = Component.new_component(
             node=self, model=model, name=name, user_data=user_data
         )
+        if self.check:
+            worker_found = self.get_fablib_manager().resources.validate(node=self)
+            if not worker_found:
+                if remove:
+                    component.delete()
+                else:
+                    raise Exception("Component cannot be attached")
 
     def get_components(self) -> List[Component]:
         """

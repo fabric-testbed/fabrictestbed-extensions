@@ -38,10 +38,14 @@ from typing import List, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
-from fim.slivers import maintenance_mode, network_node
-from fim.user import composite_node, interface, link, node
+from fim.slivers import network_node
+from fim.user import interface, link, node
 from tabulate import tabulate
 from fim.view_only_dict import ViewOnlyDict
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from fabrictestbed_extensions.fablib.node import Node
 
 
 class Resources:
@@ -227,7 +231,6 @@ class Resources:
             return self.topology.sites[site_name]
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
-            return None
 
     def get_state(self, site: str or node.Node or network_node.NodeSliver) -> str:
         """
@@ -801,7 +804,7 @@ class Resources:
             },
             "ptp": {
                 "pretty_name": "PTP Capable",
-                "value": self.get_ptp_capable(),
+                "value": self.get_ptp_capable(site),
             },
             "hosts": {
                 "pretty_name": "Hosts",
@@ -1229,3 +1232,45 @@ class FacilityPorts(Resources):
             filter_function=filter_function,
             pretty_names_dict=pretty_names_dict,
         )
+
+    def validate(self, node: Node) -> bool:
+        site = self.get_topology_site(site_name=node.get_name())
+        workers = self.get_nodes(site=site)
+        allocated_comps_per_worker = {}
+        worker_found = False
+        for w in workers.values():
+            if w.name not in allocated_comps_per_worker:
+                allocated_comps_per_worker[w.name] = {}
+            available_cores = w.capacities.cores - w.capacity_allocations.cores
+            available_ram = w.capacities.ram - w.capacity_allocations.ram
+            available_disk = w.capacities.disk - w.capacity_allocations.disk
+            if (node.get_cores() > available_cores or
+                    node.get_disk() > available_disk or
+                    node.get_ram() > available_ram):
+                print(f"Worker: {w} does not meet core/ram/disk requirements!")
+                continue
+
+            error = False
+            # Check if there are enough components available
+            for c in node.get_components():
+                comp_model = c.get_model()
+                if comp_model not in w.components:
+                    print(f"Worker: {w} does not have the requested component: {comp_model}")
+                    error = True
+                    break
+                if comp_model not in allocated_comps_per_worker[w.name]:
+                    allocated_comps_per_worker[w.name][comp_model] = 0
+                available_comps = w.components[comp_model].capacities.unit - w.components[comp_model].capacity_allocations.unit
+                available_comps -= allocated_comps_per_worker[w.name][comp_model]
+                if not available_comps:
+                    print(f"Worker: {w} has reached the limit for component: {comp_model}")
+                    error = True
+                    break
+                allocated_comps_per_worker[w.name][comp_model] += 1
+
+            if error:
+                continue
+
+            worker_found = True
+            break
+        return worker_found
