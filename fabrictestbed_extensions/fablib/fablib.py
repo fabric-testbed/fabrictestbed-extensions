@@ -2222,9 +2222,9 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated_comps: dict):
-        available_cores = worker.capacities.core - worker.capacity_allocations.core if worker.capacity_allocations is not None else 0
-        available_ram = worker.capacities.ram - worker.capacity_allocations.ram if worker.capacity_allocations is not None else 0
-        available_disk = worker.capacities.disk - worker.capacity_allocations.disk if worker.capacity_allocations is not None else 0
+        available_cores = worker.capacities.core - (worker.capacity_allocations.core if worker.capacity_allocations is not None else 0)
+        available_ram = worker.capacities.ram - (worker.capacity_allocations.ram if worker.capacity_allocations is not None else 0)
+        available_disk = worker.capacities.disk - (worker.capacity_allocations.disk if worker.capacity_allocations is not None else 0)
 
         if (node.get_requested_cores() > available_cores or
                 node.get_requested_disk() > available_disk or
