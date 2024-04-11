@@ -1133,12 +1133,15 @@ class Slice:
         self.interfaces = None
 
         if check:
-            if not self.get_fablib_manager().validate(node=node):
+            status, error = self.get_fablib_manager().validate(node=node)
+            if not status:
                 if remove:
-                    print(f"Removing: {node.get_name()} from the topology!")
+                    print(f"{node.get_name()} removed from the topology with reason: {error}!")
                     node.delete()
+                    node = None
                 else:
-                    raise ValueError("Node cannot be added")
+                    raise ValueError(f"{node.get_name()} cannot be allocated as requested on site: "
+                                     f"{node.get_site()}, reason: {error}")
         return node
 
     def get_object_by_reservation(

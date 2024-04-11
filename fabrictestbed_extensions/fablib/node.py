@@ -1159,11 +1159,14 @@ class Node:
             node=self, model=model, name=name, user_data=user_data
         )
         if self.check:
-            if self.get_fablib_manager().validate(node=self):
+            status, error = self.get_fablib_manager().validate(node=self)
+            if not status:
                 if self.remove:
-                    component.delete()
+                    print(f"{self.get_name()} removed from the topology with reason: {error}!")
+                    self.delete()
                 else:
-                    raise ValueError("Component cannot be attached")
+                    raise ValueError(f"{self.get_name()} cannot be allocated as requested on site: "
+                                     f"{self.get_site()}, reason: {error}")
         return component
 
     def get_components(self) -> List[Component]:
