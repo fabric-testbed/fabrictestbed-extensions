@@ -2238,7 +2238,7 @@ Host * !bastion.fabric-testbed.net
 
         # Check if there are enough components available
         for c in node.get_components():
-            comp_model = c.get_model()
+            comp_model = c.get_fim_model()
             if comp_model not in worker.components:
                 msg = f"Worker: {worker} does not have the requested component: {comp_model}"
                 return False, msg
@@ -2281,5 +2281,5 @@ Host * !bastion.fabric-testbed.net
                                                                allocated_comps=allocated_comps)
             if status:
                 return status, msg
-        msg = f"Node can not be allocated on any worker on site: {site}"
+        msg = f"Node can not be allocated on any worker on site: {site.name}"
         return False, msg
