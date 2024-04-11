@@ -114,6 +114,7 @@ class Interface:
             ["Device", self.get_os_interface()],
             ["Address", self.get_ip_addr()],
             ["Numa Node", self.get_numa_node()],
+            ["Switch Port", self.get_switch_port()]
         ]
 
         return tabulate(table)
@@ -149,6 +150,7 @@ class Interface:
             "mode": "Mode",
             "ip_addr": "IP Address",
             "numa": "Numa Node",
+            "switch_port": "Switch Port",
         }
 
     def toDict(self, skip=[]):
@@ -200,7 +202,14 @@ class Interface:
             "dev": dev,
             "ip_addr": ip_addr,
             "numa": str(self.get_numa_node()),
+            "switch_port": str(self.get_switch_port())
         }
+
+    def get_switch_port(self) -> str:
+        if self.get_network() and self.get_network().get_fim():
+            ifs = self.get_network().get_fim().interfaces.get(self.get_name())
+            if ifs and ifs.labels and ifs.labels.local_name:
+                return ifs.labels.local_name
 
     def get_numa_node(self) -> str:
         if self.get_component() is not None:
