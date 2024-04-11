@@ -2255,7 +2255,7 @@ Host * !bastion.fabric-testbed.net
         site = self.get_resources().get_topology_site(site_name=node.get_name())
         workers = self.get_resources().get_nodes(site=site)
         if not workers:
-            logging.warning(f"Can't do Node validation, worker information not available for {site}")
+            print(f"Can't do Node validation, worker information not available for {site}")
             return False
         allocated_comps_per_worker = {}
 

@@ -1062,6 +1062,7 @@ class Slice:
         host: str = None,
         user_data: dict = {},
         avoid: List[str] = [],
+        check: bool = True, remove: bool = True
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1108,7 +1109,7 @@ class Slice:
         :return: a new node
         :rtype: Node
         """
-        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
+        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid, check=check, remove=remove)
 
         node.init_fablib_data()
 

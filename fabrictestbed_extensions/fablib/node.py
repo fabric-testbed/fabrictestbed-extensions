@@ -84,7 +84,7 @@ class Node:
     default_disk = 10
     default_image = "default_rocky_8"
 
-    def __init__(self, slice: Slice, node: FimNode, check: bool = False, remove: bool = True):
+    def __init__(self, slice: Slice, node: FimNode, check: bool = True, remove: bool = True):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
 
@@ -1091,7 +1091,7 @@ class Node:
         return self.get_slice().get_private_key_passphrase()
 
     def add_component(
-        self, model: str = None, name: str = None, user_data: dict = {}, check: bool = False, remove: bool = True
+        self, model: str = None, name: str = None, user_data: dict = {}
     ) -> Component:
         """
         Creates a new FABRIC component using this fablib node.
@@ -1122,12 +1122,6 @@ class Node:
         :param name: the name of the new component
         :type name: String
 
-        :param check: Validate if the component can be attached to the node on the requested site
-        :type check: bool
-
-        :param remove: Remove the component from the topology if it can't be provisioned
-        :type remove: bool
-
         :return: the new component
         :rtype: Component
         """
@@ -1136,7 +1130,7 @@ class Node:
         )
         if self.check:
             if self.get_fablib_manager().validate(node=self):
-                if remove:
+                if self.remove:
                     component.delete()
                 else:
                     raise ValueError("Component cannot be attached")
