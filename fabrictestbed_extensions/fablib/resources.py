@@ -306,9 +306,10 @@ class Resources:
                         component_capacity += w.components[
                             component_model_name
                         ].capacities.unit
+            return component_capacity
         except Exception as e:
-            logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
-        return component_capacity
+            #logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            return component_capacity
 
     def get_component_allocated(
         self,
@@ -335,9 +336,10 @@ class Resources:
                         component_allocated += w.components[
                             component_model_name
                         ].capacity_allocations.unit
+            return component_allocated
         except Exception as e:
-            logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
-        return component_allocated
+            #logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
+            return component_allocated
 
     def get_component_available(
         self,
