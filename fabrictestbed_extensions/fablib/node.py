@@ -204,12 +204,6 @@ class Node:
 
         node.init_fablib_data()
 
-        if check:
-            if slice.get_fablib_manager().validate(node=node):
-                if remove:
-                    node.delete()
-                else:
-                    raise ValueError("Node cannot be added")
         return node
 
     @staticmethod

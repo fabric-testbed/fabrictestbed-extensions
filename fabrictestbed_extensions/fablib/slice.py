@@ -1132,6 +1132,12 @@ class Slice:
         self.nodes = None
         self.interfaces = None
 
+        if check:
+            if self.get_fablib_manager().validate(node=node):
+                if remove:
+                    node.delete()
+                else:
+                    raise ValueError("Node cannot be added")
         return node
 
     def get_object_by_reservation(

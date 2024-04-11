@@ -2222,9 +2222,9 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated_comps: dict):
-        available_cores = worker.capacities.cores - worker.capacity_allocations.cores
-        available_ram = worker.capacities.ram - worker.capacity_allocations.ram
-        available_disk = worker.capacities.disk - worker.capacity_allocations.disk
+        available_cores = worker.capacities.core - worker.capacity_allocations.core if worker.capacity_allocations is not None else 0
+        available_ram = worker.capacities.ram - worker.capacity_allocations.ram if worker.capacity_allocations is not None else 0
+        available_disk = worker.capacities.disk - worker.capacity_allocations.disk if worker.capacity_allocations is not None else 0
 
         if (node.get_cores() > available_cores or
                 node.get_disk() > available_disk or
@@ -2252,7 +2252,7 @@ Host * !bastion.fabric-testbed.net
         return True
 
     def validate(self, node: Node) -> bool:
-        site = self.get_resources().get_topology_site(site_name=node.get_name())
+        site = self.get_resources().get_topology_site(site_name=node.get_site())
         workers = self.get_resources().get_nodes(site=site)
         if not workers:
             print(f"Can't do Node validation, worker information not available for {site}")
