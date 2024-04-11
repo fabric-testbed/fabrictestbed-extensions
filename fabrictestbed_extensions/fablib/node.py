@@ -1162,10 +1162,11 @@ class Node:
             status, error = self.get_fablib_manager().validate(node=self)
             if not status:
                 if self.remove:
-                    print(f"{self.get_name()} removed from the topology with reason: {error}!")
-                    self.delete()
+                    print(f"{name} removed from the topology with reason: {error}!")
+                    component.delete()
+                    component = None
                 else:
-                    raise ValueError(f"{self.get_name()} cannot be allocated as requested on site: "
+                    raise ValueError(f"{name} cannot be added to the Node: {self.get_name()} as requested on site: "
                                      f"{self.get_site()}, reason: {error}")
         return component
 
