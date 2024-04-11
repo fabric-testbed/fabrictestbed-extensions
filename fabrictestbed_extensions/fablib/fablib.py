@@ -2242,14 +2242,14 @@ Host * !bastion.fabric-testbed.net
         if (node.get_requested_cores() > available_cores or
                 node.get_requested_disk() > available_disk or
                 node.get_requested_ram() > available_ram):
-            msg = f"Insufficient Resources: Worker: {worker} does not meet core/ram/disk requirements!"
+            msg = f"Insufficient Resources: Worker: {worker.name} does not meet core/ram/disk requirements!"
             return False, msg
 
         # Check if there are enough components available
         for c in node.get_components():
             comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
             if comp_model_type not in worker.components:
-                msg = f"Invalid Request: Worker: {worker} does not have the requested component: {comp_model_type}"
+                msg = f"Invalid Request: Worker: {worker.name} does not have the requested component: {comp_model_type}"
                 return False, msg
 
             allocated_comp_count = allocated.setdefault(comp_model_type, 0)
@@ -2258,7 +2258,7 @@ Host * !bastion.fabric-testbed.net
                                 if worker.components[comp_model_type].capacity_allocations else 0) -
                                allocated_comp_count)
             if available_comps <= 0:
-                msg = f"Insufficient Resources: Worker: {worker} has reached the limit for component: {comp_model_type}"
+                msg = f"Insufficient Resources: Worker: {worker.name} has reached the limit for component: {comp_model_type}"
                 return False, msg
 
             allocated[comp_model_type] += 1
@@ -2301,6 +2301,7 @@ Host * !bastion.fabric-testbed.net
                                                                allocated=allocated_comps)
             if status:
                 return status, error
-        msg = f"Invalid Request: Requested Node cannot be allocated with combination of components " \
-              f"on any of the workers on site: {site.name}"
+        msg = f"Invalid Request: Requested Node cannot accomodated by any of the workers on site: {site.name}."
+        if error:
+            msg += f" Last Error: {error}"
         return False, msg
