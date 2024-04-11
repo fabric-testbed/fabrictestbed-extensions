@@ -56,7 +56,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
 from fss_utils.sshkey import FABRICSSHKey
@@ -2601,7 +2601,11 @@ class Slice:
         else:
             return True
 
-    def validate(self):
+    def validate(self) -> Tuple[bool, List[str]]:
         allocated = {}
+        errors = []
         for n in self.get_nodes():
-            self.get_fablib_manager().validate_node(node=n, allocated=allocated)
+            status, error = self.get_fablib_manager().validate_node(node=n, allocated=allocated)
+            if not status:
+                errors.append(error)
+        return len(errors) == 0, errors
