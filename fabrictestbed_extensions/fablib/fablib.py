@@ -2230,8 +2230,8 @@ Host * !bastion.fabric-testbed.net
         """
         msg = f"Node can be allocated on the worker: {worker.name}"
         allocated_core = allocated.setdefault('core', 0)
-        allocated_ram = allocated.setdefault('core', 0)
-        allocated_disk = allocated.setdefault('core', 0)
+        allocated_ram = allocated.setdefault('ram', 0)
+        allocated_disk = allocated.setdefault('disk', 0)
         available_cores = worker.capacities.core - (worker.capacity_allocations.core
                                                     if worker.capacity_allocations is not None else 0) - allocated_core
         available_ram = worker.capacities.ram - (worker.capacity_allocations.ram
