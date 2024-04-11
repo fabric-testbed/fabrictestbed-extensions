@@ -2254,11 +2254,15 @@ Host * !bastion.fabric-testbed.net
     def validate(self, node: Node) -> bool:
         site = self.get_resources().get_topology_site(site_name=node.get_name())
         workers = self.get_resources().get_nodes(site=site)
+        if not workers:
+            logging.warning(f"Can't do Node validation, worker information not available for {site}")
+            return False
         allocated_comps_per_worker = {}
 
         if node.get_host():
             if node.get_host() not in workers:
                 print(f"Requested Host {node.get_host()} does not exist on site: {node.get_site()}")
+                return False
             worker = workers.get(node.get_host())
             allocated_comps = allocated_comps_per_worker.setdefault(worker.name, {})
             return self.__can_allocate_node_in_worker(worker=worker, node=node, allocated_comps=allocated_comps)
