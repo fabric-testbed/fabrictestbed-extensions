@@ -1133,8 +1133,9 @@ class Slice:
         self.interfaces = None
 
         if check:
-            if self.get_fablib_manager().validate(node=node):
+            if not self.get_fablib_manager().validate(node=node):
                 if remove:
+                    print(f"Removing: {node.get_name()} from the topology!")
                     node.delete()
                 else:
                     raise ValueError("Node cannot be added")

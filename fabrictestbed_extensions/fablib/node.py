@@ -836,7 +836,7 @@ class Node:
         try:
             return self.get_fim_node().get_property(pname="capacities").core
         except:
-            return None
+            return 0
 
     def get_ram(self) -> int or None:
         """
@@ -860,7 +860,7 @@ class Node:
         try:
             return self.get_fim_node().get_property(pname="capacities").ram
         except:
-            return None
+            return 0
 
     def get_disk(self) -> int or None:
         """
@@ -884,7 +884,7 @@ class Node:
         try:
             return self.get_fim_node().get_property(pname="capacities").disk
         except:
-            return None
+            return 0
 
     def get_image(self) -> str or None:
         """
