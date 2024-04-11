@@ -114,7 +114,7 @@ class Interface:
             ["Device", self.get_os_interface()],
             ["Address", self.get_ip_addr()],
             ["Numa Node", self.get_numa_node()],
-            ["Switch Port", self.get_switch_port()]
+            ["Switch Port", self.get_switch_port()],
         ]
 
         return tabulate(table)
@@ -202,7 +202,7 @@ class Interface:
             "dev": dev,
             "ip_addr": ip_addr,
             "numa": str(self.get_numa_node()),
-            "switch_port": str(self.get_switch_port())
+            "switch_port": str(self.get_switch_port()),
         }
 
     def get_switch_port(self) -> str:

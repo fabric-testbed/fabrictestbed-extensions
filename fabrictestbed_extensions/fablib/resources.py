@@ -308,7 +308,7 @@ class Resources:
                         ].capacities.unit
             return component_capacity
         except Exception as e:
-            #logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
             return component_capacity
 
     def get_component_allocated(
@@ -338,7 +338,7 @@ class Resources:
                         ].capacity_allocations.unit
             return component_allocated
         except Exception as e:
-            #logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
+            # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
             return component_allocated
 
     def get_component_available(
