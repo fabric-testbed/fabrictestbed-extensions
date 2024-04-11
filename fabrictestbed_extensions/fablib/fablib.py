@@ -2221,66 +2221,74 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated_comps: dict) -> Tuple[bool, str]:
+    def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated: dict) -> Tuple[bool, str]:
         msg = f"Node can be allocated on the worker: {worker.name}"
+        allocated_core = allocated.setdefault('core', 0)
+        allocated_ram = allocated.setdefault('core', 0)
+        allocated_disk = allocated.setdefault('core', 0)
         available_cores = worker.capacities.core - (worker.capacity_allocations.core
-                                                    if worker.capacity_allocations is not None else 0)
+                                                    if worker.capacity_allocations is not None else 0) - allocated_core
         available_ram = worker.capacities.ram - (worker.capacity_allocations.ram
-                                                 if worker.capacity_allocations is not None else 0)
+                                                 if worker.capacity_allocations is not None else 0) - allocated_ram
         available_disk = worker.capacities.disk - (worker.capacity_allocations.disk
-                                                   if worker.capacity_allocations is not None else 0)
+                                                   if worker.capacity_allocations is not None else 0) - allocated_disk
 
         if (node.get_requested_cores() > available_cores or
                 node.get_requested_disk() > available_disk or
                 node.get_requested_ram() > available_ram):
-            msg = f"Worker: {worker} does not meet core/ram/disk requirements!"
+            msg = f"Insufficient Resources: Worker: {worker} does not meet core/ram/disk requirements!"
             return False, msg
 
         # Check if there are enough components available
         for c in node.get_components():
             comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
             if comp_model_type not in worker.components:
-                msg = f"Worker: {worker} does not have the requested component: {comp_model_type}"
+                msg = f"Invalid Request: Worker: {worker} does not have the requested component: {comp_model_type}"
                 return False, msg
 
-            allocated_comp_count = allocated_comps.setdefault(comp_model_type, 0)
+            allocated_comp_count = allocated.setdefault(comp_model_type, 0)
             available_comps = (worker.components[comp_model_type].capacities.unit -
                                (worker.components[comp_model_type].capacity_allocations.unit
                                 if worker.components[comp_model_type].capacity_allocations else 0) -
                                allocated_comp_count)
             if available_comps <= 0:
-                msg = f"Worker: {worker} has reached the limit for component: {comp_model_type}"
+                msg = f"Insufficient Resources: Worker: {worker} has reached the limit for component: {comp_model_type}"
                 return False, msg
 
-            allocated_comps[comp_model_type] += 1
+            allocated[comp_model_type] += 1
+
+        allocated['core'] += node.get_requested_cores()
+        allocated['ram'] += node.get_requested_ram()
+        allocated['disk'] += node.get_requested_disk()
 
         return True, msg
 
-    def validate(self, node: Node) -> Tuple[bool, str]:
-        msg = f"Node can be allocated on the site: {node.get_site()}"
+    def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
+        if allocated is None:
+            allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())
         workers = self.get_resources().get_nodes(site=site)
         if not workers:
             msg = f"Node cannot be validated, worker information not available for {site}"
             return False, msg
-        allocated_comps_per_worker = {}
 
         if node.get_host():
             if node.get_host() not in workers:
-                msg = f"Requested Host {node.get_host()} does not exist on site: {node.get_site()}"
+                msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}"
                 return False, msg
             worker = workers.get(node.get_host())
-            allocated_comps = allocated_comps_per_worker.setdefault(worker.name, {})
+            allocated_comps = allocated.setdefault(worker.name, {})
             status, error = self.__can_allocate_node_in_worker(worker=worker, node=node,
-                                                               allocated_comps=allocated_comps)
+                                                               allocated=allocated_comps)
             if not status:
                 return status, error
 
         for worker in workers.values():
-            allocated_comps = allocated_comps_per_worker.setdefault(worker.name, {})
+            allocated_comps = allocated.setdefault(worker.name, {})
             status, error = self.__can_allocate_node_in_worker(worker=worker, node=node,
-                                                               allocated_comps=allocated_comps)
+                                                               allocated=allocated_comps)
             if status:
-                return status, msg
-        msg = f"Node can not be allocated on any worker on site: {site.name}"
+                return status, error
+        msg = f"Invalid Request: Requested Node cannot be allocated with combination of components " \
+              f"on any of the workers on site: {site.name}"
         return False, msg

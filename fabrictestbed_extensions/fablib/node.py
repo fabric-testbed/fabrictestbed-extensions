@@ -84,7 +84,7 @@ class Node:
     default_disk = 10
     default_image = "default_rocky_8"
 
-    def __init__(self, slice: Slice, node: FimNode, check: bool = True, remove: bool = True):
+    def __init__(self, slice: Slice, node: FimNode, check: bool = False, remove: bool = True):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
 
@@ -162,7 +162,7 @@ class Node:
 
     @staticmethod
     def new_node(
-        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = [], check: bool = True, remove: bool = True
+        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = [], check: bool = False, remove: bool = True
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -1159,15 +1159,15 @@ class Node:
             node=self, model=model, name=name, user_data=user_data
         )
         if self.check:
-            status, error = self.get_fablib_manager().validate(node=self)
+            status, error = self.get_fablib_manager().validate_node(node=self)
             if not status:
                 if self.remove:
-                    print(f"{name} removed from the topology with reason: {error}!")
+                    print(f"{name} removed from the topology. Reason: {error}!")
                     component.delete()
                     component = None
                 else:
                     raise ValueError(f"{name} cannot be added to the Node: {self.get_name()} as requested on site: "
-                                     f"{self.get_site()}, reason: {error}")
+                                     f"{self.get_site()}. Reason: {error}")
         return component
 
     def get_components(self) -> List[Component]:
@@ -3245,7 +3245,7 @@ class Node:
         VM INFO looks like:
         In this example below, no CPU pinning has been applied so CPU Affinity lists all the CPUs
         After the pinning has been applied, CPU Affinity would show only the pinned CPU
-        [{'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '20.2s', 'State': 'running', 'VCPU': '0'},
+            [{'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '20.2s', 'State': 'running', 'VCPU': '0'},
         {'CPU': '118', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '9.0s', 'State': 'running', 'VCPU': '1'},
         {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.9s', 'State': 'running', 'VCPU': '2'},
         {'CPU': '119', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.8s', 'State': 'running', 'VCPU': '3'},
