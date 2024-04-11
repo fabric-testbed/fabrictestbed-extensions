@@ -332,7 +332,10 @@ class Resources:
             nodes = self.get_nodes(site=site)
             if nodes:
                 for w in nodes.values():
-                    if component_model_name in w.components:
+                    if (
+                        component_model_name in w.components
+                        and w.components[component_model_name].capacity_allocations
+                    ):
                         component_allocated += w.components[
                             component_model_name
                         ].capacity_allocations.unit
