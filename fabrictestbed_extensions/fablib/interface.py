@@ -935,5 +935,5 @@ class Interface:
 
     def delete(self):
         net = self.get_network()
-
-        net.remove_interface(self)
+        if net:
+            net.remove_interface(self)

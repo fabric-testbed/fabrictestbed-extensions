@@ -669,8 +669,9 @@ class Component:
             return {}
 
     def delete(self):
-        for interface in self.get_interfaces():
-            interface.delete()
+        if self.get_interfaces():
+            for interface in self.get_interfaces():
+                interface.delete()
 
         self.get_slice().get_fim_topology().nodes[
             self.get_node().get_name()
