@@ -2238,20 +2238,20 @@ Host * !bastion.fabric-testbed.net
 
         # Check if there are enough components available
         for c in node.get_components():
-            comp_model = c.get_fim_model()
-            if comp_model not in worker.components:
-                msg = f"Worker: {worker} does not have the requested component: {comp_model}"
+            comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
+            if comp_model_type not in worker.components:
+                msg = f"Worker: {worker} does not have the requested component: {comp_model_type}"
                 return False, msg
 
-            allocated_comp_count = allocated_comps.setdefault(comp_model, 0)
-            available_comps = (worker.components[comp_model].capacities.unit -
-                               worker.components[comp_model].capacity_allocations.unit -
+            allocated_comp_count = allocated_comps.setdefault(comp_model_type, 0)
+            available_comps = (worker.components[comp_model_type].capacities.unit -
+                               worker.components[comp_model_type].capacity_allocations.unit -
                                allocated_comp_count)
             if available_comps <= 0:
-                msg = f"Worker: {worker} has reached the limit for component: {comp_model}"
+                msg = f"Worker: {worker} has reached the limit for component: {comp_model_type}"
                 return False, msg
 
-            allocated_comps[comp_model] += 1
+            allocated_comps[comp_model_type] += 1
 
         return True, msg
 
