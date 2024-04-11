@@ -927,11 +927,12 @@ class Node:
         try:
             if self.host is not None:
                 return self.host
-            return (
-                self.get_fim_node()
-                .get_property(pname="label_allocations")
-                .instance_parent
-            )
+            label_allocations = self.get_fim_node().get_property(pname="label_allocations")
+            labels = self.get_fim_node().get_property(pname="labels")
+            if label_allocations:
+                return label_allocations.instance_parent
+            if labels:
+                return labels.instance_parent
         except:
             return None
 
