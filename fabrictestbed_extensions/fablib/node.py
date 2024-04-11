@@ -204,6 +204,12 @@ class Node:
 
         node.init_fablib_data()
 
+        if check:
+            if slice.get_fablib_manager().validate(node=node):
+                if remove:
+                    node.delete()
+                else:
+                    raise ValueError("Node cannot be added")
         return node
 
     @staticmethod
@@ -1129,12 +1135,12 @@ class Node:
             node=self, model=model, name=name, user_data=user_data
         )
         if self.check:
-            worker_found = self.get_fablib_manager().resources.validate(node=self)
-            if not worker_found:
+            if self.get_fablib_manager().validate(node=self):
                 if remove:
                     component.delete()
                 else:
-                    raise Exception("Component cannot be attached")
+                    raise ValueError("Component cannot be attached")
+        return component
 
     def get_components(self) -> List[Component]:
         """

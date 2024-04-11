@@ -89,6 +89,7 @@ from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
+    from fabrictestbed_extensions.fablib.node import Node
 
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
@@ -2218,3 +2219,52 @@ Host * !bastion.fabric-testbed.net
             for field in fields:
                 table.append([field, data[field]])
         return table
+
+    @staticmethod
+    def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated_comps: dict):
+        available_cores = worker.capacities.cores - worker.capacity_allocations.cores
+        available_ram = worker.capacities.ram - worker.capacity_allocations.ram
+        available_disk = worker.capacities.disk - worker.capacity_allocations.disk
+
+        if (node.get_cores() > available_cores or
+                node.get_disk() > available_disk or
+                node.get_ram() > available_ram):
+            print(f"Worker: {worker} does not meet core/ram/disk requirements!")
+            return False
+
+        # Check if there are enough components available
+        for c in node.get_components():
+            comp_model = c.get_model()
+            if comp_model not in worker.components:
+                print(f"Worker: {worker} does not have the requested component: {comp_model}")
+                return False
+
+            allocated_comp_count = allocated_comps.setdefault(comp_model, 0)
+            available_comps = (worker.components[comp_model].capacities.unit -
+                               worker.components[comp_model].capacity_allocations.unit -
+                               allocated_comp_count)
+            if available_comps <= 0:
+                print(f"Worker: {worker} has reached the limit for component: {comp_model}")
+                return False
+
+            allocated_comps[comp_model] += 1
+
+        return True
+
+    def validate(self, node: Node) -> bool:
+        site = self.get_resources().get_topology_site(site_name=node.get_name())
+        workers = self.get_resources().get_nodes(site=site)
+        allocated_comps_per_worker = {}
+
+        if node.get_host():
+            if node.get_host() not in workers:
+                print(f"Requested Host {node.get_host()} does not exist on site: {node.get_site()}")
+            worker = workers.get(node.get_host())
+            allocated_comps = allocated_comps_per_worker.setdefault(worker.name, {})
+            return self.__can_allocate_node_in_worker(worker=worker, node=node, allocated_comps=allocated_comps)
+
+        for worker in workers.values():
+            allocated_comps = allocated_comps_per_worker.setdefault(worker.name, {})
+            if self.__can_allocate_node_in_worker(worker=worker, node=node, allocated_comps=allocated_comps):
+                return True
+        return False
