@@ -2276,6 +2276,7 @@ Host * !bastion.fabric-testbed.net
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
+        error = None
         if allocated is None:
             allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())
@@ -2301,7 +2302,7 @@ Host * !bastion.fabric-testbed.net
                                                                allocated=allocated_comps)
             if status:
                 return status, error
-        msg = f"Invalid Request: Requested Node cannot accomodated by any of the workers on site: {site.name}."
+        msg = f"Invalid Request: Requested Node cannot be accommodated by any of the workers on site: {site.name}."
         if error:
-            msg += f" Last Error: {error}"
+            msg += f" Details: {error}"
         return False, msg
