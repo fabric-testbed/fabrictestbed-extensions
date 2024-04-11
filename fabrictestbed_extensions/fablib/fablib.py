@@ -2221,7 +2221,9 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated: dict) -> Tuple[bool, str]:
+    def __can_allocate_node_in_worker(
+        worker: FimNode, node: Node, allocated: dict
+    ) -> Tuple[bool, str]:
         """
         Check if a node can be provisioned on a worker node on a site w.r.t available resources on that site
 
@@ -2229,19 +2231,42 @@ Host * !bastion.fabric-testbed.net
         :rtype: Tuple[bool, str]
         """
         msg = f"Node can be allocated on the worker: {worker.name}"
-        allocated_core = allocated.setdefault('core', 0)
-        allocated_ram = allocated.setdefault('ram', 0)
-        allocated_disk = allocated.setdefault('disk', 0)
-        available_cores = worker.capacities.core - (worker.capacity_allocations.core
-                                                    if worker.capacity_allocations is not None else 0) - allocated_core
-        available_ram = worker.capacities.ram - (worker.capacity_allocations.ram
-                                                 if worker.capacity_allocations is not None else 0) - allocated_ram
-        available_disk = worker.capacities.disk - (worker.capacity_allocations.disk
-                                                   if worker.capacity_allocations is not None else 0) - allocated_disk
+        allocated_core = allocated.setdefault("core", 0)
+        allocated_ram = allocated.setdefault("ram", 0)
+        allocated_disk = allocated.setdefault("disk", 0)
+        available_cores = (
+            worker.capacities.core
+            - (
+                worker.capacity_allocations.core
+                if worker.capacity_allocations is not None
+                else 0
+            )
+            - allocated_core
+        )
+        available_ram = (
+            worker.capacities.ram
+            - (
+                worker.capacity_allocations.ram
+                if worker.capacity_allocations is not None
+                else 0
+            )
+            - allocated_ram
+        )
+        available_disk = (
+            worker.capacities.disk
+            - (
+                worker.capacity_allocations.disk
+                if worker.capacity_allocations is not None
+                else 0
+            )
+            - allocated_disk
+        )
 
-        if (node.get_requested_cores() > available_cores or
-                node.get_requested_disk() > available_disk or
-                node.get_requested_ram() > available_ram):
+        if (
+            node.get_requested_cores() > available_cores
+            or node.get_requested_disk() > available_disk
+            or node.get_requested_ram() > available_ram
+        ):
             msg = f"Insufficient Resources: Worker: {worker.name} does not meet core/ram/disk requirements!"
             return False, msg
 
@@ -2253,19 +2278,24 @@ Host * !bastion.fabric-testbed.net
                 return False, msg
 
             allocated_comp_count = allocated.setdefault(comp_model_type, 0)
-            available_comps = (worker.components[comp_model_type].capacities.unit -
-                               (worker.components[comp_model_type].capacity_allocations.unit
-                                if worker.components[comp_model_type].capacity_allocations else 0) -
-                               allocated_comp_count)
+            available_comps = (
+                worker.components[comp_model_type].capacities.unit
+                - (
+                    worker.components[comp_model_type].capacity_allocations.unit
+                    if worker.components[comp_model_type].capacity_allocations
+                    else 0
+                )
+                - allocated_comp_count
+            )
             if available_comps <= 0:
                 msg = f"Insufficient Resources: Worker: {worker.name} has reached the limit for component: {comp_model_type}"
                 return False, msg
 
             allocated[comp_model_type] += 1
 
-        allocated['core'] += node.get_requested_cores()
-        allocated['ram'] += node.get_requested_ram()
-        allocated['disk'] += node.get_requested_disk()
+        allocated["core"] += node.get_requested_cores()
+        allocated["ram"] += node.get_requested_ram()
+        allocated["disk"] += node.get_requested_disk()
 
         return True, msg
 
@@ -2282,7 +2312,9 @@ Host * !bastion.fabric-testbed.net
         site = self.get_resources().get_topology_site(site_name=node.get_site())
         workers = self.get_resources().get_nodes(site=site)
         if not workers:
-            msg = f"Node cannot be validated, worker information not available for {site}"
+            msg = (
+                f"Node cannot be validated, worker information not available for {site}"
+            )
             return False, msg
 
         if node.get_host():
@@ -2291,15 +2323,17 @@ Host * !bastion.fabric-testbed.net
                 return False, msg
             worker = workers.get(node.get_host())
             allocated_comps = allocated.setdefault(worker.name, {})
-            status, error = self.__can_allocate_node_in_worker(worker=worker, node=node,
-                                                               allocated=allocated_comps)
+            status, error = self.__can_allocate_node_in_worker(
+                worker=worker, node=node, allocated=allocated_comps
+            )
             if not status:
                 return status, error
 
         for worker in workers.values():
             allocated_comps = allocated.setdefault(worker.name, {})
-            status, error = self.__can_allocate_node_in_worker(worker=worker, node=node,
-                                                               allocated=allocated_comps)
+            status, error = self.__can_allocate_node_in_worker(
+                worker=worker, node=node, allocated=allocated_comps
+            )
             if status:
                 return status, error
         msg = f"Invalid Request: Requested Node cannot be accommodated by any of the workers on site: {site.name}."

@@ -1063,7 +1063,7 @@ class Slice:
         user_data: dict = {},
         avoid: List[str] = [],
         check: bool = False,
-        remove: bool = True
+        remove: bool = True,
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1116,7 +1116,9 @@ class Slice:
         :return: a new node
         :rtype: Node
         """
-        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid, check=check, remove=remove)
+        node = Node.new_node(
+            slice=self, name=name, site=site, avoid=avoid, check=check, remove=remove
+        )
 
         node.init_fablib_data()
 
@@ -1143,12 +1145,16 @@ class Slice:
             status, error = self.get_fablib_manager().validate_node(node=node)
             if not status:
                 if remove:
-                    print(f"{node.get_name()} removed from the topology. Reason: {error}!")
+                    print(
+                        f"{node.get_name()} removed from the topology. Reason: {error}!"
+                    )
                     node.delete()
                     node = None
                 else:
-                    raise ValueError(f"{node.get_name()} cannot be allocated as requested on site: "
-                                     f"{node.get_site()}. Reason: {error}")
+                    raise ValueError(
+                        f"{node.get_name()} cannot be allocated as requested on site: "
+                        f"{node.get_site()}. Reason: {error}"
+                    )
         return node
 
     def get_object_by_reservation(
@@ -2619,7 +2625,9 @@ class Slice:
         allocated = {}
         errors = {}
         for n in self.get_nodes():
-            status, error = self.get_fablib_manager().validate_node(node=n, allocated=allocated)
+            status, error = self.get_fablib_manager().validate_node(
+                node=n, allocated=allocated
+            )
             if not status:
                 errors[n.get_name()] = error
         return len(errors) == 0, errors

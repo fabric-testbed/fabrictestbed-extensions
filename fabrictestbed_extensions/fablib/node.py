@@ -84,7 +84,9 @@ class Node:
     default_disk = 10
     default_image = "default_rocky_8"
 
-    def __init__(self, slice: Slice, node: FimNode, check: bool = False, remove: bool = True):
+    def __init__(
+        self, slice: Slice, node: FimNode, check: bool = False, remove: bool = True
+    ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
 
@@ -169,7 +171,12 @@ class Node:
 
     @staticmethod
     def new_node(
-        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = [], check: bool = False, remove: bool = True
+        slice: Slice = None,
+        name: str = None,
+        site: str = None,
+        avoid: List[str] = [],
+        check: bool = False,
+        remove: bool = True,
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -199,11 +206,20 @@ class Node:
         :rtype: Node
         """
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid,
-                                                                 filter_function=lambda x: x['cores_available'] > Node.default_cores and x['ram_available'] > Node.default_ram and x['disk_available'] > Node.default_disk)
+            [site] = slice.get_fablib_manager().get_random_sites(
+                avoid=avoid,
+                filter_function=lambda x: x["cores_available"] > Node.default_cores
+                and x["ram_available"] > Node.default_ram
+                and x["disk_available"] > Node.default_disk,
+            )
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
-        node = Node(slice, slice.topology.add_node(name=name, site=site), check=check, remove=remove)
+        node = Node(
+            slice,
+            slice.topology.add_node(name=name, site=site),
+            check=check,
+            remove=remove,
+        )
         node.set_capacities(
             cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
         )
@@ -927,7 +943,9 @@ class Node:
         try:
             if self.host is not None:
                 return self.host
-            label_allocations = self.get_fim_node().get_property(pname="label_allocations")
+            label_allocations = self.get_fim_node().get_property(
+                pname="label_allocations"
+            )
             labels = self.get_fim_node().get_property(pname="labels")
             if label_allocations:
                 return label_allocations.instance_parent
@@ -1174,8 +1192,10 @@ class Node:
                     component.delete()
                     component = None
                 else:
-                    raise ValueError(f"{name} cannot be added to the Node: {self.get_name()} as requested on site: "
-                                     f"{self.get_site()}. Reason: {error}")
+                    raise ValueError(
+                        f"{name} cannot be added to the Node: {self.get_name()} as requested on site: "
+                        f"{self.get_site()}. Reason: {error}"
+                    )
         return component
 
     def get_components(self) -> List[Component]:

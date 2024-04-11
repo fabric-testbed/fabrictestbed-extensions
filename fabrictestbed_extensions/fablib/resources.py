@@ -40,8 +40,8 @@ from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
 from fim.slivers import network_node
 from fim.user import interface, link, node
-from tabulate import tabulate
 from fim.view_only_dict import ViewOnlyDict
+from tabulate import tabulate
 
 
 class Resources:
@@ -255,17 +255,26 @@ class Resources:
         """
         try:
             from fim.graph.abc_property_graph import ABCPropertyGraph
+
             if isinstance(site, str):
                 site = self.get_topology_site(site)
 
-            node_id_list = site.topo.graph_model.get_first_neighbor(node_id=site.node_id, rel=ABCPropertyGraph.REL_HAS,
-                                                                    node_label=ABCPropertyGraph.CLASS_NetworkNode)
+            node_id_list = site.topo.graph_model.get_first_neighbor(
+                node_id=site.node_id,
+                rel=ABCPropertyGraph.REL_HAS,
+                node_label=ABCPropertyGraph.CLASS_NetworkNode,
+            )
             ret = dict()
             for nid in node_id_list:
                 _, node_props = site.topo.graph_model.get_node_properties(node_id=nid)
-                n = node.Node(name=node_props[ABCPropertyGraph.PROP_NAME], node_id=nid, topo=site.topo)
+                n = node.Node(
+                    name=node_props[ABCPropertyGraph.PROP_NAME],
+                    node_id=nid,
+                    topo=site.topo,
+                )
                 # exclude Facility nodes
                 from fim.user import NodeType
+
                 if n.type != NodeType.Facility:
                     ret[n.name] = n
             return ViewOnlyDict(ret)
@@ -294,7 +303,9 @@ class Resources:
             if nodes:
                 for w in nodes.values():
                     if component_model_name in w.components:
-                        component_capacity += w.components[component_model_name].capacities.unit
+                        component_capacity += w.components[
+                            component_model_name
+                        ].capacities.unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
         return component_capacity
@@ -321,7 +332,9 @@ class Resources:
             if nodes:
                 for w in nodes.values():
                     if component_model_name in w.components:
-                        component_allocated += w.components[component_model_name].capacity_allocations.unit
+                        component_allocated += w.components[
+                            component_model_name
+                        ].capacity_allocations.unit
         except Exception as e:
             logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
         return component_allocated
