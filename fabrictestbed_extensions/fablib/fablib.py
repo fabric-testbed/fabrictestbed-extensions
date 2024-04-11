@@ -2245,7 +2245,8 @@ Host * !bastion.fabric-testbed.net
 
             allocated_comp_count = allocated_comps.setdefault(comp_model_type, 0)
             available_comps = (worker.components[comp_model_type].capacities.unit -
-                               worker.components[comp_model_type].capacity_allocations.unit -
+                               (worker.components[comp_model_type].capacity_allocations.unit
+                                if worker.components[comp_model_type].capacity_allocations else 0) -
                                allocated_comp_count)
             if available_comps <= 0:
                 msg = f"Worker: {worker} has reached the limit for component: {comp_model_type}"
