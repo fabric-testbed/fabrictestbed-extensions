@@ -2222,6 +2222,12 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_worker(worker: FimNode, node: Node, allocated: dict) -> Tuple[bool, str]:
+        """
+        Check if a node can be provisioned on a worker node on a site w.r.t available resources on that site
+
+        :return: Tuple indicating status for validation and error message in case of failure
+        :rtype: Tuple[bool, str]
+        """
         msg = f"Node can be allocated on the worker: {worker.name}"
         allocated_core = allocated.setdefault('core', 0)
         allocated_ram = allocated.setdefault('core', 0)
@@ -2264,6 +2270,12 @@ Host * !bastion.fabric-testbed.net
         return True, msg
 
     def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
+        """
+        Validate a node w.r.t available resources on a site before submission
+
+        :return: Tuple indicating status for validation and error message in case of failure
+        :rtype: Tuple[bool, str]
+        """
         if allocated is None:
             allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())

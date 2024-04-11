@@ -93,6 +93,13 @@ class Node:
 
         :param node: the FIM node that this Node represents
         :type node: Node
+
+        :param check: Validate node can be allocated w.r.t available resources
+        :type check: bool
+
+        :param remove: Remove the node if validation w.r.t available resources fails
+        :type remove: bool
+
         """
         super().__init__()
         self.fim_node = node
@@ -182,10 +189,10 @@ class Node:
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
 
-        :param check: Validate if the node can be provisioned on a site
+        :param check: Validate node can be allocated w.r.t available resources
         :type check: bool
 
-        :param remove: Remove the node from the topology if it can't be provisioned
+        :param remove: Remove the node if validation w.r.t available resources fails
         :type remove: bool
 
         :return: a new fablib node

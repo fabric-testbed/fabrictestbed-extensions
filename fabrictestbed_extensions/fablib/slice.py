@@ -1062,7 +1062,8 @@ class Slice:
         host: str = None,
         user_data: dict = {},
         avoid: List[str] = [],
-        check: bool = True, remove: bool = True
+        check: bool = False,
+        remove: bool = True
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1105,6 +1106,12 @@ class Slice:
         :param avoid: (Optional) A list of sites to avoid is allowing
             random site.
         :type avoid: List[String]
+
+        :param check: Validate node can be allocated w.r.t available resources
+        :type check: bool
+
+        :param remove: Remove the node if validation w.r.t available resources fails
+        :type remove: bool
 
         :return: a new node
         :rtype: Node
@@ -2601,11 +2608,18 @@ class Slice:
         else:
             return True
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> Tuple[bool, Dict[str, str]]:
+        """
+        Validate the slice w.r.t available resources before submission
+
+        :return: Tuple indicating status for validation and dictionary of the errors corresponding to
+                 each requested node
+        :rtype: Tuple[bool, Dict[str, str]]
+        """
         allocated = {}
-        errors = []
+        errors = {}
         for n in self.get_nodes():
             status, error = self.get_fablib_manager().validate_node(node=n, allocated=allocated)
             if not status:
-                errors.append(error)
+                errors[n.get_name()] = error
         return len(errors) == 0, errors
