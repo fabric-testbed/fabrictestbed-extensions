@@ -826,6 +826,18 @@ class Node:
         except:
             return None
 
+    def get_requested_cores(self) -> int or None:
+        """
+        Gets the requested number of cores on the FABRIC node.
+
+        :return: the requested number of cores on the node
+        :rtype: int
+        """
+        try:
+            return self.get_fim_node().get_property(pname="capacities").core
+        except:
+            return None
+
     def get_ram(self) -> int or None:
         """
         Gets the amount of RAM on the FABRIC node.
@@ -838,6 +850,18 @@ class Node:
         except:
             return None
 
+    def get_requested_ram(self) -> int or None:
+        """
+        Gets the requested amount of RAM on the FABRIC node.
+
+        :return: the requested amount of RAM on the node
+        :rtype: int
+        """
+        try:
+            return self.get_fim_node().get_property(pname="capacities").ram
+        except:
+            return None
+
     def get_disk(self) -> int or None:
         """
         Gets the amount of disk space on the FABRIC node.
@@ -847,6 +871,18 @@ class Node:
         """
         try:
             return self.get_fim_node().get_property(pname="capacity_allocations").disk
+        except:
+            return None
+
+    def get_requested_disk(self) -> int or None:
+        """
+        Gets the amount of disk space on the FABRIC node.
+
+        :return: the amount of disk space on the node
+        :rtype: int
+        """
+        try:
+            return self.get_fim_node().get_property(pname="capacities").disk
         except:
             return None
 

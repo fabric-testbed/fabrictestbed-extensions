@@ -2226,9 +2226,9 @@ Host * !bastion.fabric-testbed.net
         available_ram = worker.capacities.ram - worker.capacity_allocations.ram if worker.capacity_allocations is not None else 0
         available_disk = worker.capacities.disk - worker.capacity_allocations.disk if worker.capacity_allocations is not None else 0
 
-        if (node.get_cores() > available_cores or
-                node.get_disk() > available_disk or
-                node.get_ram() > available_ram):
+        if (node.get_requested_cores() > available_cores or
+                node.get_requested_disk() > available_disk or
+                node.get_requested_ram() > available_ram):
             print(f"Worker: {worker} does not meet core/ram/disk requirements!")
             return False
 
