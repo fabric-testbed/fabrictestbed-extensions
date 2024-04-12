@@ -206,8 +206,13 @@ class Interface:
         }
 
     def get_switch_port(self) -> str:
-        if self.get_network() and self.get_network().get_fim():
-            ifs = self.get_network().get_fim().interfaces.get(self.get_name())
+        network = self.get_network()
+        if network and network.get_fim():
+            ifs = None
+            for ifs_name in network.get_fim().interfaces.keys():
+                if self.get_name() in ifs_name:
+                    ifs = network.get_fim().interfaces[ifs_name]
+                    break
             if ifs and ifs.labels and ifs.labels.local_name:
                 return ifs.labels.local_name
 

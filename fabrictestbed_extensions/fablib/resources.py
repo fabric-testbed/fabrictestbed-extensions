@@ -67,7 +67,7 @@ class Resources:
     DISK = "disk"
 
     site_attribute_name_mappings = {
-        CORES: {NON_PRETTY_NAME: CPUS, PRETTY_NAME: "Cores", HEADER_NAME: "Cores"},
+        CORES: {NON_PRETTY_NAME: CORES, PRETTY_NAME: "Cores", HEADER_NAME: "Cores"},
         RAM: {
             NON_PRETTY_NAME: RAM,
             PRETTY_NAME: "Ram",
