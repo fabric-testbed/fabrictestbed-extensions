@@ -36,6 +36,7 @@ from ipaddress import IPv4Address
 from typing import TYPE_CHECKING, Any, Union
 
 import jinja2
+from deprecated.sphinx import deprecated
 from fabrictestbed.slice_editor import Flags
 from tabulate import tabulate
 
@@ -336,10 +337,9 @@ class Interface:
 
         return os_iface
 
+    @deprecated(version="1.3.2", reason="Use get_device_name() instead.")
     def get_os_interface(self) -> str:
         """
-        Deprecated: see interface.get_device_name()
-
         Gets a name of the interface the operating system uses for this
         FABLib interface.
 

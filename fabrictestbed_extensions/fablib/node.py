@@ -60,6 +60,7 @@ from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import jinja2
 import paramiko
+from deprecated.sphinx import deprecated
 from fabric_cf.orchestrator.orchestrator_proxy import Status
 from IPython.core.display_functions import display
 from tabulate import tabulate
@@ -2550,6 +2551,7 @@ class Node:
             logging.warning(f"Failed to down link: {e}")
             raise e
 
+    @deprecated(version="1.1.3")
     def set_ip_os_interface(
         self,
         os_iface: str = None,
@@ -2558,9 +2560,6 @@ class Node:
         cidr: str = None,
         mtu: str = None,
     ):
-        """
-        .. deprecated:: 1.1.3.
-        """
         # TODO: Add docstring after doc networking classes
         if cidr:
             cidr = str(cidr)
@@ -2649,6 +2648,7 @@ class Node:
         command = f"sudo ip link del link {link} name {os_iface}"
         stdout, stderr = self.execute(command, quiet=True)
 
+    @deprecated(version="1.1.3")
     def add_vlan_os_interface(
         self,
         os_iface: str = None,
@@ -2658,9 +2658,6 @@ class Node:
         mtu: str = None,
         interface: str = None,
     ):
-        """
-        .. deprecated:: 1.1.3.
-        """
         # TODO: Add docstring after doc networking classes
 
         if vlan:
