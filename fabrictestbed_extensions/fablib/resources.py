@@ -34,7 +34,7 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
 from fabrictestbed.slice_manager import Status
@@ -45,6 +45,32 @@ from tabulate import tabulate
 
 
 class Resources:
+    CAPACITIES = "capacities"
+    ALLOCATED = "allocated"
+    NON_PRETTY_NAME = "non_pretty_name"
+    PRETTY_NAME = "pretty_name"
+
+    NIC_SHARED_CONNECTX_6 = "SharedNIC-ConnectX-6"
+    SMART_NIC_CONNECTX_6 = "SmartNIC-ConnectX-6"
+    SMART_NIC_CONNECTX_5 = "SmartNIC-ConnectX-5"
+    NVME_P4510 = "NVME-P4510"
+    GPU_TESLA_T4 = "GPU-Tesla T4"
+    GPU_RTX6000 = "GPU-RTX6000"
+    GPU_A30 = "GPU-A30"
+    GPU_A40 = "GPU-A40"
+    FPGA_XILINX_U280 = "FPGA-Xilinx-U280"
+
+    component_name_mappings = {
+        NIC_SHARED_CONNECTX_6: {NON_PRETTY_NAME: "nic_basic", PRETTY_NAME: "Basic NIC"},
+        SMART_NIC_CONNECTX_6: {NON_PRETTY_NAME: "nic_connectx_6", PRETTY_NAME: "ConnectX-6"},
+        SMART_NIC_CONNECTX_5: {NON_PRETTY_NAME: "nic_connectx_5", PRETTY_NAME: "ConnectX-5"},
+        NVME_P4510: {NON_PRETTY_NAME: "nvme", PRETTY_NAME: "NVMe"},
+        GPU_TESLA_T4: {NON_PRETTY_NAME: "tesla_t4", PRETTY_NAME: "Tesla T4"},
+        GPU_RTX6000: {NON_PRETTY_NAME: "rtx6000", PRETTY_NAME: "RTX6000"},
+        GPU_A30: {NON_PRETTY_NAME: "a30", PRETTY_NAME: "A30"},
+        GPU_A40: {NON_PRETTY_NAME: "a40", PRETTY_NAME: "A40"},
+        FPGA_XILINX_U280: {NON_PRETTY_NAME: "fpga_u280", PRETTY_NAME: "U280"},
+    }
     site_pretty_names = {
         "name": "Name",
         "state": "State",
@@ -119,7 +145,60 @@ class Resources:
         """
         table = []
         for site_name, site in self.topology.sites.items():
+            components = self.get_components_capacities_and_allocations(site)
+            row = [
+                site.name,
+                self.get_ptp_capable(site),
+                self.get_cpu_capacity(site),
+                f"{self.get_core_available(site)}/{self.get_core_capacity(site)}",
+                f"{self.get_ram_available(site)}/{self.get_ram_capacity(site)}",
+                f"{self.get_disk_available(site)}/{self.get_disk_capacity(site)}",
+            ]
+            for component, names in self.component_name_mappings.items():
+                allocated = components.get(component, {}).get(self.ALLOCATED, 0)
+                capacity = components.get(component, {}).get(self.CAPACITIES, 0)
+                available = capacity - allocated
+                row.append(f"{available}/{capacity}")
+
+            table.append(row)
+
+        return tabulate(
+            table,
+            headers=[
+                "Name",
+                "PTP Capable",
+                "CPUs",
+                "Cores",
+                f"RAM ({Capacities.UNITS['ram']})",
+                f"Disk ({Capacities.UNITS['disk']})",
+                # "Workers"
+                # "Physical Address",
+                # "Location Coordinates"
+                "Basic (100 Gbps NIC)",
+                "ConnectX-6 (100 Gbps x2 NIC)",
+                "ConnectX-5 (25 Gbps x2 NIC)",
+                "P4510 (NVMe 1TB)",
+                "Tesla T4 (GPU)",
+                "RTX6000 (GPU)",
+                "A30 (GPU)",
+                "A40 (GPU)",
+                "FPGA-Xilinx-U280",
+            ],
+        )
+
+    def __str__old(self) -> str:
+        """
+        Creates a tabulated string of all the available resources.
+
+        Intended for printing available resources.
+
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
+        table = []
+        for site_name, site in self.topology.sites.items():
             # logging.debug(f"site -- {site}")
+            components = self.get_components_capacities_and_allocations(site)
             table.append(
                 [
                     site.name,
@@ -281,6 +360,38 @@ class Resources:
         except Exception as e:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
+
+    def get_components_capacities_and_allocations(
+        self,
+        site: str or node.Node or network_node.NodeSliver
+    ) -> Dict[str, Dict[str, int]]:
+        """
+        Gets the total site capacity of all components for a site
+
+        :param site: site object or sliver or site name
+        :type site: String or Node or NodeSliver
+        :return: total component capacity for all components
+        :rtype: Dict[str, int]
+        """
+        components = {}
+
+        try:
+            nodes = self.get_nodes(site=site)
+            if nodes:
+                for w in nodes.values():
+                    if w.components:
+                        for component_model_name, c in w.components.items():
+                            comp_cap = components.setdefault(component_model_name, {})
+                            comp_cap.setdefault(self.CAPACITIES, 0)
+                            comp_cap.setdefault(self.ALLOCATED, 0)
+                            comp_cap[self.CAPACITIES] += c.capacities.unit
+                            if c.capacity_allocations:
+                                comp_cap[self.ALLOCATED] += c.capacity_allocations.unit
+
+            return components
+        except Exception as e:
+            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            return components
 
     def get_component_capacity(
         self,
@@ -720,7 +831,39 @@ class Resources:
     def site_to_json(self, site, latlon=True):
         return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(
+    def site_to_dict(self, site: str or node.Node or network_node.NodeSliver, latlon=True):
+        """
+        Convert site information into a dictionary
+
+        :param site: site name or site object
+        :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
+        """
+        components = self.get_components_capacities_and_allocations(site)
+
+        d = {
+            "name": site.name if isinstance(site, node.Node) else site.get_name(),
+            "state": self.get_state(site),
+            "address": self.get_location_postal(site),
+            "location": self.get_location_lat_long(site) if latlon else "",
+            "ptp_capable": self.get_ptp_capable(site),
+            "hosts": self.get_host_capacity(site),
+            "cpus": self.get_cpu_capacity(site)
+        }
+
+        for comp_model_name, names in self.component_name_mappings.items():
+            capacity = components.get(comp_model_name, {}).get(self.CAPACITIES, 0)
+            allocated = components.get(comp_model_name, {}).get(self.ALLOCATED, 0)
+            available = capacity - allocated
+            d[f"{names.get(self.NON_PRETTY_NAME)}_available"] = available
+            d[f"{names.get(self.NON_PRETTY_NAME)}_capacity"] = capacity
+            d[f"{names.get(self.NON_PRETTY_NAME)}_allocated"] = allocated
+
+        if not latlon:
+            d.pop("location")
+
+        return d
+
+    def site_to_dict_old(
         self, site: str or node.Node or network_node.NodeSliver, latlon=True
     ):
         """
@@ -735,24 +878,25 @@ class Resources:
         ram_c = self.get_ram_capacity(site)
         disk_a = self.get_disk_available(site)
         disk_c = self.get_disk_capacity(site)
-        nic_basic_a = self.get_component_available(site, "SharedNIC-ConnectX-6")
-        nic_basic_c = self.get_component_capacity(site, "SharedNIC-ConnectX-6")
-        nic_cx6_a = self.get_component_available(site, "SmartNIC-ConnectX-6")
-        nic_cx6_c = self.get_component_capacity(site, "SmartNIC-ConnectX-6")
-        nic_cx5_a = self.get_component_available(site, "SmartNIC-ConnectX-5")
-        nic_cx5_c = self.get_component_capacity(site, "SmartNIC-ConnectX-5")
-        nvme_a = self.get_component_available(site, "NVME-P4510")
-        nvme_c = self.get_component_capacity(site, "NVME-P4510")
-        tesla_t4_a = self.get_component_available(site, "GPU-Tesla T4")
-        tesla_t4_c = self.get_component_capacity(site, "GPU-Tesla T4")
-        rtx6000_a = self.get_component_available(site, "GPU-RTX6000")
-        rtx6000_c = self.get_component_capacity(site, "GPU-RTX6000")
-        a30_a = self.get_component_available(site, "GPU-A30")
-        a30_c = self.get_component_capacity(site, "GPU-A30")
-        a40_a = self.get_component_available(site, "GPU-A40")
-        a40_c = self.get_component_capacity(site, "GPU-A40")
-        u280_a = self.get_component_available(site, "FPGA-Xilinx-U280")
-        u280_c = self.get_component_capacity(site, "FPGA-Xilinx-U280")
+        components = self.get_components_capacities_and_allocations(site)
+        nic_basic_a = components.get(self.NIC_SHARED_CONNECTX_6).get(self.ALLOCATED) if components.get(self.NIC_SHARED_CONNECTX_6) else 0
+        nic_basic_c = components.get(self.NIC_SHARED_CONNECTX_6).get(self.CAPACITIES) if components.get(self.NIC_SHARED_CONNECTX_6) else 0
+        nic_cx6_a = components.get(self.SMART_NIC_CONNECTX_6).get(self.ALLOCATED) if components.get(self.SMART_NIC_CONNECTX_6) else 0
+        nic_cx6_c = components.get(self.SMART_NIC_CONNECTX_6).get(self.CAPACITIES) if components.get(self.SMART_NIC_CONNECTX_6) else 0
+        nic_cx5_a = components.get(self.SMART_NIC_CONNECTX_5).get(self.ALLOCATED) if components.get(self.SMART_NIC_CONNECTX_5) else 0
+        nic_cx5_c = components.get(self.SMART_NIC_CONNECTX_5).get(self.CAPACITIES) if components.get(self.SMART_NIC_CONNECTX_5) else 0
+        nvme_a = components.get(self.NVME_P4510).get(self.ALLOCATED) if components.get(self.NVME_P4510) else 0
+        nvme_c = components.get(self.NVME_P4510).get(self.CAPACITIES) if components.get(self.NVME_P4510) else 0
+        tesla_t4_a = components.get(self.GPU_TESLA_T4).get(self.ALLOCATED) if components.get(self.GPU_TESLA_T4) else 0
+        tesla_t4_c = components.get(self.GPU_TESLA_T4).get(self.CAPACITIES) if components.get(self.GPU_TESLA_T4) else 0
+        rtx6000_a = components.get(self.GPU_RTX6000).get(self.ALLOCATED) if components.get(self.GPU_RTX6000) else 0
+        rtx6000_c = components.get(self.GPU_RTX6000).get(self.CAPACITIES) if components.get(self.GPU_RTX6000) else 0
+        a30_a = components.get(self.GPU_A30).get(self.ALLOCATED) if components.get(self.GPU_A30) else 0
+        a30_c = components.get(self.GPU_A30).get(self.CAPACITIES) if components.get(self.GPU_A30) else 0
+        a40_a = components.get(self.GPU_A40).get(self.ALLOCATED) if components.get(self.GPU_A40) else 0
+        a40_c = components.get(self.GPU_A40).get(self.CAPACITIES) if components.get(self.GPU_A40) else 0
+        u280_a = components.get(self.FPGA_XILINX_U280).get(self.ALLOCATED) if components.get(self.FPGA_XILINX_U280) else 0
+        u280_c = components.get(self.FPGA_XILINX_U280).get(self.CAPACITIES) if components.get(self.FPGA_XILINX_U280) else 0
         ptp = self.get_ptp_capable(site)
 
         d = {
@@ -763,48 +907,71 @@ class Resources:
             "ptp_capable": ptp,
             "hosts": self.get_host_capacity(site),
             "cpus": self.get_cpu_capacity(site),
-            "cores_available": core_a,
+            "cores_available": core_c - core_a,
             "cores_capacity": core_c,
-            "cores_allocated": core_c - core_a,
-            "ram_available": ram_a,
+            "cores_allocated": core_a,
+            "ram_available": ram_c - ram_a,
             "ram_capacity": ram_c,
-            "ram_allocated": ram_c - ram_a,
-            "disk_available": disk_a,
+            "ram_allocated": ram_c,
+            "disk_available": disk_c - disk_a,
             "disk_capacity": disk_c,
-            "disk_allocated": disk_c - disk_a,
-            "nic_basic_available": nic_basic_a,
+            "disk_allocated": disk_a,
+            "nic_basic_available": nic_basic_c - nic_basic_a,
             "nic_basic_capacity": nic_basic_c,
-            "nic_basic_allocated": nic_basic_c - nic_basic_a,
-            "nic_connectx_6_available": nic_cx6_a,
+            "nic_basic_allocated": nic_basic_a,
+            "nic_connectx_6_available": nic_cx6_c - nic_cx6_a,
             "nic_connectx_6_capacity": nic_cx6_c,
-            "nic_connectx_6_allocated": nic_cx6_c - nic_cx6_a,
-            "nic_connectx_5_available": nic_cx5_a,
+            "nic_connectx_6_allocated": nic_cx6_a,
+            "nic_connectx_5_available": nic_cx5_c - nic_cx5_a,
             "nic_connectx_5_capacity": nic_cx5_c,
-            "nic_connectx_5_allocated": nic_cx5_c - nic_cx5_a,
-            "nvme_available": nvme_a,
+            "nic_connectx_5_allocated": nic_cx5_a,
+            "nvme_available": nvme_c - nvme_a,
             "nvme_capacity": nvme_c,
-            "nvme_allocated": nvme_c - nvme_a,
-            "tesla_t4_available": tesla_t4_a,
+            "nvme_allocated": nvme_a,
+            "tesla_t4_available": tesla_t4_c - tesla_t4_a,
             "tesla_t4_capacity": tesla_t4_c,
-            "tesla_t4_allocated": tesla_t4_c - tesla_t4_a,
-            "rtx6000_available": rtx6000_a,
+            "tesla_t4_allocated": tesla_t4_a,
+            "rtx6000_available": rtx6000_c - rtx6000_a,
             "rtx6000_capacity": rtx6000_c,
-            "rtx6000_allocated": rtx6000_c - rtx6000_a,
-            "a30_available": a30_a,
+            "rtx6000_allocated": rtx6000_a,
+            "a30_available": a30_c - a30_a,
             "a30_capacity": a30_c,
-            "a30_allocated": a30_c - a30_a,
-            "a40_available": a40_a,
+            "a30_allocated": a30_a,
+            "a40_available": a40_c - a40_a,
             "a40_capacity": a40_c,
-            "a40_allocated": a40_c - a40_a,
-            "fpga_u280_available": u280_a,
+            "a40_allocated": a40_a,
+            "fpga_u280_available": u280_c - u280_a,
             "fpga_u280_capacity": u280_c,
-            "fpga_u280_allocated": u280_c - u280_a,
+            "fpga_u280_allocated": u280_a,
         }
         if not latlon:
             d.pop("location")
         return d
 
     def site_to_dictXXX(self, site):
+        site_name = site.name
+        components = self.get_components_capacities_and_allocations(site)
+        d = {
+            "name": {"pretty_name": "Name", "value": site.name},
+            "address": {"pretty_name": "Address", "value": self.get_location_postal(site_name)},
+            "location": {"pretty_name": "Location", "value": self.get_location_lat_long(site_name)},
+            "ptp": {"pretty_name": "PTP Capable", "value": self.get_ptp_capable(site)},
+            "hosts": {"pretty_name": "Hosts", "value": self.get_host_capacity(site_name)},
+            "cpus": {"pretty_name": "CPUs", "value": self.get_cpu_capacity(site_name)}
+        }
+
+        for comp_model_name, names in self.component_name_mappings.items():
+            capacity = components.get(comp_model_name, {}).get(self.CAPACITIES, 0)
+            allocated = components.get(comp_model_name, {}).get(self.ALLOCATED, 0)
+            available = capacity - allocated
+
+            d[f"{names.get(self.NON_PRETTY_NAME)}_available"] = {"pretty_name": f"{names.get(self.PRETTY_NAME)} Available", "value": available}
+            d[f"{names.get(self.NON_PRETTY_NAME)}_capacity"] = {"pretty_name": f"{names.get(self.PRETTY_NAME)} Capacity", "value": capacity}
+            d[f"{names.get(self.NON_PRETTY_NAME)}_allocated"] = {"pretty_name": f"{names.get(self.PRETTY_NAME)} Allocated", "value": allocated}
+
+        return d
+
+    def site_to_dictXXX_old(self, site):
         site_name = site.name
         return {
             "name": {"pretty_name": "Name", "value": site.name},
