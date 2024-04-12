@@ -340,8 +340,6 @@ class Interface:
     @deprecated(version="1.3.2", reason="Use get_device_name() instead.")
     def get_os_interface(self) -> str:
         """
-        Deprecated: see interface.get_device_name()
-
         Gets a name of the interface the operating system uses for this
         FABLib interface.
 
