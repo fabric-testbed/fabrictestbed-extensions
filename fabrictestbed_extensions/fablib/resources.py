@@ -49,6 +49,7 @@ class Resources:
     ALLOCATED = "allocated"
     NON_PRETTY_NAME = "non_pretty_name"
     PRETTY_NAME = "pretty_name"
+    HEADER_NAME = "header_name"
 
     NIC_SHARED_CONNECTX_6 = "SharedNIC-ConnectX-6"
     SMART_NIC_CONNECTX_6 = "SmartNIC-ConnectX-6"
@@ -59,23 +60,69 @@ class Resources:
     GPU_A30 = "GPU-A30"
     GPU_A40 = "GPU-A40"
     FPGA_XILINX_U280 = "FPGA-Xilinx-U280"
+    HOSTS = "hosts"
+    CPUS = "cpus"
+    CORES = "cores"
+    RAM = "ram"
+    DISK = "disk"
 
-    component_name_mappings = {
-        NIC_SHARED_CONNECTX_6: {NON_PRETTY_NAME: "nic_basic", PRETTY_NAME: "Basic NIC"},
+    site_attribute_name_mappings = {
+        CORES: {NON_PRETTY_NAME: CPUS, PRETTY_NAME: "Cores", HEADER_NAME: "Cores"},
+        RAM: {
+            NON_PRETTY_NAME: RAM,
+            PRETTY_NAME: "Ram",
+            HEADER_NAME: f"RAM ({Capacities.UNITS['ram']})",
+        },
+        DISK: {
+            NON_PRETTY_NAME: DISK,
+            PRETTY_NAME: "Disk",
+            HEADER_NAME: f"Disk ({Capacities.UNITS['disk']})",
+        },
+        NIC_SHARED_CONNECTX_6: {
+            NON_PRETTY_NAME: "nic_basic",
+            PRETTY_NAME: "Basic NIC",
+            HEADER_NAME: "Basic (100 Gbps NIC)",
+        },
         SMART_NIC_CONNECTX_6: {
             NON_PRETTY_NAME: "nic_connectx_6",
             PRETTY_NAME: "ConnectX-6",
+            HEADER_NAME: "ConnectX-6 (100 Gbps x2 NIC)",
         },
         SMART_NIC_CONNECTX_5: {
             NON_PRETTY_NAME: "nic_connectx_5",
             PRETTY_NAME: "ConnectX-5",
+            HEADER_NAME: "ConnectX-5 (25 Gbps x2 NIC)",
         },
-        NVME_P4510: {NON_PRETTY_NAME: "nvme", PRETTY_NAME: "NVMe"},
-        GPU_TESLA_T4: {NON_PRETTY_NAME: "tesla_t4", PRETTY_NAME: "Tesla T4"},
-        GPU_RTX6000: {NON_PRETTY_NAME: "rtx6000", PRETTY_NAME: "RTX6000"},
-        GPU_A30: {NON_PRETTY_NAME: "a30", PRETTY_NAME: "A30"},
-        GPU_A40: {NON_PRETTY_NAME: "a40", PRETTY_NAME: "A40"},
-        FPGA_XILINX_U280: {NON_PRETTY_NAME: "fpga_u280", PRETTY_NAME: "U280"},
+        NVME_P4510: {
+            NON_PRETTY_NAME: "nvme",
+            PRETTY_NAME: "NVMe",
+            HEADER_NAME: "P4510 (NVMe 1TB)",
+        },
+        GPU_TESLA_T4: {
+            NON_PRETTY_NAME: "tesla_t4",
+            PRETTY_NAME: "Tesla T4",
+            HEADER_NAME: "Tesla T4 (GPU)",
+        },
+        GPU_RTX6000: {
+            NON_PRETTY_NAME: "rtx6000",
+            PRETTY_NAME: "RTX6000",
+            HEADER_NAME: "RTX6000 (GPU)",
+        },
+        GPU_A30: {
+            NON_PRETTY_NAME: "a30",
+            PRETTY_NAME: "A30",
+            HEADER_NAME: "A30 (GPU)",
+        },
+        GPU_A40: {
+            NON_PRETTY_NAME: "a40",
+            PRETTY_NAME: "A40",
+            HEADER_NAME: "A40 (GPU)",
+        },
+        FPGA_XILINX_U280: {
+            NON_PRETTY_NAME: "fpga_u280",
+            PRETTY_NAME: "U280",
+            HEADER_NAME: "FPGA-Xilinx-U280",
+        },
     }
     site_pretty_names = {
         "name": "Name",
@@ -150,46 +197,30 @@ class Resources:
         :rtype: String
         """
         table = []
+        headers = [
+            "Name",
+            "PTP Capable",
+            "CPUs",
+        ]
         for site_name, site in self.topology.sites.items():
-            components = self.get_components_capacities_and_allocations(site)
+            site_info = self.get_site_info(site)
             row = [
                 site.name,
                 self.get_ptp_capable(site),
                 self.get_cpu_capacity(site),
-                f"{self.get_core_available(site)}/{self.get_core_capacity(site)}",
-                f"{self.get_ram_available(site)}/{self.get_ram_capacity(site)}",
-                f"{self.get_disk_available(site)}/{self.get_disk_capacity(site)}",
             ]
-            for component, names in self.component_name_mappings.items():
-                allocated = components.get(component, {}).get(self.ALLOCATED, 0)
-                capacity = components.get(component, {}).get(self.CAPACITIES, 0)
+            for attribute, names in self.site_attribute_name_mappings.items():
+                allocated = site_info.get(attribute, {}).get(self.ALLOCATED, 0)
+                capacity = site_info.get(attribute, {}).get(self.CAPACITIES, 0)
                 available = capacity - allocated
                 row.append(f"{available}/{capacity}")
+                headers.append(names.get(self.HEADER_NAME))
 
             table.append(row)
 
         return tabulate(
             table,
-            headers=[
-                "Name",
-                "PTP Capable",
-                "CPUs",
-                "Cores",
-                f"RAM ({Capacities.UNITS['ram']})",
-                f"Disk ({Capacities.UNITS['disk']})",
-                # "Workers"
-                # "Physical Address",
-                # "Location Coordinates"
-                "Basic (100 Gbps NIC)",
-                "ConnectX-6 (100 Gbps x2 NIC)",
-                "ConnectX-5 (25 Gbps x2 NIC)",
-                "P4510 (NVMe 1TB)",
-                "Tesla T4 (GPU)",
-                "RTX6000 (GPU)",
-                "A30 (GPU)",
-                "A40 (GPU)",
-                "FPGA-Xilinx-U280",
-            ],
+            headers=headers,
         )
 
     def show_site(
@@ -307,7 +338,7 @@ class Resources:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
 
-    def get_components_capacities_and_allocations(
+    def get_site_info(
         self, site: str or node.Node or network_node.NodeSliver
     ) -> Dict[str, Dict[str, int]]:
         """
@@ -318,25 +349,44 @@ class Resources:
         :return: total component capacity for all components
         :rtype: Dict[str, int]
         """
-        components = {}
+        site_info = {}
 
         try:
             nodes = self.get_nodes(site=site)
+            site_info[self.CORES] = {
+                self.CAPACITIES: site.capacities.core,
+                self.ALLOCATED: site.capacity_allocations.core
+                if site.capacity_allocations
+                else 0,
+            }
+            site_info[self.RAM] = {
+                self.CAPACITIES: site.capacities.ram,
+                self.ALLOCATED: site.capacity_allocations.ram
+                if site.capacity_allocations
+                else 0,
+            }
+            site_info[self.DISK] = {
+                self.CAPACITIES: site.capacities.disk,
+                self.ALLOCATED: site.capacity_allocations.disk
+                if site.capacity_allocations
+                else 0,
+            }
+
             if nodes:
                 for w in nodes.values():
                     if w.components:
                         for component_model_name, c in w.components.items():
-                            comp_cap = components.setdefault(component_model_name, {})
+                            comp_cap = site_info.setdefault(component_model_name, {})
                             comp_cap.setdefault(self.CAPACITIES, 0)
                             comp_cap.setdefault(self.ALLOCATED, 0)
                             comp_cap[self.CAPACITIES] += c.capacities.unit
                             if c.capacity_allocations:
                                 comp_cap[self.ALLOCATED] += c.capacity_allocations.unit
 
-            return components
+            return site_info
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
-            return components
+            return site_info
 
     def get_component_capacity(
         self,
@@ -785,8 +835,7 @@ class Resources:
         :param site: site name or site object
         :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
         """
-        components = self.get_components_capacities_and_allocations(site)
-
+        site_info = self.get_site_info(site)
         d = {
             "name": site.name if isinstance(site, node.Node) else site.get_name(),
             "state": self.get_state(site),
@@ -797,9 +846,9 @@ class Resources:
             "cpus": self.get_cpu_capacity(site),
         }
 
-        for comp_model_name, names in self.component_name_mappings.items():
-            capacity = components.get(comp_model_name, {}).get(self.CAPACITIES, 0)
-            allocated = components.get(comp_model_name, {}).get(self.ALLOCATED, 0)
+        for attribute, names in self.site_attribute_name_mappings.items():
+            capacity = site_info.get(attribute, {}).get(self.CAPACITIES, 0)
+            allocated = site_info.get(attribute, {}).get(self.ALLOCATED, 0)
             available = capacity - allocated
             d[f"{names.get(self.NON_PRETTY_NAME)}_available"] = available
             d[f"{names.get(self.NON_PRETTY_NAME)}_capacity"] = capacity
@@ -812,7 +861,7 @@ class Resources:
 
     def site_to_dictXXX(self, site):
         site_name = site.name
-        components = self.get_components_capacities_and_allocations(site)
+        site_info = self.get_site_info(site)
         d = {
             "name": {"pretty_name": "Name", "value": site.name},
             "address": {
@@ -831,9 +880,9 @@ class Resources:
             "cpus": {"pretty_name": "CPUs", "value": self.get_cpu_capacity(site_name)},
         }
 
-        for comp_model_name, names in self.component_name_mappings.items():
-            capacity = components.get(comp_model_name, {}).get(self.CAPACITIES, 0)
-            allocated = components.get(comp_model_name, {}).get(self.ALLOCATED, 0)
+        for attribute, names in self.site_attribute_name_mappings.items():
+            capacity = site_info.get(attribute, {}).get(self.CAPACITIES, 0)
+            allocated = site_info.get(attribute, {}).get(self.ALLOCATED, 0)
             available = capacity - allocated
 
             d[f"{names.get(self.NON_PRETTY_NAME)}_available"] = {
