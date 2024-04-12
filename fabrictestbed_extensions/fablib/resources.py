@@ -45,11 +45,13 @@ from tabulate import tabulate
 
 
 class Resources:
-    CAPACITIES = "capacities"
-    ALLOCATED = "allocated"
     NON_PRETTY_NAME = "non_pretty_name"
     PRETTY_NAME = "pretty_name"
     HEADER_NAME = "header_name"
+    AVAILABLE = "Available"
+    CAPACITY = "Capacity"
+    ALLOCATED = "Allocated"
+    VALUE = "value"
 
     NIC_SHARED_CONNECTX_6 = "SharedNIC-ConnectX-6"
     SMART_NIC_CONNECTX_6 = "SmartNIC-ConnectX-6"
@@ -60,23 +62,23 @@ class Resources:
     GPU_A30 = "GPU-A30"
     GPU_A40 = "GPU-A40"
     FPGA_XILINX_U280 = "FPGA-Xilinx-U280"
-    HOSTS = "hosts"
-    CPUS = "cpus"
-    CORES = "cores"
-    RAM = "ram"
-    DISK = "disk"
+    CORES = "Cores"
+    RAM = "Ram"
+    DISK = "Disk"
+    CPUS = "CPUs"
+    HOSTS = "Hosts"
 
     site_attribute_name_mappings = {
-        CORES: {NON_PRETTY_NAME: CORES, PRETTY_NAME: "Cores", HEADER_NAME: "Cores"},
-        RAM: {
-            NON_PRETTY_NAME: RAM,
-            PRETTY_NAME: "Ram",
-            HEADER_NAME: f"RAM ({Capacities.UNITS['ram']})",
+        CORES.lower(): {NON_PRETTY_NAME: CORES, PRETTY_NAME: CORES, HEADER_NAME: CORES},
+        RAM.lower(): {
+            NON_PRETTY_NAME: RAM.lower(),
+            PRETTY_NAME: RAM,
+            HEADER_NAME: f"{RAM} ({Capacities.UNITS[RAM.lower()]})",
         },
         DISK: {
-            NON_PRETTY_NAME: DISK,
-            PRETTY_NAME: "Disk",
-            HEADER_NAME: f"Disk ({Capacities.UNITS['disk']})",
+            NON_PRETTY_NAME: DISK.lower(),
+            PRETTY_NAME: DISK,
+            HEADER_NAME: f"{DISK} ({Capacities.UNITS[DISK.lower()]})",
         },
         NIC_SHARED_CONNECTX_6: {
             NON_PRETTY_NAME: "nic_basic",
@@ -130,45 +132,16 @@ class Resources:
         "address": "Address",
         "location": "Location",
         "ptp_capable": "PTP Capable",
-        "hosts": "Hosts",
-        "cpus": "CPUs",
-        "cores_available": "Cores Available",
-        "cores_capacity": "Cores Capacity",
-        "cores_allocated": "Cores Allocated",
-        "ram_available": "RAM Available",
-        "ram_capacity": "RAM Capacity",
-        "ram_allocated": "RAM Allocated",
-        "disk_available": "Disk Available",
-        "disk_capacity": "Disk Capacity",
-        "disk_allocated": "Disk Allocated",
-        "nic_basic_available": "Basic NIC Available",
-        "nic_basic_capacity": "Basic NIC Capacity",
-        "nic_basic_allocated": "Basic NIC Allocated",
-        "nic_connectx_6_available": "ConnectX-6 Available",
-        "nic_connectx_6_capacity": "ConnectX-6 Capacity",
-        "nic_connectx_6_allocated": "ConnectX-6 Allocated",
-        "nic_connectx_5_available": "ConnectX-5 Available",
-        "nic_connectx_5_capacity": "ConnectX-5 Capacity",
-        "nic_connectx_5_allocated": "ConnectX-5 Allocated",
-        "nvme_available": "NVMe Available",
-        "nvme_capacity": "NVMe Capacity",
-        "nvme_allocated": "NVMe Allocated",
-        "tesla_t4_available": "Tesla T4 Available",
-        "tesla_t4_capacity": "Tesla T4 Capacity",
-        "tesla_t4_allocated": "Tesla T4 Allocated",
-        "rtx6000_available": "RTX6000 Available",
-        "rtx6000_capacity": "RTX6000 Capacity",
-        "rtx6000_allocated": "RTX6000 Allocated",
-        "a30_available": "A30 Available",
-        "a30_capacity": "A30 Capacity",
-        "a30_allocated": "A30 Allocated",
-        "a40_available": "A40 Available",
-        "a40_capacity": "A40 Capacity",
-        "a40_allocated": "A40 Allocated",
-        "fpga_u280_available": "U280 Available",
-        "fpga_u280_capacity": "U280 Capacity",
-        "fpga_u280_allocated": "U280 Allocated",
+        HOSTS.lower(): HOSTS,
+        CPUS.lower(): CPUS
     }
+    for attribute, names in site_attribute_name_mappings.items():
+        non_pretty_name = names.get(NON_PRETTY_NAME)
+        pretty_name = names.get(PRETTY_NAME)
+        site_pretty_names[non_pretty_name] = pretty_name
+        site_pretty_names[f"{non_pretty_name}_{AVAILABLE.lower()}"] = f"{pretty_name} {AVAILABLE}"
+        site_pretty_names[f"{non_pretty_name}_{CAPACITY.lower()}"] = f"{pretty_name} {CAPACITY}"
+        site_pretty_names[f"{non_pretty_name}_{ALLOCATED.lower()}"] = f"{pretty_name} {ALLOCATED}"
 
     def __init__(self, fablib_manager, force_refresh: bool = False):
         """
@@ -200,7 +173,7 @@ class Resources:
         headers = [
             "Name",
             "PTP Capable",
-            "CPUs",
+            self.CPUS,
         ]
         for site_name, site in self.topology.sites.items():
             site_info = self.get_site_info(site)
@@ -210,8 +183,8 @@ class Resources:
                 self.get_cpu_capacity(site),
             ]
             for attribute, names in self.site_attribute_name_mappings.items():
-                allocated = site_info.get(attribute, {}).get(self.ALLOCATED, 0)
-                capacity = site_info.get(attribute, {}).get(self.CAPACITIES, 0)
+                allocated = site_info.get(attribute, {}).get(self.ALLOCATED.lower(), 0)
+                capacity = site_info.get(attribute, {}).get(self.CAPACITY.lower(), 0)
                 available = capacity - allocated
                 row.append(f"{available}/{capacity}")
                 headers.append(names.get(self.HEADER_NAME))
@@ -353,21 +326,21 @@ class Resources:
 
         try:
             nodes = self.get_nodes(site=site)
-            site_info[self.CORES] = {
-                self.CAPACITIES: site.capacities.core,
-                self.ALLOCATED: site.capacity_allocations.core
+            site_info[self.CORES.lower()] = {
+                self.CAPACITY.lower(): site.capacities.core,
+                self.ALLOCATED.lower(): site.capacity_allocations.core
                 if site.capacity_allocations
                 else 0,
             }
-            site_info[self.RAM] = {
-                self.CAPACITIES: site.capacities.ram,
-                self.ALLOCATED: site.capacity_allocations.ram
+            site_info[self.RAM.lower()] = {
+                self.CAPACITY.lower(): site.capacities.ram,
+                self.ALLOCATED.lower(): site.capacity_allocations.ram
                 if site.capacity_allocations
                 else 0,
             }
-            site_info[self.DISK] = {
-                self.CAPACITIES: site.capacities.disk,
-                self.ALLOCATED: site.capacity_allocations.disk
+            site_info[self.DISK.lower()] = {
+                self.CAPACITY.lower(): site.capacities.disk,
+                self.ALLOCATED.lower(): site.capacity_allocations.disk
                 if site.capacity_allocations
                 else 0,
             }
@@ -377,11 +350,11 @@ class Resources:
                     if w.components:
                         for component_model_name, c in w.components.items():
                             comp_cap = site_info.setdefault(component_model_name, {})
-                            comp_cap.setdefault(self.CAPACITIES, 0)
-                            comp_cap.setdefault(self.ALLOCATED, 0)
-                            comp_cap[self.CAPACITIES] += c.capacities.unit
+                            comp_cap.setdefault(self.CAPACITY.lower(), 0)
+                            comp_cap.setdefault(self.ALLOCATED.lower(), 0)
+                            comp_cap[self.CAPACITY.lower()] += c.capacities.unit
                             if c.capacity_allocations:
-                                comp_cap[self.ALLOCATED] += c.capacity_allocations.unit
+                                comp_cap[self.ALLOCATED.lower()] += c.capacity_allocations.unit
 
             return site_info
         except Exception as e:
@@ -847,12 +820,12 @@ class Resources:
         }
 
         for attribute, names in self.site_attribute_name_mappings.items():
-            capacity = site_info.get(attribute, {}).get(self.CAPACITIES, 0)
-            allocated = site_info.get(attribute, {}).get(self.ALLOCATED, 0)
+            capacity = site_info.get(attribute, {}).get(self.CAPACITY.lower(), 0)
+            allocated = site_info.get(attribute, {}).get(self.ALLOCATED.lower(), 0)
             available = capacity - allocated
-            d[f"{names.get(self.NON_PRETTY_NAME)}_available"] = available
-            d[f"{names.get(self.NON_PRETTY_NAME)}_capacity"] = capacity
-            d[f"{names.get(self.NON_PRETTY_NAME)}_allocated"] = allocated
+            d[f"{names.get(self.NON_PRETTY_NAME)}_{self.AVAILABLE.lower()}"] = available
+            d[f"{names.get(self.NON_PRETTY_NAME)}_{self.CAPACITY.lower()}"] = capacity
+            d[f"{names.get(self.NON_PRETTY_NAME)}_{self.ALLOCATED.lower()}"] = allocated
 
         if not latlon:
             d.pop("location")
@@ -863,39 +836,39 @@ class Resources:
         site_name = site.name
         site_info = self.get_site_info(site)
         d = {
-            "name": {"pretty_name": "Name", "value": site.name},
+            "name": {self.PRETTY_NAME: "Name", self.VALUE: site.name},
             "address": {
-                "pretty_name": "Address",
-                "value": self.get_location_postal(site_name),
+                self.PRETTY_NAME: "Address",
+                self.VALUE: self.get_location_postal(site_name),
             },
             "location": {
-                "pretty_name": "Location",
-                "value": self.get_location_lat_long(site_name),
+                self.PRETTY_NAME: "Location",
+                self.VALUE: self.get_location_lat_long(site_name),
             },
-            "ptp": {"pretty_name": "PTP Capable", "value": self.get_ptp_capable(site)},
-            "hosts": {
-                "pretty_name": "Hosts",
-                "value": self.get_host_capacity(site_name),
+            "ptp": {self.PRETTY_NAME: "PTP Capable", self.VALUE: self.get_ptp_capable(site)},
+            self.HOSTS.lower(): {
+                self.PRETTY_NAME: self.HOSTS,
+                self.VALUE: self.get_host_capacity(site_name),
             },
-            "cpus": {"pretty_name": "CPUs", "value": self.get_cpu_capacity(site_name)},
+            self.CPUS.lower(): {self.PRETTY_NAME: self.CPUS, self.VALUE: self.get_cpu_capacity(site_name)},
         }
 
         for attribute, names in self.site_attribute_name_mappings.items():
-            capacity = site_info.get(attribute, {}).get(self.CAPACITIES, 0)
-            allocated = site_info.get(attribute, {}).get(self.ALLOCATED, 0)
+            capacity = site_info.get(attribute, {}).get(self.CAPACITY.lower(), 0)
+            allocated = site_info.get(attribute, {}).get(self.ALLOCATED.lower(), 0)
             available = capacity - allocated
 
-            d[f"{names.get(self.NON_PRETTY_NAME)}_available"] = {
-                "pretty_name": f"{names.get(self.PRETTY_NAME)} Available",
-                "value": available,
+            d[f"{names.get(self.NON_PRETTY_NAME)}_{self.AVAILABLE.lower()}"] = {
+                self.PRETTY_NAME: f"{names.get(self.PRETTY_NAME)} {self.AVAILABLE}",
+                self.VALUE: available,
             }
-            d[f"{names.get(self.NON_PRETTY_NAME)}_capacity"] = {
-                "pretty_name": f"{names.get(self.PRETTY_NAME)} Capacity",
-                "value": capacity,
+            d[f"{names.get(self.NON_PRETTY_NAME)}_{self.CAPACITY.lower()}"] = {
+                self.PRETTY_NAME: f"{names.get(self.PRETTY_NAME)} {self.CAPACITY}",
+                self.VALUE: capacity,
             }
-            d[f"{names.get(self.NON_PRETTY_NAME)}_allocated"] = {
-                "pretty_name": f"{names.get(self.PRETTY_NAME)} Allocated",
-                "value": allocated,
+            d[f"{names.get(self.NON_PRETTY_NAME)}_{self.ALLOCATED.lower()}"] = {
+                self.PRETTY_NAME: f"{names.get(self.PRETTY_NAME)} {self.ALLOCATED}",
+                self.VALUE: allocated,
             }
 
         return d
