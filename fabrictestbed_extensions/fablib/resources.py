@@ -133,15 +133,21 @@ class Resources:
         "location": "Location",
         "ptp_capable": "PTP Capable",
         HOSTS.lower(): HOSTS,
-        CPUS.lower(): CPUS
+        CPUS.lower(): CPUS,
     }
     for attribute, names in site_attribute_name_mappings.items():
         non_pretty_name = names.get(NON_PRETTY_NAME)
         pretty_name = names.get(PRETTY_NAME)
         site_pretty_names[non_pretty_name] = pretty_name
-        site_pretty_names[f"{non_pretty_name}_{AVAILABLE.lower()}"] = f"{pretty_name} {AVAILABLE}"
-        site_pretty_names[f"{non_pretty_name}_{CAPACITY.lower()}"] = f"{pretty_name} {CAPACITY}"
-        site_pretty_names[f"{non_pretty_name}_{ALLOCATED.lower()}"] = f"{pretty_name} {ALLOCATED}"
+        site_pretty_names[
+            f"{non_pretty_name}_{AVAILABLE.lower()}"
+        ] = f"{pretty_name} {AVAILABLE}"
+        site_pretty_names[
+            f"{non_pretty_name}_{CAPACITY.lower()}"
+        ] = f"{pretty_name} {CAPACITY}"
+        site_pretty_names[
+            f"{non_pretty_name}_{ALLOCATED.lower()}"
+        ] = f"{pretty_name} {ALLOCATED}"
 
     def __init__(self, fablib_manager, force_refresh: bool = False):
         """
@@ -354,7 +360,9 @@ class Resources:
                             comp_cap.setdefault(self.ALLOCATED.lower(), 0)
                             comp_cap[self.CAPACITY.lower()] += c.capacities.unit
                             if c.capacity_allocations:
-                                comp_cap[self.ALLOCATED.lower()] += c.capacity_allocations.unit
+                                comp_cap[
+                                    self.ALLOCATED.lower()
+                                ] += c.capacity_allocations.unit
 
             return site_info
         except Exception as e:
@@ -845,12 +853,18 @@ class Resources:
                 self.PRETTY_NAME: "Location",
                 self.VALUE: self.get_location_lat_long(site_name),
             },
-            "ptp": {self.PRETTY_NAME: "PTP Capable", self.VALUE: self.get_ptp_capable(site)},
+            "ptp": {
+                self.PRETTY_NAME: "PTP Capable",
+                self.VALUE: self.get_ptp_capable(site),
+            },
             self.HOSTS.lower(): {
                 self.PRETTY_NAME: self.HOSTS,
                 self.VALUE: self.get_host_capacity(site_name),
             },
-            self.CPUS.lower(): {self.PRETTY_NAME: self.CPUS, self.VALUE: self.get_cpu_capacity(site_name)},
+            self.CPUS.lower(): {
+                self.PRETTY_NAME: self.CPUS,
+                self.VALUE: self.get_cpu_capacity(site_name),
+            },
         }
 
         for attribute, names in self.site_attribute_name_mappings.items():
