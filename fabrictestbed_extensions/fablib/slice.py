@@ -2614,9 +2614,12 @@ class Slice:
         else:
             return True
 
-    def validate(self) -> Tuple[bool, Dict[str, str]]:
+    def validate(self, raise_exception: bool = True) -> Tuple[bool, Dict[str, str]]:
         """
         Validate the slice w.r.t available resources before submission
+
+        :param raise_exception: raise exception if validation fails
+        :type raise_exception: bool
 
         :return: Tuple indicating status for validation and dictionary of the errors corresponding to
                  each requested node
@@ -2629,5 +2632,10 @@ class Slice:
                 node=n, allocated=allocated
             )
             if not status:
-                errors[n.get_name()] = error
+                if raise_exception:
+                    print(f"{n.get_name()}: {error}")
+                else:
+                    errors[n.get_name()] = error
+        if raise_exception:
+            raise Exception("Slice validation failed!")
         return len(errors) == 0, errors
