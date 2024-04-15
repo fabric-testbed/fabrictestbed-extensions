@@ -1062,7 +1062,7 @@ class Slice:
         host: str = None,
         user_data: dict = {},
         avoid: List[str] = [],
-        check: bool = False,
+        validate: bool = False,
         remove: bool = True,
     ) -> Node:
         """
@@ -1107,8 +1107,8 @@ class Slice:
             random site.
         :type avoid: List[String]
 
-        :param check: Validate node can be allocated w.r.t available resources
-        :type check: bool
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
 
         :param remove: Remove the node if validation w.r.t available resources fails
         :type remove: bool
@@ -1117,7 +1117,7 @@ class Slice:
         :rtype: Node
         """
         node = Node.new_node(
-            slice=self, name=name, site=site, avoid=avoid, check=check, remove=remove
+            slice=self, name=name, site=site, avoid=avoid, validate=validate, remove=remove
         )
 
         node.init_fablib_data()
@@ -1141,7 +1141,7 @@ class Slice:
         self.nodes = None
         self.interfaces = None
 
-        if check:
+        if validate:
             status, error = self.get_fablib_manager().validate_node(node=node)
             if not status:
                 if remove:
@@ -1985,6 +1985,7 @@ class Slice:
         wait_ssh: bool = True,
         extra_ssh_keys: List[str] = None,
         lease_in_days: int = None,
+        validate: bool = False
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1997,20 +1998,44 @@ class Slice:
 
 
         :param wait: indicator for whether to wait for the slice's resources to be active
+        :type wait: bool
+
         :param wait_timeout: how many seconds to wait on the slice resources
+        :type wait_timeout: int
+
         :param wait_interval: how often to check on the slice resources
+        :type wait_interval: int
+
         :param progress: indicator for whether to show progress while waiting
+        :type progress: bool
+
         :param wait_jupyter: Special wait for jupyter notebooks.
+        :type wait_jupyter: bool
+
         :param post_boot_config:
+        :type post_boot_config: bool
+
         :param wait_ssh:
+        :type wait_ssh: bool
+
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
+        :type extra_ssh_keys: List[str]
+
         :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
                               only used for create.
+        :type lease_in_days: int
+
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
         :return: slice_id
         """
 
         if not wait:
             progress = False
+
+        if validate:
+            self.validate()
 
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
@@ -2636,6 +2661,6 @@ class Slice:
                     print(f"{n.get_name()}: {error}")
                 else:
                     errors[n.get_name()] = error
-        if raise_exception:
+        if raise_exception and len(errors):
             raise Exception("Slice validation failed!")
         return len(errors) == 0, errors

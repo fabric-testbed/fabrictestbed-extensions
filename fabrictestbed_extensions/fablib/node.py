@@ -85,7 +85,7 @@ class Node:
     default_image = "default_rocky_8"
 
     def __init__(
-        self, slice: Slice, node: FimNode, check: bool = False, remove: bool = True
+        self, slice: Slice, node: FimNode, validate: bool = False, remove: bool = True
     ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
@@ -96,8 +96,8 @@ class Node:
         :param node: the FIM node that this Node represents
         :type node: Node
 
-        :param check: Validate node can be allocated w.r.t available resources
-        :type check: bool
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
 
         :param remove: Remove the node if validation w.r.t available resources fails
         :type remove: bool
@@ -108,7 +108,7 @@ class Node:
         self.slice = slice
         self.host = None
         self.ip_addr_list_json = None
-        self.check = check
+        self.validate = validate
         self.remove = remove
 
         # Try to set the username.
@@ -175,7 +175,7 @@ class Node:
         name: str = None,
         site: str = None,
         avoid: List[str] = [],
-        check: bool = False,
+        validate: bool = False,
         remove: bool = True,
     ):
         """
@@ -196,8 +196,8 @@ class Node:
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
 
-        :param check: Validate node can be allocated w.r.t available resources
-        :type check: bool
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
 
         :param remove: Remove the node if validation w.r.t available resources fails
         :type remove: bool
@@ -214,7 +214,7 @@ class Node:
         node = Node(
             slice,
             slice.topology.add_node(name=name, site=site),
-            check=check,
+            validate=validate,
             remove=remove,
         )
         node.set_capacities(
@@ -1181,7 +1181,7 @@ class Node:
         component = Component.new_component(
             node=self, model=model, name=name, user_data=user_data
         )
-        if self.check:
+        if self.validate:
             status, error = self.get_fablib_manager().validate_node(node=self)
             if not status:
                 if self.remove:
