@@ -2230,7 +2230,7 @@ Host * !bastion.fabric-testbed.net
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        msg = f"Node can be allocated on the worker: {worker.name}"
+        msg = f"Node can be allocated on the host: {worker.name}."
         allocated_core = allocated.setdefault("core", 0)
         allocated_ram = allocated.setdefault("ram", 0)
         allocated_disk = allocated.setdefault("disk", 0)
@@ -2267,14 +2267,14 @@ Host * !bastion.fabric-testbed.net
             or node.get_requested_disk() > available_disk
             or node.get_requested_ram() > available_ram
         ):
-            msg = f"Insufficient Resources: Worker: {worker.name} does not meet core/ram/disk requirements!"
+            msg = f"Insufficient Resources: Host: {worker.name} does not meet core/ram/disk requirements."
             return False, msg
 
         # Check if there are enough components available
         for c in node.get_components():
             comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
             if comp_model_type not in worker.components:
-                msg = f"Invalid Request: Worker: {worker.name} does not have the requested component: {comp_model_type}"
+                msg = f"Invalid Request: Host: {worker.name} does not have the requested component: {comp_model_type}."
                 return False, msg
 
             allocated_comp_count = allocated.setdefault(comp_model_type, 0)
@@ -2288,7 +2288,7 @@ Host * !bastion.fabric-testbed.net
                 - allocated_comp_count
             )
             if available_comps <= 0:
-                msg = f"Insufficient Resources: Worker: {worker.name} has reached the limit for component: {comp_model_type}"
+                msg = f"Insufficient Resources: Host: {worker.name} has reached the limit for component: {comp_model_type}."
                 return False, msg
 
             allocated[comp_model_type] += 1
@@ -2310,16 +2310,20 @@ Host * !bastion.fabric-testbed.net
         if allocated is None:
             allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())
+        site_state = self.get_resources().get_state(site)
+        if site_state != "Active":
+            msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
+            return False, msg
         workers = self.get_resources().get_nodes(site=site)
         if not workers:
             msg = (
-                f"Node cannot be validated, worker information not available for {site}"
+                f"Node cannot be validated, host information not available for {site}."
             )
             return False, msg
 
         if node.get_host():
             if node.get_host() not in workers:
-                msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}"
+                msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
                 return False, msg
             worker = workers.get(node.get_host())
             allocated_comps = allocated.setdefault(worker.name, {})
@@ -2336,7 +2340,7 @@ Host * !bastion.fabric-testbed.net
             )
             if status:
                 return status, error
-        msg = f"Invalid Request: Requested Node cannot be accommodated by any of the workers on site: {site.name}."
+        msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.name}."
         if error:
             msg += f" Details: {error}"
         return False, msg

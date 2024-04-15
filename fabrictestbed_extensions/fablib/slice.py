@@ -2010,7 +2010,7 @@ class Slice:
         :type progress: bool
 
         :param wait_jupyter: Special wait for jupyter notebooks.
-        :type wait_jupyter: bool
+        :type wait_jupyter: str
 
         :param post_boot_config:
         :type post_boot_config: bool
