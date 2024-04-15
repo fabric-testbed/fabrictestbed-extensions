@@ -208,9 +208,6 @@ class Node:
         if site is None:
             [site] = slice.get_fablib_manager().get_random_sites(
                 avoid=avoid,
-                filter_function=lambda x: x["cores_available"] > Node.default_cores
-                and x["ram_available"] > Node.default_ram
-                and x["disk_available"] > Node.default_disk,
             )
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
