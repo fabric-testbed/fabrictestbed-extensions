@@ -69,7 +69,7 @@ class Resources:
     HOSTS = "Hosts"
 
     site_attribute_name_mappings = {
-        CORES.lower(): {NON_PRETTY_NAME: CORES, PRETTY_NAME: CORES, HEADER_NAME: CORES},
+        CORES.lower(): {NON_PRETTY_NAME: CORES.lower(), PRETTY_NAME: CORES, HEADER_NAME: CORES},
         RAM.lower(): {
             NON_PRETTY_NAME: RAM.lower(),
             PRETTY_NAME: RAM,
