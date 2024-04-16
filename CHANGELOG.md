@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Unreleased
 
 ### Fixed
+- Avoid use of deprecated methods internally (Issue
+  [#239](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/239))
 - Emit deprecation warnings from deprecated methods (Issue
   [#239](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/239))
 - Add Facility Port to allow adding multiple interfaces (Issue [#289](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/289))
