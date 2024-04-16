@@ -382,9 +382,7 @@ class Slice:
                 iface.get_physical_os_interface_name
             )
 
-            logging.info(
-                f"Starting get get_device_name for iface {iface.get_name()} "
-            )
+            logging.info(f"Starting get get_device_name for iface {iface.get_name()} ")
             os_interface_threads[iface.get_name()] = executor.submit(
                 iface.get_device_name
             )
