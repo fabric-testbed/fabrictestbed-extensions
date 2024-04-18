@@ -1063,7 +1063,7 @@ class Slice:
         user_data: dict = {},
         avoid: List[str] = [],
         validate: bool = False,
-        remove: bool = True,
+        raise_exception: bool = False,
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1110,14 +1110,14 @@ class Slice:
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
 
-        :param remove: Remove the node if validation w.r.t available resources fails
-        :type remove: bool
+        :param raise_exception: Raise exception in case of Failure
+        :type raise_exception: bool
 
         :return: a new node
         :rtype: Node
         """
         node = Node.new_node(
-            slice=self, name=name, site=site, avoid=avoid, validate=validate, remove=remove
+            slice=self, name=name, site=site, avoid=avoid, validate=validate, raise_exception=raise_exception
         )
 
         node.init_fablib_data()
@@ -1144,16 +1144,11 @@ class Slice:
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=node)
             if not status:
-                if remove:
-                    print(
-                        f"{node.get_name()} removed from the topology. Reason: {error}!"
-                    )
-                    node.delete()
-                    node = None
-                else:
+                node.delete()
+                node = None
+                if raise_exception:
                     raise ValueError(
-                        f"{node.get_name()} cannot be allocated as requested on site: "
-                        f"{node.get_site()}. Reason: {error}"
+                        f"{name} cannot be allocated as requested on site: {site}. Reason: {error}"
                     )
         return node
 
@@ -2652,15 +2647,19 @@ class Slice:
         """
         allocated = {}
         errors = {}
+        nodes_to_remove = []
         for n in self.get_nodes():
             status, error = self.get_fablib_manager().validate_node(
                 node=n, allocated=allocated
             )
             if not status:
+                nodes_to_remove.append(n)
                 if raise_exception:
                     print(f"{n.get_name()}: {error}")
                 else:
                     errors[n.get_name()] = error
+        for n in nodes_to_remove:
+            n.delete()
         if raise_exception and len(errors):
             raise Exception("Slice validation failed!")
         return len(errors) == 0, errors

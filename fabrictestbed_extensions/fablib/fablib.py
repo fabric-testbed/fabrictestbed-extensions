@@ -2222,7 +2222,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_worker(
-        worker: FimNode, node: Node, allocated: dict
+        worker: FimNode, node: Node, allocated: dict, site: FimNode
     ) -> Tuple[bool, str]:
         """
         Check if a node can be provisioned on a worker node on a site w.r.t available resources on that site
@@ -2231,6 +2231,12 @@ Host * !bastion.fabric-testbed.net
         :rtype: Tuple[bool, str]
         """
         msg = f"Node can be allocated on the host: {worker.name}."
+
+        worker_maint_info = site.maintenance_info.get(worker.name)
+        if worker_maint_info and worker_maint_info.state != "Active":
+            msg = f"Node cannot be allocated on {worker.name}, {worker.name} is in {worker_maint_info.state}."
+            return False, msg
+
         allocated_core = allocated.setdefault("core", 0)
         allocated_ram = allocated.setdefault("ram", 0)
         allocated_disk = allocated.setdefault("disk", 0)
@@ -2310,9 +2316,9 @@ Host * !bastion.fabric-testbed.net
         if allocated is None:
             allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())
-        site_state = self.get_resources().get_state(site)
-        if site_state != "Active":
-            msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
+        site_maint_info = site.maintenance_info.get(site.name)
+        if site_maint_info and site_maint_info.state != "Active":
+            msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
             return False, msg
         workers = self.get_resources().get_nodes(site=site)
         if not workers:
@@ -2325,18 +2331,21 @@ Host * !bastion.fabric-testbed.net
             if node.get_host() not in workers:
                 msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
                 return False, msg
+
             worker = workers.get(node.get_host())
+
             allocated_comps = allocated.setdefault(worker.name, {})
             status, error = self.__can_allocate_node_in_worker(
-                worker=worker, node=node, allocated=allocated_comps
+                worker=worker, node=node, allocated=allocated_comps, site=site
             )
+
             if not status:
                 return status, error
 
         for worker in workers.values():
             allocated_comps = allocated.setdefault(worker.name, {})
             status, error = self.__can_allocate_node_in_worker(
-                worker=worker, node=node, allocated=allocated_comps
+                worker=worker, node=node, allocated=allocated_comps, site=site
             )
             if status:
                 return status, error

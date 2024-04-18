@@ -85,7 +85,7 @@ class Node:
     default_image = "default_rocky_8"
 
     def __init__(
-        self, slice: Slice, node: FimNode, validate: bool = False, remove: bool = True
+        self, slice: Slice, node: FimNode, validate: bool = False, raise_exception: bool = False
     ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
@@ -99,8 +99,8 @@ class Node:
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
 
-        :param remove: Remove the node if validation w.r.t available resources fails
-        :type remove: bool
+        :param raise_exception: Raise exception in case validation failes
+        :type raise_exception: bool
 
         """
         super().__init__()
@@ -109,7 +109,7 @@ class Node:
         self.host = None
         self.ip_addr_list_json = None
         self.validate = validate
-        self.remove = remove
+        self.raise_exception = raise_exception
 
         # Try to set the username.
         try:
@@ -176,7 +176,7 @@ class Node:
         site: str = None,
         avoid: List[str] = [],
         validate: bool = False,
-        remove: bool = True,
+        raise_exception: bool = False,
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -199,8 +199,8 @@ class Node:
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
 
-        :param remove: Remove the node if validation w.r.t available resources fails
-        :type remove: bool
+        :param raise_exception: Raise exception in case of failure
+        :type raise_exception: bool
 
         :return: a new fablib node
         :rtype: Node
@@ -215,7 +215,7 @@ class Node:
             slice,
             slice.topology.add_node(name=name, site=site),
             validate=validate,
-            remove=remove,
+            raise_exception=raise_exception,
         )
         node.set_capacities(
             cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
@@ -1184,11 +1184,9 @@ class Node:
         if self.validate:
             status, error = self.get_fablib_manager().validate_node(node=self)
             if not status:
-                if self.remove:
-                    print(f"{name} removed from the topology. Reason: {error}!")
-                    component.delete()
-                    component = None
-                else:
+                component.delete()
+                component = None
+                if self.raise_exception:
                     raise ValueError(
                         f"{name} cannot be added to the Node: {self.get_name()} as requested on site: "
                         f"{self.get_site()}. Reason: {error}"
