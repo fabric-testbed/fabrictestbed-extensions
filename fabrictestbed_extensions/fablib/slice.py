@@ -1147,9 +1147,7 @@ class Slice:
                 node.delete()
                 node = None
                 if raise_exception:
-                    raise ValueError(
-                        f"{name} cannot be allocated as requested on site: {site}. Reason: {error}"
-                    )
+                    raise ValueError(error)
         return node
 
     def get_object_by_reservation(
@@ -2654,12 +2652,9 @@ class Slice:
             )
             if not status:
                 nodes_to_remove.append(n)
-                if raise_exception:
-                    print(f"{n.get_name()}: {error}")
-                else:
-                    errors[n.get_name()] = error
+                errors[n.get_name()] = error
         for n in nodes_to_remove:
             n.delete()
         if raise_exception and len(errors):
-            raise Exception("Slice validation failed!")
+            raise Exception(f"Slice validation failed - {errors}!")
         return len(errors) == 0, errors

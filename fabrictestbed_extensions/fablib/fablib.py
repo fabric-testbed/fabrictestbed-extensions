@@ -2234,7 +2234,7 @@ Host * !bastion.fabric-testbed.net
 
         worker_maint_info = site.maintenance_info.get(worker.name)
         if worker_maint_info and worker_maint_info.state != "Active":
-            msg = f"Node cannot be allocated on {worker.name}, {worker.name} is in {worker_maint_info.state}."
+            msg = f"Node cannot be allocated on {worker.name}, {worker.name} is in {worker_maint_info.state}!"
             return False, msg
 
         allocated_core = allocated.setdefault("core", 0)
