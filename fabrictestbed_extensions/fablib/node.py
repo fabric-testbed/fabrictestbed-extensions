@@ -1187,10 +1187,7 @@ class Node:
                 component.delete()
                 component = None
                 if self.raise_exception:
-                    raise ValueError(
-                        f"{name} cannot be added to the Node: {self.get_name()} as requested on site: "
-                        f"{self.get_site()}. Reason: {error}"
-                    )
+                    raise ValueError(error)
         return component
 
     def get_components(self) -> List[Component]:

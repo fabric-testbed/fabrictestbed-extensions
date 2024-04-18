@@ -2233,7 +2233,7 @@ Host * !bastion.fabric-testbed.net
         msg = f"Node can be allocated on the host: {worker.name}."
 
         worker_maint_info = site.maintenance_info.get(worker.name)
-        if worker_maint_info and worker_maint_info.state != "Active":
+        if worker_maint_info and str(worker_maint_info.state) != "Active":
             msg = f"Node cannot be allocated on {worker.name}, {worker.name} is in {worker_maint_info.state}!"
             return False, msg
 
@@ -2317,7 +2317,7 @@ Host * !bastion.fabric-testbed.net
             allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())
         site_maint_info = site.maintenance_info.get(site.name)
-        if site_maint_info and site_maint_info.state != "Active":
+        if site_maint_info and str(site_maint_info.state) != "Active":
             msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
             return False, msg
         workers = self.get_resources().get_nodes(site=site)
