@@ -59,9 +59,6 @@ test = [
 branch = true
 omit = ["fabrictestbed_extensions/tests/*"]
 
-[tool.black]
-src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
-
 [tool.isort]
 profile = "black"
 src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
