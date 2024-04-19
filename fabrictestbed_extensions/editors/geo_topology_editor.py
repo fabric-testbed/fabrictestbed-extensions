@@ -1460,9 +1460,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.current_node = node
 
             self.dashboards["node_dashboard"]["node_name_widget"].value = node_name
-            self.dashboards["node_dashboard"][
-                "site_name_widget"
-            ].value = node.get_property(pname="site")
+            self.dashboards["node_dashboard"]["site_name_widget"].value = (
+                node.get_property(pname="site")
+            )
             self.dashboards["node_dashboard"]["core_slider"].value = int(
                 self.get_capacity_value(node, "core")
             )
@@ -1475,9 +1475,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
             self.dashboards["node_dashboard"]["image_widget"].value = node.get_property(
                 pname="image_ref"
             )
-            self.dashboards["node_dashboard"][
-                "image_type_widget"
-            ].value = node.get_property(pname="image_type")
+            self.dashboards["node_dashboard"]["image_type_widget"].value = (
+                node.get_property(pname="image_type")
+            )
 
             # TODO: LOAD Components
 
