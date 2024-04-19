@@ -1146,6 +1146,7 @@ class Slice:
             if not status:
                 node.delete()
                 node = None
+                logging.warning(error)
                 if raise_exception:
                     raise ValueError(error)
         return node
@@ -2653,6 +2654,7 @@ class Slice:
             if not status:
                 nodes_to_remove.append(n)
                 errors[n.get_name()] = error
+                logging.warning(f"{n.get_name()} - {error}")
         for n in nodes_to_remove:
             n.delete()
         if raise_exception and len(errors):

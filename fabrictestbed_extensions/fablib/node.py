@@ -1186,6 +1186,7 @@ class Node:
             if not status:
                 component.delete()
                 component = None
+                logging.warning(error)
                 if self.raise_exception:
                     raise ValueError(error)
         return component
