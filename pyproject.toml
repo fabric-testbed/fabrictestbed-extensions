@@ -49,7 +49,7 @@ doc = [
   "furo"
 ]
 test = [
-  "black==23.*",
+  "black==24.*",
   "isort==5.*",
   "tox==4.*",
   "pytest",
