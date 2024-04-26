@@ -544,6 +544,22 @@ class Interface:
 
         return self
 
+    def set_bandwidth(self, bw: int):
+        """
+        Set the Bandwidths on the FABRIC request.
+
+        :param addr: bw
+        :type addr: int
+        """
+        if not bw:
+            return
+
+        if_capacities = self.get_fim_interface().get_property(pname="capacities")
+        if_capacities.bw = int(bw)
+        self.get_fim_interface().set_properties(capacities=if_capacities)
+
+        return self
+
     def get_fim_interface(self) -> FimInterface:
         """
         Not recommended for most users.
@@ -581,6 +597,19 @@ class Interface:
         except:
             vlan = None
         return vlan
+
+    def get_bw(self) -> int:
+        """
+        Gets the FABRIC bandwidth of an interface.
+
+        :return: VLAN
+        :rtype: String
+        """
+        try:
+            bw = self.get_fim_interface().get_property(pname="capacities").bw
+        except:
+            bw = None
+        return bw
 
     def get_reservation_id(self) -> str or None:
         try:

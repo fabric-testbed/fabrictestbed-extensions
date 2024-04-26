@@ -2230,6 +2230,8 @@ Host * !bastion.fabric-testbed.net
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
+        if not worker or not site or not allocated:
+            return False, f"Worker: {worker}, Site: {site}, allocated: {allocated} not available."
         msg = f"Node can be allocated on the host: {worker.name}."
 
         worker_maint_info = site.maintenance_info.get(worker.name)
@@ -2316,6 +2318,8 @@ Host * !bastion.fabric-testbed.net
         if allocated is None:
             allocated = {}
         site = self.get_resources().get_topology_site(site_name=node.get_site())
+        if not site:
+            return False, f"Site: {node.get_site()} not available in resources."
         site_maint_info = site.maintenance_info.get(site.name)
         if site_maint_info and str(site_maint_info.state) != "Active":
             msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
@@ -2334,7 +2338,7 @@ Host * !bastion.fabric-testbed.net
 
             worker = workers.get(node.get_host())
 
-            allocated_comps = allocated.setdefault(worker.name, {})
+            allocated_comps = allocated.setdefault(node.get_host(), {})
             status, error = self.__can_allocate_node_in_worker(
                 worker=worker, node=node, allocated=allocated_comps, site=site
             )
