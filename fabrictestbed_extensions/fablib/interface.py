@@ -598,7 +598,7 @@ class Interface:
             vlan = None
         return vlan
 
-    def get_bw(self) -> int:
+    def get_bandwidth(self) -> int:
         """
         Gets the FABRIC bandwidth of an interface.
 
