@@ -2230,8 +2230,8 @@ Host * !bastion.fabric-testbed.net
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        if not worker or not site or not allocated:
-            return False, f"Worker: {worker}, Site: {site}, allocated: {allocated} not available."
+        if worker is None or site is None:
+            return False, f"Worker: {worker}, Site: {site} not available."
         msg = f"Node can be allocated on the host: {worker.name}."
 
         worker_maint_info = site.maintenance_info.get(worker.name)
