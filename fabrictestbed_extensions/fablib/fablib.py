@@ -69,6 +69,7 @@ import logging
 import os
 import random
 import time
+import traceback
 import warnings
 
 warnings.filterwarnings("always", category=DeprecationWarning)
@@ -2231,7 +2232,8 @@ Host * !bastion.fabric-testbed.net
         :rtype: Tuple[bool, str]
         """
         if worker is None or site is None:
-            return False, f"Worker: {worker}, Site: {site} not available."
+            return True, f"Ignoring validation: Worker: {worker}, Site: {site} not available."
+
         msg = f"Node can be allocated on the host: {worker.name}."
 
         worker_maint_info = site.maintenance_info.get(worker.name)
@@ -2314,46 +2316,60 @@ Host * !bastion.fabric-testbed.net
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        error = None
-        if allocated is None:
-            allocated = {}
-        site = self.get_resources().get_topology_site(site_name=node.get_site())
-        if not site:
-            return False, f"Site: {node.get_site()} not available in resources."
-        site_maint_info = site.maintenance_info.get(site.name)
-        if site_maint_info and str(site_maint_info.state) != "Active":
-            msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
-            return False, msg
-        workers = self.get_resources().get_nodes(site=site)
-        if not workers:
-            msg = (
-                f"Node cannot be validated, host information not available for {site}."
-            )
-            return False, msg
+        try:
+            error = None
+            if allocated is None:
+                allocated = {}
+            site = self.get_resources().get_topology_site(site_name=node.get_site())
 
-        if node.get_host():
-            if node.get_host() not in workers:
-                msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
+            if not site:
+                logging.warning(f"Ignoring validation: Site: {node.get_site()} not available in resources.")
+                return True, f"Ignoring validation: Site: {node.get_site()} not available in resources."
+
+            site_maint_info = site.maintenance_info.get(site.name)
+            if site_maint_info and str(site_maint_info.state) != "Active":
+                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
+                logging.error(msg)
+                return False, msg
+            workers = self.get_resources().get_nodes(site=site)
+            if not workers:
+                msg = (
+                    f"Node cannot be validated, host information not available for {site}."
+                )
+                logging.error(msg)
                 return False, msg
 
-            worker = workers.get(node.get_host())
+            if node.get_host():
+                if node.get_host() not in workers:
+                    msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
+                    logging.error(msg)
+                    return False, msg
 
-            allocated_comps = allocated.setdefault(node.get_host(), {})
-            status, error = self.__can_allocate_node_in_worker(
-                worker=worker, node=node, allocated=allocated_comps, site=site
-            )
+                worker = workers.get(node.get_host())
 
-            if not status:
-                return status, error
+                allocated_comps = allocated.setdefault(node.get_host(), {})
+                status, error = self.__can_allocate_node_in_worker(
+                    worker=worker, node=node, allocated=allocated_comps, site=site
+                )
 
-        for worker in workers.values():
-            allocated_comps = allocated.setdefault(worker.name, {})
-            status, error = self.__can_allocate_node_in_worker(
-                worker=worker, node=node, allocated=allocated_comps, site=site
-            )
-            if status:
-                return status, error
-        msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.name}."
-        if error:
-            msg += f" Details: {error}"
-        return False, msg
+                if not status:
+                    logging.error(error)
+                    return status, error
+
+            for worker in workers.values():
+                allocated_comps = allocated.setdefault(worker.name, {})
+                status, error = self.__can_allocate_node_in_worker(
+                    worker=worker, node=node, allocated=allocated_comps, site=site
+                )
+                if status:
+                    return status, error
+
+            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.name}."
+            if error:
+                msg += f" Details: {error}"
+            logging.error(msg)
+            return False, msg
+        except Exception as e:
+            logging.error(e)
+            logging.error(traceback.format_exc())
+            return False, str(e)
