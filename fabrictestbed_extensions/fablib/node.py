@@ -662,6 +662,9 @@ class Node:
         )
 
     def get_networks(self):
+        """
+        Get a list of networks attached to the node.
+        """
         networks = []
         for interface in self.get_interfaces():
             networks.append(interface.get_network())
