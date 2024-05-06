@@ -2780,6 +2780,11 @@ class Node:
             return {}
 
     def delete(self):
+        """
+        TODO: another delete()?
+
+        https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321
+        """
         for component in self.get_components():
             component.delete()
 
