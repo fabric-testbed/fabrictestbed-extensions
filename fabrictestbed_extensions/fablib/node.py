@@ -121,6 +121,9 @@ class Node:
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
         return self.slice.get_fablib_manager()
 
     def __str__(self):
