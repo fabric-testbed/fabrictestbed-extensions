@@ -233,6 +233,11 @@ class Node:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return mappings from non-pretty names to pretty names.
+
+        Pretty names are in table headers.
+        """
         return {
             "id": "ID",
             "name": "Name",
