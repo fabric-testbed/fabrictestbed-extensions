@@ -32,6 +32,7 @@ Methods to work with FABRIC `network services`_.
 from __future__ import annotations
 
 import logging
+import threading
 from typing import TYPE_CHECKING, List, Union
 
 from tabulate import tabulate
@@ -624,6 +625,7 @@ class NetworkService:
             pass
 
         self.sliver = None
+        self.lock = threading.Lock()
 
     def __str__(self):
         """
@@ -1185,24 +1187,28 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
-        subnet = self.get_subnet()
-        allocated_ips = self.get_allocated_ips()
+        try:
+            self.lock.acquire()
+            subnet = self.get_subnet()
+            allocated_ips = self.get_allocated_ips()
 
-        if addr:
-            # if addr != subnet.network_address and addr not in allocated_ips:
-            if addr not in allocated_ips:
-                self.set_allocated_ip(addr)
-                return addr
-        elif (
-            type(subnet) == ipaddress.IPv4Network
-            or type(subnet) == ipaddress.IPv6Network
-        ):
-            for host in subnet:
-                if host != subnet.network_address and host not in allocated_ips:
-                    self.set_allocated_ip(host)
+            if addr:
+                # if addr != subnet.network_address and addr not in allocated_ips:
+                if addr not in allocated_ips:
+                    self.set_allocated_ip(addr)
+                    return addr
+            elif (
+                type(subnet) == ipaddress.IPv4Network
+                or type(subnet) == ipaddress.IPv6Network
+            ):
+                for host in subnet:
+                    if host != subnet.network_address and host not in allocated_ips:
+                        self.set_allocated_ip(host)
 
-                    return host
-        return None
+                        return host
+            return None
+        finally:
+            self.lock.release()
 
     def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
         fablib_data = self.get_fablib_data()
@@ -1217,10 +1223,14 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def free_ip(self, addr: IPv4Address or IPv6Address):
-        allocated_ips = self.get_allocated_ips()
-        if addr in allocated_ips:
-            allocated_ips.remove(addr)
-        self.set_allocated_ips(allocated_ips)
+        try:
+            self.lock.acquire()
+            allocated_ips = self.get_allocated_ips()
+            if addr in allocated_ips:
+                allocated_ips.remove(addr)
+            self.set_allocated_ips(allocated_ips)
+        finally:
+            self.lock.release()
 
     def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
         labels = self.fim_network_service.labels

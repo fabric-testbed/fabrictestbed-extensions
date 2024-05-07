@@ -69,13 +69,14 @@ import logging
 import os
 import random
 import time
+import traceback
 import warnings
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import pandas as pd
 import paramiko
@@ -89,6 +90,7 @@ from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
+    from fabrictestbed_extensions.fablib.node import Node
 
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
@@ -2218,3 +2220,156 @@ Host * !bastion.fabric-testbed.net
             for field in fields:
                 table.append([field, data[field]])
         return table
+
+    @staticmethod
+    def __can_allocate_node_in_worker(
+        worker: FimNode, node: Node, allocated: dict, site: FimNode
+    ) -> Tuple[bool, str]:
+        """
+        Check if a node can be provisioned on a worker node on a site w.r.t available resources on that site
+
+        :return: Tuple indicating status for validation and error message in case of failure
+        :rtype: Tuple[bool, str]
+        """
+        if worker is None or site is None:
+            return True, f"Ignoring validation: Worker: {worker}, Site: {site} not available."
+
+        msg = f"Node can be allocated on the host: {worker.name}."
+
+        worker_maint_info = site.maintenance_info.get(worker.name)
+        if worker_maint_info and str(worker_maint_info.state) != "Active":
+            msg = f"Node cannot be allocated on {worker.name}, {worker.name} is in {worker_maint_info.state}!"
+            return False, msg
+
+        allocated_core = allocated.setdefault("core", 0)
+        allocated_ram = allocated.setdefault("ram", 0)
+        allocated_disk = allocated.setdefault("disk", 0)
+        available_cores = (
+            worker.capacities.core
+            - (
+                worker.capacity_allocations.core
+                if worker.capacity_allocations is not None
+                else 0
+            )
+            - allocated_core
+        )
+        available_ram = (
+            worker.capacities.ram
+            - (
+                worker.capacity_allocations.ram
+                if worker.capacity_allocations is not None
+                else 0
+            )
+            - allocated_ram
+        )
+        available_disk = (
+            worker.capacities.disk
+            - (
+                worker.capacity_allocations.disk
+                if worker.capacity_allocations is not None
+                else 0
+            )
+            - allocated_disk
+        )
+
+        if (
+            node.get_requested_cores() > available_cores
+            or node.get_requested_disk() > available_disk
+            or node.get_requested_ram() > available_ram
+        ):
+            msg = f"Insufficient Resources: Host: {worker.name} does not meet core/ram/disk requirements."
+            return False, msg
+
+        # Check if there are enough components available
+        for c in node.get_components():
+            comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
+            if comp_model_type not in worker.components:
+                msg = f"Invalid Request: Host: {worker.name} does not have the requested component: {comp_model_type}."
+                return False, msg
+
+            allocated_comp_count = allocated.setdefault(comp_model_type, 0)
+            available_comps = (
+                worker.components[comp_model_type].capacities.unit
+                - (
+                    worker.components[comp_model_type].capacity_allocations.unit
+                    if worker.components[comp_model_type].capacity_allocations
+                    else 0
+                )
+                - allocated_comp_count
+            )
+            if available_comps <= 0:
+                msg = f"Insufficient Resources: Host: {worker.name} has reached the limit for component: {comp_model_type}."
+                return False, msg
+
+            allocated[comp_model_type] += 1
+
+        allocated["core"] += node.get_requested_cores()
+        allocated["ram"] += node.get_requested_ram()
+        allocated["disk"] += node.get_requested_disk()
+
+        return True, msg
+
+    def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
+        """
+        Validate a node w.r.t available resources on a site before submission
+
+        :return: Tuple indicating status for validation and error message in case of failure
+        :rtype: Tuple[bool, str]
+        """
+        try:
+            error = None
+            if allocated is None:
+                allocated = {}
+            site = self.get_resources().get_topology_site(site_name=node.get_site())
+
+            if not site:
+                logging.warning(f"Ignoring validation: Site: {node.get_site()} not available in resources.")
+                return True, f"Ignoring validation: Site: {node.get_site()} not available in resources."
+
+            site_maint_info = site.maintenance_info.get(site.name)
+            if site_maint_info and str(site_maint_info.state) != "Active":
+                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
+                logging.error(msg)
+                return False, msg
+            workers = self.get_resources().get_nodes(site=site)
+            if not workers:
+                msg = (
+                    f"Node cannot be validated, host information not available for {site}."
+                )
+                logging.error(msg)
+                return False, msg
+
+            if node.get_host():
+                if node.get_host() not in workers:
+                    msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
+                    logging.error(msg)
+                    return False, msg
+
+                worker = workers.get(node.get_host())
+
+                allocated_comps = allocated.setdefault(node.get_host(), {})
+                status, error = self.__can_allocate_node_in_worker(
+                    worker=worker, node=node, allocated=allocated_comps, site=site
+                )
+
+                if not status:
+                    logging.error(error)
+                    return status, error
+
+            for worker in workers.values():
+                allocated_comps = allocated.setdefault(worker.name, {})
+                status, error = self.__can_allocate_node_in_worker(
+                    worker=worker, node=node, allocated=allocated_comps, site=site
+                )
+                if status:
+                    return status, error
+
+            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.name}."
+            if error:
+                msg += f" Details: {error}"
+            logging.error(msg)
+            return False, msg
+        except Exception as e:
+            logging.error(e)
+            logging.error(traceback.format_exc())
+            return False, str(e)

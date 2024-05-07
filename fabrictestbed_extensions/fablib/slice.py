@@ -56,7 +56,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
 from fss_utils.sshkey import FABRICSSHKey
@@ -1062,6 +1062,8 @@ class Slice:
         host: str = None,
         user_data: dict = {},
         avoid: List[str] = [],
+        validate: bool = False,
+        raise_exception: bool = False,
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1105,10 +1107,18 @@ class Slice:
             random site.
         :type avoid: List[String]
 
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case of Failure
+        :type raise_exception: bool
+
         :return: a new node
         :rtype: Node
         """
-        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
+        node = Node.new_node(
+            slice=self, name=name, site=site, avoid=avoid, validate=validate, raise_exception=raise_exception
+        )
 
         node.init_fablib_data()
 
@@ -1131,6 +1141,14 @@ class Slice:
         self.nodes = None
         self.interfaces = None
 
+        if validate:
+            status, error = self.get_fablib_manager().validate_node(node=node)
+            if not status:
+                node.delete()
+                node = None
+                logging.warning(error)
+                if raise_exception:
+                    raise ValueError(error)
         return node
 
     def get_object_by_reservation(
@@ -1961,6 +1979,7 @@ class Slice:
         wait_ssh: bool = True,
         extra_ssh_keys: List[str] = None,
         lease_in_days: int = None,
+        validate: bool = False
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1973,20 +1992,44 @@ class Slice:
 
 
         :param wait: indicator for whether to wait for the slice's resources to be active
+        :type wait: bool
+
         :param wait_timeout: how many seconds to wait on the slice resources
+        :type wait_timeout: int
+
         :param wait_interval: how often to check on the slice resources
+        :type wait_interval: int
+
         :param progress: indicator for whether to show progress while waiting
+        :type progress: bool
+
         :param wait_jupyter: Special wait for jupyter notebooks.
+        :type wait_jupyter: str
+
         :param post_boot_config:
+        :type post_boot_config: bool
+
         :param wait_ssh:
+        :type wait_ssh: bool
+
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
+        :type extra_ssh_keys: List[str]
+
         :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
                               only used for create.
+        :type lease_in_days: int
+
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
         :return: slice_id
         """
 
         if not wait:
             progress = False
+
+        if validate:
+            self.validate()
 
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
@@ -2589,3 +2632,31 @@ class Slice:
             return False
         else:
             return True
+
+    def validate(self, raise_exception: bool = True) -> Tuple[bool, Dict[str, str]]:
+        """
+        Validate the slice w.r.t available resources before submission
+
+        :param raise_exception: raise exception if validation fails
+        :type raise_exception: bool
+
+        :return: Tuple indicating status for validation and dictionary of the errors corresponding to
+                 each requested node
+        :rtype: Tuple[bool, Dict[str, str]]
+        """
+        allocated = {}
+        errors = {}
+        nodes_to_remove = []
+        for n in self.get_nodes():
+            status, error = self.get_fablib_manager().validate_node(
+                node=n, allocated=allocated
+            )
+            if not status:
+                nodes_to_remove.append(n)
+                errors[n.get_name()] = error
+                logging.warning(f"{n.get_name()} - {error}")
+        for n in nodes_to_remove:
+            n.delete()
+        if raise_exception and len(errors):
+            raise Exception(f"Slice validation failed - {errors}!")
+        return len(errors) == 0, errors
