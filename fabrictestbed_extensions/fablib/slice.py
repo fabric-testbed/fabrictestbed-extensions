@@ -1978,6 +1978,7 @@ class Slice:
         post_boot_config: bool = True,
         wait_ssh: bool = True,
         extra_ssh_keys: List[str] = None,
+        lease_start_time: datetime = None,
         lease_in_days: int = None,
         validate: bool = False
     ) -> str:
@@ -2014,6 +2015,9 @@ class Slice:
 
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
         :type extra_ssh_keys: List[str]
+
+        :param lease_start_time: Optional lease start in UTC time format: %Y-%m-%d %H:%M:%S %z
+        :type lease_start_time: datetime
 
         :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
                               only used for create.
@@ -2066,6 +2070,9 @@ class Slice:
                 lease_end_time = (
                     datetime.now(timezone.utc) + timedelta(days=lease_in_days)
                 ).strftime("%Y-%m-%d %H:%M:%S %z")
+            lease_start_time_str = None
+            if lease_start_time:
+                lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
 
             (
                 return_status,
@@ -2075,6 +2082,7 @@ class Slice:
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
                 lease_end_time=lease_end_time,
+                lease_start_time=lease_start_time_str
             )
             if return_status == Status.OK:
                 logging.info(
