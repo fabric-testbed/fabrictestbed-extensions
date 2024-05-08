@@ -2775,9 +2775,7 @@ class Node:
 
     def delete(self):
         """
-        TODO: another delete()?
-
-        https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321
+        Remove the node, including components connected to it.
         """
         for component in self.get_components():
             component.delete()
