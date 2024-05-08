@@ -330,12 +330,6 @@ class Node:
 
         return output_string
 
-    def delete(self):
-        """
-        Remove the node.
-        """
-        self.get_slice().get_fim_topology().remove_node(name=self.get_name())
-
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):

@@ -48,7 +48,7 @@ doc = [
   "furo"
 ]
 test = [
-  "black==23.*",
+  "black==24.*",
   "isort==5.*",
   "tox==4.*",
   "pytest",
@@ -58,9 +58,6 @@ test = [
 [tool.coverage.run]
 branch = true
 omit = ["fabrictestbed_extensions/tests/*"]
-
-[tool.black]
-src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
 
 [tool.isort]
 profile = "black"
