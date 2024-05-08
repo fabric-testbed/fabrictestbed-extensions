@@ -2065,14 +2065,16 @@ class Slice:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
-            lease_end_time = None
-            if lease_in_days:
-                lease_end_time = (
-                    datetime.now(timezone.utc) + timedelta(days=lease_in_days)
-                ).strftime("%Y-%m-%d %H:%M:%S %z")
             lease_start_time_str = None
             if lease_start_time:
                 lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
+
+            lease_end_time = None
+            if lease_in_days:
+                start_time = lease_start_time if lease_end_time else datetime.now(timezone.utc)
+                lease_end_time = (
+                    start_time + timedelta(days=lease_in_days)
+                ).strftime("%Y-%m-%d %H:%M:%S %z")
 
             (
                 return_status,
