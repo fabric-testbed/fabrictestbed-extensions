@@ -1071,6 +1071,10 @@ Host * !bastion.fabric-testbed.net
         pretty_names: bool = True,
         force_refresh: bool = False,
         latlon: bool = True,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1106,10 +1110,19 @@ Host * !bastion.fabric-testbed.net
         :param force_refresh:
         :type force_refresh: bool
         :param latlon: convert address to latlon, makes online call to openstreetmaps.org
-        :rtype: Object
+        :type: Object
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param avoid: list of sites to avoid
+        :type: list of string
+        :param includes: list of sites to include
+        :type: list of string
+
         """
         return self.get_resources(
-            update=update, force_refresh=force_refresh
+            update=update, force_refresh=force_refresh, start=start, end=end, avoid=avoid, includes=includes
         ).list_sites(
             output=output,
             fields=fields,
@@ -1351,17 +1364,40 @@ Host * !bastion.fabric-testbed.net
         return self.facility_ports
 
     def get_resources(
-        self, update: bool = True, force_refresh: bool = False
+        self, update: bool = True, force_refresh: bool = False,
+            start: datetime = None,
+            end: datetime = None,
+            avoid: List[str] = None,
+            includes: List[str] = None
     ) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
 
+        :param update:
+        :type update: bool
+
+        :param force_refresh:
+        :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
+
         :return: the resources object
         :rtype: Resources
         """
         if not self.resources:
-            self.get_available_resources(update=update, force_refresh=force_refresh)
+            self.get_available_resources(update=update, force_refresh=force_refresh,
+                                         start=start, end=end, avoid=avoid, includes=includes)
 
         return self.resources
 
@@ -1566,7 +1602,11 @@ Host * !bastion.fabric-testbed.net
         return topology.sites[site]
 
     def get_available_resources(
-        self, update: bool = False, force_refresh: bool = False
+        self, update: bool = False, force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None
     ) -> Resources:
         """
         Get the available resources.
@@ -1576,15 +1616,33 @@ Host * !bastion.fabric-testbed.net
         information.
 
         :param update:
+        :type update: bool
+
         :param force_refresh:
+        :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
+
         :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
-            self.resources = Resources(self, force_refresh=force_refresh)
+            self.resources = Resources(self, force_refresh=force_refresh,
+                                       start=start, end=end, avoid=avoid, includes=includes)
         elif update:
-            self.resources.update(force_refresh=force_refresh)
+            self.resources.update(force_refresh=force_refresh,
+                                  start=start, end=end, avoid=avoid, includes=includes)
 
         return self.resources
 

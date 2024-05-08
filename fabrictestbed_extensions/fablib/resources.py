@@ -34,6 +34,7 @@ from __future__ import annotations
 import json
 import logging
 import traceback
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
@@ -149,7 +150,11 @@ class Resources:
             f"{non_pretty_name}_{ALLOCATED.lower()}"
         ] = f"{pretty_name} {ALLOCATED}"
 
-    def __init__(self, fablib_manager, force_refresh: bool = False):
+    def __init__(self, fablib_manager, force_refresh: bool = False,
+                 start: datetime = None,
+                 end: datetime = None,
+                 avoid: List[str] = None,
+                 includes: List[str] = None):
         """
         :param fablib_manager: a :class:`FablibManager` instance.
         :type fablib_manager: fablib.FablibManager
@@ -157,6 +162,19 @@ class Resources:
         :param force_refresh: force a refresh of available testbed
             resources.
         :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
+
         """
         super().__init__()
 
@@ -164,7 +182,7 @@ class Resources:
 
         self.topology = None
 
-        self.update(force_refresh=force_refresh)
+        self.update(force_refresh=force_refresh, start=start, end=end, includes=includes, avoid=avoid)
 
     def __str__(self) -> str:
         """
@@ -739,16 +757,36 @@ class Resources:
     def get_fablib_manager(self):
         return self.fablib_manager
 
-    def update(self, force_refresh: bool = False):
+    def update(self, force_refresh: bool = False,
+               start: datetime = None,
+               end: datetime = None,
+               avoid: List[str] = None,
+               includes: List[str] = None):
         """
         Update the available resources by querying the FABRIC services
+        :param force_refresh: force a refresh of available testbed
+            resources.
+        :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
 
         """
         logging.info(f"Updating available resources")
         return_status, topology = (
             self.get_fablib_manager()
             .get_slice_manager()
-            .resources(force_refresh=force_refresh, level=2)
+            .resources(force_refresh=force_refresh, level=2, start=start, end=end, excludes=avoid,
+                       includes=includes)
         )
         if return_status != Status.OK:
             raise Exception(
