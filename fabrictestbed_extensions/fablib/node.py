@@ -1217,6 +1217,16 @@ class Node:
     def get_paramiko_key(
         self, private_key_file: str = None, get_private_key_passphrase: str = None
     ) -> paramiko.PKey:
+        """
+        Get SSH pubkey for internal use.
+
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+
+        :return: an SSH pubkey.
+        :rtype: paramiko.PKey
+        """
         # TODO: This is a bit of a hack and should probably test he keys for their types
         # rather than relying on execptions
         if get_private_key_passphrase:
