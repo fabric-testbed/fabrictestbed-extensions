@@ -2793,6 +2793,11 @@ class Node:
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
 
     def init_fablib_data(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         fablib_data = {
             "instantiated": "False",
             "run_update_commands": "False",
@@ -2802,12 +2807,22 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def get_fablib_data(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         try:
             return self.get_user_data()["fablib_data"]
         except:
             return {}
 
     def set_fablib_data(self, fablib_data: dict):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
