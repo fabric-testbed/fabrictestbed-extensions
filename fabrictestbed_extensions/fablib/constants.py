@@ -158,3 +158,4 @@ class Constants:
     EMAIL = "email"
     SSH_KEYS = "sshkeys"
     EXPIRES_ON = "expires_on"
+    LEASE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"

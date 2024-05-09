@@ -204,9 +204,13 @@ class Slice:
                 color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "ModifyOK":
                 color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "AllocatedOK":
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "StableError":
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             elif val == "ModifyError":
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
+            elif val == "AllocatedError":
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             elif val == "Configuring":
                 color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
@@ -760,7 +764,41 @@ class Slice:
         return self.fablib_manager.get_default_slice_private_key()
 
     def is_dead_or_closing(self):
+        """
+        Tests is the slice is Dead or Closing state.
+
+        :return: True if slice is Dead or Closing state, False otherwise
+        :rtype: Bool
+        """
         if self.get_state() in ["Closing", "Dead"]:
+            return True
+        else:
+            return False
+
+    def is_advanced_allocation(self) -> bool:
+        """
+        Checks if slice is requested in future
+
+        :return: True if slice is Allocated and starts in future, False otherwise
+        :rtype: Bool
+        """
+        now = datetime.now(timezone.utc)
+        lease_start = datetime.strptime(self.get_lease_start(), Constants.LEASE_TIME_FORMAT) if self.get_lease_start() else None
+        if lease_start and lease_start > now and self.is_allocated():
+            return True
+        return False
+
+    def is_allocated(self) -> bool:
+        """
+        Tests is the slice is in Allocated State.
+
+        :return: True if slice is Allocated, False otherwise
+        :rtype: Bool
+        """
+        if self.get_state() in [
+            "AllocatedOK",
+            "AllocatedError"
+        ] and self.get_lease_start() :
             return True
         else:
             return False
@@ -794,18 +832,13 @@ class Slice:
         :rtype: str
         """
 
-        if self.sm_slice == None:
-            state = None
-        else:
-            try:
-                state = self.sm_slice.state
-            except Exception as e:
-                logging.warning(
-                    f"Exception in get_state from non-None sm_slice. Returning None state: {e}"
-                )
-                state = None
-
-        return state
+        try:
+            if self.sm_slice is not None:
+                return self.sm_slice.state
+        except Exception as e:
+            logging.warning(
+                f"Exception in get_state from non-None sm_slice. Returning None state: {e}"
+            )
 
     def get_name(self) -> str:
         """
@@ -833,18 +866,13 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice is None:
-            lease_end_time = None
-        else:
-            try:
-                lease_end_time = self.sm_slice.lease_end_time
-            except Exception as e:
-                logging.warning(
-                    f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
-                )
-                lease_end_time = None
-
-        return lease_end_time
+        try:
+            if self.sm_slice is not None:
+                return self.sm_slice.lease_end_time
+        except Exception as e:
+            logging.warning(
+                f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
+            )
 
     def get_lease_start(self) -> str:
         """
@@ -853,19 +881,13 @@ class Slice:
         :return: timestamp when lease starts
         :rtype: String
         """
-
-        if self.sm_slice is None:
-            lease_start_time = None
-        else:
-            try:
-                lease_start_time = self.sm_slice.lease_start_time
-            except Exception as e:
-                logging.warning(
-                    f"Exception in get_lease_start from non-None sm_slice. Returning None state: {e}"
-                )
-                lease_start_time = None
-
-        return lease_start_time
+        try:
+            if self.sm_slice is not None:
+                return self.sm_slice.lease_start_time
+        except Exception as e:
+            logging.warning(
+                f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
+            )
 
     def get_project_id(self) -> str:
         """
@@ -1672,7 +1694,7 @@ class Slice:
         Only use this method after a non-blocking submit call and only call it
         once.
         """
-        if self.is_dead_or_closing():
+        if self.is_dead_or_closing() or self.is_allocated():
             print(
                 f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
             )
@@ -1728,8 +1750,8 @@ class Slice:
         )  # ({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
+            node = threads[thread]
             try:
-                node = threads[thread]
                 result = thread.result()
                 # print(result)
                 print(
@@ -1784,7 +1806,7 @@ class Slice:
 
             if (
                 node.get_reservation_state() == "Active"
-                and node.get_management_ip() == None
+                and node.get_management_ip() is None
             ):
                 logging.warning(
                     f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
@@ -1799,7 +1821,7 @@ class Slice:
                         in [ipaddress.IPv4Network, ipaddress.IPv6Network]
                         or not type(net.get_gateway())
                         in [ipaddress.IPv4Address, ipaddress.IPv6Address]
-                        or net.get_available_ips() == None
+                        or net.get_available_ips() is None
                     ):
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
@@ -1854,6 +1876,7 @@ class Slice:
             time.sleep(interval)
 
             stable = False
+            allocated = False
             self.update_slice()
             self.update_slivers()
 
@@ -1866,6 +1889,14 @@ class Slice:
                     hasNetworks = False
                 if self.isReady():
                     break
+            elif self.is_advanced_allocation():
+                allocated = True
+                self.update()
+                if len(self.get_interfaces()) > 0:
+                    hasNetworks = True
+                else:
+                    hasNetworks = False
+                break
             else:
                 if verbose:
                     self.update()
@@ -1904,7 +1935,6 @@ class Slice:
                     display(node_table)
                 if hasNetworks and network_table:
                     display(network_table)
-
             else:
                 if slice_show_table:
                     display(slice_show_table)
@@ -1937,11 +1967,14 @@ class Slice:
         if hasNetworks and network_table:
             display(network_table)
 
-        print(f"\nTime to stable {time.time() - start:.0f} seconds")
+        print(f"\nTime to {self.get_state()} {time.time() - start:.0f} seconds")
 
-        print("Running post_boot_config ... ")
-        self.post_boot_config()
-        print(f"Time to post boot config {time.time() - start:.0f} seconds")
+        if stable:
+            print("Running post_boot_config ... ")
+            self.post_boot_config()
+            print(f"Time to post boot config {time.time() - start:.0f} seconds")
+        elif allocated:
+            print("Future allocation - skipping post_boot_config ... ")
 
         # Last update to get final data for display
         # no longer needed because post_boot_config does this
@@ -2126,10 +2159,14 @@ class Slice:
                     timeout=wait_timeout, interval=wait_interval, progress=progress
                 )
 
+            advance_allocation = self.is_advanced_allocation()
             if progress:
-                print("Running post boot config ... ", end="")
+                if advance_allocation:
+                    print("Future allocation - skipping post_boot_config ... ")
+                else:
+                    print("Running post boot config ... ", end="")
 
-            if post_boot_config:
+            if advance_allocation and post_boot_config:
                 self.post_boot_config()
         else:
             self.update()
