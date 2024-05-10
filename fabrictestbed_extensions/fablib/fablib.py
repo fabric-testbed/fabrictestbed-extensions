@@ -2239,17 +2239,6 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def create_list_tableXXX(data, fields=None):
-        table = []
-        for entry in data:
-            row = []
-            for field in fields:
-                row.append(entry[field])
-
-            table.append(row)
-        return table
-
-    @staticmethod
     def create_show_table(data, fields=None, pretty_names_dict={}):
         table = []
         if fields is None:
@@ -2266,17 +2255,6 @@ Host * !bastion.fabric-testbed.net
                 else:
                     table.append([field, value])
 
-        return table
-
-    @staticmethod
-    def create_show_tableXXX(data, fields=None):
-        table = []
-        if fields is None:
-            for key, value in data.items():
-                table.append([key, value])
-        else:
-            for field in fields:
-                table.append([field, data[field]])
         return table
 
     @staticmethod
@@ -2431,3 +2409,17 @@ Host * !bastion.fabric-testbed.net
             logging.error(e)
             logging.error(traceback.format_exc())
             return False, str(e)
+
+    def get_metrics_overview(self, excluded_projects: List[str] = None, authenticated: bool = False) -> list:
+        """
+        Get Metrics overview
+        @param excluded_projects: excluded_projects
+        @param authenticated: Specific user metrics
+        @return list of metrics
+        """
+        try:
+            return self.get_slice_manager().get_metrics_overview(authenticated=authenticated,
+                                                                 excluded_projects=excluded_projects)
+        except Exception as e:
+            logging.error(e)
+            logging.error(traceback.format_exc())
