@@ -2939,12 +2939,22 @@ class Node:
             return []
 
     def get_routes(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         try:
             return self.get_fablib_data()["routes"]
         except Exception as e:
             return []
 
     def config_routes(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         routes = self.get_routes()
 
         for route in routes:
@@ -2970,6 +2980,11 @@ class Node:
             self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
 
     def run_post_boot_tasks(self, log_dir: str = "."):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         logging.debug(f"run_post_boot_tasks: {self.get_name()}")
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" in fablib_data:
@@ -3004,6 +3019,11 @@ class Node:
                 logging.error(f"Invalid post boot command: {command}")
 
     def run_post_update_commands(self, log_dir: str = "."):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         fablib_data = self.get_fablib_data()
         if "post_update_commands" in fablib_data:
             commands = fablib_data["post_update_commands"]
@@ -3016,6 +3036,11 @@ class Node:
             )
 
     def is_instantiated(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         fablib_data = self.get_fablib_data()
         if "instantiated" not in fablib_data:
             logging.debug(
@@ -3035,11 +3060,21 @@ class Node:
             return False
 
     def set_instantiated(self, instantiated: bool = True):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         fablib_data = self.get_fablib_data()
         fablib_data["instantiated"] = str(instantiated)
         self.set_fablib_data(fablib_data)
 
     def run_update_commands(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         fablib_data = self.get_fablib_data()
         if fablib_data["run_update_commands"] == "True":
             return True
