@@ -2418,8 +2418,59 @@ Host * !bastion.fabric-testbed.net
         @return list of metrics
         """
         try:
-            return self.get_slice_manager().get_metrics_overview(authenticated=authenticated,
-                                                                 excluded_projects=excluded_projects)
+            status, metrics =  self.get_slice_manager().get_metrics_overview(authenticated=authenticated,
+                                                                             excluded_projects=excluded_projects)
+            if status = Status.OK
         except Exception as e:
             logging.error(e)
             logging.error(traceback.format_exc())
+
+    def list_metrics(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        pretty_names: bool = True,
+    ) -> object:
+        """
+        Lists all the Metrics.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Active Slices','Total Slices']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['Active Slices'] > 3 and s['Total Slices'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :param pretty_names:
+        :type pretty_names: bool
+
+        """
+        return self.get_resources(
+            update=update, force_refresh=force_refresh, start=start, end=end, avoid=avoid, includes=includes
+        ).list_sites(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
+            latlon=latlon,
+        )
