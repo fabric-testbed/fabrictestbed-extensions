@@ -2420,7 +2420,7 @@ Host * !bastion.fabric-testbed.net
         try:
             status, metrics =  self.get_slice_manager().get_metrics_overview(authenticated=authenticated,
                                                                              excluded_projects=excluded_projects)
-            if status = Status.OK
+            return metrics
         except Exception as e:
             logging.error(e)
             logging.error(traceback.format_exc())
