@@ -47,7 +47,7 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 import jinja2
-from fabrictestbed.slice_editor import Labels, Capacities
+from fabrictestbed.slice_editor import Capacities, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
@@ -336,7 +336,7 @@ class NetworkService:
         interfaces: List[Interface] = [],
         type: str = None,
         user_data={},
-        technology: str = None
+        technology: str = None,
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -444,7 +444,7 @@ class NetworkService:
         nstype: ServiceType = None,
         interfaces: List[Interface] = [],
         user_data: dict = {},
-        technology: str = None
+        technology: str = None,
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -1282,7 +1282,13 @@ class NetworkService:
                 allocated_ips.append(self.get_gateway())
             self.set_allocated_ip(self.get_gateway())
 
-    def peer(self, other: NetworkService, labels: Labels, peer_labels: Labels, capacities: Capacities):
+    def peer(
+        self,
+        other: NetworkService,
+        labels: Labels,
+        peer_labels: Labels,
+        capacities: Capacities,
+    ):
         """
         Peer a network service; used for AL2S peering between FABRIC Networks and Cloud Networks
         Peer this network service to another. A few constraints are enforced like services being
@@ -1300,4 +1306,9 @@ class NetworkService:
 
         """
         # Peer Cloud L3VPN with FABRIC L3VPN
-        self.get_fim().peer(other.get_fim(), labels=labels, peer_labels=peer_labels, capacities=capacities)
+        self.get_fim().peer(
+            other.get_fim(),
+            labels=labels,
+            peer_labels=peer_labels,
+            capacities=capacities,
+        )

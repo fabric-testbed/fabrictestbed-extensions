@@ -1122,7 +1122,12 @@ Host * !bastion.fabric-testbed.net
 
         """
         return self.get_resources(
-            update=update, force_refresh=force_refresh, start=start, end=end, avoid=avoid, includes=includes
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
         ).list_sites(
             output=output,
             fields=fields,
@@ -1364,11 +1369,13 @@ Host * !bastion.fabric-testbed.net
         return self.facility_ports
 
     def get_resources(
-        self, update: bool = True, force_refresh: bool = False,
-            start: datetime = None,
-            end: datetime = None,
-            avoid: List[str] = None,
-            includes: List[str] = None
+        self,
+        update: bool = True,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> Resources:
         """
         Get a reference to the resources object. The resources object
@@ -1396,8 +1403,14 @@ Host * !bastion.fabric-testbed.net
         :rtype: Resources
         """
         if not self.resources:
-            self.get_available_resources(update=update, force_refresh=force_refresh,
-                                         start=start, end=end, avoid=avoid, includes=includes)
+            self.get_available_resources(
+                update=update,
+                force_refresh=force_refresh,
+                start=start,
+                end=end,
+                avoid=avoid,
+                includes=includes,
+            )
 
         return self.resources
 
@@ -1602,11 +1615,13 @@ Host * !bastion.fabric-testbed.net
         return topology.sites[site]
 
     def get_available_resources(
-        self, update: bool = False, force_refresh: bool = False,
+        self,
+        update: bool = False,
+        force_refresh: bool = False,
         start: datetime = None,
         end: datetime = None,
         avoid: List[str] = None,
-        includes: List[str] = None
+        includes: List[str] = None,
     ) -> Resources:
         """
         Get the available resources.
@@ -1638,11 +1653,22 @@ Host * !bastion.fabric-testbed.net
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
-            self.resources = Resources(self, force_refresh=force_refresh,
-                                       start=start, end=end, avoid=avoid, includes=includes)
+            self.resources = Resources(
+                self,
+                force_refresh=force_refresh,
+                start=start,
+                end=end,
+                avoid=avoid,
+                includes=includes,
+            )
         elif update:
-            self.resources.update(force_refresh=force_refresh,
-                                  start=start, end=end, avoid=avoid, includes=includes)
+            self.resources.update(
+                force_refresh=force_refresh,
+                start=start,
+                end=end,
+                avoid=avoid,
+                includes=includes,
+            )
 
         return self.resources
 
@@ -2268,7 +2294,10 @@ Host * !bastion.fabric-testbed.net
         :rtype: Tuple[bool, str]
         """
         if worker is None or site is None:
-            return True, f"Ignoring validation: Worker: {worker}, Site: {site} not available."
+            return (
+                True,
+                f"Ignoring validation: Worker: {worker}, Site: {site} not available.",
+            )
 
         msg = f"Node can be allocated on the host: {worker.name}."
 
@@ -2359,8 +2388,13 @@ Host * !bastion.fabric-testbed.net
             site = self.get_resources().get_topology_site(site_name=node.get_site())
 
             if not site:
-                logging.warning(f"Ignoring validation: Site: {node.get_site()} not available in resources.")
-                return True, f"Ignoring validation: Site: {node.get_site()} not available in resources."
+                logging.warning(
+                    f"Ignoring validation: Site: {node.get_site()} not available in resources."
+                )
+                return (
+                    True,
+                    f"Ignoring validation: Site: {node.get_site()} not available in resources.",
+                )
 
             site_maint_info = site.maintenance_info.get(site.name)
             if site_maint_info and str(site_maint_info.state) != "Active":
@@ -2369,9 +2403,7 @@ Host * !bastion.fabric-testbed.net
                 return False, msg
             workers = self.get_resources().get_nodes(site=site)
             if not workers:
-                msg = (
-                    f"Node cannot be validated, host information not available for {site}."
-                )
+                msg = f"Node cannot be validated, host information not available for {site}."
                 logging.error(msg)
                 return False, msg
 

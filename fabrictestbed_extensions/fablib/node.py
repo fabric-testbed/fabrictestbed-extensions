@@ -85,7 +85,11 @@ class Node:
     default_image = "default_rocky_8"
 
     def __init__(
-        self, slice: Slice, node: FimNode, validate: bool = False, raise_exception: bool = False
+        self,
+        slice: Slice,
+        node: FimNode,
+        validate: bool = False,
+        raise_exception: bool = False,
     ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.

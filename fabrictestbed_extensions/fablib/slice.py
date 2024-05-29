@@ -59,7 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fim.user import Labels, Capacities
+from fim.user import Capacities, Labels
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
@@ -784,7 +784,11 @@ class Slice:
         :rtype: Bool
         """
         now = datetime.now(timezone.utc)
-        lease_start = datetime.strptime(self.get_lease_start(), Constants.LEASE_TIME_FORMAT) if self.get_lease_start() else None
+        lease_start = (
+            datetime.strptime(self.get_lease_start(), Constants.LEASE_TIME_FORMAT)
+            if self.get_lease_start()
+            else None
+        )
         if lease_start and lease_start > now and self.is_allocated():
             return True
         return False
@@ -796,10 +800,10 @@ class Slice:
         :return: True if slice is Allocated, False otherwise
         :rtype: Bool
         """
-        if self.get_state() in [
-            "AllocatedOK",
-            "AllocatedError"
-        ] and self.get_lease_start() :
+        if (
+            self.get_state() in ["AllocatedOK", "AllocatedError"]
+            and self.get_lease_start()
+        ):
             return True
         else:
             return False
@@ -998,7 +1002,7 @@ class Slice:
         interfaces: List[Interface] = [],
         type: str = "IPv4",
         user_data: dict = {},
-        technology: str = None
+        technology: str = None,
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -1059,8 +1063,13 @@ class Slice:
         )
 
     def add_facility_port(
-        self, name: str = None, site: str = None, vlan: Union[str, list] = None, labels: Labels = None,
-            peer_labels: Labels = None, capacities: Capacities = None
+        self,
+        name: str = None,
+        site: str = None,
+        vlan: Union[str, list] = None,
+        labels: Labels = None,
+        peer_labels: Labels = None,
+        capacities: Capacities = None,
     ) -> NetworkService:
         """
         Adds a new L2 facility port to this slice
@@ -1081,7 +1090,13 @@ class Slice:
         :rtype: NetworkService
         """
         return FacilityPort.new_facility_port(
-            slice=self, name=name, site=site, vlan=vlan, labels=labels, peer_labels=peer_labels, capacities=capacities
+            slice=self,
+            name=name,
+            site=site,
+            vlan=vlan,
+            labels=labels,
+            peer_labels=peer_labels,
+            capacities=capacities,
         )
 
     def add_node(
@@ -1151,7 +1166,12 @@ class Slice:
         :rtype: Node
         """
         node = Node.new_node(
-            slice=self, name=name, site=site, avoid=avoid, validate=validate, raise_exception=raise_exception
+            slice=self,
+            name=name,
+            site=site,
+            avoid=avoid,
+            validate=validate,
+            raise_exception=raise_exception,
         )
 
         node.init_fablib_data()
@@ -2025,7 +2045,7 @@ class Slice:
         extra_ssh_keys: List[str] = None,
         lease_start_time: datetime = None,
         lease_in_days: int = None,
-        validate: bool = False
+        validate: bool = False,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2116,10 +2136,12 @@ class Slice:
 
             lease_end_time = None
             if lease_in_days:
-                start_time = lease_start_time if lease_end_time else datetime.now(timezone.utc)
-                lease_end_time = (
-                    start_time + timedelta(days=lease_in_days)
-                ).strftime("%Y-%m-%d %H:%M:%S %z")
+                start_time = (
+                    lease_start_time if lease_end_time else datetime.now(timezone.utc)
+                )
+                lease_end_time = (start_time + timedelta(days=lease_in_days)).strftime(
+                    "%Y-%m-%d %H:%M:%S %z"
+                )
 
             (
                 return_status,
@@ -2129,7 +2151,7 @@ class Slice:
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
                 lease_end_time=lease_end_time,
-                lease_start_time=lease_start_time_str
+                lease_start_time=lease_start_time_str,
             )
             if return_status == Status.OK:
                 logging.info(

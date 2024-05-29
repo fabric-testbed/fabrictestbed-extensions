@@ -143,7 +143,9 @@ class FacilityPort:
         site: str = None,
         vlan: Union[List, str] = None,
         bandwidth: int = 10,
-        labels: Labels = None, peer_labels: Labels = None, capacities: Capacities = None
+        labels: Labels = None,
+        peer_labels: Labels = None,
+        capacities: Capacities = None,
     ):
         if capacities is None:
             if not bandwidth:
@@ -151,7 +153,7 @@ class FacilityPort:
             capacities = Capacities(bw=bandwidth)
 
         interfaces = None
-        
+
         if vlan:
             index = 1
             interfaces = []
@@ -172,7 +174,7 @@ class FacilityPort:
             capacities=capacities,
             labels=labels,
             peer_labels=peer_labels,
-            interfaces=interfaces
+            interfaces=interfaces,
         )
         return FacilityPort(slice, fim_facility_port)
 

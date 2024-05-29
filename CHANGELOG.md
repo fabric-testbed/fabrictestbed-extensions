@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Unreleased
 
 ### Fixed
+- AL2S Support (Issue [#325](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/325))
+- Deny infeasible slices (Issue [#326](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/326))
 - Add display of switch port name to network service table listing (Issue [#152](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/152))
 - Error *may* be inaccurate or wrong when I issue an invalid configuration. (Issue [#304](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/304))
 - Add Facility Port to allow adding multiple interfaces (Issue [#289](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/289))
