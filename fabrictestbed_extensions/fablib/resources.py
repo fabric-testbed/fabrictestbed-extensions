@@ -1063,6 +1063,7 @@ class FacilityPorts(Resources):
         "site_name": "Site",
         "node_id": "Interface Name",
         "vlan_range": "VLAN Range",
+        "allocated_vlan_range": "Allocated VLAN Range",
         "local_name": "Local Name",
         "device_name": "Device Name",
         "region": "Region",
@@ -1118,6 +1119,7 @@ class FacilityPorts(Resources):
                 "site_name",
                 "node_id",
                 "vlan_range",
+                "allocated_vlan_range",
                 "local_name",
                 "device_name",
                 "region",
@@ -1133,11 +1135,13 @@ class FacilityPorts(Resources):
         :return: collection of link properties
         :rtype: dict
         """
+        label_allocations = iface.get_property("label_allocations")
         return {
             "name": name,
             "site_name": site,
             "node_id": iface.node_id,
             "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
+            "allocated_vlan_range": label_allocations.vlan if label_allocations else "N/A",
             "local_name": (
                 iface.labels.local_name
                 if iface.labels and iface.labels.local_name
