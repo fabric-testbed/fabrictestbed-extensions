@@ -141,7 +141,7 @@ class FacilityPort:
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        vlan: str = None,
+        vlan: Union[List, str] = None,
         bandwidth: int = 10,
         labels: Labels = None, peer_labels: Labels = None, capacities: Capacities = None
     ):
@@ -150,17 +150,29 @@ class FacilityPort:
                 bandwidth = 10
             capacities = Capacities(bw=bandwidth)
 
-        if not labels:
-            labels = Labels()
-
+        interfaces = None
+        
         if vlan:
-            labels.vlan = vlan
+            index = 1
+            interfaces = []
+            if isinstance(vlan, str):
+                vlan = [vlan]
+
+            for v in vlan:
+                iface_tuple = (
+                    f"iface-{index}",
+                    Labels(vlan=v),
+                    capacities,
+                )
+                interfaces.append(iface_tuple)
+
         fim_facility_port = slice.get_fim_topology().add_facility(
             name=name,
             site=site,
             capacities=capacities,
             labels=labels,
-            peer_labels=peer_labels
+            peer_labels=peer_labels,
+            interfaces=interfaces
         )
         return FacilityPort(slice, fim_facility_port)
 
