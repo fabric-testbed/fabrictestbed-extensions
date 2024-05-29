@@ -1285,6 +1285,10 @@ class NetworkService:
     def peer(self, other: NetworkService, labels: Labels, peer_labels: Labels, capacities: Capacities):
         """
         Peer a network service; used for AL2S peering between FABRIC Networks and Cloud Networks
+        Peer this network service to another. A few constraints are enforced like services being
+        of the same type. Both services will have ServicePort interfaces facing each other over a link.
+        It typically requires labels and capacities to put on the interface facing the other service
+
         :param other: network service to be peered
         :type other: NetworkService
         :param labels: labels
@@ -1296,4 +1300,4 @@ class NetworkService:
 
         """
         # Peer Cloud L3VPN with FABRIC L3VPN
-        self.get_fim().peer(other.get_fim(), labels=labels, peer_labels=peer_labels)
+        self.get_fim().peer(other.get_fim(), labels=labels, peer_labels=peer_labels, capacities=capacities)
