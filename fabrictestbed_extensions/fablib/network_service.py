@@ -336,6 +336,7 @@ class NetworkService:
         interfaces: List[Interface] = [],
         type: str = None,
         user_data={},
+        technology: str = None
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -365,6 +366,7 @@ class NetworkService:
             nstype=nstype,
             interfaces=interfaces,
             user_data=user_data,
+            technology=technology,
         )
 
     @staticmethod
@@ -442,6 +444,7 @@ class NetworkService:
         nstype: ServiceType = None,
         interfaces: List[Interface] = [],
         user_data: dict = {},
+        technology: str = None
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -456,6 +459,9 @@ class NetworkService:
         :param nstype: the type of network service to create
         :type nstype: ServiceType
         :param interfaces: a list of interfaces to
+        :type interfaces: List
+        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :type technology: str
         :return: the new fablib network service
         :rtype: NetworkService
         """
@@ -467,7 +473,7 @@ class NetworkService:
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
-            name=name, nstype=nstype, interfaces=fim_interfaces
+            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology
         )
 
         network_service = NetworkService(
@@ -1275,3 +1281,17 @@ class NetworkService:
             if self.get_gateway() not in allocated_ips:
                 allocated_ips.append(self.get_gateway())
             self.set_allocated_ip(self.get_gateway())
+
+    def peer(self, other: NetworkService, labels: Labels, peer_labels: Labels):
+        """
+        Peer a network service; used for AL2S peering between FABRIC Networks and Cloud Networks
+        :param other: network service to be peered
+        :type other: NetworkService
+        :param labels: labels
+        :type labels: Labels
+        :param peer_labels: peer labels
+        :type peer_labels: Labels
+
+        """
+        # Peer Cloud L3VPN with FABRIC L3VPN
+        self.get_fim().peer(other.get_fim(), labels=labels, peer_labels=peer_labels)

@@ -59,6 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
+from fim.user import Labels, Capacities
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
@@ -997,6 +998,7 @@ class Slice:
         interfaces: List[Interface] = [],
         type: str = "IPv4",
         user_data: dict = {},
+        technology: str = None
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -1038,6 +1040,8 @@ class Slice:
         :type type: String
         :param user_data
         :type user_data: dict
+        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :type technology: str
 
         :return: a new L3 network service
         :rtype: NetworkService
@@ -1051,10 +1055,12 @@ class Slice:
             interfaces=interfaces,
             type=type,
             user_data=user_data,
+            technology=technology,
         )
 
     def add_facility_port(
-        self, name: str = None, site: str = None, vlan: Union[str, list] = None
+        self, name: str = None, site: str = None, vlan: Union[str, list] = None, labels: Labels = None,
+            peer_labels: Labels = None, capacities: Capacities = None
     ) -> NetworkService:
         """
         Adds a new L2 facility port to this slice
@@ -1065,11 +1071,17 @@ class Slice:
         :type site: String
         :param vlan: vlan
         :type vlan: String
+        :param labels: labels for the facility port such as VLAN, ip sub net
+        :type: labels: Labels
+        :param peer_labels: peer labels for the facility port such as VLAN, ip sub net, bgp key - used for AL2S Peering
+        :type: peer_labels: Labels
+        :param capacities: capacities for the facility port such as bandwidth
+        :type: capacities: Capacities
         :return: a new L2 facility port
         :rtype: NetworkService
         """
         return FacilityPort.new_facility_port(
-            slice=self, name=name, site=site, vlan=vlan
+            slice=self, name=name, site=site, vlan=vlan, labels=labels, peer_labels=peer_labels, capacities=capacities
         )
 
     def add_node(
