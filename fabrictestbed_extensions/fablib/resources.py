@@ -1141,7 +1141,7 @@ class FacilityPorts(Resources):
             "site_name": site,
             "node_id": iface.node_id,
             "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
-            "allocated_vlan_range": label_allocations.vlan if label_allocations else "N/A",
+            "allocated_vlan_range": label_allocations.vlan_range if label_allocations else "N/A",
             "local_name": (
                 iface.labels.local_name
                 if iface.labels and iface.labels.local_name
