@@ -1252,9 +1252,9 @@ class Slice:
             notices[node.get_reservation_id()] = node.get_error_message()
 
         for network_service in self.get_network_services():
-            notices[
-                network_service.get_reservation_id()
-            ] = network_service.get_error_message()
+            notices[network_service.get_reservation_id()] = (
+                network_service.get_error_message()
+            )
 
         for component in self.get_components():
             notices[component.get_reservation_id()] = component.get_error_message()

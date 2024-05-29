@@ -66,6 +66,13 @@ $ pip install -e .[test]
 $ pytest -s tests/integration/test_hello_fabric.py
 ```
 
+If you want to format code with [black] and [isort]:
+
+```
+$ tox -e format
+```
+
+
 ## Documenting FABlib
 
 FABlib uses Sphinx to generate API documentation from Python

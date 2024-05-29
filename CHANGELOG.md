@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add display of switch port name to network service table listing (Issue [#152](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/152))
 - Error *may* be inaccurate or wrong when I issue an invalid configuration. (Issue [#304](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/304))
 - Add Facility Port to allow adding multiple interfaces (Issue [#289](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/289))
-- validate_config errors out when config directory does not exist (Issue [#299](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/299)
-- create_ssh_config adds extra indentation (Issue [#300](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/300)
+- validate_config errors out when config directory does not exist (Issue [#299](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/299))
+- create_ssh_config adds extra indentation (Issue [#300](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/300))
+- Remove duplicate Node.delete() method (Issue [#321](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321))
 
 ## [1.6.4] - 2024-03-05
 

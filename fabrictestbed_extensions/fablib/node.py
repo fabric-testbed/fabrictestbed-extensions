@@ -347,9 +347,6 @@ class Node:
 
         return output_string
 
-    def delete(self):
-        self.get_slice().get_fim_topology().remove_node(name=self.get_name())
-
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
@@ -1167,7 +1164,7 @@ class Node:
 
         - GPU_A40: A40 GPU
 
-        - FPGA_Xilinx_U280: Xilinx U280 GPU
+        - FPGA_Xilinx_U280: Xilinx U280 FPGA card
 
         :param model: the name of the component model to add
         :type model: String
