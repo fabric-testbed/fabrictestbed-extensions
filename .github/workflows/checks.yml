@@ -47,6 +47,7 @@ jobs:
 
       - name: Run "black --check"
         run: |
+          python -m black --version
           python -m black --check .
 
       - name: Run "isort --check"
