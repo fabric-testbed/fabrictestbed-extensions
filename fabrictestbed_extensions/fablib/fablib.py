@@ -72,6 +72,8 @@ import time
 import traceback
 import warnings
 
+from fabrictestbed_extensions.fablib.site import Site
+
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
@@ -2285,7 +2287,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_host(
-        host: FimNode, node: Node, allocated: dict, site: FimNode
+        host: FimNode, node: Node, allocated: dict, site: Site
     ) -> Tuple[bool, str]:
         """
         Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
@@ -2301,9 +2303,9 @@ Host * !bastion.fabric-testbed.net
 
         msg = f"Node can be allocated on the host: {host.name}."
 
-        host_maint_info = site.maintenance_info.get(host.name)
-        if host_maint_info and str(host_maint_info.state) != "Active":
-            msg = f"Node cannot be allocated on {host.name}, {host.name} is in {host_maint_info.state}!"
+        host_state = site.get_state(host=host.name)
+        if host_state != "Active":
+            msg = f"Node cannot be allocated on {host.name}, {host.name} is in {host_state}!"
             return False, msg
 
         allocated_core = allocated.setdefault("core", 0)
@@ -2385,7 +2387,7 @@ Host * !bastion.fabric-testbed.net
             error = None
             if allocated is None:
                 allocated = {}
-            site = self.get_resources().__get_topology_site(site_name=node.get_site())
+            site = self.get_resources().get_site(site_name=node.get_site())
 
             if not site:
                 logging.warning(
@@ -2396,12 +2398,12 @@ Host * !bastion.fabric-testbed.net
                     f"Ignoring validation: Site: {node.get_site()} not available in resources.",
                 )
 
-            site_maint_info = site.maintenance_info.get(site.name)
-            if site_maint_info and str(site_maint_info.state) != "Active":
-                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
+            site_state = site.get_state()
+            if site_state != "Active":
+                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
                 logging.error(msg)
                 return False, msg
-            hosts = self.get_resources().get_nodes(site=site)
+            hosts = site.get_hosts()
             if not hosts:
                 msg = f"Node cannot be validated, host information not available for {site}."
                 logging.error(msg)
@@ -2432,7 +2434,7 @@ Host * !bastion.fabric-testbed.net
                 if status:
                     return status, error
 
-            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.name}."
+            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.get_name()}."
             if error:
                 msg += f" Details: {error}"
             logging.error(msg)

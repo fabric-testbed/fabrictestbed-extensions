@@ -81,6 +81,8 @@ class Resources:
 
         self.topology = None
 
+        self.sites = {}
+
         self.update(
             force_refresh=force_refresh,
             start=start,
@@ -100,9 +102,8 @@ class Resources:
         """
         table = []
         headers = []
-        for site_name, site in self.topology.sites.items():
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            headers, row = s.__str__()
+        for site_name, site in self.sites.items():
+            headers, row = site.to_row()
             table.append(row)
 
         return tabulate(
@@ -140,11 +141,8 @@ class Resources:
         :return: Tabulated string of available resources
         :rtype: String
         """
-        site = self.topology.sites[site_name]
-
-        s = Site(site=site, fablib_manager=self.fablib_manager)
-
-        return s.show(output=output, fields=fields, quiet=quiet, pretty_names=pretty_names)
+        site = self.sites.get(site_name)
+        return site.show(output=output, fields=fields, quiet=quiet, pretty_names=pretty_names)
 
     def get_site_names(self) -> List[str]:
         """
@@ -153,16 +151,11 @@ class Resources:
         :return: list of site names
         :rtype: List[String]
         """
-        site_name_list = []
-        for site_name in self.topology.sites.keys():
-            site_name_list.append(str(site_name))
-
-        return site_name_list
+        return list(self.sites.keys())
 
     def get_site(self, site_name: str) -> Site:
         try:
-            site = self.topology.sites[site_name]
-            return Site(site=site, fablib_manager=self.get_fablib_manager())
+            return self.sites.get(site_name)
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
 
@@ -171,7 +164,7 @@ class Resources:
         Not recommended for most users.
         """
         try:
-            return self.topology.sites[site_name]
+            return self.topology.sites.get(site_name)
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
 
@@ -185,9 +178,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_name()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_name()
         except Exception as e:
             # logging.warning(f"Failed to get site state {site_name}")
             return ""
@@ -210,9 +204,10 @@ class Resources:
         component_capacity = 0
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_component_capacity(component_model_name=component_model_name)
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_component_capacity(component_model_name=component_model_name)
 
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
@@ -237,9 +232,10 @@ class Resources:
         component_allocated = 0
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_component_allocated(component_model_name=component_model_name)
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_component_allocated(component_model_name=component_model_name)
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
             return component_allocated
@@ -262,9 +258,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_component_available(component_model_name=component_model_name)
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_component_available(component_model_name=component_model_name)
         except Exception as e:
             # logging.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(site, component_model_name)
@@ -282,9 +279,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_location_lat_long()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_location_lat_long()
         except Exception as e:
             # logging.warning(f"Failed to get location postal {site}")
             return 0, 0
@@ -302,9 +300,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_location_postal()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_location_postal()
         except Exception as e:
             # logging.debug(f"Failed to get location postal {site}")
             return ""
@@ -322,9 +321,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_host_capacity()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_host_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get host count {site}")
             return 0
@@ -342,9 +342,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_cpu_capacity()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_cpu_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
@@ -362,9 +363,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_core_capacity()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_core_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get core capacity {site}")
             return 0
@@ -382,9 +384,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_core_allocated()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_core_allocated()
         except Exception as e:
             # logging.debug(f"Failed to get cores allocated {site}")
             return 0
@@ -402,9 +405,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_core_available()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_core_available()
         except Exception as e:
             # logging.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity(site)
@@ -422,9 +426,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_ram_capacity()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ram_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get ram capacity {site}")
             return 0
@@ -442,9 +447,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_ram_allocated()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ram_allocated()
         except Exception as e:
             # logging.debug(f"Failed to get ram allocated {site}")
             return 0
@@ -462,9 +468,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_ram_available()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ram_available()
         except Exception as e:
             # logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site)
@@ -482,9 +489,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_disk_capacity()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_disk_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get disk capacity {site}")
             return 0
@@ -502,9 +510,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_disk_allocated()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_disk_allocated()
         except Exception as e:
             # logging.debug(f"Failed to get disk allocated {site}")
             return 0
@@ -522,9 +531,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_disk_available()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_disk_available()
         except Exception as e:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site)
@@ -541,9 +551,10 @@ class Resources:
         """
         try:
             if isinstance(site, str):
-                site = self.__get_topology_site(site_name=site)
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            return s.get_ptp_capable()
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ptp_capable()
         except Exception as e:
             # logging.debug(f"Failed to get PTP status for {site}")
             return False
@@ -599,6 +610,10 @@ class Resources:
             )
 
         self.topology = topology
+
+        for site_name, site in self.topology.sites.items():
+            s = Site(site=site, fablib_manager=self.get_fablib_manager())
+            self.sites[site_name] = s
 
     def get_topology(self, update: bool = False) -> AdvertisedTopology:
         """
@@ -658,9 +673,10 @@ class Resources:
         :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
         """
         if isinstance(site, str):
-            site = self.__get_topology_site(site_name=site)
-        s = Site(site=site, fablib_manager=self.fablib_manager)
-        return s.to_dict()
+            site = self.get_site(site_name=site)
+        elif isinstance(site, node.Node):
+            site = Site(site=site, fablib_manager=self.fablib_manager)
+        return site.to_dict()
 
     def list_sites(
         self,
@@ -672,11 +688,10 @@ class Resources:
         latlon=True,
     ):
         table = []
-        for site_name, site in self.topology.sites.items():
-            s = Site(site=site, fablib_manager=self.fablib_manager)
-            site_dict = s.to_dict()
+        for site_name, site in self.sites.items():
+            site_dict = site.to_dict()
             if site_dict.get("hosts"):
-                table.append(s.to_dict())
+                table.append(site_dict)
 
         if pretty_names:
             pretty_names_dict = Site.site_pretty_names

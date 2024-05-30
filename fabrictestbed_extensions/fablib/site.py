@@ -28,12 +28,10 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from typing import TYPE_CHECKING, List, Union, Dict, Tuple
+from typing import List, Dict, Tuple
 
-import jinja2
-from fabrictestbed.slice_editor import Capacities, Labels
+from fabrictestbed.slice_editor import Capacities
 from fim.view_only_dict import ViewOnlyDict
-from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fim.user import node
@@ -121,8 +119,13 @@ class Site:
         super().__init__()
         self.site = site
         self.fablib_manager = fablib_manager
+        self.hosts = self.__get_hosts_topology()
+        self.site_info = self.__get_site_info()
 
     def get_hosts(self) -> ViewOnlyDict:
+        return self.hosts
+
+    def __get_hosts_topology(self) -> ViewOnlyDict:
         """
         Get worker nodes on a site
         :param site: site name
@@ -169,14 +172,17 @@ class Site:
             # logging.debug(f"Failed to get name for {site}")
             return ""
 
-    def get_state(self):
+    def get_state(self, host: str = None):
         """
         Gets the maintenance state of the node
 
         :return: str(MaintenanceState)
         """
         try:
-            return str(self.site.maintenance_info.get(self.site.name).state)
+            if not host:
+                return str(self.site.maintenance_info.get(self.site.name).state)
+            else:
+                return str(self.site.maintenance_info.get(host).state)
         except Exception as e:
             # logging.debug(f"Failed to get maintenance state for {site}")
             return ""
@@ -257,7 +263,6 @@ class Site:
         """
         Convert site information into a dictionary
         """
-        site_info = self.__get_site_info()
         d = {
             "name": self.get_name() ,
             "state": self.get_state(),
@@ -269,8 +274,8 @@ class Site:
         }
 
         for attribute, names in self.site_attribute_name_mappings.items():
-            capacity = site_info.get(attribute, {}).get(Constants.CAPACITY.lower(), 0)
-            allocated = site_info.get(attribute, {}).get(Constants.ALLOCATED.lower(), 0)
+            capacity = self.site_info.get(attribute, {}).get(Constants.CAPACITY.lower(), 0)
+            allocated = self.site_info.get(attribute, {}).get(Constants.ALLOCATED.lower(), 0)
             available = capacity - allocated
             d[f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.AVAILABLE.lower()}"] = available
             d[f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.CAPACITY.lower()}"] = capacity
@@ -288,7 +293,6 @@ class Site:
         site_info = {}
 
         try:
-            hosts = self.get_hosts()
             site_info[Constants.CORES.lower()] = {
                 Constants.CAPACITY.lower(): self.site.capacities.core,
                 Constants.ALLOCATED.lower(): (
@@ -308,8 +312,8 @@ class Site:
                 ),
             }
 
-            if hosts:
-                for h in hosts.values():
+            if self.hosts:
+                for h in self.hosts.values():
                     if h.components:
                         for component_model_name, c in h.components.items():
                             comp_cap = site_info.setdefault(component_model_name, {})
@@ -372,7 +376,7 @@ class Site:
     def get_fablib_manager(self):
         return self.fablib_manager
 
-    def __str__(self):
+    def to_row(self):
         headers = [
             "Name",
             "PTP Capable",
@@ -384,12 +388,11 @@ class Site:
             self.get_cpu_capacity(),
         ]
 
-        site_info = self.__get_site_info()
         for attribute, names in self.site_attribute_name_mappings.items():
-            allocated = site_info.get(attribute, {}).get(
+            allocated = self.site_info.get(attribute, {}).get(
                 Constants.ALLOCATED.lower(), 0
             )
-            capacity = site_info.get(attribute, {}).get(
+            capacity = self.site_info.get(attribute, {}).get(
                 Constants.CAPACITY.lower(), 0
             )
             available = capacity - allocated
@@ -411,9 +414,8 @@ class Site:
         """
         component_capacity = 0
         try:
-            hosts = self.get_hosts()
-            if hosts:
-                for h in hosts.values():
+            if self.hosts:
+                for h in self.hosts.values():
                     if component_model_name in h.components:
                         component_capacity += h.components[
                             component_model_name
@@ -438,9 +440,8 @@ class Site:
         """
         component_allocated = 0
         try:
-            hosts = self.get_hosts()
-            if hosts:
-                for h in hosts.values():
+            if self.hosts:
+                for h in self.hosts.values():
                     if (
                         component_model_name in h.components
                         and h.components[component_model_name].capacity_allocations
