@@ -128,40 +128,113 @@ class ResourceConstants:
 
 class Switch:
     def __init__(self, switch: node.Node, fablib_manager):
+        """
+        Initialize a Switch object.
+
+        :param switch: The node representing the switch.
+        :type switch: node.Node
+
+        :param fablib_manager: The manager for the Fabric library.
+        :type fablib_manager: Any
+
+        """
         self.switch = switch
         self.fablib_manager = fablib_manager
 
-    def get_capacity(self):
+    def get_capacity(self) -> int:
+        """
+        Get the capacity of the switch.
+
+        :return: The capacity of the switch.
+        :rtype: int
+        """
         try:
             return self.switch.capacities.unit
         except Exception:
             return 0
 
-    def get_allocated(self):
+    def get_allocated(self) -> int:
+        """
+        Get the allocated capacity of the switch.
+
+        :return: The allocated capacity of the switch.
+        :rtype: int
+        """
         try:
             return self.switch.capacity_allocations.unit
         except Exception:
             return 0
 
-    def get_available(self):
+    def get_available(self) -> int:
+        """
+        Get the available capacity of the switch.
+
+        :return: The available capacity of the switch.
+        :rtype: int
+        """
         return self.get_capacity() - self.get_allocated()
+
+    def get_fim(self) -> node.Node:
+        """
+        Get the FIM object of the Switch.
+
+        :return: The FIM of the Switch.
+        :rtype: node.Node
+        """
+        return self.switch
 
 
 class Host:
     def __init__(self, host: node.Node, state: str, ptp: bool, fablib_manager):
+        """
+        Initialize a Host object.
+
+        :param host: The node representing the host.
+        :type host: node.Node
+
+        :param state: The state of the host.
+        :type state: str
+
+        :param ptp: Boolean indicating if the host is PTP capable.
+        :type ptp: bool
+
+        :param fablib_manager: The manager for the Fabric library.
+        :type fablib_manager: Any
+
+        :return: None
+        """
         self.host = host
         self.state = state
         self.ptp = ptp
         self.fablib_manager = fablib_manager
-        self.host_info = self.__get_host_info()
+        self.host_info = {}
+        self.__load()
 
     def get_fablib_manager(self):
+        """
+        Get the Fabric library manager associated with the host.
+
+        :return: The Fabric library manager.
+        :rtype: Any
+        """
         return self.fablib_manager
 
     def __str__(self):
-        self.to_json()
+        """
+        Convert the Host object to a string representation in JSON format.
 
-    def to_dict(self):
+        :return: JSON string representation of the Host object.
+        :rtype: str
+        """
+        return self.to_json()
+
+    def to_dict(self) -> dict:
+        """
+        Convert the Host object to a dictionary.
+
+        :return: Dictionary representation of the Host object.
+        :rtype: dict
+        """
         d = {
             "name": self.get_name(),
             "state": self.get_state(),
@@ -191,6 +264,96 @@ class Host:
             ] = allocated
 
         return d
+
+    def to_json(self) -> str:
+        """
+        Convert the Host object to a JSON string.
+
+        :return: JSON string representation of the Host object.
+        :rtype: str
+        """
+        return json.dumps(self.to_dict(), indent=4)
+
+    def get_state(self) -> str:
+        """
+        Get the state of the host.
+
+        :return: The state of the host.
+        :rtype: str
+        """
+        if not self.state:
+            return ""
+        return self.state
+
+    def get_fim(self) -> node.Node:
+        """
+        Get the FIM object of the host.
+
+        :return: The FIM of the host.
+        :rtype: node.Node
+        """
+        return self.host
+
+    def __load(self):
+        """
+        Load information about the host.
+
+        :return: None
+        """
+        try:
+            self.host_info[Constants.CORES.lower()] = {
+                Constants.CAPACITY.lower(): self.get_core_capacity(),
+                Constants.ALLOCATED.lower(): self.get_core_allocated(),
+            }
+            self.host_info[Constants.RAM.lower()] = {
+                Constants.CAPACITY.lower(): self.get_ram_capacity(),
+                Constants.ALLOCATED.lower(): self.get_ram_allocated(),
+            }
+            self.host_info[Constants.DISK.lower()] = {
+                Constants.CAPACITY.lower(): self.get_disk_capacity(),
+                Constants.ALLOCATED.lower(): self.get_disk_allocated(),
+            }
+
+            if self.host.components:
+                for component_model_name, c in self.host.components.items():
+                    comp_cap = self.host_info.setdefault(component_model_name.lower(), {})
+                    comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
+                    comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
+                    comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
+                    if c.capacity_allocations:
+                        comp_cap[
+                            Constants.ALLOCATED.lower()
+                        ] += c.capacity_allocations.unit
+        except Exception as e:
+            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            pass
+
+    def get_components(self) -> ViewOnlyDict:
+        """
+        Get the components associated with the host.
+
+        :return: Dictionary-like view of the components associated with the host.
+        :rtype: ViewOnlyDict
+        """
+        try:
+            return self.host.components
+        except Exception as e:
+            pass
+
+    def get_component(self, comp_model_type:str) -> Component:
+        """
+        Get a specific component associated with the host.
+
+        :param comp_model_type: The type of component to retrieve.
+        :type comp_model_type: str
+
+        :return: The specified component.
+        :rtype: Component
+        """
+        try:
+            return self.host.components.get(comp_model_type)
+        except Exception as e:
+            pass
 
     def show(
         self,
@@ -235,9 +398,6 @@ class Host:
 
         return host_table
 
-    def to_json(self):
-        return json.dumps(self.to_dict(), indent=4)
-
     def get_location_postal(self) -> str:
         """
         Gets the location of a site by postal address
@@ -279,47 +439,6 @@ class Host:
         except Exception as e:
             # logging.debug(f"Failed to get PTP status for {site}")
             return False
-
-    def get_state(self) -> str:
-        if not self.state:
-            return ""
-        return self.state
-
-    def get_fim(self):
-        return self.host
-
-    def __get_host_info(self):
-        host_info = {}
-
-        try:
-            host_info[Constants.CORES.lower()] = {
-                Constants.CAPACITY.lower(): self.get_core_capacity(),
-                Constants.ALLOCATED.lower(): self.get_core_allocated(),
-            }
-            host_info[Constants.RAM.lower()] = {
-                Constants.CAPACITY.lower(): self.get_ram_capacity(),
-                Constants.ALLOCATED.lower(): self.get_ram_allocated(),
-            }
-            host_info[Constants.DISK.lower()] = {
-                Constants.CAPACITY.lower(): self.get_disk_capacity(),
-                Constants.ALLOCATED.lower(): self.get_disk_allocated(),
-            }
-
-            if self.host.components:
-                for component_model_name, c in self.host.components.items():
-                    comp_cap = host_info.setdefault(component_model_name.lower(), {})
-                    comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
-                    comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
-                    comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
-                    if c.capacity_allocations:
-                        comp_cap[
-                            Constants.ALLOCATED.lower()
-                        ] += c.capacity_allocations.unit
-
-            return host_info
-        except Exception as e:
-            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
-            return host_info
 
     def get_name(self):
         """
@@ -455,18 +574,6 @@ class Host:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity()
 
-    def get_components(self) -> ViewOnlyDict:
-        try:
-            return self.host.components
-        except Exception as e:
-            pass
-
-    def get_component(self, comp_model_type) -> Component:
-        try:
-            return self.host.components.get(comp_model_type)
-        except Exception as e:
-            pass
-
     def get_component_capacity(
         self,
         component_model_name: str,
@@ -542,9 +649,15 @@ class Host:
 class Site:
     def __init__(self, site: node.Node, fablib_manager):
         """
-        :param site: Site Node from Fim Topology
+        Initialize a Site object.
+
+        :param site: The node representing the site.
         :type site: node.Node
 
+        :param fablib_manager: The manager for the Fabric library.
+        :type fablib_manager: Any
+
+        :return: None
         """
         super().__init__()
         self.site = site
@@ -555,15 +668,28 @@ class Site:
         self.__load()
 
     def get_hosts(self) -> Dict[str, Host]:
+        """
+        Get the hosts associated with the site.
+
+        :return: Dictionary of hosts associated with the site.
+        :rtype: Dict[str, Host]
+        """
         return self.hosts
 
     def __load(self):
+        """
+        Load information about the site.
+
+        :return: None
+        """
         self.__load_hosts()
         self.__load_site_info()
 
     def __load_hosts(self):
         """
-        Load Hosts and Switches for a site
+        Load Hosts and Switches for a site.
+
+        :return: None
         """
         try:
             from fim.graph.abc_property_graph import ABCPropertyGraph
@@ -594,10 +720,76 @@ class Site:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
 
-    def to_json(self):
+    def to_json(self) -> str:
+        """
+        Convert the Site object to a JSON string.
+
+        :return: JSON string representation of the Site object.
+        :rtype: str
+        """
         return json.dumps(self.to_dict(), indent=4)
 
-    def get_name(self):
+    def get_fablib_manager(self):
+        """
+        Get the Fabric library manager associated with the site.
+
+        :return: The Fabric library manager.
+        :rtype: Any
+        """
+        return self.fablib_manager
+
+    def to_row(self) -> Tuple[list, list]:
+        """
+        Convert the Site object to a row for tabular display.
+
+        :return: Tuple containing headers and row for tabular display.
+        :rtype: Tuple[list, list]
+        """
+        headers = [
+            "Name",
+            "PTP Capable",
+            Constants.CPUS,
+        ]
+        row = [
+            self.get_name(),
+            self.get_ptp_capable(),
+            self.get_cpu_capacity(),
+        ]
+
+        for attribute, names in ResourceConstants.attribute_name_mappings.items():
+            allocated = self.site_info.get(attribute, {}).get(
+                Constants.ALLOCATED.lower(), 0
+            )
+            capacity = self.site_info.get(attribute, {}).get(
+                Constants.CAPACITY.lower(), 0
+            )
+            available = capacity - allocated
+            row.append(f"{available}/{capacity}")
+            headers.append(names.get(Constants.HEADER_NAME))
+        return headers, row
+
+    def get_host(self, name: str) -> Host:
+        """
+        Get a specific host associated with the site.
+
+        :param name: The name of the host to retrieve.
+        :type name: str
+
+        :return: The specified host.
+        :rtype: Host
+        """
+        return self.hosts.get(name)
+
+    def __str__(self) -> str:
+        """
+        Convert the Site object to a string representation in JSON format.
+
+        :return: JSON string representation of the Site object.
+        :rtype: str
+        """
+        return self.to_json()
+
+    def get_name(self) -> str:
         """
         Gets the site name
 
@@ -699,7 +891,7 @@ class Site:
             # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """
         Convert site information into a dictionary
         """
@@ -817,33 +1009,6 @@ class Site:
 
         return site_table
 
-    def get_fablib_manager(self):
-        return self.fablib_manager
-
-    def to_row(self):
-        headers = [
-            "Name",
-            "PTP Capable",
-            Constants.CPUS,
-        ]
-        row = [
-            self.get_name(),
-            self.get_ptp_capable(),
-            self.get_cpu_capacity(),
-        ]
-
-        for attribute, names in ResourceConstants.attribute_name_mappings.items():
-            allocated = self.site_info.get(attribute, {}).get(
-                Constants.ALLOCATED.lower(), 0
-            )
-            capacity = self.site_info.get(attribute, {}).get(
-                Constants.CAPACITY.lower(), 0
-            )
-            available = capacity - allocated
-            row.append(f"{available}/{capacity}")
-            headers.append(names.get(Constants.HEADER_NAME))
-        return headers, row
-
     def get_component_capacity(
         self,
         component_model_name: str,
@@ -909,6 +1074,12 @@ class Site:
             return self.get_component_capacity(component_model_name)
 
     def get_fim(self) -> node.Node:
+        """
+        Get the FIM object of the site.
+
+        :return: The FIM of the site.
+        :rtype: node.Node
+        """
         return self.site
 
     def get_core_capacity(self) -> int:
@@ -1033,9 +1204,6 @@ class Site:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity()
 
-    def get_host(self, name: str) -> Host:
-        return self.hosts.get(name)
-
     def get_host_names(self) -> List[str]:
         """
         Gets a list of all currently available hosts
@@ -1044,6 +1212,3 @@ class Site:
         :rtype: List[String]
         """
         return list(self.hosts.keys())
-
-    def __str__(self):
-        return self.to_json()

@@ -156,6 +156,15 @@ class Resources:
         return list(self.sites.keys())
 
     def get_site(self, site_name: str) -> Site:
+        """
+        Get a specific site by name.
+
+        :param site_name: The name of the site to retrieve.
+        :type site_name: str
+
+        :return: The specified site.
+        :rtype: Site
+        """
         try:
             return self.sites.get(site_name)
         except Exception as e:
@@ -163,7 +172,13 @@ class Resources:
 
     def __get_topology_site(self, site_name: str) -> node.Node:
         """
-        Not recommended for most users.
+        Get a specific site from the topology.
+
+        :param site_name: The name of the site to retrieve from the topology.
+        :type site_name: str
+
+        :return: The node representing the specified site from the topology.
+        :rtype: node.Node
         """
         try:
             return self.topology.sites.get(site_name)
@@ -540,6 +555,12 @@ class Resources:
             return False
 
     def get_fablib_manager(self):
+        """
+        Get the Fabric library manager associated with the resources.
+
+        :return: The Fabric library manager.
+        :rtype: Any
+        """
         return self.fablib_manager
 
     def update(
@@ -597,7 +618,19 @@ class Resources:
 
     def get_topology(self, update: bool = False) -> AdvertisedTopology:
         """
-        Not intended for API use
+        Get the FIM object of the Resources.
+
+        :return: The FIM of the resources.
+        :rtype: AdvertisedTopology
+        """
+        return self.get_fim()
+
+    def get_fim(self, update: bool = False) -> AdvertisedTopology:
+        """
+        Get the FIM object of the Resources.
+
+        :return: The FIM of the resources.
+        :rtype: AdvertisedTopology
         """
         if update or self.topology is None:
             self.update()
@@ -641,14 +674,32 @@ class Resources:
         return rtn_links
 
     def site_to_json(self, site, latlon=True):
+        """
+        Convert site information into a JSON string.
+
+        :param site: Name of the site or site object.
+        :type site: str or node.Node
+
+        :param latlon: Flag indicating whether to convert address to latitude and longitude.
+        :type latlon: bool
+
+        :return: JSON string representation of the site information.
+        :rtype: str
+        """
         return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
     def site_to_dict(self, site: str or node.Node, latlon=True):
         """
-        Convert site information into a dictionary
+        Convert site information into a dictionary.
 
-        :param site: site name or site object
-        :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
+        :param site: Name of the site or site object.
+        :type site: str or node.Node
+
+        :param latlon: Flag indicating whether to convert address to latitude and longitude.
+        :type latlon: bool
+
+        :return: Dictionary representation of the site information.
+        :rtype: dict
         """
         if isinstance(site, str):
             site = self.get_site(site_name=site)
@@ -665,6 +716,30 @@ class Resources:
         pretty_names=True,
         latlon=True,
     ):
+        """
+        List information about sites.
+
+        :param output: Output type for listing information.
+        :type output: Any, optional
+
+        :param fields: List of fields to include in the output.
+        :type fields: Optional[List[str]], optional
+
+        :param quiet: Flag indicating whether to display output quietly.
+        :type quiet: bool, optional
+
+        :param filter_function: Function to filter the output.
+        :type filter_function: Optional[Callable[[Dict], bool]], optional
+
+        :param pretty_names: Flag indicating whether to use pretty names for fields.
+        :type pretty_names: bool, optional
+
+        :param latlon: Flag indicating whether to convert address to latitude and longitude.
+        :type latlon: bool, optional
+
+        :return: Table listing information about sites.
+        :rtype: str
+        """
         table = []
         for site_name, site in self.sites.items():
             site_dict = site.to_dict()
@@ -694,6 +769,27 @@ class Resources:
         filter_function=None,
         pretty_names=True,
     ):
+        """
+        List information about hosts.
+
+        :param output: Output type for listing information.
+        :type output: Any, optional
+
+        :param fields: List of fields to include in the output.
+        :type fields: Optional[List[str]], optional
+
+        :param quiet: Flag indicating whether to display output quietly.
+        :type quiet: bool, optional
+
+        :param filter_function: Function to filter the output.
+        :type filter_function: Optional[Callable[[Dict], bool]], optional
+
+        :param pretty_names: Flag indicating whether to use pretty names for fields.
+        :type pretty_names: bool, optional
+
+        :return: Table listing information about hosts.
+        :rtype: str
+        """
         table = []
         for site_name, site in self.sites.items():
             for host_name, host in site.get_hosts().items():
@@ -714,6 +810,7 @@ class Resources:
             filter_function=filter_function,
             pretty_names_dict=pretty_names_dict,
         )
+
 
 class Links(Resources):
     link_pretty_names = {
@@ -929,7 +1026,22 @@ class FacilityPorts(Resources):
         """
         Print a table of link resources in pretty format.
 
-        :return: formatted table of resources
+        :param output: Output type for listing information.
+        :type output: Any, optional
+
+        :param fields: List of fields to include in the output.
+        :type fields: Optional[List[str]], optional
+
+        :param quiet: Flag indicating whether to display output quietly.
+        :type quiet: bool, optional
+
+        :param filter_function: Function to filter the output.
+        :type filter_function: Optional[Callable[[Dict], bool]], optional
+
+        :param pretty_names: Flag indicating whether to use pretty names for fields.
+        :type pretty_names: bool, optional
+
+        :return: Formatted table of resources.
         :rtype: object
         """
         table = []
