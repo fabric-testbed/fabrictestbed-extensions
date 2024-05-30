@@ -696,7 +696,7 @@ class Resources:
     ):
         table = []
         for site_name, site in self.sites.items():
-            for host_name, host in site.get_hosts():
+            for host_name, host in site.get_hosts().items():
                 host_dict = host.to_dict()
                 table.append(host_dict)
 

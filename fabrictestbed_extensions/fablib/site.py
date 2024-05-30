@@ -59,6 +59,11 @@ class ResourceConstants:
             Constants.PRETTY_NAME: "Basic NIC",
             Constants.HEADER_NAME: "Basic (100 Gbps NIC)",
         },
+        Constants.P4_SWITCH: {
+            Constants.NON_PRETTY_NAME: Constants.P4_SWITCH.lower(),
+            Constants.PRETTY_NAME: Constants.P4_SWITCH,
+            Constants.HEADER_NAME: Constants.P4_SWITCH
+        },
         Constants.SMART_NIC_CONNECTX_6: {
             Constants.NON_PRETTY_NAME: "nic_connectx_6",
             Constants.PRETTY_NAME: "ConnectX-6",
@@ -121,10 +126,32 @@ class ResourceConstants:
                 f"{non_pretty_name}_{Constants.CAPACITY.lower()}"] = f"{pretty_name} {Constants.CAPACITY}"
 
 
+class Switch:
+    def __init__(self, switch: node.Node, fablib_manager):
+        self.switch = switch
+        self.fablib_manager = fablib_manager
+
+    def get_capacity(self):
+        try:
+            return self.switch.capacities.unit
+        except Exception:
+            return 0
+
+    def get_allocated(self):
+        try:
+            return self.switch.capacity_allocations.unit
+        except Exception:
+            return 0
+
+    def get_available(self):
+        return self.get_capacity() - self.get_allocated()
+
+
 class Host:
-    def __init__(self, host: node.Node, state: str, fablib_manager):
+    def __init__(self, host: node.Node, state: str, ptp: bool, fablib_manager):
         self.host = host
         self.state = state
+        self.ptp = ptp
         self.fablib_manager = fablib_manager
         self.host_info = self.__get_host_info()
 
@@ -243,7 +270,7 @@ class Host:
         :rtype: bool
         """
         try:
-            return self.host.flags.ptp
+            return self.ptp
         except Exception as e:
             # logging.debug(f"Failed to get PTP status for {site}")
             return False
@@ -517,17 +544,21 @@ class Site:
         super().__init__()
         self.site = site
         self.fablib_manager = fablib_manager
-        self.hosts = self.__get_hosts_topology()
-        self.site_info = self.__get_site_info()
+        self.hosts = {}
+        self.switches = {}
+        self.site_info = {}
+        self.__load()
 
     def get_hosts(self) -> Dict[str, Host]:
         return self.hosts
 
-    def __get_hosts_topology(self) -> Dict[str, Host]:
+    def __load(self):
+        self.__load_hosts()
+        self.__load_site_info()
+
+    def __load_hosts(self):
         """
-        Get worker nodes on a site
-        :param site: site name
-        :type site: String
+        Load Hosts and Switches for a site
         """
         try:
             from fim.graph.abc_property_graph import ABCPropertyGraph
@@ -537,7 +568,6 @@ class Site:
                 rel=ABCPropertyGraph.REL_HAS,
                 node_label=ABCPropertyGraph.CLASS_NetworkNode,
             )
-            ret = dict()
             for nid in node_id_list:
                 _, node_props = self.site.topo.graph_model.get_node_properties(
                     node_id=nid
@@ -550,9 +580,11 @@ class Site:
                 # exclude Facility nodes
                 from fim.user import NodeType
 
-                if n.type != NodeType.Facility:
-                    ret[n.name] = Host(host=n, state=self.get_state(n.name), fablib_manager=self.fablib_manager)
-            return ret
+                if n.type == NodeType.Server:
+                    self.hosts[n.name] = Host(host=n, state=self.get_state(n.name), ptp=self.get_ptp_capable(),
+                                              fablib_manager=self.fablib_manager)
+                elif n.type == NodeType.Switch:
+                    self.switches[n.name] = Switch(switch=n, fablib_manager=self.get_fablib_manager())
         except Exception as e:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
@@ -693,46 +725,46 @@ class Site:
 
         return d
 
-    def __get_site_info(self) -> Dict[str, Dict[str, int]]:
+    def __load_site_info(self):
         """
-        Gets the total site capacity of all components for a site
-
-        :return: total component capacity for all components
-        :rtype: Dict[str, int]
+        Load the total site capacity of all components for a site
         """
-        site_info = {}
-
         try:
-            site_info[Constants.CORES.lower()] = {
+            self.site_info[Constants.CORES.lower()] = {
                 Constants.CAPACITY.lower(): self.get_core_capacity(),
                 Constants.ALLOCATED.lower(): self.get_core_allocated(),
             }
-            site_info[Constants.RAM.lower()] = {
+            self.site_info[Constants.RAM.lower()] = {
                 Constants.CAPACITY.lower(): self.get_ram_capacity(),
                 Constants.ALLOCATED.lower(): self.get_ram_allocated(),
             }
-            site_info[Constants.DISK.lower()] = {
+            self.site_info[Constants.DISK.lower()] = {
                 Constants.CAPACITY.lower(): self.get_disk_capacity(),
                 Constants.ALLOCATED.lower(): self.get_disk_allocated(),
             }
 
-            if self.hosts:
-                for h in self.hosts.values():
-                    if h.get_components():
-                        for component_model_name, c in h.get_components().items():
-                            comp_cap = site_info.setdefault(component_model_name.lower(), {})
-                            comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
-                            comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
-                            comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
-                            if c.capacity_allocations:
-                                comp_cap[
-                                    Constants.ALLOCATED.lower()
-                                ] += c.capacity_allocations.unit
+            for h in self.hosts.values():
+                if h.get_components():
+                    for component_model_name, c in h.get_components().items():
+                        comp_cap = self.site_info.setdefault(component_model_name.lower(), {})
+                        comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
+                        comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
+                        comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
+                        if c.capacity_allocations:
+                            comp_cap[
+                                Constants.ALLOCATED.lower()
+                            ] += c.capacity_allocations.unit
 
-            return site_info
+            p4_mappings = ResourceConstants.attribute_name_mappings.get(Constants.P4_SWITCH)
+            for s in self.switches.values():
+                self.site_info[p4_mappings.get(Constants.NON_PRETTY_NAME)] = {
+                    Constants.CAPACITY.lower(): s.get_capacity(),
+                    Constants.ALLOCATED.lower(): s.get_allocated(),
+                }
+
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
-            return site_info
+            pass
 
     def show(
         self,
@@ -818,9 +850,8 @@ class Site:
         """
         component_capacity = 0
         try:
-            if self.hosts:
-                for h in self.hosts.values():
-                    component_capacity += h.get_component_capacity(component_model_name=component_model_name)
+            for h in self.hosts.values():
+                component_capacity += h.get_component_capacity(component_model_name=component_model_name)
             return component_capacity
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
@@ -841,9 +872,8 @@ class Site:
         """
         component_allocated = 0
         try:
-            if self.hosts:
-                for h in self.hosts.values():
-                    component_allocated += h.get_component_allocated(component_model_name=component_model_name)
+            for h in self.hosts.values():
+                component_allocated += h.get_component_allocated(component_model_name=component_model_name)
             return component_allocated
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")

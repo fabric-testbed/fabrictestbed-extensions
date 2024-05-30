@@ -182,3 +182,4 @@ class Constants:
     DISK = "Disk"
     CPUS = "CPUs"
     HOSTS = "Hosts"
+    P4_SWITCH = "P4-Switch"
