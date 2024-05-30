@@ -72,7 +72,7 @@ import time
 import traceback
 import warnings
 
-from fabrictestbed_extensions.fablib.site import Site
+from fabrictestbed_extensions.fablib.site import Site, Host
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
@@ -2287,7 +2287,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_host(
-        host: FimNode, node: Node, allocated: dict, site: Site
+        host: Host, node: Node, allocated: dict, site: Site
     ) -> Tuple[bool, str]:
         """
         Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
@@ -2301,71 +2301,44 @@ Host * !bastion.fabric-testbed.net
                 f"Ignoring validation: Host: {host}, Site: {site} not available.",
             )
 
-        msg = f"Node can be allocated on the host: {host.name}."
+        msg = f"Node can be allocated on the host: {host.get_name()}."
 
-        host_state = site.get_state(host=host.name)
-        if host_state != "Active":
-            msg = f"Node cannot be allocated on {host.name}, {host.name} is in {host_state}!"
+        if host.get_state() != "Active":
+            msg = f"Node cannot be allocated on {host.get_name()}, {host.get_name()} is in {host.get_state()}!"
             return False, msg
 
-        allocated_core = allocated.setdefault("core", 0)
-        allocated_ram = allocated.setdefault("ram", 0)
-        allocated_disk = allocated.setdefault("disk", 0)
-        available_cores = (
-            host.capacities.core
-            - (
-                host.capacity_allocations.core
-                if host.capacity_allocations is not None
-                else 0
-            )
-            - allocated_core
-        )
-        available_ram = (
-            host.capacities.ram
-            - (
-                host.capacity_allocations.ram
-                if host.capacity_allocations is not None
-                else 0
-            )
-            - allocated_ram
-        )
-        available_disk = (
-            host.capacities.disk
-            - (
-                host.capacity_allocations.disk
-                if host.capacity_allocations is not None
-                else 0
-            )
-            - allocated_disk
-        )
+        available_cores = host.get_core_available()
+        available_ram = host.get_ram_available()
+        available_disk = host.get_disk_available()
 
         if (
             node.get_requested_cores() > available_cores
             or node.get_requested_disk() > available_disk
             or node.get_requested_ram() > available_ram
         ):
-            msg = f"Insufficient Resources: Host: {host.name} does not meet core/ram/disk requirements."
+            msg = f"Insufficient Resources: Host: {host.get_name()} does not meet core/ram/disk requirements."
             return False, msg
 
         # Check if there are enough components available
         for c in node.get_components():
             comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
-            if comp_model_type not in host.components:
-                msg = f"Invalid Request: Host: {host.name} does not have the requested component: {comp_model_type}."
+            substrate_component = host.get_component(comp_model_type=comp_model_type)
+            if not substrate_component:
+                msg = f"Invalid Request: Host: {host.get_name()} does not have the requested component: {comp_model_type}."
                 return False, msg
 
             allocated_comp_count = allocated.setdefault(comp_model_type, 0)
             available_comps = (
-                host.components[comp_model_type].capacities.unit
+                substrate_component.capacities.unit
                 - (
-                    host.components[comp_model_type].capacity_allocations.unit
-                    if host.components[comp_model_type].capacity_allocations
+                    substrate_component.capacity_allocations.unit
+                    if substrate_component.capacity_allocations
                     else 0
                 )
                 - allocated_comp_count
             )
             if available_comps <= 0:
-                msg = f"Insufficient Resources: Host: {host.name} has reached the limit for component: {comp_model_type}."
+                msg = f"Insufficient Resources: Host: {host.get_name()} has reached the limit for component: {comp_model_type}."
                 return False, msg
 
             allocated[comp_model_type] += 1
@@ -2427,7 +2400,7 @@ Host * !bastion.fabric-testbed.net
                     return status, error
 
             for host in hosts.values():
-                allocated_comps = allocated.setdefault(host.name, {})
+                allocated_comps = allocated.setdefault(host.get_name(), {})
                 status, error = self.__can_allocate_node_in_host(
                     host=host, node=node, allocated=allocated_comps, site=site
                 )

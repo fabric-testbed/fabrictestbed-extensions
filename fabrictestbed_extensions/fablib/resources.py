@@ -41,7 +41,7 @@ from fabrictestbed.slice_manager import Status
 from fim.user import interface, link, node
 from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.site import Site
+from fabrictestbed_extensions.fablib.site import Site, ResourceConstants
 
 
 class Resources:
@@ -672,7 +672,7 @@ class Resources:
                 table.append(site_dict)
 
         if pretty_names:
-            pretty_names_dict = Site.site_pretty_names
+            pretty_names_dict = ResourceConstants.pretty_names
         else:
             pretty_names_dict = {}
 
@@ -686,6 +686,35 @@ class Resources:
             pretty_names_dict=pretty_names_dict,
         )
 
+    def list_hosts(
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+        latlon=True,
+    ):
+        table = []
+        for site_name, site in self.sites.items():
+            for host_name, host in site.get_hosts():
+                host_dict = host.to_dict()
+                table.append(host_dict)
+
+        if pretty_names:
+            pretty_names_dict = ResourceConstants.pretty_names
+        else:
+            pretty_names_dict = {}
+
+        return self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Hosts",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
 
 class Links(Resources):
     link_pretty_names = {

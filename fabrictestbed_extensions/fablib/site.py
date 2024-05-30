@@ -31,14 +31,14 @@ import traceback
 from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
-from fim.user import node
+from fim.user import node, Component
 from fim.view_only_dict import ViewOnlyDict
 
 from fabrictestbed_extensions.fablib.constants import Constants
 
 
-class Site:
-    site_attribute_name_mappings = {
+class ResourceConstants:
+    attribute_name_mappings = {
         Constants.CORES.lower(): {
             Constants.NON_PRETTY_NAME: Constants.CORES.lower(),
             Constants.PRETTY_NAME: Constants.CORES,
@@ -100,7 +100,7 @@ class Site:
             Constants.HEADER_NAME: "FPGA-Xilinx-U280",
         },
     }
-    site_pretty_names = {
+    pretty_names = {
         "name": "Name",
         "state": "State",
         "address": "Address",
@@ -109,17 +109,405 @@ class Site:
         Constants.HOSTS.lower(): Constants.HOSTS,
         Constants.CPUS.lower(): Constants.CPUS,
     }
-    for attribute, names in site_attribute_name_mappings.items():
+    for attribute, names in attribute_name_mappings.items():
         pretty_name = names.get(Constants.PRETTY_NAME)
         non_pretty_name = names.get(Constants.NON_PRETTY_NAME)
-        if pretty_name not in site_pretty_names:
-            site_pretty_names[
+        if pretty_name not in pretty_names:
+            pretty_names[
                 f"{non_pretty_name}_{Constants.AVAILABLE.lower()}"] = f"{pretty_name} {Constants.AVAILABLE}"
-            site_pretty_names[
+            pretty_names[
                 f"{non_pretty_name}_{Constants.ALLOCATED.lower()}"] = f"{pretty_name} {Constants.ALLOCATED}"
-            site_pretty_names[
+            pretty_names[
                 f"{non_pretty_name}_{Constants.CAPACITY.lower()}"] = f"{pretty_name} {Constants.CAPACITY}"
 
+
+class Host:
+    def __init__(self, host: node.Node, state: str, fablib_manager):
+        self.host = host
+        self.state = state
+        self.fablib_manager = fablib_manager
+        self.host_info = self.__get_host_info()
+
+    def get_fablib_manager(self):
+        return self.fablib_manager
+
+    def to_dict(self):
+        d = {
+            "name": self.get_name(),
+            "state": self.get_state(),
+            "address": self.get_location_postal(),
+            "location": self.get_location_lat_long(),
+            "ptp_capable": self.get_ptp_capable()
+        }
+
+        for attribute, names in ResourceConstants.attribute_name_mappings.items():
+            capacity = self.host_info.get(attribute.lower(), {}).get(
+                Constants.CAPACITY.lower(), 0
+            )
+            allocated = self.host_info.get(attribute.lower(), {}).get(
+                Constants.ALLOCATED.lower(), 0
+            )
+            available = capacity - allocated
+            d[
+                f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.AVAILABLE.lower()}"
+            ] = available
+            d[
+                f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.CAPACITY.lower()}"
+            ] = capacity
+            d[
+                f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.ALLOCATED.lower()}"
+            ] = allocated
+
+        return d
+
+    def show(
+        self,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
+    ) -> str:
+        """
+        Creates a tabulated string of all the available resources at a specific host.
+
+        Intended for printing available resources at a host.
+
+        :param output: Output type
+        :type output: str
+        :param fields: List of fields to include
+        :type fields: List
+        :param quiet: flag indicating verbose or quiet display
+        :type quiet: bool
+        :param pretty_names: flag indicating if pretty names for the fields to be used or not
+        :type pretty_names: bool
+
+        :return: Tabulated string of available resources
+        :rtype: String
+        """
+
+        data = self.to_dict()
+
+        if pretty_names:
+            pretty_names_dict = ResourceConstants.pretty_names
+        else:
+            pretty_names_dict = {}
+
+        host_table = self.get_fablib_manager().show_table(
+            data,
+            fields=fields,
+            title="Host",
+            output=output,
+            quiet=quiet,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+        return host_table
+
+    def to_json(self):
+        return json.dumps(self.to_dict(), indent=4)
+
+    def get_location_postal(self) -> str:
+        """
+        Gets the location of a site by postal address
+
+        :param site: site name or site object
+        :type site: String or Node or NodeSliver
+        :return: postal address of the site
+        :rtype: String
+        """
+        try:
+            return self.host.location.postal
+        except Exception as e:
+            # logging.debug(f"Failed to get postal address for {site}")
+            return ""
+
+    def get_location_lat_long(self) -> Tuple[float, float]:
+        """
+        Gets gets location of a site in latitude and longitude
+
+        :return: latitude and longitude of the site
+        :rtype: Tuple(float,float)
+        """
+        try:
+            return self.host.location.to_latlon()
+        except Exception as e:
+            # logging.debug(f"Failed to get latitude and longitude for {site}")
+            return 0, 0
+
+    def get_ptp_capable(self) -> bool:
+        """
+        Gets the PTP flag of the site - if it has a native PTP capability
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
+        :return: boolean flag
+        :rtype: bool
+        """
+        try:
+            return self.host.flags.ptp
+        except Exception as e:
+            # logging.debug(f"Failed to get PTP status for {site}")
+            return False
+
+    def get_state(self) -> str:
+        if not self.state:
+            return ""
+        return self.state
+
+    def get_fim(self):
+        return self.host
+
+    def __get_host_info(self):
+        host_info = {}
+
+        try:
+            host_info[Constants.CORES.lower()] = {
+                Constants.CAPACITY.lower(): self.get_core_capacity(),
+                Constants.ALLOCATED.lower(): self.get_core_allocated(),
+            }
+            host_info[Constants.RAM.lower()] = {
+                Constants.CAPACITY.lower(): self.get_ram_capacity(),
+                Constants.ALLOCATED.lower(): self.get_ram_allocated(),
+            }
+            host_info[Constants.DISK.lower()] = {
+                Constants.CAPACITY.lower(): self.get_disk_capacity(),
+                Constants.ALLOCATED.lower(): self.get_disk_allocated(),
+            }
+
+            if self.host.components:
+                for component_model_name, c in self.host.components.items():
+                    comp_cap = host_info.setdefault(component_model_name.lower(), {})
+                    comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
+                    comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
+                    comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
+                    if c.capacity_allocations:
+                        comp_cap[
+                            Constants.ALLOCATED.lower()
+                        ] += c.capacity_allocations.unit
+
+            return host_info
+        except Exception as e:
+            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            return host_info
+
+    def get_name(self):
+        """
+        Gets the host name
+
+        :return: str
+        """
+        try:
+            return self.host.name
+        except Exception as e:
+            # logging.debug(f"Failed to get name for {host}")
+            return ""
+
+    def get_core_capacity(self) -> int:
+        """
+        Gets the total number of cores at the site
+
+        :return: core count
+        :rtype: int
+        """
+        try:
+            return self.host.capacities.core
+        except Exception as e:
+            # logging.debug(f"Failed to get core capacity {site}")
+            return 0
+
+    def get_core_allocated(self) -> int:
+        """
+        Gets the number of currently allocated cores at the site
+
+        :return: core count
+        :rtype: int
+        """
+        try:
+            return self.host.capacity_allocations.core
+        except Exception as e:
+            # logging.debug(f"Failed to get cores allocated {site}")
+            return 0
+
+    def get_core_available(self) -> int:
+        """
+        Gets the number of currently available cores at the site
+        :return: core count
+        :rtype: int
+        """
+        try:
+            return self.get_core_capacity() - self.get_core_allocated()
+        except Exception as e:
+            # logging.debug(f"Failed to get cores available {site}")
+            return self.get_core_capacity()
+
+    def get_ram_capacity(self) -> int:
+        """
+        Gets the total amount of memory at the site in GB
+
+        :return: ram in GB
+        :rtype: int
+        """
+        try:
+            return self.host.capacities.ram
+        except Exception as e:
+            # logging.debug(f"Failed to get ram capacity {site}")
+            return 0
+
+    def get_ram_allocated(self) -> int:
+        """
+        Gets the amount of memory currently  allocated the site in GB
+
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
+        :return: ram in GB
+        :rtype: int
+        """
+        try:
+            return self.host.capacity_allocations.ram
+        except Exception as e:
+            # logging.debug(f"Failed to get ram allocated {site}")
+            return 0
+
+    def get_ram_available(self) -> int:
+        """
+        Gets the amount of memory currently  available the site in GB
+
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
+        :return: ram in GB
+        :rtype: int
+        """
+        try:
+            return self.get_ram_capacity() - self.get_ram_allocated()
+        except Exception as e:
+            # logging.debug(f"Failed to get ram available {site_name}")
+            return self.get_ram_capacity()
+
+    def get_disk_capacity(self) -> int:
+        """
+        Gets the total amount of disk available the site in GB
+
+        :return: disk in GB
+        :rtype: int
+        """
+        try:
+            return self.host.capacities.disk
+        except Exception as e:
+            # logging.debug(f"Failed to get disk capacity {site}")
+            return 0
+
+    def get_disk_allocated(self) -> int:
+        """
+        Gets the amount of disk allocated the site in GB
+
+        :return: disk in GB
+        :rtype: int
+        """
+        try:
+            return self.host.capacity_allocations.disk
+        except Exception as e:
+            # logging.debug(f"Failed to get disk allocated {site}")
+            return 0
+
+    def get_disk_available(self) -> int:
+        """
+        Gets the amount of disk available the site in GB
+
+        :param site: site name or object
+        :type site: String or Node or NodeSliver
+        :return: disk in GB
+        :rtype: int
+        """
+        try:
+            return self.get_disk_capacity() - self.get_disk_allocated()
+        except Exception as e:
+            # logging.debug(f"Failed to get disk available {site_name}")
+            return self.get_disk_capacity()
+
+    def get_components(self) -> ViewOnlyDict:
+        try:
+            return self.host.components
+        except Exception as e:
+            pass
+
+    def get_component(self, comp_model_type) -> Component:
+        try:
+            return self.host.components.get(comp_model_type)
+        except Exception as e:
+            pass
+
+    def get_component_capacity(
+        self,
+        component_model_name: str,
+    ) -> int:
+        """
+        Gets the total site capacity of a component by model name.
+
+        :param component_model_name: component model name
+        :type component_model_name: String
+        :return: total component capacity
+        :rtype: int
+        """
+        component_capacity = 0
+        try:
+            if component_model_name in self.host.components:
+                component_capacity += self.host.components[
+                    component_model_name
+                ].capacities.unit
+            return component_capacity
+        except Exception as e:
+            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            return component_capacity
+
+    def get_component_allocated(
+        self,
+        component_model_name: str,
+    ) -> int:
+        """
+        Gets gets number of currently allocated components on a the site
+        by the component by model name.
+
+        :param component_model_name: component model name
+        :type component_model_name: String
+        :return: currently allocated component of this model
+        :rtype: int
+        """
+        component_allocated = 0
+        try:
+            if (
+                component_model_name in self.host.components
+                and self.host.components[component_model_name].capacity_allocations
+            ):
+                component_allocated += self.host.components[
+                    component_model_name
+                ].capacity_allocations.unit
+            return component_allocated
+        except Exception as e:
+            # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
+            return component_allocated
+
+    def get_component_available(
+        self,
+        component_model_name: str,
+    ) -> int:
+        """
+        Gets gets number of currently available components on the site
+        by the component by model name.
+
+        :param component_model_name: component model name
+        :type component_model_name: String
+        :return: currently available component of this model
+        :rtype: int
+        """
+        try:
+            return self.get_component_capacity(
+                component_model_name
+            ) - self.get_component_allocated(component_model_name)
+        except Exception as e:
+            # logging.debug(f"Failed to get {component_model_name} available {site}")
+            return self.get_component_capacity(component_model_name)
+
+
+class Site:
     def __init__(self, site: node.Node, fablib_manager):
         """
         :param site: Site Node from Fim Topology
@@ -132,10 +520,10 @@ class Site:
         self.hosts = self.__get_hosts_topology()
         self.site_info = self.__get_site_info()
 
-    def get_hosts(self) -> ViewOnlyDict:
+    def get_hosts(self) -> Dict[str, Host]:
         return self.hosts
 
-    def __get_hosts_topology(self) -> ViewOnlyDict:
+    def __get_hosts_topology(self) -> Dict[str, Host]:
         """
         Get worker nodes on a site
         :param site: site name
@@ -163,8 +551,8 @@ class Site:
                 from fim.user import NodeType
 
                 if n.type != NodeType.Facility:
-                    ret[n.name] = n
-            return ViewOnlyDict(ret)
+                    ret[n.name] = Host(host=n, state=self.get_state(n.name), fablib_manager=self.fablib_manager)
+            return ret
         except Exception as e:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
@@ -285,7 +673,7 @@ class Site:
             "cpus": self.get_cpu_capacity(),
         }
 
-        for attribute, names in self.site_attribute_name_mappings.items():
+        for attribute, names in ResourceConstants.attribute_name_mappings.items():
             capacity = self.site_info.get(attribute.lower(), {}).get(
                 Constants.CAPACITY.lower(), 0
             )
@@ -330,8 +718,8 @@ class Site:
 
             if self.hosts:
                 for h in self.hosts.values():
-                    if h.components:
-                        for component_model_name, c in h.components.items():
+                    if h.get_components():
+                        for component_model_name, c in h.get_components().items():
                             comp_cap = site_info.setdefault(component_model_name.lower(), {})
                             comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
                             comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
@@ -374,7 +762,7 @@ class Site:
         data = self.to_dict()
 
         if pretty_names:
-            pretty_names_dict = self.site_pretty_names
+            pretty_names_dict = ResourceConstants.pretty_names
         else:
             pretty_names_dict = {}
 
@@ -404,7 +792,7 @@ class Site:
             self.get_cpu_capacity(),
         ]
 
-        for attribute, names in self.site_attribute_name_mappings.items():
+        for attribute, names in ResourceConstants.attribute_name_mappings.items():
             allocated = self.site_info.get(attribute, {}).get(
                 Constants.ALLOCATED.lower(), 0
             )
@@ -432,10 +820,7 @@ class Site:
         try:
             if self.hosts:
                 for h in self.hosts.values():
-                    if component_model_name in h.components:
-                        component_capacity += h.components[
-                            component_model_name
-                        ].capacities.unit
+                    component_capacity += h.get_component_capacity(component_model_name=component_model_name)
             return component_capacity
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
@@ -458,13 +843,7 @@ class Site:
         try:
             if self.hosts:
                 for h in self.hosts.values():
-                    if (
-                        component_model_name in h.components
-                        and h.components[component_model_name].capacity_allocations
-                    ):
-                        component_allocated += h.components[
-                            component_model_name
-                        ].capacity_allocations.unit
+                    component_allocated += h.get_component_allocated(component_model_name=component_model_name)
             return component_allocated
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
@@ -615,3 +994,15 @@ class Site:
         except Exception as e:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity()
+
+    def get_host(self, name: str) -> Host:
+        return self.hosts.get(name)
+
+    def get_host_names(self) -> List[str]:
+        """
+        Gets a list of all currently available hosts
+
+        :return: list of host names
+        :rtype: List[String]
+        """
+        return list(self.hosts.keys())
