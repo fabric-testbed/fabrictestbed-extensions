@@ -2388,7 +2388,10 @@ Host * !bastion.fabric-testbed.net
         if host.get_state() != "Active":
             msg = f"Node cannot be allocated on {host.get_name()}, {host.get_name()} is in {host.get_state()}!"
             return False, msg
-
+        
+        allocated_core = allocated.setdefault("core", 0)
+        allocated_ram = allocated.setdefault("ram", 0)
+        allocated_disk = allocated.setdefault("disk", 0)
         available_cores = host.get_core_available()
         available_ram = host.get_ram_available()
         available_disk = host.get_disk_available()
