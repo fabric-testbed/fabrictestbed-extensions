@@ -168,6 +168,8 @@ class Host:
         }
 
         for attribute, names in ResourceConstants.attribute_name_mappings.items():
+            if attribute in Constants.P4_SWITCH:
+                continue
             capacity = self.host_info.get(attribute.lower(), {}).get(
                 Constants.CAPACITY.lower(), 0
             )
@@ -184,9 +186,6 @@ class Host:
             d[
                 f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.ALLOCATED.lower()}"
             ] = allocated
-
-        if Constants.P4_SWITCH.lower() in d:
-            d.pop(Constants.P4_SWITCH.lower())
 
         return d
 
@@ -617,7 +616,7 @@ class Site:
             if not host:
                 return str(self.site.maintenance_info.get(self.site.name).state)
             else:
-                if host in self.site.maintenance_info:
+                if self.site.maintenance_info.get(host):
                     return str(self.site.maintenance_info.get(host).state)
                 else:
                     return "Active"
