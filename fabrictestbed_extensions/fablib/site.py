@@ -158,6 +158,9 @@ class Host:
     def get_fablib_manager(self):
         return self.fablib_manager
 
+    def __str__(self):
+        self.to_json()
+
     def to_dict(self):
         d = {
             "name": self.get_name(),
@@ -1041,3 +1044,6 @@ class Site:
         :rtype: List[String]
         """
         return list(self.hosts.keys())
+
+    def __str__(self):
+        return self.to_json()
