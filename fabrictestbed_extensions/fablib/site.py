@@ -110,7 +110,7 @@ class Site:
         Constants.CPUS.lower(): Constants.CPUS,
     }
     for attribute, names in site_attribute_name_mappings.items():
-        pretty_name = site_attribute_name_mappings.get(attribute.lower()).get(Constants.PRETTY_NAME)
+        pretty_name = names.get(Constants.PRETTY_NAME)
         if pretty_name not in site_pretty_names:
             site_pretty_names[attribute.lower()] = pretty_name
 
