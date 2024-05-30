@@ -152,7 +152,11 @@ class NetworkService:
             # L2PTP limitation for Facility Ports:
             # basically the layer-2 point-to-point server template applied is not popping
             # vlan tags over the MPLS tunnel between two facility ports.
-            if includes_facility_port and facility_port_interfaces < 2:
+            if (
+                includes_facility_port
+                and facility_port_interfaces < 2
+                and not basic_nic_count
+            ):
                 # For now WAN FacilityPorts require L2PTP
                 rtn_nstype = NetworkService.network_service_map["L2PTP"]
             elif len(interfaces) >= 2:
