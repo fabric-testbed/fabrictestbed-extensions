@@ -617,7 +617,7 @@ class Site:
             if not host:
                 return str(self.site.maintenance_info.get(self.site.name).state)
             else:
-                if host in self.site.maintenance_info.get(host):
+                if host in self.site.maintenance_info:
                     return str(self.site.maintenance_info.get(host).state)
                 else:
                     return "Active"
