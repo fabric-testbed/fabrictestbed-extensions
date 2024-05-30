@@ -693,7 +693,6 @@ class Resources:
         quiet=False,
         filter_function=None,
         pretty_names=True,
-        latlon=True,
     ):
         table = []
         for site_name, site in self.sites.items():

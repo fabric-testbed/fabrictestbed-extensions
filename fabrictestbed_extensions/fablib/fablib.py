@@ -146,6 +146,16 @@ class fablib:
         return fablib.get_default_fablib_manager().list_sites(latlon=latlon)
 
     @staticmethod
+    def list_hosts() -> object:
+        """
+        Get a string used to print a tabular list of sites with state
+
+        :return: tabulated string of site state
+        :rtype: str
+        """
+        return fablib.get_default_fablib_manager().list_hosts()
+
+    @staticmethod
     def list_links() -> object:
         """
         Print the links in pretty format
@@ -1137,6 +1147,78 @@ Host * !bastion.fabric-testbed.net
             filter_function=filter_function,
             pretty_names=pretty_names,
             latlon=latlon,
+        )
+
+    def list_hosts(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ) -> object:
+        """
+        Lists all the hosts and their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :param update:
+        :type update: bool
+        :param pretty_names:
+        :type pretty_names: bool
+        :param force_refresh:
+        :type force_refresh: bool
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param avoid: list of sites to avoid
+        :type: list of string
+        :param includes: list of sites to include
+        :type: list of string
+
+        """
+        return self.get_resources(
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
+        ).list_hosts(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
         )
 
     def list_links(
