@@ -612,7 +612,10 @@ class Site:
         """
         try:
             if not host:
-                return str(self.site.maintenance_info.get(self.site.name).state)
+                if host in self.site.maintenance_info:
+                    return str(self.site.maintenance_info.get(self.site.name).state)
+                else:
+                    return "Active"
             else:
                 return str(self.site.maintenance_info.get(host).state)
         except Exception as e:
