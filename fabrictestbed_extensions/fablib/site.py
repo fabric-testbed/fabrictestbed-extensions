@@ -28,13 +28,13 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
+from fim.user import node
 from fim.view_only_dict import ViewOnlyDict
 
 from fabrictestbed_extensions.fablib.constants import Constants
-from fim.user import node
 
 
 class Site:
@@ -141,7 +141,9 @@ class Site:
             )
             ret = dict()
             for nid in node_id_list:
-                _, node_props = self.site.topo.graph_model.get_node_properties(node_id=nid)
+                _, node_props = self.site.topo.graph_model.get_node_properties(
+                    node_id=nid
+                )
                 n = node.Node(
                     name=node_props[ABCPropertyGraph.PROP_NAME],
                     node_id=nid,
@@ -264,7 +266,7 @@ class Site:
         Convert site information into a dictionary
         """
         d = {
-            "name": self.get_name() ,
+            "name": self.get_name(),
             "state": self.get_state(),
             "address": self.get_location_postal(),
             "location": self.get_location_lat_long(),
@@ -274,12 +276,22 @@ class Site:
         }
 
         for attribute, names in self.site_attribute_name_mappings.items():
-            capacity = self.site_info.get(attribute, {}).get(Constants.CAPACITY.lower(), 0)
-            allocated = self.site_info.get(attribute, {}).get(Constants.ALLOCATED.lower(), 0)
+            capacity = self.site_info.get(attribute, {}).get(
+                Constants.CAPACITY.lower(), 0
+            )
+            allocated = self.site_info.get(attribute, {}).get(
+                Constants.ALLOCATED.lower(), 0
+            )
             available = capacity - allocated
-            d[f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.AVAILABLE.lower()}"] = available
-            d[f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.CAPACITY.lower()}"] = capacity
-            d[f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.ALLOCATED.lower()}"] = allocated
+            d[
+                f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.AVAILABLE.lower()}"
+            ] = available
+            d[
+                f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.CAPACITY.lower()}"
+            ] = capacity
+            d[
+                f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.ALLOCATED.lower()}"
+            ] = allocated
 
         return d
 
@@ -296,19 +308,25 @@ class Site:
             site_info[Constants.CORES.lower()] = {
                 Constants.CAPACITY.lower(): self.site.capacities.core,
                 Constants.ALLOCATED.lower(): (
-                    self.site.capacity_allocations.core if self.site.capacity_allocations else 0
+                    self.site.capacity_allocations.core
+                    if self.site.capacity_allocations
+                    else 0
                 ),
             }
             site_info[Constants.RAM.lower()] = {
                 Constants.CAPACITY.lower(): self.site.capacities.ram,
                 Constants.ALLOCATED.lower(): (
-                    self.site.capacity_allocations.ram if self.site.capacity_allocations else 0
+                    self.site.capacity_allocations.ram
+                    if self.site.capacity_allocations
+                    else 0
                 ),
             }
             site_info[Constants.DISK.lower()] = {
                 Constants.CAPACITY.lower(): self.site.capacities.disk,
                 Constants.ALLOCATED.lower(): (
-                    self.site.capacity_allocations.disk if self.site.capacity_allocations else 0
+                    self.site.capacity_allocations.disk
+                    if self.site.capacity_allocations
+                    else 0
                 ),
             }
 

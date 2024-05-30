@@ -142,7 +142,9 @@ class Resources:
         :rtype: String
         """
         site = self.sites.get(site_name)
-        return site.show(output=output, fields=fields, quiet=quiet, pretty_names=pretty_names)
+        return site.show(
+            output=output, fields=fields, quiet=quiet, pretty_names=pretty_names
+        )
 
     def get_site_names(self) -> List[str]:
         """
@@ -207,7 +209,9 @@ class Resources:
                 site = self.get_site(site_name=site)
             elif isinstance(site, node.Node):
                 site = Site(site=site, fablib_manager=self.fablib_manager)
-            return site.get_component_capacity(component_model_name=component_model_name)
+            return site.get_component_capacity(
+                component_model_name=component_model_name
+            )
 
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
@@ -235,7 +239,9 @@ class Resources:
                 site = self.get_site(site_name=site)
             elif isinstance(site, node.Node):
                 site = Site(site=site, fablib_manager=self.fablib_manager)
-            return site.get_component_allocated(component_model_name=component_model_name)
+            return site.get_component_allocated(
+                component_model_name=component_model_name
+            )
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
             return component_allocated
@@ -261,14 +267,14 @@ class Resources:
                 site = self.get_site(site_name=site)
             elif isinstance(site, node.Node):
                 site = Site(site=site, fablib_manager=self.fablib_manager)
-            return site.get_component_available(component_model_name=component_model_name)
+            return site.get_component_available(
+                component_model_name=component_model_name
+            )
         except Exception as e:
             # logging.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(site, component_model_name)
 
-    def get_location_lat_long(
-        self, site: str or node.Node
-    ) -> Tuple[float, float]:
+    def get_location_lat_long(self, site: str or node.Node) -> Tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -287,9 +293,7 @@ class Resources:
             # logging.warning(f"Failed to get location postal {site}")
             return 0, 0
 
-    def get_location_postal(
-        self, site: str or node.Node
-    ) -> str:
+    def get_location_postal(self, site: str or node.Node) -> str:
         """
         Gets the location of a site by postal address
 
@@ -308,9 +312,7 @@ class Resources:
             # logging.debug(f"Failed to get location postal {site}")
             return ""
 
-    def get_host_capacity(
-        self, site: str or node.Node
-    ) -> int:
+    def get_host_capacity(self, site: str or node.Node) -> int:
         """
         Gets the number of hosts at the site
 
@@ -329,9 +331,7 @@ class Resources:
             # logging.debug(f"Failed to get host count {site}")
             return 0
 
-    def get_cpu_capacity(
-        self, site: str or node.Node
-    ) -> int:
+    def get_cpu_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total number of cpus at the site
 
@@ -350,9 +350,7 @@ class Resources:
             # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
 
-    def get_core_capacity(
-        self, site: str or node.Node
-    ) -> int:
+    def get_core_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total number of cores at the site
 
@@ -371,9 +369,7 @@ class Resources:
             # logging.debug(f"Failed to get core capacity {site}")
             return 0
 
-    def get_core_allocated(
-        self, site: str or node.Node
-    ) -> int:
+    def get_core_allocated(self, site: str or node.Node) -> int:
         """
         Gets the number of currently allocated cores at the site
 
@@ -392,9 +388,7 @@ class Resources:
             # logging.debug(f"Failed to get cores allocated {site}")
             return 0
 
-    def get_core_available(
-        self, site: str or node.Node
-    ) -> int:
+    def get_core_available(self, site: str or node.Node) -> int:
         """
         Gets the number of currently available cores at the site
 
@@ -413,9 +407,7 @@ class Resources:
             # logging.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity(site)
 
-    def get_ram_capacity(
-        self, site: str or node.Node
-    ) -> int:
+    def get_ram_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total amount of memory at the site in GB
 
@@ -434,9 +426,7 @@ class Resources:
             # logging.debug(f"Failed to get ram capacity {site}")
             return 0
 
-    def get_ram_allocated(
-        self, site: str or node.Node
-    ) -> int:
+    def get_ram_allocated(self, site: str or node.Node) -> int:
         """
         Gets the amount of memory currently  allocated the site in GB
 
@@ -455,9 +445,7 @@ class Resources:
             # logging.debug(f"Failed to get ram allocated {site}")
             return 0
 
-    def get_ram_available(
-        self, site: str or node.Node
-    ) -> int:
+    def get_ram_available(self, site: str or node.Node) -> int:
         """
         Gets the amount of memory currently  available the site in GB
 
@@ -476,9 +464,7 @@ class Resources:
             # logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site)
 
-    def get_disk_capacity(
-        self, site: str or node.Node
-    ) -> int:
+    def get_disk_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total amount of disk available the site in GB
 
@@ -497,9 +483,7 @@ class Resources:
             # logging.debug(f"Failed to get disk capacity {site}")
             return 0
 
-    def get_disk_allocated(
-        self, site: str or node.Node
-    ) -> int:
+    def get_disk_allocated(self, site: str or node.Node) -> int:
         """
         Gets the amount of disk allocated the site in GB
 
@@ -518,9 +502,7 @@ class Resources:
             # logging.debug(f"Failed to get disk allocated {site}")
             return 0
 
-    def get_disk_available(
-        self, site: str or node.Node
-    ) -> int:
+    def get_disk_available(self, site: str or node.Node) -> int:
         """
         Gets the amount of disk available the site in GB
 
@@ -539,9 +521,7 @@ class Resources:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site)
 
-    def get_ptp_capable(
-        self, site: str or node.Node
-    ) -> bool:
+    def get_ptp_capable(self, site: str or node.Node) -> bool:
         """
         Gets the PTP flag of the site - if it has a native PTP capability
         :param site: site name or object
@@ -663,9 +643,7 @@ class Resources:
     def site_to_json(self, site, latlon=True):
         return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(
-        self, site: str or node.Node, latlon=True
-    ):
+    def site_to_dict(self, site: str or node.Node, latlon=True):
         """
         Convert site information into a dictionary
 
