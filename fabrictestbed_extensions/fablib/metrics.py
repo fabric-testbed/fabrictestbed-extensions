@@ -29,12 +29,12 @@ class Metrics:
         self.fablib_manager = fablib_manager
 
     def list_metrics(
-            self,
-            output=None,
-            fields=None,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ):
         table = []
         metric_dict = self.metrics_to_dict()

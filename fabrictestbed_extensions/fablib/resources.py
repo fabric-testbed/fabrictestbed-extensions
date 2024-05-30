@@ -70,7 +70,11 @@ class Resources:
     HOSTS = "Hosts"
 
     site_attribute_name_mappings = {
-        CORES.lower(): {NON_PRETTY_NAME: CORES.lower(), PRETTY_NAME: CORES, HEADER_NAME: CORES},
+        CORES.lower(): {
+            NON_PRETTY_NAME: CORES.lower(),
+            PRETTY_NAME: CORES,
+            HEADER_NAME: CORES,
+        },
         RAM.lower(): {
             NON_PRETTY_NAME: RAM.lower(),
             PRETTY_NAME: RAM,
@@ -140,21 +144,25 @@ class Resources:
         non_pretty_name = names.get(NON_PRETTY_NAME)
         pretty_name = names.get(PRETTY_NAME)
         site_pretty_names[non_pretty_name] = pretty_name
-        site_pretty_names[
-            f"{non_pretty_name}_{AVAILABLE.lower()}"
-        ] = f"{pretty_name} {AVAILABLE}"
-        site_pretty_names[
-            f"{non_pretty_name}_{CAPACITY.lower()}"
-        ] = f"{pretty_name} {CAPACITY}"
-        site_pretty_names[
-            f"{non_pretty_name}_{ALLOCATED.lower()}"
-        ] = f"{pretty_name} {ALLOCATED}"
+        site_pretty_names[f"{non_pretty_name}_{AVAILABLE.lower()}"] = (
+            f"{pretty_name} {AVAILABLE}"
+        )
+        site_pretty_names[f"{non_pretty_name}_{CAPACITY.lower()}"] = (
+            f"{pretty_name} {CAPACITY}"
+        )
+        site_pretty_names[f"{non_pretty_name}_{ALLOCATED.lower()}"] = (
+            f"{pretty_name} {ALLOCATED}"
+        )
 
-    def __init__(self, fablib_manager, force_refresh: bool = False,
-                 start: datetime = None,
-                 end: datetime = None,
-                 avoid: List[str] = None,
-                 includes: List[str] = None):
+    def __init__(
+        self,
+        fablib_manager,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ):
         """
         :param fablib_manager: a :class:`FablibManager` instance.
         :type fablib_manager: fablib.FablibManager
@@ -182,7 +190,13 @@ class Resources:
 
         self.topology = None
 
-        self.update(force_refresh=force_refresh, start=start, end=end, includes=includes, avoid=avoid)
+        self.update(
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            includes=includes,
+            avoid=avoid,
+        )
 
     def __str__(self) -> str:
         """
@@ -352,21 +366,21 @@ class Resources:
             nodes = self.get_nodes(site=site)
             site_info[self.CORES.lower()] = {
                 self.CAPACITY.lower(): site.capacities.core,
-                self.ALLOCATED.lower(): site.capacity_allocations.core
-                if site.capacity_allocations
-                else 0,
+                self.ALLOCATED.lower(): (
+                    site.capacity_allocations.core if site.capacity_allocations else 0
+                ),
             }
             site_info[self.RAM.lower()] = {
                 self.CAPACITY.lower(): site.capacities.ram,
-                self.ALLOCATED.lower(): site.capacity_allocations.ram
-                if site.capacity_allocations
-                else 0,
+                self.ALLOCATED.lower(): (
+                    site.capacity_allocations.ram if site.capacity_allocations else 0
+                ),
             }
             site_info[self.DISK.lower()] = {
                 self.CAPACITY.lower(): site.capacities.disk,
-                self.ALLOCATED.lower(): site.capacity_allocations.disk
-                if site.capacity_allocations
-                else 0,
+                self.ALLOCATED.lower(): (
+                    site.capacity_allocations.disk if site.capacity_allocations else 0
+                ),
             }
 
             if nodes:
@@ -757,11 +771,14 @@ class Resources:
     def get_fablib_manager(self):
         return self.fablib_manager
 
-    def update(self, force_refresh: bool = False,
-               start: datetime = None,
-               end: datetime = None,
-               avoid: List[str] = None,
-               includes: List[str] = None):
+    def update(
+        self,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ):
         """
         Update the available resources by querying the FABRIC services
         :param force_refresh: force a refresh of available testbed
@@ -785,8 +802,14 @@ class Resources:
         return_status, topology = (
             self.get_fablib_manager()
             .get_slice_manager()
-            .resources(force_refresh=force_refresh, level=2, start=start, end=end, excludes=avoid,
-                       includes=includes)
+            .resources(
+                force_refresh=force_refresh,
+                level=2,
+                start=start,
+                end=end,
+                excludes=avoid,
+                includes=includes,
+            )
         )
         if return_status != Status.OK:
             raise Exception(
@@ -1141,7 +1164,9 @@ class FacilityPorts(Resources):
             "site_name": site,
             "node_id": iface.node_id,
             "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
-            "allocated_vlan_range": label_allocations.vlan if label_allocations else "N/A",
+            "allocated_vlan_range": (
+                label_allocations.vlan if label_allocations else "N/A"
+            ),
             "local_name": (
                 iface.labels.local_name
                 if iface.labels and iface.labels.local_name
