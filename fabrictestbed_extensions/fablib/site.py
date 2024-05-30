@@ -111,8 +111,9 @@ class Site:
     }
     for attribute, names in site_attribute_name_mappings.items():
         pretty_name = names.get(Constants.PRETTY_NAME)
+        non_pretty_name = names.get(Constants.NON_PRETTY_NAME)
         if pretty_name not in site_pretty_names:
-            site_pretty_names[attribute.lower()] = pretty_name
+            site_pretty_names[non_pretty_name.lower()] = pretty_name
 
     def __init__(self, site: node.Node, fablib_manager):
         """
