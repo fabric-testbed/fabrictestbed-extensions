@@ -276,10 +276,10 @@ class Site:
         }
 
         for attribute, names in self.site_attribute_name_mappings.items():
-            capacity = self.site_info.get(attribute, {}).get(
+            capacity = self.site_info.get(attribute.lower(), {}).get(
                 Constants.CAPACITY.lower(), 0
             )
-            allocated = self.site_info.get(attribute, {}).get(
+            allocated = self.site_info.get(attribute.lower(), {}).get(
                 Constants.ALLOCATED.lower(), 0
             )
             available = capacity - allocated
@@ -322,7 +322,7 @@ class Site:
                 for h in self.hosts.values():
                     if h.components:
                         for component_model_name, c in h.components.items():
-                            comp_cap = site_info.setdefault(component_model_name, {})
+                            comp_cap = site_info.setdefault(component_model_name.lower(), {})
                             comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
                             comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
                             comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
