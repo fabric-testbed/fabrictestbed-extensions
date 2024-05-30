@@ -185,6 +185,9 @@ class Host:
                 f"{names.get(Constants.NON_PRETTY_NAME)}_{Constants.ALLOCATED.lower()}"
             ] = allocated
 
+        if Constants.P4_SWITCH.lower() in d:
+            d.pop(Constants.P4_SWITCH.lower())
+
         return d
 
     def show(
