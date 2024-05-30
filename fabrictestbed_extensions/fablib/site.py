@@ -113,7 +113,12 @@ class Site:
         pretty_name = names.get(Constants.PRETTY_NAME)
         non_pretty_name = names.get(Constants.NON_PRETTY_NAME)
         if pretty_name not in site_pretty_names:
-            site_pretty_names[non_pretty_name.lower()] = pretty_name
+            site_pretty_names[
+                f"{non_pretty_name}_{Constants.AVAILABLE.lower()}"] = f"{pretty_name} {Constants.AVAILABLE}"
+            site_pretty_names[
+                f"{non_pretty_name}_{Constants.ALLOCATED.lower()}"] = f"{pretty_name} {Constants.ALLOCATED}"
+            site_pretty_names[
+                f"{non_pretty_name}_{Constants.CAPACITY.lower()}"] = f"{pretty_name} {Constants.CAPACITY}"
 
     def __init__(self, site: node.Node, fablib_manager):
         """
