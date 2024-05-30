@@ -41,7 +41,7 @@ from fabrictestbed.slice_manager import Status
 from fim.user import interface, link, node
 from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.site import Site, ResourceConstants
+from fabrictestbed_extensions.fablib.site import ResourceConstants, Site
 
 
 class Resources:

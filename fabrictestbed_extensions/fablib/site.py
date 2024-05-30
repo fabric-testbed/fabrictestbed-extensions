@@ -31,7 +31,7 @@ import traceback
 from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
-from fim.user import node, Component
+from fim.user import Component, node
 from fim.view_only_dict import ViewOnlyDict
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -62,7 +62,7 @@ class ResourceConstants:
         Constants.P4_SWITCH: {
             Constants.NON_PRETTY_NAME: Constants.P4_SWITCH.lower(),
             Constants.PRETTY_NAME: Constants.P4_SWITCH,
-            Constants.HEADER_NAME: Constants.P4_SWITCH
+            Constants.HEADER_NAME: Constants.P4_SWITCH,
         },
         Constants.SMART_NIC_CONNECTX_6: {
             Constants.NON_PRETTY_NAME: "nic_connectx_6",
@@ -118,12 +118,15 @@ class ResourceConstants:
         pretty_name = names.get(Constants.PRETTY_NAME)
         non_pretty_name = names.get(Constants.NON_PRETTY_NAME)
         if pretty_name not in pretty_names:
-            pretty_names[
-                f"{non_pretty_name}_{Constants.AVAILABLE.lower()}"] = f"{pretty_name} {Constants.AVAILABLE}"
-            pretty_names[
-                f"{non_pretty_name}_{Constants.ALLOCATED.lower()}"] = f"{pretty_name} {Constants.ALLOCATED}"
-            pretty_names[
-                f"{non_pretty_name}_{Constants.CAPACITY.lower()}"] = f"{pretty_name} {Constants.CAPACITY}"
+            pretty_names[f"{non_pretty_name}_{Constants.AVAILABLE.lower()}"] = (
+                f"{pretty_name} {Constants.AVAILABLE}"
+            )
+            pretty_names[f"{non_pretty_name}_{Constants.ALLOCATED.lower()}"] = (
+                f"{pretty_name} {Constants.ALLOCATED}"
+            )
+            pretty_names[f"{non_pretty_name}_{Constants.CAPACITY.lower()}"] = (
+                f"{pretty_name} {Constants.CAPACITY}"
+            )
 
 
 class Switch:
@@ -240,7 +243,7 @@ class Host:
             "state": self.get_state(),
             "address": self.get_location_postal(),
             "location": self.get_location_lat_long(),
-            "ptp_capable": self.get_ptp_capable()
+            "ptp_capable": self.get_ptp_capable(),
         }
 
         for attribute, names in ResourceConstants.attribute_name_mappings.items():
@@ -316,7 +319,9 @@ class Host:
 
             if self.host.components:
                 for component_model_name, c in self.host.components.items():
-                    comp_cap = self.host_info.setdefault(component_model_name.lower(), {})
+                    comp_cap = self.host_info.setdefault(
+                        component_model_name.lower(), {}
+                    )
                     comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
                     comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
                     comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
@@ -340,7 +345,7 @@ class Host:
         except Exception as e:
             pass
 
-    def get_component(self, comp_model_type:str) -> Component:
+    def get_component(self, comp_model_type: str) -> Component:
         """
         Get a specific component associated with the host.
 
@@ -712,10 +717,16 @@ class Site:
                 from fim.user import NodeType
 
                 if n.type == NodeType.Server:
-                    self.hosts[n.name] = Host(host=n, state=self.get_state(n.name), ptp=self.get_ptp_capable(),
-                                              fablib_manager=self.fablib_manager)
+                    self.hosts[n.name] = Host(
+                        host=n,
+                        state=self.get_state(n.name),
+                        ptp=self.get_ptp_capable(),
+                        fablib_manager=self.fablib_manager,
+                    )
                 elif n.type == NodeType.Switch:
-                    self.switches[n.name] = Switch(switch=n, fablib_manager=self.get_fablib_manager())
+                    self.switches[n.name] = Switch(
+                        switch=n, fablib_manager=self.get_fablib_manager()
+                    )
         except Exception as e:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
@@ -946,7 +957,9 @@ class Site:
             for h in self.hosts.values():
                 if h.get_components():
                     for component_model_name, c in h.get_components().items():
-                        comp_cap = self.site_info.setdefault(component_model_name.lower(), {})
+                        comp_cap = self.site_info.setdefault(
+                            component_model_name.lower(), {}
+                        )
                         comp_cap.setdefault(Constants.CAPACITY.lower(), 0)
                         comp_cap.setdefault(Constants.ALLOCATED.lower(), 0)
                         comp_cap[Constants.CAPACITY.lower()] += c.capacities.unit
@@ -955,7 +968,9 @@ class Site:
                                 Constants.ALLOCATED.lower()
                             ] += c.capacity_allocations.unit
 
-            p4_mappings = ResourceConstants.attribute_name_mappings.get(Constants.P4_SWITCH)
+            p4_mappings = ResourceConstants.attribute_name_mappings.get(
+                Constants.P4_SWITCH
+            )
             for s in self.switches.values():
                 self.site_info[p4_mappings.get(Constants.NON_PRETTY_NAME)] = {
                     Constants.CAPACITY.lower(): s.get_capacity(),
@@ -1024,7 +1039,9 @@ class Site:
         component_capacity = 0
         try:
             for h in self.hosts.values():
-                component_capacity += h.get_component_capacity(component_model_name=component_model_name)
+                component_capacity += h.get_component_capacity(
+                    component_model_name=component_model_name
+                )
             return component_capacity
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
@@ -1046,7 +1063,9 @@ class Site:
         component_allocated = 0
         try:
             for h in self.hosts.values():
-                component_allocated += h.get_component_allocated(component_model_name=component_model_name)
+                component_allocated += h.get_component_allocated(
+                    component_model_name=component_model_name
+                )
             return component_allocated
         except Exception as e:
             # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
