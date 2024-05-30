@@ -306,28 +306,16 @@ class Site:
 
         try:
             site_info[Constants.CORES.lower()] = {
-                Constants.CAPACITY.lower(): self.site.capacities.core,
-                Constants.ALLOCATED.lower(): (
-                    self.site.capacity_allocations.core
-                    if self.site.capacity_allocations
-                    else 0
-                ),
+                Constants.CAPACITY.lower(): self.get_core_capacity(),
+                Constants.ALLOCATED.lower(): self.get_core_allocated(),
             }
             site_info[Constants.RAM.lower()] = {
-                Constants.CAPACITY.lower(): self.site.capacities.ram,
-                Constants.ALLOCATED.lower(): (
-                    self.site.capacity_allocations.ram
-                    if self.site.capacity_allocations
-                    else 0
-                ),
+                Constants.CAPACITY.lower(): self.get_ram_capacity(),
+                Constants.ALLOCATED.lower(): self.get_ram_allocated(),
             }
             site_info[Constants.DISK.lower()] = {
-                Constants.CAPACITY.lower(): self.site.capacities.disk,
-                Constants.ALLOCATED.lower(): (
-                    self.site.capacity_allocations.disk
-                    if self.site.capacity_allocations
-                    else 0
-                ),
+                Constants.CAPACITY.lower(): self.get_disk_capacity(),
+                Constants.ALLOCATED.lower(): self.get_disk_allocated(),
             }
 
             if self.hosts:
