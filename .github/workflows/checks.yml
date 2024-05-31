@@ -1,6 +1,6 @@
 # Run some code checks with GitHub Actions.
 
-name: Code checks
+name: Code formatting checks
 
 on:
   push:
