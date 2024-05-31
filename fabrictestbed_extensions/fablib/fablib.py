@@ -72,6 +72,8 @@ import time
 import traceback
 import warnings
 
+from fabrictestbed_extensions.fablib.site import Host, Site
+
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
@@ -142,6 +144,16 @@ class fablib:
         :rtype: str
         """
         return fablib.get_default_fablib_manager().list_sites(latlon=latlon)
+
+    @staticmethod
+    def list_hosts() -> object:
+        """
+        Get a string used to print a tabular list of sites with state
+
+        :return: tabulated string of site state
+        :rtype: str
+        """
+        return fablib.get_default_fablib_manager().list_hosts()
 
     @staticmethod
     def list_links() -> object:
@@ -1135,6 +1147,78 @@ Host * !bastion.fabric-testbed.net
             filter_function=filter_function,
             pretty_names=pretty_names,
             latlon=latlon,
+        )
+
+    def list_hosts(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ) -> object:
+        """
+        Lists all the hosts and their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :param update:
+        :type update: bool
+        :param pretty_names:
+        :type pretty_names: bool
+        :param force_refresh:
+        :type force_refresh: bool
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param avoid: list of sites to avoid
+        :type: list of string
+        :param includes: list of sites to include
+        :type: list of string
+
+        """
+        return self.get_resources(
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
+        ).list_hosts(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
         )
 
     def list_links(
@@ -2284,86 +2368,62 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def __can_allocate_node_in_worker(
-        worker: FimNode, node: Node, allocated: dict, site: FimNode
+    def __can_allocate_node_in_host(
+        host: Host, node: Node, allocated: dict, site: Site
     ) -> Tuple[bool, str]:
         """
-        Check if a node can be provisioned on a worker node on a site w.r.t available resources on that site
+        Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
 
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        if worker is None or site is None:
+        if host is None or site is None:
             return (
                 True,
-                f"Ignoring validation: Worker: {worker}, Site: {site} not available.",
+                f"Ignoring validation: Host: {host}, Site: {site} not available.",
             )
 
-        msg = f"Node can be allocated on the host: {worker.name}."
+        msg = f"Node can be allocated on the host: {host.get_name()}."
 
-        worker_maint_info = site.maintenance_info.get(worker.name)
-        if worker_maint_info and str(worker_maint_info.state) != "Active":
-            msg = f"Node cannot be allocated on {worker.name}, {worker.name} is in {worker_maint_info.state}!"
+        if host.get_state() != "Active":
+            msg = f"Node cannot be allocated on {host.get_name()}, {host.get_name()} is in {host.get_state()}!"
             return False, msg
 
         allocated_core = allocated.setdefault("core", 0)
         allocated_ram = allocated.setdefault("ram", 0)
         allocated_disk = allocated.setdefault("disk", 0)
-        available_cores = (
-            worker.capacities.core
-            - (
-                worker.capacity_allocations.core
-                if worker.capacity_allocations is not None
-                else 0
-            )
-            - allocated_core
-        )
-        available_ram = (
-            worker.capacities.ram
-            - (
-                worker.capacity_allocations.ram
-                if worker.capacity_allocations is not None
-                else 0
-            )
-            - allocated_ram
-        )
-        available_disk = (
-            worker.capacities.disk
-            - (
-                worker.capacity_allocations.disk
-                if worker.capacity_allocations is not None
-                else 0
-            )
-            - allocated_disk
-        )
+        available_cores = host.get_core_available()
+        available_ram = host.get_ram_available()
+        available_disk = host.get_disk_available()
 
         if (
             node.get_requested_cores() > available_cores
             or node.get_requested_disk() > available_disk
             or node.get_requested_ram() > available_ram
         ):
-            msg = f"Insufficient Resources: Host: {worker.name} does not meet core/ram/disk requirements."
+            msg = f"Insufficient Resources: Host: {host.get_name()} does not meet core/ram/disk requirements."
             return False, msg
 
         # Check if there are enough components available
         for c in node.get_components():
             comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
-            if comp_model_type not in worker.components:
-                msg = f"Invalid Request: Host: {worker.name} does not have the requested component: {comp_model_type}."
+            substrate_component = host.get_component(comp_model_type=comp_model_type)
+            if not substrate_component:
+                msg = f"Invalid Request: Host: {host.get_name()} does not have the requested component: {comp_model_type}."
                 return False, msg
 
             allocated_comp_count = allocated.setdefault(comp_model_type, 0)
             available_comps = (
-                worker.components[comp_model_type].capacities.unit
+                substrate_component.capacities.unit
                 - (
-                    worker.components[comp_model_type].capacity_allocations.unit
-                    if worker.components[comp_model_type].capacity_allocations
+                    substrate_component.capacity_allocations.unit
+                    if substrate_component.capacity_allocations
                     else 0
                 )
                 - allocated_comp_count
             )
             if available_comps <= 0:
-                msg = f"Insufficient Resources: Host: {worker.name} has reached the limit for component: {comp_model_type}."
+                msg = f"Insufficient Resources: Host: {host.get_name()} has reached the limit for component: {comp_model_type}."
                 return False, msg
 
             allocated[comp_model_type] += 1
@@ -2385,7 +2445,7 @@ Host * !bastion.fabric-testbed.net
             error = None
             if allocated is None:
                 allocated = {}
-            site = self.get_resources().get_topology_site(site_name=node.get_site())
+            site = self.get_resources().get_site(site_name=node.get_site())
 
             if not site:
                 logging.warning(
@@ -2396,43 +2456,43 @@ Host * !bastion.fabric-testbed.net
                     f"Ignoring validation: Site: {node.get_site()} not available in resources.",
                 )
 
-            site_maint_info = site.maintenance_info.get(site.name)
-            if site_maint_info and str(site_maint_info.state) != "Active":
-                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_maint_info.state}."
+            site_state = site.get_state()
+            if site_state != "Active":
+                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
                 logging.error(msg)
                 return False, msg
-            workers = self.get_resources().get_nodes(site=site)
-            if not workers:
+            hosts = site.get_hosts()
+            if not hosts:
                 msg = f"Node cannot be validated, host information not available for {site}."
                 logging.error(msg)
                 return False, msg
 
             if node.get_host():
-                if node.get_host() not in workers:
+                if node.get_host() not in hosts:
                     msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
                     logging.error(msg)
                     return False, msg
 
-                worker = workers.get(node.get_host())
+                host = hosts.get(node.get_host())
 
                 allocated_comps = allocated.setdefault(node.get_host(), {})
-                status, error = self.__can_allocate_node_in_worker(
-                    worker=worker, node=node, allocated=allocated_comps, site=site
+                status, error = self.__can_allocate_node_in_host(
+                    host=host, node=node, allocated=allocated_comps, site=site
                 )
 
                 if not status:
                     logging.error(error)
                     return status, error
 
-            for worker in workers.values():
-                allocated_comps = allocated.setdefault(worker.name, {})
-                status, error = self.__can_allocate_node_in_worker(
-                    worker=worker, node=node, allocated=allocated_comps, site=site
+            for host in hosts.values():
+                allocated_comps = allocated.setdefault(host.get_name(), {})
+                status, error = self.__can_allocate_node_in_host(
+                    host=host, node=node, allocated=allocated_comps, site=site
                 )
                 if status:
                     return status, error
 
-            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.name}."
+            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.get_name()}."
             if error:
                 msg += f" Details: {error}"
             logging.error(msg)
