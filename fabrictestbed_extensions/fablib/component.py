@@ -259,32 +259,6 @@ class Component:
             fields=fields, output=output, quiet=quiet, filter_function=filter_function
         )
 
-    # def list_interfaces(self) -> List[str]:
-    #     """
-    #     Creates a tabulated string describing all components in the slice.
-    #
-    #     Intended for printing a list of all components.
-    #
-    #     :return: Tabulated srting of all components information
-    #     :rtype: String
-    #     """
-    #     table = []
-    #     for iface in self.get_interfaces():
-    #         network_name = ""
-    #         if iface.get_network():
-    #             network_name = iface.get_network().get_name()
-    #
-    #         table.append( [     iface.get_name(),
-    #                             network_name,
-    #                             iface.get_bandwidth(),
-    #                             iface.get_vlan(),
-    #                             iface.get_mac(),
-    #                             iface.get_physical_os_interface_name(),
-    #                             iface.get_os_interface(),
-    #                             ] )
-    #
-    #     return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
-
     @staticmethod
     def calculate_name(node: Node = None, name: str = None) -> str:
         """

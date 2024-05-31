@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Author: Komal Thareja(kthar10@renci.org)
+# Author: Komal Thareja(kthare10@renci.org)
 
 from __future__ import annotations
 
