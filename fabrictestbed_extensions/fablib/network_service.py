@@ -131,12 +131,10 @@ class NetworkService:
         basic_nic_count = 0
 
         sites = set([])
-        includes_facility_port = False
         facility_port_interfaces = 0
         for interface in interfaces:
             sites.add(interface.get_site())
             if isinstance(interface.get_node(), FacilityPort):
-                includes_facility_port = True
                 facility_port_interfaces += 1
             if interface.get_model() == "NIC_Basic":
                 basic_nic_count += 1
@@ -153,8 +151,7 @@ class NetworkService:
             # basically the layer-2 point-to-point server template applied is not popping
             # vlan tags over the MPLS tunnel between two facility ports.
             if (
-                includes_facility_port
-                and facility_port_interfaces < 2
+                facility_port_interfaces < 2
                 and not basic_nic_count
             ):
                 # For now WAN FacilityPorts require L2PTP
