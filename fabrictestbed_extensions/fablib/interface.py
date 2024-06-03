@@ -114,6 +114,7 @@ class Interface:
             ["Device", self.get_os_interface()],
             ["Address", self.get_ip_addr()],
             ["Numa Node", self.get_numa_node()],
+            ["Switch Port", self.get_switch_port()],
         ]
 
         return tabulate(table)
@@ -149,6 +150,7 @@ class Interface:
             "mode": "Mode",
             "ip_addr": "IP Address",
             "numa": "Numa Node",
+            "switch_port": "Switch Port",
         }
 
     def toDict(self, skip=[]):
@@ -200,7 +202,19 @@ class Interface:
             "dev": dev,
             "ip_addr": ip_addr,
             "numa": str(self.get_numa_node()),
+            "switch_port": str(self.get_switch_port()),
         }
+
+    def get_switch_port(self) -> str:
+        network = self.get_network()
+        if network and network.get_fim():
+            ifs = None
+            for ifs_name in network.get_fim().interfaces.keys():
+                if self.get_name() in ifs_name:
+                    ifs = network.get_fim().interfaces[ifs_name]
+                    break
+            if ifs and ifs.labels and ifs.labels.local_name:
+                return ifs.labels.local_name
 
     def get_numa_node(self) -> str:
         if self.get_component() is not None:
@@ -530,6 +544,22 @@ class Interface:
 
         return self
 
+    def set_bandwidth(self, bw: int):
+        """
+        Set the Bandwidths on the FABRIC request.
+
+        :param addr: bw
+        :type addr: int
+        """
+        if not bw:
+            return
+
+        if_capacities = self.get_fim_interface().get_property(pname="capacities")
+        if_capacities.bw = int(bw)
+        self.get_fim_interface().set_properties(capacities=if_capacities)
+
+        return self
+
     def get_fim_interface(self) -> FimInterface:
         """
         Not recommended for most users.
@@ -567,6 +597,19 @@ class Interface:
         except:
             vlan = None
         return vlan
+
+    def get_bandwidth(self) -> int:
+        """
+        Gets the FABRIC bandwidth of an interface.
+
+        :return: VLAN
+        :rtype: String
+        """
+        try:
+            bw = self.get_fim_interface().get_property(pname="capacities").bw
+        except:
+            bw = None
+        return bw
 
     def get_reservation_id(self) -> str or None:
         try:
@@ -935,5 +978,5 @@ class Interface:
 
     def delete(self):
         net = self.get_network()
-
-        net.remove_interface(self)
+        if net:
+            net.remove_interface(self)

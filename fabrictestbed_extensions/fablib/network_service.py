@@ -32,6 +32,7 @@ Methods to work with FABRIC `network services`_.
 from __future__ import annotations
 
 import logging
+import threading
 from typing import TYPE_CHECKING, List, Union
 
 from tabulate import tabulate
@@ -46,7 +47,7 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 import jinja2
-from fabrictestbed.slice_editor import Labels
+from fabrictestbed.slice_editor import Capacities, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
@@ -130,12 +131,10 @@ class NetworkService:
         basic_nic_count = 0
 
         sites = set([])
-        includes_facility_port = False
         facility_port_interfaces = 0
         for interface in interfaces:
             sites.add(interface.get_site())
             if isinstance(interface.get_node(), FacilityPort):
-                includes_facility_port = True
                 facility_port_interfaces += 1
             if interface.get_model() == "NIC_Basic":
                 basic_nic_count += 1
@@ -152,8 +151,7 @@ class NetworkService:
             # basically the layer-2 point-to-point server template applied is not popping
             # vlan tags over the MPLS tunnel between two facility ports.
             if (
-                includes_facility_port
-                and facility_port_interfaces < 2
+                facility_port_interfaces < 2
                 and not basic_nic_count
             ):
                 # For now WAN FacilityPorts require L2PTP
@@ -168,7 +166,7 @@ class NetworkService:
         return rtn_nstype
 
     @staticmethod
-    def validate_nstype(type, interfaces):
+    def __validate_nstype(type, interfaces):
         """
         Not intended for API use
 
@@ -183,6 +181,9 @@ class NetworkService:
         :return: true if the network service type is valid based on the number of interfaces
         :rtype: bool
         """
+        # Just an empty network created; NS type would be validated when add_interface is invoked.
+        if not len(interfaces):
+            return True
 
         from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
@@ -339,6 +340,7 @@ class NetworkService:
         interfaces: List[Interface] = [],
         type: str = None,
         user_data={},
+        technology: str = None,
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -368,6 +370,7 @@ class NetworkService:
             nstype=nstype,
             interfaces=interfaces,
             user_data=user_data,
+            technology=technology,
         )
 
     @staticmethod
@@ -406,10 +409,10 @@ class NetworkService:
                 )
 
         # validate nstype and interface List
-        NetworkService.validate_nstype(nstype, interfaces)
+        NetworkService.__validate_nstype(nstype, interfaces)
 
         # Set default VLANs for P2P networks that did not pass in VLANs
-        if nstype == ServiceType.L2PTP:  # or nstype == ServiceType.L2STS:
+        if nstype == ServiceType.L2PTP and len(interfaces):  # or nstype == ServiceType.L2STS:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
@@ -445,6 +448,7 @@ class NetworkService:
         nstype: ServiceType = None,
         interfaces: List[Interface] = [],
         user_data: dict = {},
+        technology: str = None,
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -459,6 +463,9 @@ class NetworkService:
         :param nstype: the type of network service to create
         :type nstype: ServiceType
         :param interfaces: a list of interfaces to
+        :type interfaces: List
+        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :type technology: str
         :return: the new fablib network service
         :rtype: NetworkService
         """
@@ -470,7 +477,7 @@ class NetworkService:
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
-            name=name, nstype=nstype, interfaces=fim_interfaces
+            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology
         )
 
         network_service = NetworkService(
@@ -628,6 +635,7 @@ class NetworkService:
             pass
 
         self.sliver = None
+        self.lock = threading.Lock()
 
     def __str__(self):
         """
@@ -1189,24 +1197,28 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
-        subnet = self.get_subnet()
-        allocated_ips = self.get_allocated_ips()
+        try:
+            self.lock.acquire()
+            subnet = self.get_subnet()
+            allocated_ips = self.get_allocated_ips()
 
-        if addr:
-            # if addr != subnet.network_address and addr not in allocated_ips:
-            if addr not in allocated_ips:
-                self.set_allocated_ip(addr)
-                return addr
-        elif (
-            type(subnet) == ipaddress.IPv4Network
-            or type(subnet) == ipaddress.IPv6Network
-        ):
-            for host in subnet:
-                if host != subnet.network_address and host not in allocated_ips:
-                    self.set_allocated_ip(host)
+            if addr:
+                # if addr != subnet.network_address and addr not in allocated_ips:
+                if addr not in allocated_ips:
+                    self.set_allocated_ip(addr)
+                    return addr
+            elif (
+                type(subnet) == ipaddress.IPv4Network
+                or type(subnet) == ipaddress.IPv6Network
+            ):
+                for host in subnet:
+                    if host != subnet.network_address and host not in allocated_ips:
+                        self.set_allocated_ip(host)
 
-                    return host
-        return None
+                        return host
+            return None
+        finally:
+            self.lock.release()
 
     def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
         fablib_data = self.get_fablib_data()
@@ -1221,10 +1233,14 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def free_ip(self, addr: IPv4Address or IPv6Address):
-        allocated_ips = self.get_allocated_ips()
-        if addr in allocated_ips:
-            allocated_ips.remove(addr)
-        self.set_allocated_ips(allocated_ips)
+        try:
+            self.lock.acquire()
+            allocated_ips = self.get_allocated_ips()
+            if addr in allocated_ips:
+                allocated_ips.remove(addr)
+            self.set_allocated_ips(allocated_ips)
+        finally:
+            self.lock.release()
 
     def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
         labels = self.fim_network_service.labels
@@ -1269,3 +1285,34 @@ class NetworkService:
             if self.get_gateway() not in allocated_ips:
                 allocated_ips.append(self.get_gateway())
             self.set_allocated_ip(self.get_gateway())
+
+    def peer(
+        self,
+        other: NetworkService,
+        labels: Labels,
+        peer_labels: Labels,
+        capacities: Capacities,
+    ):
+        """
+        Peer a network service; used for AL2S peering between FABRIC Networks and Cloud Networks
+        Peer this network service to another. A few constraints are enforced like services being
+        of the same type. Both services will have ServicePort interfaces facing each other over a link.
+        It typically requires labels and capacities to put on the interface facing the other service
+
+        :param other: network service to be peered
+        :type other: NetworkService
+        :param labels: labels
+        :type labels: Labels
+        :param peer_labels: peer labels
+        :type peer_labels: Labels
+        :param capacities: capacities
+        :type capacities: Capacities
+
+        """
+        # Peer Cloud L3VPN with FABRIC L3VPN
+        self.get_fim().peer(
+            other.get_fim(),
+            labels=labels,
+            peer_labels=peer_labels,
+            capacities=capacities,
+        )

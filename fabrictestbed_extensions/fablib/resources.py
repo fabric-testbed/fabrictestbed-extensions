@@ -33,63 +33,27 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from typing import List, Tuple
 
-from fabrictestbed.slice_editor import AdvertisedTopology, Capacities
+from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
-from fim.slivers import maintenance_mode, network_node
-from fim.user import composite_node, interface, link, node
+from fim.user import interface, link, node
 from tabulate import tabulate
+
+from fabrictestbed_extensions.fablib.site import ResourceConstants, Site
 
 
 class Resources:
-    site_pretty_names = {
-        "name": "Name",
-        "state": "State",
-        "address": "Address",
-        "location": "Location",
-        "ptp_capable": "PTP Capable",
-        "hosts": "Hosts",
-        "cpus": "CPUs",
-        "cores_available": "Cores Available",
-        "cores_capacity": "Cores Capacity",
-        "cores_allocated": "Cores Allocated",
-        "ram_available": "RAM Available",
-        "ram_capacity": "RAM Capacity",
-        "ram_allocated": "RAM Allocated",
-        "disk_available": "Disk Available",
-        "disk_capacity": "Disk Capacity",
-        "disk_allocated": "Disk Allocated",
-        "nic_basic_available": "Basic NIC Available",
-        "nic_basic_capacity": "Basic NIC Capacity",
-        "nic_basic_allocated": "Basic NIC Allocated",
-        "nic_connectx_6_available": "ConnectX-6 Available",
-        "nic_connectx_6_capacity": "ConnectX-6 Capacity",
-        "nic_connectx_6_allocated": "ConnectX-6 Allocated",
-        "nic_connectx_5_available": "ConnectX-5 Available",
-        "nic_connectx_5_capacity": "ConnectX-5 Capacity",
-        "nic_connectx_5_allocated": "ConnectX-5 Allocated",
-        "nvme_available": "NVMe Available",
-        "nvme_capacity": "NVMe Capacity",
-        "nvme_allocated": "NVMe Allocated",
-        "tesla_t4_available": "Tesla T4 Available",
-        "tesla_t4_capacity": "Tesla T4 Capacity",
-        "tesla_t4_allocated": "Tesla T4 Allocated",
-        "rtx6000_available": "RTX6000 Available",
-        "rtx6000_capacity": "RTX6000 Capacity",
-        "rtx6000_allocated": "RTX6000 Allocated",
-        "a30_available": "A30 Available",
-        "a30_capacity": "A30 Capacity",
-        "a30_allocated": "A30 Allocated",
-        "a40_available": "A40 Available",
-        "a40_capacity": "A40 Capacity",
-        "a40_allocated": "A40 Allocated",
-        "fpga_u280_available": "U280 Available",
-        "fpga_u280_capacity": "U280 Capacity",
-        "fpga_u280_allocated": "U280 Allocated",
-    }
-
-    def __init__(self, fablib_manager, force_refresh: bool = False):
+    def __init__(
+        self,
+        fablib_manager,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ):
         """
         :param fablib_manager: a :class:`FablibManager` instance.
         :type fablib_manager: fablib.FablibManager
@@ -97,6 +61,19 @@ class Resources:
         :param force_refresh: force a refresh of available testbed
             resources.
         :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
+
         """
         super().__init__()
 
@@ -104,7 +81,15 @@ class Resources:
 
         self.topology = None
 
-        self.update(force_refresh=force_refresh)
+        self.sites = {}
+
+        self.update(
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            includes=includes,
+            avoid=avoid,
+        )
 
     def __str__(self) -> str:
         """
@@ -116,54 +101,14 @@ class Resources:
         :rtype: String
         """
         table = []
-        for site_name, site in self.topology.sites.items():
-            # logging.debug(f"site -- {site}")
-            site_sliver = site.get_sliver()
-            table.append(
-                [
-                    site.name,
-                    f"{self.get_ptp_capable()}",
-                    self.get_cpu_capacity(site_sliver),
-                    f"{self.get_core_available(site_sliver)}/{self.get_core_capacity(site_sliver)}",
-                    f"{self.get_ram_available(site_sliver)}/{self.get_ram_capacity(site_sliver)}",
-                    f"{self.get_disk_available(site_sliver)}/{self.get_disk_capacity(site_sliver)}",
-                    # self.get_host_capacity(site),
-                    # self.get_location_postal(site),
-                    # self.get_location_lat_long(site),
-                    f"{self.get_component_available(site_sliver,'SharedNIC-ConnectX-6')}/{self.get_component_capacity(site_sliver,'SharedNIC-ConnectX-6')}",
-                    f"{self.get_component_available(site_sliver,'SmartNIC-ConnectX-6')}/{self.get_component_capacity(site_sliver,'SmartNIC-ConnectX-6')}",
-                    f"{self.get_component_available(site_sliver,'SmartNIC-ConnectX-5')}/{self.get_component_capacity(site_sliver,'SmartNIC-ConnectX-5')}",
-                    f"{self.get_component_available(site_sliver,'NVME-P4510')}/{self.get_component_capacity(site_sliver,'NVME-P4510')}",
-                    f"{self.get_component_available(site_sliver,'GPU-Tesla T4')}/{self.get_component_capacity(site_sliver,'GPU-Tesla T4')}",
-                    f"{self.get_component_available(site_sliver,'GPU-RTX6000')}/{self.get_component_capacity(site_sliver,'GPU-RTX6000')}",
-                    f"{self.get_component_available(site_sliver, 'GPU-A30')}/{self.get_component_capacity(site_sliver, 'GPU-A30')}",
-                    f"{self.get_component_available(site_sliver, 'GPU-A40')}/{self.get_component_capacity(site_sliver, 'GPU-A40')}",
-                    f"{self.get_component_available(site_sliver, 'FPGA-Xilinx-U280')}/{self.get_component_capacity(site_sliver, 'FPGA-Xilinx-U280')}",
-                ]
-            )
+        headers = []
+        for site_name, site in self.sites.items():
+            headers, row = site.to_row()
+            table.append(row)
 
         return tabulate(
             table,
-            headers=[
-                "Name",
-                "PTP Capable",
-                "CPUs",
-                "Cores",
-                f"RAM ({Capacities.UNITS['ram']})",
-                f"Disk ({Capacities.UNITS['disk']})",
-                # "Workers"
-                # "Physical Address",
-                # "Location Coordinates"
-                "Basic (100 Gbps NIC)",
-                "ConnectX-6 (100 Gbps x2 NIC)",
-                "ConnectX-5 (25 Gbps x2 NIC)",
-                "P4510 (NVMe 1TB)",
-                "Tesla T4 (GPU)",
-                "RTX6000 (GPU)",
-                "A30 (GPU)",
-                "A40 (GPU)",
-                "FPGA-Xilinx-U280",
-            ],
+            headers=headers,
         )
 
     def show_site(
@@ -182,28 +127,24 @@ class Resources:
 
         :param site_name: site name
         :type site_name: String
+        :param output: Output type
+        :type output: str
+        :param fields: List of fields to include
+        :type fields: List
+        :param quiet: flag indicating verbose or quiet display
+        :type quiet: bool
+        :param pretty_names: flag indicating if pretty names for the fields to be used or not
+        :type pretty_names: bool
+        :param latlon: Flag indicating if lat lon to be included or not
+        :type latlon: bool
+
         :return: Tabulated string of available resources
         :rtype: String
         """
-        site = self.topology.sites[site_name]
-
-        data = self.site_to_dict(site.get_sliver(), latlon=latlon)
-
-        if pretty_names:
-            pretty_names_dict = self.site_pretty_names
-        else:
-            pretty_names_dict = {}
-
-        site_table = self.get_fablib_manager().show_table(
-            data,
-            fields=fields,
-            title="Site",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
+        site = self.sites.get(site_name)
+        return site.show(
+            output=output, fields=fields, quiet=quiet, pretty_names=pretty_names
         )
-
-        return site_table
 
     def get_site_names(self) -> List[str]:
         """
@@ -212,23 +153,39 @@ class Resources:
         :return: list of site names
         :rtype: List[String]
         """
-        site_name_list = []
-        for site_name in self.topology.sites.keys():
-            site_name_list.append(str(site_name))
+        return list(self.sites.keys())
 
-        return site_name_list
-
-    def get_topology_site(self, site_name: str) -> node.Node:
+    def get_site(self, site_name: str) -> Site:
         """
-        Not recommended for most users.
+        Get a specific site by name.
+
+        :param site_name: The name of the site to retrieve.
+        :type site_name: str
+
+        :return: The specified site.
+        :rtype: Site
         """
         try:
-            return self.topology.sites[site_name]
+            return self.sites.get(site_name)
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
-            return None
 
-    def get_state(self, site: str or node.Node or network_node.NodeSliver) -> str:
+    def __get_topology_site(self, site_name: str) -> node.Node:
+        """
+        Get a specific site from the topology.
+
+        :param site_name: The name of the site to retrieve from the topology.
+        :type site_name: str
+
+        :return: The node representing the specified site from the topology.
+        :rtype: node.Node
+        """
+        try:
+            return self.topology.sites.get(site_name)
+        except Exception as e:
+            logging.warning(f"Failed to get site {site_name}")
+
+    def get_state(self, site: str or node.Node) -> str:
         """
         Gets the maintenance state of the node
 
@@ -236,20 +193,19 @@ class Resources:
         :type site: String or Node or NodeSliver
         :return: str(MaintenanceState)
         """
-        site_name = ""
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return str(site.maintenance_info.get(site.get_name()).state)
-            if isinstance(site, node.Node):
-                return str(site.maintenance_info.get(site.name).state)
-            return str(self.get_topology_site(site).maintenance_info.get(site).state)
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_name()
         except Exception as e:
             # logging.warning(f"Failed to get site state {site_name}")
             return ""
 
     def get_component_capacity(
         self,
-        site: str or node.Node or network_node.NodeSliver,
+        site: str or node.Node,
         component_model_name: str,
     ) -> int:
         """
@@ -262,25 +218,23 @@ class Resources:
         :return: total component capacity
         :rtype: int
         """
+        component_capacity = 0
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.attached_components_info.get_device(
-                    component_model_name
-                ).capacities.unit
-            if isinstance(site, node.Node):
-                return site.components[component_model_name].capacities.unit
-            return (
-                self.get_topology_site(site)
-                .components[component_model_name]
-                .capacities.unit
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_component_capacity(
+                component_model_name=component_model_name
             )
+
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} capacity {site}")
-            return 0
+            # logging.error(f"Failed to get {component_model_name} capacity {site}: {e}")
+            return component_capacity
 
     def get_component_allocated(
         self,
-        site: str or node.Node or network_node.NodeSliver,
+        site: str or node.Node,
         component_model_name: str,
     ) -> int:
         """
@@ -294,25 +248,22 @@ class Resources:
         :return: currently allocated component of this model
         :rtype: int
         """
+        component_allocated = 0
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.attached_components_info.get_device(
-                    component_model_name
-                ).capacity_allocations.unit
-            if isinstance(site, node.Node):
-                return site.components[component_model_name].capacity_allocations.unit
-            return (
-                self.get_topology_site(site)
-                .components[component_model_name]
-                .capacity_allocations.unit
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_component_allocated(
+                component_model_name=component_model_name
             )
         except Exception as e:
-            # logging.debug(f"Failed to get {component_model_name} allocated {site}")
-            return 0
+            # logging.error(f"Failed to get {component_model_name} allocated {site}: {e}")
+            return component_allocated
 
     def get_component_available(
         self,
-        site: str or node.Node or network_node.NodeSliver,
+        site: str or node.Node,
         component_model_name: str,
     ) -> int:
         """
@@ -327,16 +278,18 @@ class Resources:
         :rtype: int
         """
         try:
-            return self.get_component_capacity(
-                site, component_model_name
-            ) - self.get_component_allocated(site, component_model_name)
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_component_available(
+                component_model_name=component_model_name
+            )
         except Exception as e:
             # logging.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(site, component_model_name)
 
-    def get_location_lat_long(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> Tuple[float, float]:
+    def get_location_lat_long(self, site: str or node.Node) -> Tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -346,18 +299,16 @@ class Resources:
         :rtype: Tuple(float,float)
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_location().to_latlon()
-            if isinstance(site, node.Node):
-                return site.location.to_latlon()
-            return self.get_topology_site(site).location.to_latlon()
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_location_lat_long()
         except Exception as e:
             # logging.warning(f"Failed to get location postal {site}")
             return 0, 0
 
-    def get_location_postal(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> str:
+    def get_location_postal(self, site: str or node.Node) -> str:
         """
         Gets the location of a site by postal address
 
@@ -367,20 +318,18 @@ class Resources:
         :rtype: String
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_location().postal
-            if isinstance(site, node.Node):
-                return site.location.postal
-            return self.get_topology_site(site).location.postal
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_location_postal()
         except Exception as e:
             # logging.debug(f"Failed to get location postal {site}")
             return ""
 
-    def get_host_capacity(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_host_capacity(self, site: str or node.Node) -> int:
         """
-        Gets the number of worker hosts at the site
+        Gets the number of hosts at the site
 
         :param site: site name or site object
         :type site: String or Node or NodeSliver
@@ -388,18 +337,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacities().unit
-            if isinstance(site, node.Node):
-                return site.capacities.unit
-            return self.get_topology_site(site).capacities.unit
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_host_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get host count {site}")
             return 0
 
-    def get_cpu_capacity(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_cpu_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total number of cpus at the site
 
@@ -409,18 +356,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacities().cpu
-            if isinstance(site, node.Node):
-                return site.capacities.cpu
-            return self.get_topology_site(site).capacities.cpu
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_cpu_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
 
-    def get_core_capacity(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_core_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total number of cores at the site
 
@@ -430,18 +375,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacities().core
-            if isinstance(site, node.Node):
-                return site.capacities.core
-            return self.get_topology_site(site).capacities.core
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_core_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get core capacity {site}")
             return 0
 
-    def get_core_allocated(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_core_allocated(self, site: str or node.Node) -> int:
         """
         Gets the number of currently allocated cores at the site
 
@@ -451,18 +394,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacity_allocations().core
-            if isinstance(site, node.Node):
-                return site.capacity_allocations.core
-            return self.get_topology_site(site).capacity_allocations.core
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_core_allocated()
         except Exception as e:
             # logging.debug(f"Failed to get cores allocated {site}")
             return 0
 
-    def get_core_available(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_core_available(self, site: str or node.Node) -> int:
         """
         Gets the number of currently available cores at the site
 
@@ -472,14 +413,16 @@ class Resources:
         :rtype: int
         """
         try:
-            return self.get_core_capacity(site) - self.get_core_allocated(site)
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_core_available()
         except Exception as e:
             # logging.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity(site)
 
-    def get_ram_capacity(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_ram_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total amount of memory at the site in GB
 
@@ -489,18 +432,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacities().ram
-            if isinstance(site, node.Node):
-                return site.capacities.ram
-            return self.get_topology_site(site).capacities.ram
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ram_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get ram capacity {site}")
             return 0
 
-    def get_ram_allocated(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_ram_allocated(self, site: str or node.Node) -> int:
         """
         Gets the amount of memory currently  allocated the site in GB
 
@@ -510,18 +451,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacity_allocations().ram
-            if isinstance(site, node.Node):
-                return site.capacity_allocations.ram
-            return self.get_topology_site(site).capacity_allocations.ram
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ram_allocated()
         except Exception as e:
             # logging.debug(f"Failed to get ram allocated {site}")
             return 0
 
-    def get_ram_available(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_ram_available(self, site: str or node.Node) -> int:
         """
         Gets the amount of memory currently  available the site in GB
 
@@ -531,14 +470,16 @@ class Resources:
         :rtype: int
         """
         try:
-            return self.get_ram_capacity(site) - self.get_ram_allocated(site)
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ram_available()
         except Exception as e:
             # logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site)
 
-    def get_disk_capacity(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_disk_capacity(self, site: str or node.Node) -> int:
         """
         Gets the total amount of disk available the site in GB
 
@@ -548,18 +489,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacities().disk
-            if isinstance(site, node.Node):
-                return site.capacities.disk
-            return self.get_topology_site(site).capacities.disk
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_disk_capacity()
         except Exception as e:
             # logging.debug(f"Failed to get disk capacity {site}")
             return 0
 
-    def get_disk_allocated(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_disk_allocated(self, site: str or node.Node) -> int:
         """
         Gets the amount of disk allocated the site in GB
 
@@ -569,18 +508,16 @@ class Resources:
         :rtype: int
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.get_capacity_allocations().disk
-            if isinstance(site, node.Node):
-                return site.capacity_allocations.disk
-            return self.get_topology_site(site).capacity_allocations.disk
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_disk_allocated()
         except Exception as e:
             # logging.debug(f"Failed to get disk allocated {site}")
             return 0
 
-    def get_disk_available(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> int:
+    def get_disk_available(self, site: str or node.Node) -> int:
         """
         Gets the amount of disk available the site in GB
 
@@ -590,14 +527,16 @@ class Resources:
         :rtype: int
         """
         try:
-            return self.get_disk_capacity(site) - self.get_disk_allocated(site)
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_disk_available()
         except Exception as e:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site)
 
-    def get_ptp_capable(
-        self, site: str or node.Node or network_node.NodeSliver
-    ) -> bool:
+    def get_ptp_capable(self, site: str or node.Node) -> bool:
         """
         Gets the PTP flag of the site - if it has a native PTP capability
         :param site: site name or object
@@ -606,28 +545,63 @@ class Resources:
         :rtype: bool
         """
         try:
-            if isinstance(site, network_node.NodeSliver):
-                return site.flags.ptp
-            if isinstance(site, node.Node):
-                return site.flags.ptp
-            return self.get_topology_site(site).flags.ptp
+            if isinstance(site, str):
+                site = self.get_site(site_name=site)
+            elif isinstance(site, node.Node):
+                site = Site(site=site, fablib_manager=self.fablib_manager)
+            return site.get_ptp_capable()
         except Exception as e:
             # logging.debug(f"Failed to get PTP status for {site}")
             return False
 
     def get_fablib_manager(self):
+        """
+        Get the Fabric library manager associated with the resources.
+
+        :return: The Fabric library manager.
+        :rtype: Any
+        """
         return self.fablib_manager
 
-    def update(self, force_refresh: bool = False):
+    def update(
+        self,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ):
         """
         Update the available resources by querying the FABRIC services
+        :param force_refresh: force a refresh of available testbed
+            resources.
+        :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
 
         """
         logging.info(f"Updating available resources")
         return_status, topology = (
             self.get_fablib_manager()
             .get_slice_manager()
-            .resources(force_refresh=force_refresh)
+            .resources(
+                force_refresh=force_refresh,
+                level=2,
+                start=start,
+                end=end,
+                excludes=avoid,
+                includes=includes,
+            )
         )
         if return_status != Status.OK:
             raise Exception(
@@ -638,9 +612,25 @@ class Resources:
 
         self.topology = topology
 
+        for site_name, site in self.topology.sites.items():
+            s = Site(site=site, fablib_manager=self.get_fablib_manager())
+            self.sites[site_name] = s
+
     def get_topology(self, update: bool = False) -> AdvertisedTopology:
         """
-        Not intended for API use
+        Get the FIM object of the Resources.
+
+        :return: The FIM of the resources.
+        :rtype: AdvertisedTopology
+        """
+        return self.get_fim()
+
+    def get_fim(self, update: bool = False) -> AdvertisedTopology:
+        """
+        Get the FIM object of the Resources.
+
+        :return: The FIM of the resources.
+        :rtype: AdvertisedTopology
         """
         if update or self.topology is None:
             self.update()
@@ -684,272 +674,38 @@ class Resources:
         return rtn_links
 
     def site_to_json(self, site, latlon=True):
+        """
+        Convert site information into a JSON string.
+
+        :param site: Name of the site or site object.
+        :type site: str or node.Node
+
+        :param latlon: Flag indicating whether to convert address to latitude and longitude.
+        :type latlon: bool
+
+        :return: JSON string representation of the site information.
+        :rtype: str
+        """
         return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(
-        self, site: str or node.Node or network_node.NodeSliver, latlon=True
-    ):
+    def site_to_dict(self, site: str or node.Node, latlon=True):
         """
-        Convert site information into a dictionary
+        Convert site information into a dictionary.
 
-        :param site: site name or site object
-        :param latlon: convert address to latlon (makes online call to openstreetmaps.org)
+        :param site: Name of the site or site object.
+        :type site: str or node.Node
+
+        :param latlon: Flag indicating whether to convert address to latitude and longitude.
+        :type latlon: bool
+
+        :return: Dictionary representation of the site information.
+        :rtype: dict
         """
-        core_a = self.get_core_available(site)
-        core_c = self.get_core_capacity(site)
-        ram_a = self.get_ram_available(site)
-        ram_c = self.get_ram_capacity(site)
-        disk_a = self.get_disk_available(site)
-        disk_c = self.get_disk_capacity(site)
-        nic_basic_a = self.get_component_available(site, "SharedNIC-ConnectX-6")
-        nic_basic_c = self.get_component_capacity(site, "SharedNIC-ConnectX-6")
-        nic_cx6_a = self.get_component_available(site, "SmartNIC-ConnectX-6")
-        nic_cx6_c = self.get_component_capacity(site, "SmartNIC-ConnectX-6")
-        nic_cx5_a = self.get_component_available(site, "SmartNIC-ConnectX-5")
-        nic_cx5_c = self.get_component_capacity(site, "SmartNIC-ConnectX-5")
-        nvme_a = self.get_component_available(site, "NVME-P4510")
-        nvme_c = self.get_component_capacity(site, "NVME-P4510")
-        tesla_t4_a = self.get_component_available(site, "GPU-Tesla T4")
-        tesla_t4_c = self.get_component_capacity(site, "GPU-Tesla T4")
-        rtx6000_a = self.get_component_available(site, "GPU-RTX6000")
-        rtx6000_c = self.get_component_capacity(site, "GPU-RTX6000")
-        a30_a = self.get_component_available(site, "GPU-A30")
-        a30_c = self.get_component_capacity(site, "GPU-A30")
-        a40_a = self.get_component_available(site, "GPU-A40")
-        a40_c = self.get_component_capacity(site, "GPU-A40")
-        u280_a = self.get_component_available(site, "FPGA-Xilinx-U280")
-        u280_c = self.get_component_capacity(site, "FPGA-Xilinx-U280")
-        ptp = self.get_ptp_capable(site)
-
-        d = {
-            "name": site.name if isinstance(site, node.Node) else site.get_name(),
-            "state": self.get_state(site),
-            "address": self.get_location_postal(site),
-            "location": self.get_location_lat_long(site) if latlon else "",
-            "ptp_capable": ptp,
-            "hosts": self.get_host_capacity(site),
-            "cpus": self.get_cpu_capacity(site),
-            "cores_available": core_a,
-            "cores_capacity": core_c,
-            "cores_allocated": core_c - core_a,
-            "ram_available": ram_a,
-            "ram_capacity": ram_c,
-            "ram_allocated": ram_c - ram_a,
-            "disk_available": disk_a,
-            "disk_capacity": disk_c,
-            "disk_allocated": disk_c - disk_a,
-            "nic_basic_available": nic_basic_a,
-            "nic_basic_capacity": nic_basic_c,
-            "nic_basic_allocated": nic_basic_c - nic_basic_a,
-            "nic_connectx_6_available": nic_cx6_a,
-            "nic_connectx_6_capacity": nic_cx6_c,
-            "nic_connectx_6_allocated": nic_cx6_c - nic_cx6_a,
-            "nic_connectx_5_available": nic_cx5_a,
-            "nic_connectx_5_capacity": nic_cx5_c,
-            "nic_connectx_5_allocated": nic_cx5_c - nic_cx5_a,
-            "nvme_available": nvme_a,
-            "nvme_capacity": nvme_c,
-            "nvme_allocated": nvme_c - nvme_a,
-            "tesla_t4_available": tesla_t4_a,
-            "tesla_t4_capacity": tesla_t4_c,
-            "tesla_t4_allocated": tesla_t4_c - tesla_t4_a,
-            "rtx6000_available": rtx6000_a,
-            "rtx6000_capacity": rtx6000_c,
-            "rtx6000_allocated": rtx6000_c - rtx6000_a,
-            "a30_available": a30_a,
-            "a30_capacity": a30_c,
-            "a30_allocated": a30_c - a30_a,
-            "a40_available": a40_a,
-            "a40_capacity": a40_c,
-            "a40_allocated": a40_c - a40_a,
-            "fpga_u280_available": u280_a,
-            "fpga_u280_capacity": u280_c,
-            "fpga_u280_allocated": u280_c - u280_a,
-        }
-        if not latlon:
-            d.pop("location")
-        return d
-
-    def site_to_dictXXX(self, site):
-        site_name = site.name
-        return {
-            "name": {"pretty_name": "Name", "value": site.name},
-            "address": {
-                "pretty_name": "Address",
-                "value": self.get_location_postal(site_name),
-            },
-            "location": {
-                "pretty_name": "Location",
-                "value": self.get_location_lat_long(site_name),
-            },
-            "ptp": {
-                "pretty_name": "PTP Capable",
-                "value": self.get_ptp_capable(),
-            },
-            "hosts": {
-                "pretty_name": "Hosts",
-                "value": self.get_host_capacity(site_name),
-            },
-            "cpus": {"pretty_name": "CPUs", "value": self.get_cpu_capacity(site_name)},
-            "cores_available": {
-                "pretty_name": "Cores Available",
-                "value": self.get_core_available(site_name),
-            },
-            "cores_capacity": {
-                "pretty_name": "Cores Capacity",
-                "value": self.get_core_capacity(site_name),
-            },
-            "cores_allocated": {
-                "pretty_name": "Cores Allocated",
-                "value": self.get_core_capacity(site_name)
-                - self.get_core_available(site_name),
-            },
-            "ram_available": {
-                "pretty_name": "RAM Available",
-                "value": self.get_ram_available(site_name),
-            },
-            "ram_capacity": {
-                "pretty_name": "RAM Capacity",
-                "value": self.get_ram_capacity(site_name),
-            },
-            "ram_allocated": {
-                "pretty_name": "RAM Allocated",
-                "value": self.get_ram_capacity(site_name)
-                - self.get_ram_available(site_name),
-            },
-            "disk_available": {
-                "pretty_name": "Disk Available",
-                "value": self.get_disk_available(site_name),
-            },
-            "disk_capacity": {
-                "pretty_name": "Disk Capacity",
-                "value": self.get_disk_capacity(site_name),
-            },
-            "disk_allocated": {
-                "pretty_name": "Disk Allocated",
-                "value": self.get_disk_capacity(site_name)
-                - self.get_disk_available(site_name),
-            },
-            "nic_basic_available": {
-                "pretty_name": "Basic NIC Available",
-                "value": self.get_component_available(
-                    site_name, "SharedNIC-ConnectX-6"
-                ),
-            },
-            "nic_basic_capacity": {
-                "pretty_name": "Basic NIC Capacity",
-                "value": self.get_component_capacity(site_name, "SharedNIC-ConnectX-6"),
-            },
-            "nic_basic_allocated": {
-                "pretty_name": "Basic NIC Allocated",
-                "value": self.get_component_capacity(site_name, "SharedNIC-ConnectX-6")
-                - self.get_component_available(site_name, "SharedNIC-ConnectX-6"),
-            },
-            "nic_connectx_6_available": {
-                "pretty_name": "ConnectX-6 Available",
-                "value": self.get_component_available(site_name, "SmartNIC-ConnectX-6"),
-            },
-            "nic_connectx_6_capacity": {
-                "pretty_name": "ConnectX-6 Capacity",
-                "value": self.get_component_capacity(site_name, "SmartNIC-ConnectX-6"),
-            },
-            "nic_connectx_6_allocated": {
-                "pretty_name": "ConnectX-6 Allocated",
-                "value": self.get_component_capacity(site_name, "SmartNIC-ConnectX-6")
-                - self.get_component_available(site_name, "SmartNIC-ConnectX-6"),
-            },
-            "nic_connectx_5_available": {
-                "pretty_name": "ConnectX-5 Available",
-                "value": self.get_component_available(site_name, "SmartNIC-ConnectX-5"),
-            },
-            "nic_connectx_5_capacity": {
-                "pretty_name": "ConnectX-5 Capacity",
-                "value": self.get_component_capacity(site_name, "SmartNIC-ConnectX-5"),
-            },
-            "nic_connectx_5_allocated": {
-                "pretty_name": "ConnectX-5 Allocated",
-                "value": self.get_component_capacity(site_name, "SmartNIC-ConnectX-5")
-                - self.get_component_available(site_name, "SmartNIC-ConnectX-5"),
-            },
-            "nvme_available": {
-                "pretty_name": "NVMe Available",
-                "value": self.get_component_available(site_name, "NVME-P4510"),
-            },
-            "nvme_capacity": {
-                "pretty_name": "NVMe Capacity",
-                "value": self.get_component_capacity(site_name, "NVME-P4510"),
-            },
-            "nvme_allocated": {
-                "pretty_name": "NVMe Allocated",
-                "value": self.get_component_capacity(site_name, "NVME-P4510")
-                - self.get_component_available(site_name, "NVME-P4510"),
-            },
-            "tesla_t4_available": {
-                "pretty_name": "Tesla T4 Available",
-                "value": self.get_component_available(site_name, "GPU-Tesla T4"),
-            },
-            "tesla_t4_capacity": {
-                "pretty_name": "Tesla T4 Capacity",
-                "value": self.get_component_capacity(site_name, "GPU-Tesla T4"),
-            },
-            "tesla_t4_allocated": {
-                "pretty_name": "Tesla T4 Allocated",
-                "value": self.get_component_capacity(site_name, "GPU-Tesla T4")
-                - self.get_component_available(site_name, "GPU-Tesla T4"),
-            },
-            "rtx6000_available": {
-                "pretty_name": "RTX6000 Available",
-                "value": self.get_component_available(site_name, "GPU-RTX6000"),
-            },
-            "rtx6000_capacity": {
-                "pretty_name": "RTX6000 Capacity",
-                "value": self.get_component_capacity(site_name, "GPU-RTX6000"),
-            },
-            "rtx6000_allocated": {
-                "pretty_name": "RTX6000 Allocated",
-                "value": self.get_component_capacity(site_name, "GPU-RTX6000")
-                - self.get_component_available(site_name, "GPU-RTX6000"),
-            },
-            "a30_available": {
-                "pretty_name": "A30 Available",
-                "value": self.get_component_available(site_name, "GPU-A30"),
-            },
-            "a30_capacity": {
-                "pretty_name": "A30 Capacity",
-                "value": self.get_component_capacity(site_name, "GPU-A30"),
-            },
-            "a30_allocated": {
-                "pretty_name": "A30 Allocated",
-                "value": self.get_component_capacity(site_name, "GPU-A30")
-                - self.get_component_available(site_name, "GPU-A30"),
-            },
-            "a40_available": {
-                "pretty_name": "A40 Available",
-                "value": self.get_component_available(site_name, "GPU-A40"),
-            },
-            "a40_capacity": {
-                "pretty_name": "A40 Capacity",
-                "value": self.get_component_capacity(site_name, "GPU-A40"),
-            },
-            "a40_allocated": {
-                "pretty_name": "A40 Allocated",
-                "value": self.get_component_capacity(site_name, "GPU-A40")
-                - self.get_component_available(site_name, "GPU-A40"),
-            },
-            "fpga_u280_available": {
-                "pretty_name": "FPGA U280 Available",
-                "value": self.get_component_available(site_name, "FPGA-Xilinx-U280"),
-            },
-            "fpga_u280_capacity": {
-                "pretty_name": "FPGA U280 Capacity",
-                "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280"),
-            },
-            "fpga_u280_allocated": {
-                "pretty_name": "FPGA U280 Allocated",
-                "value": self.get_component_capacity(site_name, "FPGA-Xilinx-U280")
-                - self.get_component_available(site_name, "FPGA-Xilinx-U280"),
-            },
-        }
+        if isinstance(site, str):
+            site = self.get_site(site_name=site)
+        elif isinstance(site, node.Node):
+            site = Site(site=site, fablib_manager=self.fablib_manager)
+        return site.to_dict()
 
     def list_sites(
         self,
@@ -960,12 +716,38 @@ class Resources:
         pretty_names=True,
         latlon=True,
     ):
+        """
+        List information about sites.
+
+        :param output: Output type for listing information.
+        :type output: Any, optional
+
+        :param fields: List of fields to include in the output.
+        :type fields: Optional[List[str]], optional
+
+        :param quiet: Flag indicating whether to display output quietly.
+        :type quiet: bool, optional
+
+        :param filter_function: Function to filter the output.
+        :type filter_function: Optional[Callable[[Dict], bool]], optional
+
+        :param pretty_names: Flag indicating whether to use pretty names for fields.
+        :type pretty_names: bool, optional
+
+        :param latlon: Flag indicating whether to convert address to latitude and longitude.
+        :type latlon: bool, optional
+
+        :return: Table listing information about sites.
+        :rtype: str
+        """
         table = []
-        for site_name, site in self.topology.sites.items():
-            table.append(self.site_to_dict(site.get_sliver(), latlon=latlon))
+        for site_name, site in self.sites.items():
+            site_dict = site.to_dict()
+            if site_dict.get("hosts"):
+                table.append(site_dict)
 
         if pretty_names:
-            pretty_names_dict = self.site_pretty_names
+            pretty_names_dict = ResourceConstants.pretty_names
         else:
             pretty_names_dict = {}
 
@@ -973,6 +755,56 @@ class Resources:
             table,
             fields=fields,
             title="Sites",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+    def list_hosts(
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
+        """
+        List information about hosts.
+
+        :param output: Output type for listing information.
+        :type output: Any, optional
+
+        :param fields: List of fields to include in the output.
+        :type fields: Optional[List[str]], optional
+
+        :param quiet: Flag indicating whether to display output quietly.
+        :type quiet: bool, optional
+
+        :param filter_function: Function to filter the output.
+        :type filter_function: Optional[Callable[[Dict], bool]], optional
+
+        :param pretty_names: Flag indicating whether to use pretty names for fields.
+        :type pretty_names: bool, optional
+
+        :return: Table listing information about hosts.
+        :rtype: str
+        """
+        table = []
+        for site_name, site in self.sites.items():
+            for host_name, host in site.get_hosts().items():
+                host_dict = host.to_dict()
+                table.append(host_dict)
+
+        if pretty_names:
+            pretty_names_dict = ResourceConstants.pretty_names
+        else:
+            pretty_names_dict = {}
+
+        return self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Hosts",
             output=output,
             quiet=quiet,
             filter_function=filter_function,
@@ -1087,6 +919,7 @@ class FacilityPorts(Resources):
         "site_name": "Site",
         "node_id": "Interface Name",
         "vlan_range": "VLAN Range",
+        "allocated_vlan_range": "Allocated VLAN Range",
         "local_name": "Local Name",
         "device_name": "Device Name",
         "region": "Region",
@@ -1142,6 +975,7 @@ class FacilityPorts(Resources):
                 "site_name",
                 "node_id",
                 "vlan_range",
+                "allocated_vlan_range",
                 "local_name",
                 "device_name",
                 "region",
@@ -1157,11 +991,15 @@ class FacilityPorts(Resources):
         :return: collection of link properties
         :rtype: dict
         """
+        label_allocations = iface.get_property("label_allocations")
         return {
             "name": name,
             "site_name": site,
             "node_id": iface.node_id,
             "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
+            "allocated_vlan_range": (
+                label_allocations.vlan if label_allocations else "N/A"
+            ),
             "local_name": (
                 iface.labels.local_name
                 if iface.labels and iface.labels.local_name
@@ -1188,7 +1026,22 @@ class FacilityPorts(Resources):
         """
         Print a table of link resources in pretty format.
 
-        :return: formatted table of resources
+        :param output: Output type for listing information.
+        :type output: Any, optional
+
+        :param fields: List of fields to include in the output.
+        :type fields: Optional[List[str]], optional
+
+        :param quiet: Flag indicating whether to display output quietly.
+        :type quiet: bool, optional
+
+        :param filter_function: Function to filter the output.
+        :type filter_function: Optional[Callable[[Dict], bool]], optional
+
+        :param pretty_names: Flag indicating whether to use pretty names for fields.
+        :type pretty_names: bool, optional
+
+        :return: Formatted table of resources.
         :rtype: object
         """
         table = []
