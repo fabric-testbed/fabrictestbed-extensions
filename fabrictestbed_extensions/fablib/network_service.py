@@ -169,7 +169,7 @@ class NetworkService:
         return rtn_nstype
 
     @staticmethod
-    def validate_nstype(type, interfaces):
+    def __validate_nstype(type, interfaces):
         """
         Not intended for API use
 
@@ -184,6 +184,9 @@ class NetworkService:
         :return: true if the network service type is valid based on the number of interfaces
         :rtype: bool
         """
+        # Just an empty network created; NS type would be validated when add_interface is invoked.
+        if not len(interfaces):
+            return True
 
         from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
@@ -409,10 +412,10 @@ class NetworkService:
                 )
 
         # validate nstype and interface List
-        NetworkService.validate_nstype(nstype, interfaces)
+        NetworkService.__validate_nstype(nstype, interfaces)
 
         # Set default VLANs for P2P networks that did not pass in VLANs
-        if nstype == ServiceType.L2PTP:  # or nstype == ServiceType.L2STS:
+        if nstype == ServiceType.L2PTP and len(interfaces):  # or nstype == ServiceType.L2STS:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
