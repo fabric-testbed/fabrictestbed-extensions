@@ -825,10 +825,10 @@ class Resources:
         """
         hop_sites_node_ids = []
         for hop in hops:
-            hs = self.get_site(site_name=hop)
-            if not hs:
+            ns = self.get_topology().network_services.get(f"{hop}_ns")
+            if not ns:
                 raise Exception(f"Hop: {hop} is not found in the available sites!")
-            hop_sites_node_ids.append(hs.get_fim().node_id)
+            hop_sites_node_ids.append(ns.node_id)
 
         source_site = self.get_site(site_name=source)
         end_site = self.get_site(site_name=end)
@@ -841,7 +841,7 @@ class Resources:
                                                                       hops=hop_sites_node_ids)
 
         if not path or not len(path):
-            raise Exception(f"Requested path via hops between {source} and {end} is invalid!")
+            raise Exception(f"Requested path via {hops} between {source} and {end} is invalid!")
 
 
 class Links(Resources):
