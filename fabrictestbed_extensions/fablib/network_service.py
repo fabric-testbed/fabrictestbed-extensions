@@ -1398,5 +1398,5 @@ class NetworkService:
         p.set_symmetric(hops)
         e = ERO()
         e.set(payload=p)
-        self.get_fim().set_properties(ero=e)
-        self.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=True)
+        ns_type = self.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=True)
+        self.get_fim().set_properties(type=ns_type, ero=e)
