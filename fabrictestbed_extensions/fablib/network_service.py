@@ -126,7 +126,9 @@ class NetworkService:
         )
 
     @staticmethod
-    def __calculate_l2_nstype(interfaces: List[Interface] = None, ero_enabled: bool = False) -> ServiceType:
+    def __calculate_l2_nstype(
+        interfaces: List[Interface] = None, ero_enabled: bool = False
+    ) -> ServiceType:
         """
         Not inteded for API use
 
@@ -170,9 +172,9 @@ class NetworkService:
             # L2PTP limitation for Facility Ports:
             # basically the layer-2 point-to-point server template applied is not popping
             # vlan tags over the MPLS tunnel between two facility ports.
-            if (((includes_facility_port and facility_port_interfaces < 2) or ero_enabled)
-                and not basic_nic_count
-            ):
+            if (
+                (includes_facility_port and facility_port_interfaces < 2) or ero_enabled
+            ) and not basic_nic_count:
                 # For now WAN FacilityPorts require L2PTP
                 rtn_nstype = NetworkService.network_service_map["L2PTP"]
             elif len(interfaces) >= 2:
@@ -431,7 +433,9 @@ class NetworkService:
         NetworkService.__validate_nstype(nstype, interfaces)
 
         # Set default VLANs for P2P networks that did not pass in VLANs
-        if nstype == ServiceType.L2PTP and len(interfaces):  # or nstype == ServiceType.L2STS:
+        if nstype == ServiceType.L2PTP and len(
+            interfaces
+        ):  # or nstype == ServiceType.L2STS:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
@@ -1136,7 +1140,9 @@ class NetworkService:
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
             ero_enabled = True if self.get_fim().ero else False
-            new_nstype = NetworkService.__calculate_l2_nstype(interfaces=new_interfaces, ero_enabled=ero_enabled)
+            new_nstype = NetworkService.__calculate_l2_nstype(
+                interfaces=new_interfaces, ero_enabled=ero_enabled
+            )
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
             else:
@@ -1179,7 +1185,9 @@ class NetworkService:
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
             ero_enabled = True if self.get_fim().ero else False
-            new_nstype = NetworkService.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=ero_enabled)
+            new_nstype = NetworkService.__calculate_l2_nstype(
+                interfaces=interfaces, ero_enabled=ero_enabled
+            )
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
 
@@ -1383,17 +1391,22 @@ class NetworkService:
 
         interfaces = self.get_interfaces()
 
-        if len(interfaces) != 2 or self.get_type() not in [ServiceType.L2STS, ServiceType.L2PTP]:
-            raise Exception("Network path can only be specified for a Point to Point Layer2 connection!")
+        if len(interfaces) != 2 or self.get_type() not in [
+            ServiceType.L2STS,
+            ServiceType.L2PTP,
+        ]:
+            raise Exception(
+                "Network path can only be specified for a Point to Point Layer2 connection!"
+            )
 
         ifs_sites = []
         for ifs in interfaces:
             ifs_sites.append(ifs.get_site())
 
         resources = self.get_fablib_manager().get_resources()
-        resources.validate_requested_ero_path(source=ifs_sites[0],
-                                              end=ifs_sites[1],
-                                              hops=hops)
+        resources.validate_requested_ero_path(
+            source=ifs_sites[0], end=ifs_sites[1], hops=hops
+        )
         p = Path()
         p.set_symmetric(hops)
         e = ERO()

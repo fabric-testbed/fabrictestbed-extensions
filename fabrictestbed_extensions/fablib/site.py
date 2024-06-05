@@ -699,6 +699,7 @@ class Site:
         """
         try:
             from fim.user import NodeType
+
             for c_name, child in self.site.children.items():
                 if child.type == NodeType.Server:
                     self.hosts[child.name] = Host(

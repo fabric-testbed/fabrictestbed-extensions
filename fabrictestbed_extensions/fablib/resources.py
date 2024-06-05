@@ -836,11 +836,13 @@ class Resources:
         if not source_site or not end_site:
             raise Exception(f"Source {source} or End: {end} is not found!")
 
-        path = self.get_fim().graph_model.get_nodes_on_path_with_hops(node_a=source_site.node_id,
-                                                                      node_z=end_site.node_id,
-                                                                      hops=hop_sites_node_ids)
+        path = self.get_fim().graph_model.get_nodes_on_path_with_hops(
+            node_a=source_site.node_id, node_z=end_site.node_id, hops=hop_sites_node_ids
+        )
         if not path or not len(path):
-            raise Exception(f"Requested path via {hops} between {source} and {end} is invalid!")
+            raise Exception(
+                f"Requested path via {hops} between {source} and {end} is invalid!"
+            )
 
 
 class Links(Resources):
