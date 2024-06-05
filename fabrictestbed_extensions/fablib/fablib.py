@@ -765,7 +765,7 @@ class FablibManager(Config):
             logging.info("Project is not specified")
             raise Exception("Bastion User name is not specified")
 
-        self.create_ssh_config()
+        self.create_ssh_config(overwrite=True)
 
         print("Configuration is valid and please save the config!")
 
@@ -811,12 +811,14 @@ class FablibManager(Config):
 
         dir_path = os.path.dirname(bastion_ssh_config_file)
         if not os.path.exists(dir_path):
-            msg = (
-                f"Directory {dir_path} does not exist, can not create ssh_config file!"
-            )
-            print(msg)
-            logging.error(msg)
-            raise Exception(msg)
+            try:
+                os.makedirs(dir_path)
+            except OSError as e:
+                msg = f"Directory {dir_path} does not exist, Failed to create directory {dir_path}: {e}, " \
+                      f"can not create ssh_config file!"
+                print(msg)
+                logging.error(msg)
+                raise Exception(msg)
 
         with open(bastion_ssh_config_file, "w") as f:
             f.write(
@@ -989,12 +991,15 @@ Host * !bastion.fabric-testbed.net
         """
         dir_path = os.path.dirname(private_file_path)
         if not os.path.exists(dir_path):
-            msg = (
-                f"Directory {dir_path} does not exist, can not create {key_type} keys!"
-            )
-            print(msg)
-            logging.error(msg)
-            raise Exception(msg)
+            try:
+                os.makedirs(dir_path)
+            except OSError as e:
+                msg = f"Directory {dir_path} does not exist! Failed to create directory {dir_path}: {e}, " \
+                      f"cannot create {key_type} keys!"
+                print(msg)
+                logging.error(msg)
+                raise Exception(msg)
+
         comment = os.path.basename(private_file_path)
         ssh_keys = self.get_slice_manager().create_ssh_keys(
             key_type=key_type,
