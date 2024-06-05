@@ -2840,6 +2840,10 @@ class Node:
             return {}
 
     def delete(self):
+        """
+        Remove the node from the slice. All components and interfaces associated with
+        the Node are removed from the Slice.
+        """
         for component in self.get_components():
             component.delete()
 
@@ -3420,7 +3424,9 @@ class Node:
 
     def os_reboot(self):
         """
-        Reboot the node.
+        Request Openstack to reboot the VM.
+        NOTE: This is not same as rebooting the VM via reboot or init 6 command.
+        Instead this is like openstack server reboot.
         """
         status = self.poa(operation="reboot")
         if status == "Failed":
