@@ -711,39 +711,6 @@ class Site:
                     self.switches[child.name] = Switch(
                         switch=child, fablib_manager=self.get_fablib_manager()
                     )
-                # exclude Facility nodes
-            ''' 
-            from fim.graph.abc_property_graph import ABCPropertyGraph
-
-            node_id_list = self.site.topo.graph_model.get_first_neighbor(
-                node_id=self.site.node_id,
-                rel=ABCPropertyGraph.REL_HAS,
-                node_label=ABCPropertyGraph.CLASS_NetworkNode,
-            )
-            for nid in node_id_list:
-                _, node_props = self.site.topo.graph_model.get_node_properties(
-                    node_id=nid
-                )
-                n = node.Node(
-                    name=node_props[ABCPropertyGraph.PROP_NAME],
-                    node_id=nid,
-                    topo=self.site.topo,
-                )
-                # exclude Facility nodes
-                from fim.user import NodeType
-
-                if n.type == NodeType.Server:
-                    self.hosts[n.name] = Host(
-                        host=n,
-                        state=self.get_state(n.name),
-                        ptp=self.get_ptp_capable(),
-                        fablib_manager=self.fablib_manager,
-                    )
-                elif n.type == NodeType.Switch:
-                    self.switches[n.name] = Switch(
-                        switch=n, fablib_manager=self.get_fablib_manager()
-                    )
-            '''
         except Exception as e:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())
