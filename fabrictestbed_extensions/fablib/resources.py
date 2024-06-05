@@ -637,24 +637,6 @@ class Resources:
 
         return self.topology
 
-    def get_site_list(self, update: bool = False) -> List[str]:
-        """
-        Gets a list of all sites by name
-
-        :param update: (optional) set to True update available resources
-        :type update: bool
-        :return: list of site names
-        :rtype: List[String]
-        """
-        if update or self.topology is None:
-            self.update()
-
-        rtn_sites = []
-        for site_name, site in self.topology.sites.items():
-            rtn_sites.append(site_name)
-
-        return rtn_sites
-
     def get_link_list(self, update: bool = False) -> List[str]:
         """
         Gets a list of all links by name
