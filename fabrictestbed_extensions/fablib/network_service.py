@@ -1135,7 +1135,8 @@ class NetworkService:
 
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
-            new_nstype = NetworkService.__calculate_l2_nstype(interfaces=new_interfaces)
+            ero_enabled = True if self.get_fim().ero else False
+            new_nstype = NetworkService.__calculate_l2_nstype(interfaces=new_interfaces, ero_enabled=ero_enabled)
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
             else:
@@ -1177,7 +1178,8 @@ class NetworkService:
 
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
-            new_nstype = NetworkService.__calculate_l2_nstype(interfaces=interfaces)
+            ero_enabled = True if self.get_fim().ero else False
+            new_nstype = NetworkService.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=ero_enabled)
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
 
