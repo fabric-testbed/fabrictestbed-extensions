@@ -32,6 +32,7 @@ from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
 from fim.user import Component, node
+from fim.user.composite_node import CompositeNode
 from fim.view_only_dict import ViewOnlyDict
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -652,7 +653,7 @@ class Host:
 
 
 class Site:
-    def __init__(self, site: node.Node, fablib_manager):
+    def __init__(self, site: CompositeNode, fablib_manager):
         """
         Initialize a Site object.
 
@@ -697,6 +698,21 @@ class Site:
         :return: None
         """
         try:
+            from fim.user import NodeType
+            for c_name, child in self.site.children.items():
+                if child.type == NodeType.Server:
+                    self.hosts[child.name] = Host(
+                        host=child,
+                        state=self.get_state(child.name),
+                        ptp=self.get_ptp_capable(),
+                        fablib_manager=self.fablib_manager,
+                    )
+                elif child.type == NodeType.Switch:
+                    self.switches[child.name] = Switch(
+                        switch=child, fablib_manager=self.get_fablib_manager()
+                    )
+                # exclude Facility nodes
+            ''' 
             from fim.graph.abc_property_graph import ABCPropertyGraph
 
             node_id_list = self.site.topo.graph_model.get_first_neighbor(
@@ -727,6 +743,7 @@ class Site:
                     self.switches[n.name] = Switch(
                         switch=n, fablib_manager=self.get_fablib_manager()
                     )
+            '''
         except Exception as e:
             logging.error(f"Error occurred - {e}")
             logging.error(traceback.format_exc())

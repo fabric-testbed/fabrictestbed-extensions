@@ -825,21 +825,20 @@ class Resources:
         """
         hop_sites_node_ids = []
         for hop in hops:
-            ns = self.get_topology().network_services.get(f"{hop}_ns")
+            ns = self.get_topology().network_services.get(f"{hop.upper()}_ns")
             if not ns:
                 raise Exception(f"Hop: {hop} is not found in the available sites!")
             hop_sites_node_ids.append(ns.node_id)
 
-        source_site = self.get_site(site_name=source)
-        end_site = self.get_site(site_name=end)
+        source_site = self.__get_topology_site(site_name=source)
+        end_site = self.__get_topology_site(site_name=end)
 
         if not source_site or not end_site:
             raise Exception(f"Source {source} or End: {end} is not found!")
 
-        path = self.get_fim().graph_model.get_nodes_on_path_with_hops(node_a=source_site.get_fim().node_id,
-                                                                      node_z=end_site.get_fim().node_id,
+        path = self.get_fim().graph_model.get_nodes_on_path_with_hops(node_a=source_site.node_id,
+                                                                      node_z=end_site.node_id,
                                                                       hops=hop_sites_node_ids)
-
         if not path or not len(path):
             raise Exception(f"Requested path via {hops} between {source} and {end} is invalid!")
 
