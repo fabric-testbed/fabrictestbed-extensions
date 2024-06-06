@@ -59,6 +59,7 @@ import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
 from IPython.core.display_functions import display
+from fim.user import NodeType
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -90,6 +91,7 @@ class Node:
         node: FimNode,
         validate: bool = False,
         raise_exception: bool = False,
+        node_type: NodeType = NodeType.VM,
     ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
@@ -106,6 +108,9 @@ class Node:
         :param raise_exception: Raise exception in case validation failes
         :type raise_exception: bool
 
+        :param node_type: Node Type; set to VM by default, set to Switch when requesting P4 switch
+        :type node_type: NodeType
+
         """
         super().__init__()
         self.fim_node = node
@@ -114,6 +119,7 @@ class Node:
         self.ip_addr_list_json = None
         self.validate = validate
         self.raise_exception = raise_exception
+        self.node_type = node_type
 
         # Try to set the username.
         try:
@@ -181,6 +187,7 @@ class Node:
         avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
+        node_type: NodeType = NodeType.VM
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -206,25 +213,38 @@ class Node:
         :param raise_exception: Raise exception in case of failure
         :type raise_exception: bool
 
+        :param node_type: Node Type; set to VM by default, set to Switch when requesting P4 switch
+        :type node_type: NodeType
+
         :return: a new fablib node
         :rtype: Node
         """
-        if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(
-                avoid=avoid,
+        if node_type == NodeType.Switch:
+            logging.info(f"Adding switch: {name}, slice: {slice.get_name()}, site: {site}")
+            node = Node(
+                slice,
+                slice.topology.add_switch(name=name, site=site),
+                validate=validate,
+                raise_exception=raise_exception,
             )
+            node.get_fim_node().set_properties(capacities=Capacities(unit=1))
+        else:
+            if site is None and node_type:
+                [site] = slice.get_fablib_manager().get_random_sites(
+                    avoid=avoid,
+                )
 
-        logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
-        node = Node(
-            slice,
-            slice.topology.add_node(name=name, site=site),
-            validate=validate,
-            raise_exception=raise_exception,
-        )
-        node.set_capacities(
-            cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
-        )
-        node.set_image(Node.default_image)
+            logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
+            node = Node(
+                slice,
+                slice.topology.add_node(name=name, site=site),
+                validate=validate,
+                raise_exception=raise_exception,
+            )
+            node.set_capacities(
+                cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
+            )
+            node.set_image(Node.default_image)
 
         node.init_fablib_data()
 

@@ -59,7 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fim.user import Capacities, Labels
+from fim.user import Capacities, Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
@@ -1205,6 +1205,71 @@ class Slice:
                     raise ValueError(error)
         return node
 
+    def add_switch(
+        self,
+        name: str,
+        site: str = None,
+        user_data: dict = {},
+        avoid: List[str] = [],
+        validate: bool = False,
+        raise_exception: bool = False,
+    ) -> Node:
+        """
+        Creates a new switch on this fablib slice.
+
+        :param name: Name of the new switch
+        :type name: String
+
+        :param site: (Optional) Name of the site to deploy the node
+            on.  Default to a random site.
+        :type site: String
+
+        :param user_data
+        :type user_data: dict
+
+        :param avoid: (Optional) A list of sites to avoid is allowing
+            random site.
+        :type avoid: List[String]
+
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case of Failure
+        :type raise_exception: bool
+
+        :return: a new node
+        :rtype: Node
+        """
+        node = Node.new_node(
+            slice=self,
+            name=name,
+            site=site,
+            avoid=avoid,
+            validate=validate,
+            raise_exception=raise_exception,
+            node_type=NodeType.Switch
+        )
+
+        node.init_fablib_data()
+
+        user_data_working = node.get_user_data()
+        for k, v in user_data.items():
+            user_data_working[k] = v
+        node.set_user_data(user_data_working)
+
+        self.nodes = None
+        self.interfaces = None
+
+        if validate:
+            status, error = self.get_fablib_manager().validate_node(node=node)
+            if not status:
+                node.delete()
+                node = None
+                logging.warning(error)
+                if raise_exception:
+                    raise ValueError(error)
+        return node
+
     def get_object_by_reservation(
         self, reservation_id: str
     ) -> Union[Node, NetworkService, Interface, None]:
@@ -1399,7 +1464,6 @@ class Slice:
             return NetworkService.get_l3network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
-        return None
 
     def get_l2networks(self) -> List[NetworkService]:
         """
@@ -1428,7 +1492,6 @@ class Slice:
             return NetworkService.get_l2network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
-        return None
 
     def get_network_services(self) -> List[NetworkService]:
         """
@@ -1484,7 +1547,6 @@ class Slice:
             return NetworkService.get_network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
-        return None
 
     def delete(self):
         """
