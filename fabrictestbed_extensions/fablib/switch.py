@@ -99,7 +99,7 @@ class Switch(Node):
         avoid: List[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
-    ):
+    ) -> Switch:
         """
         Not intended for API call.  See: Slice.add_node()
 

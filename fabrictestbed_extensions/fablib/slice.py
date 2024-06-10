@@ -1210,8 +1210,8 @@ class Slice:
         self,
         name: str,
         site: str = None,
-        user_data: dict = {},
-        avoid: List[str] = [],
+        user_data: dict = None,
+        avoid: List[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
     ) -> Switch:
@@ -1241,7 +1241,12 @@ class Slice:
         :return: a new node
         :rtype: Node
         """
-        node = Node.new_(
+        if not user_data:
+            user_data = {}
+        if not avoid:
+            avoid = []
+
+        node = Switch.new_switch(
             slice=self,
             name=name,
             site=site,
