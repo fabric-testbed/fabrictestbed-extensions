@@ -32,11 +32,11 @@ import jinja2
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
+from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.node import Node
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
-
 
 from fabrictestbed.slice_editor import Capacities
 from fabrictestbed.slice_editor import Node as FimNode
@@ -44,11 +44,11 @@ from fabrictestbed.slice_editor import Node as FimNode
 
 class Switch(Node):
     def __init__(
-        self,
-        slice: Slice,
-        node: FimNode,
-        validate: bool = False,
-        raise_exception: bool = False,
+            self,
+            slice: Slice,
+            node: FimNode,
+            validate: bool = False,
+            raise_exception: bool = False,
     ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
@@ -93,12 +93,12 @@ class Switch(Node):
 
     @staticmethod
     def new_switch(
-        slice: Slice = None,
-        name: str = None,
-        site: str = None,
-        avoid: List[str] = None,
-        validate: bool = False,
-        raise_exception: bool = False,
+            slice: Slice = None,
+            name: str = None,
+            site: str = None,
+            avoid: List[str] = None,
+            validate: bool = False,
+            raise_exception: bool = False,
     ) -> Switch:
         """
         Not intended for API call.  See: Slice.add_node()
@@ -194,7 +194,7 @@ class Switch(Node):
             rtn_dict["management_ip"] = (
                 str(self.get_management_ip()).strip()
                 if str(self.get_reservation_state()) == "Active"
-                and self.get_management_ip()
+                   and self.get_management_ip()
                 else ""
             )  # str(self.get_management_ip())
         if "state" not in skip:
@@ -236,7 +236,7 @@ class Switch(Node):
         return output_string
 
     def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+            self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
         """
         Show a table containing the current node attributes.
@@ -341,3 +341,16 @@ class Switch(Node):
         the Node are removed from the Slice.
         """
         self.get_slice().get_fim_topology().remove_switch(name=self.get_name())
+
+    def get_interfaces(self) -> List[Interface] or None:
+        """
+        Gets a list of the interfaces associated with the FABRIC node.
+
+        :return: a list of interfaces on the node
+        :rtype: List[Interface]
+        """
+        interfaces = []
+        for name, ifs in self.get_fim().interfaces.items():
+            interfaces.append(Interface(fim_interface=ifs))
+
+        return interfaces
