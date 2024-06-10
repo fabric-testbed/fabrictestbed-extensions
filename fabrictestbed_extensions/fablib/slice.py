@@ -65,6 +65,7 @@ from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+from fabrictestbed_extensions.fablib.switch import Switch
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
@@ -1213,7 +1214,7 @@ class Slice:
         avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
-    ) -> Node:
+    ) -> Switch:
         """
         Creates a new switch on this fablib slice.
 
@@ -1240,14 +1241,13 @@ class Slice:
         :return: a new node
         :rtype: Node
         """
-        node = Node.new_node(
+        node = Node.new_(
             slice=self,
             name=name,
             site=site,
             avoid=avoid,
             validate=validate,
             raise_exception=raise_exception,
-            node_type=NodeType.Switch
         )
 
         node.init_fablib_data()
