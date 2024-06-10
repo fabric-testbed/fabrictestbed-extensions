@@ -64,6 +64,7 @@ class Interface:
         component: Component = None,
         fim_interface: FimInterface = None,
         node: Union[Switch, FacilityPort] = None,
+        model: str = None
     ):
         """
         .. note::
@@ -86,6 +87,7 @@ class Interface:
         self.network = None
         self.dev = None
         self.node = node
+        self.model = model
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -689,7 +691,9 @@ class Interface:
         :return: the model of this interface's component
         :rtype: str
         """
-        if self.node:
+        if self.model:
+            return self.model
+        elif self.node:
             return self.node.get_model()
         else:
             return self.get_component().get_model()
