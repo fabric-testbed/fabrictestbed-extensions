@@ -351,6 +351,6 @@ class Switch(Node):
         """
         interfaces = []
         for name, ifs in self.get_fim().interfaces.items():
-            interfaces.append(Interface(fim_interface=ifs))
+            interfaces.append(Interface(node=self, fim_interface=ifs))
 
         return interfaces

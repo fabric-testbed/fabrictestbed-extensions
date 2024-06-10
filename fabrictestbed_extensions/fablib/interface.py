@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
     from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+    from fabrictestbed_extensions.fablib.switch import Switch
 
 from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
@@ -62,7 +63,7 @@ class Interface:
         self,
         component: Component = None,
         fim_interface: FimInterface = None,
-        node: FacilityPort = None,
+        node: Union[Switch, FacilityPort] = None,
     ):
         """
         .. note::
