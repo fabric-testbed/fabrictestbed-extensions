@@ -1559,6 +1559,9 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
+        if not self.sm_slice:
+            self.topology = None
+            return
         return_status, result = self.fablib_manager.get_slice_manager().delete(
             slice_object=self.sm_slice
         )
