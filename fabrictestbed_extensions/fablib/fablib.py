@@ -814,8 +814,10 @@ class FablibManager(Config):
             try:
                 os.makedirs(dir_path)
             except OSError as e:
-                msg = f"Directory {dir_path} does not exist, Failed to create directory {dir_path}: {e}, " \
-                      f"can not create ssh_config file!"
+                msg = (
+                    f"Directory {dir_path} does not exist, Failed to create directory {dir_path}: {e}, "
+                    f"can not create ssh_config file!"
+                )
                 print(msg)
                 logging.error(msg)
                 raise Exception(msg)
@@ -994,8 +996,10 @@ Host * !bastion.fabric-testbed.net
             try:
                 os.makedirs(dir_path)
             except OSError as e:
-                msg = f"Directory {dir_path} does not exist! Failed to create directory {dir_path}: {e}, " \
-                      f"cannot create {key_type} keys!"
+                msg = (
+                    f"Directory {dir_path} does not exist! Failed to create directory {dir_path}: {e}, "
+                    f"cannot create {key_type} keys!"
+                )
                 print(msg)
                 logging.error(msg)
                 raise Exception(msg)

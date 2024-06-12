@@ -58,8 +58,8 @@ from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
-from IPython.core.display_functions import display
 from fim.user import NodeType
+from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService

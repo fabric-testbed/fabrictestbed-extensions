@@ -64,7 +64,7 @@ class Interface:
         component: Component = None,
         fim_interface: FimInterface = None,
         node: Union[Switch, FacilityPort] = None,
-        model: str = None
+        model: str = None,
     ):
         """
         .. note::
