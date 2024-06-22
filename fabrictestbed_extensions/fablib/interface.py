@@ -322,13 +322,16 @@ class Interface:
                 # logging.debug(f"iface: {self}")
                 os_iface = self.get_physical_os_interface_name()
                 vlan = self.get_vlan()
-                if vlan is not None:
-                    os_iface = f"{os_iface}.{vlan}"
 
                 fablib_data["base_dev"] = os_iface
+
+                if os_iface and vlan:
+                    os_iface = f"{os_iface}.{vlan}"
+
                 fablib_data["dev"] = os_iface
 
-                self.set_fablib_data(fablib_data)
+                if os_iface:
+                    self.set_fablib_data(fablib_data)
             return os_iface
 
         except Exception as e:
