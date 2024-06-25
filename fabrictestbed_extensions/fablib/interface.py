@@ -121,12 +121,24 @@ class Interface:
             ["Switch Port", self.get_switch_port()],
         ]
 
-        labels = self.get_labels()
-        if labels:
-            table.append(["Labels", labels])
-        peer_labels = self.get_peer_labels()
-        if peer_labels:
-            table.append(["PeerLabels", peer_labels])
+        subnet = self.get_subnet()
+        if subnet:
+            table.append(["Subnet", subnet])
+        peer_subnet = self.get_peer_subnet()
+        if peer_subnet:
+            table.append(["Peer Subnet", peer_subnet])
+
+        peer_asn = self.get_peer_asn()
+        if peer_asn:
+            table.append(["Peer ASN", peer_asn])
+
+        peer_bgp = self.get_peer_bgp_key()
+        if peer_bgp:
+            table.append(["Peer BGP Key", peer_bgp])
+
+        peer_account_id = self.get_peer_account_id()
+        if peer_account_id:
+            table.append(["Peer Account Id", peer_account_id])
 
         return tabulate(table)
 
@@ -997,9 +1009,9 @@ class Interface:
         if net:
             net.remove_interface(self)
 
-    def set_labels(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
+    def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
-        Set labels for the interface.
+        Set subnet for the interface.
         Used only for interfaces connected to L3VPN service where each interface could be connected to multiple subnets
 
         :param ipv4_subnet: ipv4 subnet
@@ -1026,10 +1038,28 @@ class Interface:
             logging.error(f"Failed to set the ip subnet e: {e}")
             raise e
 
-    def get_labels(self):
-        if self.get_fim():
-            return self.get_fim().labels
+    def get_subnet(self):
+        if self.get_fim() and self.get_fim().labels:
+            if self.get_fim().labels.ipv4_subnet:
+                return self.get_fim().labels.ipv4_subnet
+            if self.get_fim().labels.ipv6_subnet:
+                return self.get_fim().labels.ipv6_subnet
 
-    def get_peer_labels(self):
-        if self.get_fim():
-            return self.get_fim().peer_labels
+    def get_peer_subnet(self):
+        if self.get_fim() and self.get_fim().peer_labels:
+            if self.get_fim().peer_labels.ipv4_subnet:
+                return self.get_fim().peer_labels.ipv4_subnet
+            if self.get_fim().peer_labels.ipv6_subnet:
+                return self.get_fim().peer_labels.ipv6_subnet
+
+    def get_peer_asn(self):
+        if self.get_fim() and self.get_fim().peer_labels:
+            return self.get_fim().peer_labels.asn
+
+    def get_peer_bgp_key(self):
+        if self.get_fim() and self.get_fim().peer_labels:
+            return self.get_fim().peer_labels.bgp_key
+
+    def get_peer_account_id(self):
+        if self.get_fim() and self.get_fim().peer_labels:
+            return self.get_fim().peer_labels.account_id
