@@ -1374,6 +1374,7 @@ class NetworkService:
             capacities=capacities,
         )
         peer_fim_interface = self.get_fim().interfaces.get(f"{self.get_name()}-{other.get_name()}")
+        from interface import Interface
         peer_interface = Interface(fim_interface=peer_fim_interface)
         self.add_interface(peer_interface)
 
