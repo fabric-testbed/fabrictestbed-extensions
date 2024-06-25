@@ -1008,10 +1008,10 @@ class Interface:
             if not labels:
                 labels = Labels()
             if ipv4_subnet:
-                ipaddress.ip_network(ipv4_subnet)
+                ipaddress.ip_network(ipv4_subnet, strict=False)
                 labels = Labels.update(labels, ipv4_subnet=ipv4_subnet)
             elif ipv6_subnet:
-                ipaddress.ip_network(ipv6_subnet)
+                ipaddress.ip_network(ipv6_subnet, strict=False)
                 labels = Labels.update(labels, ipv6_subnet=ipv6_subnet)
 
             self.get_fim().set_property('labels', labels)
