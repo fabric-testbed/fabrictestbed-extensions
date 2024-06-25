@@ -121,6 +121,13 @@ class Interface:
             ["Switch Port", self.get_switch_port()],
         ]
 
+        labels = self.get_labels()
+        if labels:
+            table.append(["Labels", labels])
+        peer_labels = self.get_peer_labels()
+        if peer_labels:
+            table.append(["PeerLabels", peer_labels])
+
         return tabulate(table)
 
     def toJson(self):
@@ -990,9 +997,9 @@ class Interface:
         if net:
             net.remove_interface(self)
 
-    def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
+    def set_labels(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
-        Set Subnet for the interface.
+        Set labels for the interface.
         Used only for interfaces connected to L3VPN service where each interface could be connected to multiple subnets
 
         :param ipv4_subnet: ipv4 subnet
@@ -1018,3 +1025,11 @@ class Interface:
         except Exception as e:
             logging.error(f"Failed to set the ip subnet e: {e}")
             raise e
+
+    def get_labels(self):
+        if self.get_fim():
+            return self.get_fim().labels
+
+    def get_peer_labels(self):
+        if self.get_fim():
+            return self.get_fim().peer_labels
