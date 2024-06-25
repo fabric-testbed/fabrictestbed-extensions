@@ -1058,9 +1058,13 @@ class NetworkService:
                 logging.debug(f"interface: {interface}")
 
                 try:
-                    self.interfaces.append(
-                        self.get_slice().get_interface(name=interface.name)
-                    )
+                    if interface.peer_labels:
+                        self.interfaces.append(Interface(fim_interface=interface, model="NIC_Peered")
+                        )
+                    else:
+                        self.interfaces.append(
+                            self.get_slice().get_interface(name=interface.name)
+                        )
                 except:
                     logging.warning(f"interface not found: {interface.name}")
 
