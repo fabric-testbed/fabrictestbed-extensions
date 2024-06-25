@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
+from fim.user import Labels
 from tabulate import tabulate
 
 if TYPE_CHECKING:
@@ -982,6 +983,38 @@ class Interface:
         )
 
     def delete(self):
+        """
+        Delete the interface by removing it from the corresponding network service
+        """
         net = self.get_network()
         if net:
             net.remove_interface(self)
+
+    def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
+        """
+        Set Subnet for the interface.
+        Used only for interfaces connected to L3VPN service where each interface could be connected to multiple subnets
+
+        :param ipv4_subnet: ipv4 subnet
+        :type ipv4_subnet: str
+
+        :param ipv6_subnet: ipv6 subnet
+        :type ipv6_subnet: str
+
+        :raises Exception in case invalid subnet string is specified.
+        """
+        try:
+            labels = self.get_fim().labels
+            if not labels:
+                labels = Labels()
+            if ipv4_subnet:
+                ipaddress.ip_network(ipv4_subnet)
+                labels = Labels.update(labels, ipv4_subnet=ipv4_subnet)
+            elif ipv6_subnet:
+                ipaddress.ip_network(ipv6_subnet)
+                labels = Labels.update(labels, ipv6_subnet=ipv6_subnet)
+
+            self.get_fim().set_property('labels', labels)
+        except Exception as e:
+            logging.error(f"Failed to set the ip subnet e: {e}")
+            raise e
