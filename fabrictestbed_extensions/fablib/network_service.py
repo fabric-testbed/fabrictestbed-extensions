@@ -1373,10 +1373,6 @@ class NetworkService:
             peer_labels=peer_labels,
             capacities=capacities,
         )
-        peer_fim_interface = self.get_fim().interfaces.get(f"{self.get_name()}-{other.get_name()}")
-        from fabrictestbed_extensions.fablib.interface import Interface
-        peer_interface = Interface(fim_interface=peer_fim_interface)
-        self.add_interface(peer_interface)
 
     def set_l2_route_hops(self, hops: List[str]):
         """
