@@ -1064,7 +1064,10 @@ class NetworkService:
                 except:
                     logging.warning(f"interface not found: {interface.name}")
                     from fabrictestbed_extensions.fablib.interface import Interface
-                    self.interfaces.append(Interface(fim_interface=interface, node=self))
+
+                    self.interfaces.append(
+                        Interface(fim_interface=interface, node=self)
+                    )
 
         return self.interfaces
 

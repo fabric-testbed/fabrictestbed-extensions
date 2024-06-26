@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Unreleased
 
 ### Fixed
+- Port Mirroring with Basic NICs (Issue [#343](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/343))
 - P4 support (Issue [#340](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/340))
 - ERO Support (Issue [#338](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/338))
 - List hosts (Issue [#331](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/331))

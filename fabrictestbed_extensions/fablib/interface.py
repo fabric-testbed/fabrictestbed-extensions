@@ -994,10 +994,11 @@ class Interface:
             # manual mode... do nothing
             pass
 
-    def add_mirror(self, port_name: str, name: str = "mirror"):
+    def add_mirror(self, port_name: str, name: str = "mirror", vlan: str = None):
         self.get_slice().get_fim_topology().add_port_mirror_service(
             name=name,
             from_interface_name=port_name,
+            from_interface_vlan=vlan,
             to_interface=self.get_fim_interface(),
         )
 
@@ -1033,7 +1034,7 @@ class Interface:
                 ipaddress.ip_network(ipv6_subnet, strict=False)
                 labels = Labels.update(labels, ipv6_subnet=ipv6_subnet)
 
-            self.get_fim().set_property('labels', labels)
+            self.get_fim().set_property("labels", labels)
         except Exception as e:
             logging.error(f"Failed to set the ip subnet e: {e}")
             raise e
