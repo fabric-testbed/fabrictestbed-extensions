@@ -619,6 +619,8 @@ class Interface:
         """
         try:
             vlan = self.get_fim_interface().get_property(pname="labels").vlan
+            if not vlan:
+                vlan = self.get_fim_interface().get_property(pname="label_allocations").vlan
         except:
             vlan = None
         return vlan
