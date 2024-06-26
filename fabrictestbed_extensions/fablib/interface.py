@@ -341,6 +341,19 @@ class Interface:
         else:
             return None
 
+    def get_peer_port_vlan(self) -> str:
+        """
+        Returns the VLAN associated with the interface.
+        For shared NICs extracts it from label_allocations.
+
+        :return VLAN to be used for Port Mirroring
+        """
+        vlan = self.get_vlan()
+        if not vlan:
+            label_allocations = self.get_fim_interface().get_property(pname="label_allocations")
+            if label_allocations:
+                return label_allocations.vlan
+
     def get_device_name(self) -> str:
         """
         Gets a name of the device name on the node
@@ -619,24 +632,9 @@ class Interface:
         """
         try:
             vlan = self.get_fim_interface().get_property(pname="labels").vlan
-            if not vlan:
-                vlan = self.get_fim_interface().get_property(pname="label_allocations").vlan
         except:
             vlan = None
         return vlan
-
-    def get_bandwidth(self) -> int:
-        """
-        Gets the FABRIC bandwidth of an interface.
-
-        :return: VLAN
-        :rtype: String
-        """
-        try:
-            bw = self.get_fim_interface().get_property(pname="capacities").bw
-        except:
-            bw = None
-        return bw
 
     def get_reservation_id(self) -> str or None:
         try:
