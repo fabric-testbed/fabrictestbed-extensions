@@ -21,6 +21,7 @@ dependencies = [
     "ipycytoscape",
     "tabulate",
     "fabrictestbed==1.7.0b8",
+    "fabric-fim==1.7.0b7",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
