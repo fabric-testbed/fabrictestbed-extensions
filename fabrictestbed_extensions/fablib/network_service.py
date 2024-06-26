@@ -290,6 +290,7 @@ class NetworkService:
         slice: Slice = None,
         name: str = None,
         mirror_interface_name: str = None,
+        mirror_interface_vlan: str = None,
         receive_interface: Interface or None = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
@@ -344,6 +345,7 @@ class NetworkService:
         fim_network_service = slice.topology.add_port_mirror_service(
             name=name,
             from_interface_name=mirror_interface_name,
+            from_interface_vlan=mirror_interface_vlan,
             to_interface=receive_interface.fim_interface,
             direction=direction,
         )

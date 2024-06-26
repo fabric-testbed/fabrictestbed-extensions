@@ -909,6 +909,7 @@ class Slice:
         name: str,
         mirror_interface_name: str,
         receive_interface: Interface or None = None,
+        mirror_interface_vlan: str = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
@@ -921,6 +922,7 @@ class Slice:
         :param name: Name of the service
         :param mirror_interface_name: Name of the interface on the
             dataplane switch to mirror
+        :param mirror_interface_vlan: Vlan of the interface
         :param receive_interface: Interface in the topology belonging
             to a SmartNIC component
         :param mirror_direction: String 'rx', 'tx' or 'both'
@@ -932,6 +934,7 @@ class Slice:
             slice=self,
             name=name,
             mirror_interface_name=mirror_interface_name,
+            mirror_interface_vlan=mirror_interface_vlan,
             receive_interface=receive_interface,
             mirror_direction=mirror_direction,
         )
