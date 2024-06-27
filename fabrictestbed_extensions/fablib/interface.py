@@ -229,6 +229,12 @@ class Interface:
         }
 
     def get_switch_port(self) -> str:
+        """
+        Get the name of the port on the switch corresponding to this interface
+
+        :return: name of the port on switch
+        :rtype: String
+        """
         network = self.get_network()
         if network and network.get_fim():
             ifs = None
@@ -240,6 +246,12 @@ class Interface:
                 return ifs.labels.local_name
 
     def get_numa_node(self) -> str:
+        """
+        Retrieve the NUMA node of the component linked to the interface.
+
+        :return: NUMA node of the linked component.
+        :rtype: str
+        """
         if self.get_component() is not None:
             return self.get_component().get_numa_node()
 
@@ -260,7 +272,7 @@ class Interface:
         return output_string
 
     def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+        self, fields=None, output: str = None, quiet: bool = False, colors: bool = False, pretty_names: bool = True
     ):
         """
         Show a table containing the current interface attributes.
@@ -284,15 +296,13 @@ class Interface:
         :type quiet: bool
         :param colors: True to specify state colors for pandas output
         :type colors: bool
+        :param pretty_names: Display pretty names
+        :type pretty_names: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
         data = self.toDict()
-
-        # fields = ["Name", "Node", "Network", "Bandwidth", "VLAN",
-        #        "MAC", "Device"
-        #         ]
 
         if pretty_names:
             pretty_names_dict = self.get_pretty_name_dict()
@@ -311,19 +321,28 @@ class Interface:
         return table
 
     def set_auto_config(self):
+        """
+        Enable auto-configuration for the interface.
+
+        This method sets the `auto_config` flag to `True` for the interface
+        associated with the current instance. The `auto_config` flag enables
+        automatic configuration of the interface by Control Framework.
+
+        :return: None
+        """
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=True)
-        # fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
-
-        # labels = Labels()
-        # labels.instance_parent = host_name
-        # self.get_fim_node().set_properties(labels=labels)
-
-        # if_labels = Labels.update(if_labels, ipv4=str(next(ips)), ipv4_subnet=str(network))
-        # if_labels = Labels.update(if_labels, vlan="200", ipv4=str(next(ips)))
-        # fim_iface.set_properties(labels=if_labels)
 
     def unset_auto_config(self):
+        """
+        Disable auto-configuration for the interface.
+
+        This method sets the `auto_config` flag to `False` for the interface
+        associated with the current instance. The `auto_config` flag disables
+        automatic configuration of the interface by Control Framework.
+
+        :return: None
+        """
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
@@ -424,8 +443,6 @@ class Interface:
         :rtype: String
         """
         try:
-            # os_iface = self.get_physical_os_interface()
-            # mac = os_iface['mac']
             mac = self.get_fim_interface().get_property(pname="label_allocations").mac
         except:
             mac = None
@@ -439,7 +456,6 @@ class Interface:
         :return: device description
         :rtype: Dict
         """
-
         if not self.dev:
             ip_addr_list_json = self.get_node().ip_addr_list(output="json")
 
@@ -452,22 +468,6 @@ class Interface:
             return self.dev
 
         return None
-
-    def get_physical_os_interface(self):
-        """
-        Not intended for API use
-        """
-
-        if self.get_network() is None:
-            return None
-
-        network_name = self.get_network().get_name()
-        node_name = self.get_node().get_name()
-
-        try:
-            return self.get_slice().get_interface_map()[network_name][node_name]
-        except:
-            return None
 
     def get_physical_os_interface_name(self) -> str:
         """
@@ -487,7 +487,9 @@ class Interface:
 
     def config_vlan_iface(self):
         """
-        Not intended for API use
+        Configure vlan interface
+
+        NOTE: Not intended for API use
         """
         if self.get_vlan() is not None:
             self.get_node().add_vlan_os_interface(
@@ -498,7 +500,19 @@ class Interface:
 
     def set_ip(self, ip=None, cidr=None, mtu=None):
         """
-        Depricated
+        Configures IP address for the interface inside the VM
+
+        :param ip: IP address
+        :type ip: String
+
+        :param cidr: CIDR
+        :type cidr: String
+
+        :param mtu: MTU
+        :type mtu: String
+
+        .. deprecated:: 1.7.0
+           Use `set_ip_os_interface()` instead.
         """
         if cidr:
             cidr = str(cidr)
@@ -538,7 +552,6 @@ class Interface:
     def ip_link_up(self):
         """
         Bring up the link on the interface.
-
         """
         if self.get_network():
             self.get_node().ip_link_up(None, self)
@@ -610,8 +623,11 @@ class Interface:
 
         :return: the FABRIC model node
         :rtype: fim interface
+
+        .. deprecated:: 1.7.0
+           Use `get_fim()` instead.
         """
-        return self.fim_interface
+        return self.get_fim()
 
     def get_bandwidth(self) -> int:
         """
@@ -640,9 +656,13 @@ class Interface:
         return vlan
 
     def get_reservation_id(self) -> str or None:
+        """
+        Gets the reservation id
+
+        :return: reservation id
+        :rtype: String
+        """
         try:
-            # TODO THIS DOESNT WORK.
-            # print(f"{self.get_fim_interface()}")
             return (
                 self.get_fim_interface()
                 .get_property(pname="reservation_info")
@@ -655,7 +675,7 @@ class Interface:
         """
         Gets the reservation state
 
-        :return: VLAN
+        :return: reservation state
         :rtype: String
         """
         try:
@@ -684,12 +704,19 @@ class Interface:
             return ""
 
     def get_short_name(self):
-        # strip of the extra parts of the name added by fim
-        return self.get_name()[
-            len(
-                f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"
-            ) :
-        ]
+        """
+        Retrieve the shortened name of the interface.
+
+        This method strips off the extra parts of the name added by the FIM. Specifically, it removes the
+        prefix formed by concatenating the node name and the component's short name
+        followed by a hyphen.
+
+        :return: Shortened name of the interface.
+        :rtype: str
+        """
+        # Strip off the extra parts of the name added by FIM
+        prefix_length = len(f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-")
+        return self.get_name()[prefix_length:]
 
     def get_name(self) -> str:
         """
@@ -804,6 +831,20 @@ class Interface:
             logging.warning(f"{e}")
 
     def get_ip_addr_show(self, dev=None):
+        """
+        Retrieve the IP address information for a specified network device.
+
+        This method executes the `ip -j addr show` command on the node to get
+        the IP address information in JSON format for the specified device.
+        If no device is specified, it defaults to the device name associated
+        with the current instance.
+
+        :param dev: The name of the network device (optional).
+        :type dev: str, optional
+        :return: The JSON output of the `ip -j addr show` command.
+        :rtype: str
+        :raises: Logs an error message if the command execution fails.
+        """
         try:
             if not dev:
                 dev = self.get_device_name()
@@ -814,7 +855,7 @@ class Interface:
             return stdout
         except Exception as e:
             logging.error(
-                f"Failed to get ip addr show info for interface {self.get_name()} Exception: {e}"
+                f"Failed to get IP address show info for interface {self.get_name()}. Exception: {e}"
             )
 
     # fablib.Interface.get_ip_addr()
@@ -871,31 +912,90 @@ class Interface:
         return return_ips
 
     def get_fim(self):
-        return self.get_fim_interface()
+        """
+        Gets the node's FABRIC Information Model (fim) object. This method
+        is used to access data at a lower level than FABlib.
+
+        :return: the FABRIC model node
+        :rtype: fim interface
+        """
+        return self.fim_interface
 
     def set_user_data(self, user_data: dict):
+        """
+        Set the user data for the interface.
+
+        This method stores the given user data dictionary as a JSON string
+        in the FIM object associated with the interface.
+
+        :param user_data: The user data to be set.
+        :type user_data: dict
+        :return: None
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
     def get_user_data(self):
+        """
+        Retrieve the user data for the interface.
+
+        This method fetches the user data stored in the FIM object associated
+        with the interface and returns it as a dictionary. If an error occurs,
+        it returns an empty dictionary.
+
+        :return: The user data dictionary.
+        :rtype: dict
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except Exception as e:
             return {}
 
     def get_fablib_data(self):
+        """
+        Retrieve the 'fablib_data' from the user data.
+
+        This method extracts and returns the 'fablib_data' field from the
+        user data dictionary. If an error occurs or the field is not present,
+        it returns an empty dictionary.
+
+        :return: The 'fablib_data' dictionary.
+        :rtype: dict
+        """
         try:
             return self.get_user_data()["fablib_data"]
         except:
             return {}
 
     def set_fablib_data(self, fablib_data: dict):
+        """
+        Set the 'fablib_data' in the user data.
+
+        This method updates the 'fablib_data' field in the user data dictionary
+        and stores the updated user data back in the FIM.
+
+        :param fablib_data: The 'fablib_data' to be set.
+        :type fablib_data: dict
+        :return: None
+        """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
 
     def set_network(self, network: NetworkService):
+        """
+        Set the network for the interface.
+
+        This method assigns the interface to the specified network. If the
+        interface is already part of another network, it will be removed from
+        the current network before being added to the new one.
+
+        :param network: The network service to assign the interface to.
+        :type network: NetworkService
+        :return: The current instance with the updated network.
+        :rtype: self
+        """
         current_network = self.get_network()
         if current_network:
             current_network.remove_interface(self)
@@ -905,6 +1005,21 @@ class Interface:
         return self
 
     def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
+        """
+        Set the IP address for the interface.
+
+        This method assigns an IP address to the interface based on the provided
+        address or allocation mode. If an address is provided, it will be allocated
+        to the interface. If the mode is set to 'AUTO' and no address is provided,
+        an IP address will be automatically allocated by the network.
+
+        :param addr: The IP address to assign to the interface (optional).
+        :type addr: ipaddress.IPv4Address or ipaddress.IPv6Address, optional
+        :param mode: The mode for IP address allocation, e.g., 'AUTO' (optional).
+        :type mode: str, optional
+        :return: The current instance with the updated IP address.
+        :rtype: self
+        """
         fablib_data = self.get_fablib_data()
         if mode:
             fablib_data[self.MODE] = str(mode)
@@ -915,11 +1030,22 @@ class Interface:
         elif mode == self.AUTO:
             if self.get_network():
                 fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
+
         self.set_fablib_data(fablib_data)
 
         return self
 
     def get_ip_addr(self):
+        """
+        Retrieve the IP address assigned to the interface.
+
+        This method returns the IP address assigned to the interface, either
+        from the 'fablib_data' or by fetching it via SSH if not available in
+        the stored data. If the MAC address is not available, it returns None.
+
+        :return: The IP address assigned to the interface.
+        :rtype: ipaddress.IPv4Address or ipaddress.IPv6Address or str or None
+        """
         fablib_data = self.get_fablib_data()
         if self.ADDR in fablib_data:
             try:
@@ -934,6 +1060,18 @@ class Interface:
             return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
+        """
+        Set the mode for the interface.
+
+        This method sets the mode for the interface in the 'fablib_data'
+        dictionary. The mode determines the configuration behavior of the
+        interface.
+
+        :param mode: The mode to set for the interface (default is "config").
+        :type mode: str
+        :return: The current instance with the updated mode.
+        :rtype: self
+        """
         fablib_data = self.get_fablib_data()
         fablib_data[self.MODE] = mode
         self.set_fablib_data(fablib_data)
@@ -941,6 +1079,16 @@ class Interface:
         return self
 
     def get_mode(self):
+        """
+        Retrieve the mode of the interface.
+
+        This method returns the current mode of the interface from the 'fablib_data'
+        dictionary. If the mode is not set, it defaults to "config" and updates the
+        'fablib_data' accordingly.
+
+        :return: The mode of the interface.
+        :rtype: str
+        """
         fablib_data = self.get_fablib_data()
         if self.MODE not in fablib_data:
             self.set_mode(self.CONFIG)
@@ -949,18 +1097,39 @@ class Interface:
         return fablib_data[self.MODE]
 
     def is_configured(self):
+        """
+        Check if the interface is configured.
+
+        This method checks the 'fablib_data' dictionary to determine if the
+        interface is marked as configured.
+
+        :return: True if the interface is configured, False otherwise.
+        :rtype: bool
+        """
         fablib_data = self.get_fablib_data()
-        is_configured = fablib_data.get(self.CONFIGURED)
-        if is_configured is None or not bool(is_configured):
-            return False
+        if fablib_data:
+            is_configured = fablib_data.get(self.CONFIGURED)
+            if is_configured is None or not bool(is_configured):
+                return False
 
         return True
 
     def config(self):
+        """
+        Configure the interface based on its mode and network settings.
+
+        This method configures the interface by setting its IP address and
+        bringing it up. It checks the configuration mode and acts accordingly:
+        - If the mode is 'AUTO' and no address is set, it automatically allocates an IP address.
+        - If the mode is 'CONFIG' or 'AUTO', it configures the interface with the assigned IP address and subnet.
+        - If the mode is 'MANUAL', it does not perform any automatic configuration.
+
+        :return: None
+        """
         network = self.get_network()
         if not network:
             logging.info(
-                f"interface {self.get_name()} not connected to network, skipping config."
+                f"Interface {self.get_name()} not connected to a network, skipping configuration."
             )
             return
 
@@ -972,16 +1141,10 @@ class Interface:
             fablib_data[self.CONFIGURED] = str(True)
             self.set_fablib_data(fablib_data)
 
-        if self.MODE in fablib_data:
-            mode = fablib_data[self.MODE]
-        else:
-            mode = self.MANUAL
+        mode = fablib_data.get(self.MODE, self.MANUAL)
 
         if mode == self.AUTO and addr is None:
             fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
-            # addr = fablib_data[self.ADDR]
-            # print(f"auto allocated addr: {addr}")
-
             self.set_fablib_data(fablib_data)
 
         self.ip_link_up()
@@ -994,7 +1157,7 @@ class Interface:
                 self.ip_link_up()
                 self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
         else:
-            # manual mode... do nothing
+            # Manual mode; do nothing.
             pass
 
     def add_mirror(self, port_name: str, name: str = "mirror", vlan: str = None):

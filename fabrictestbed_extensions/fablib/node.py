@@ -2635,9 +2635,24 @@ class Node:
         mtu: str = None,
     ):
         """
-        .. deprecated:: 1.1.3.
+        Configure IP Address on network interface as seen inside the VM
+        :param os_iface: Interface name as seen by the OS such as eth1 etc.
+        :type os_iface: String
+
+        :param vlan: Vlan tag
+        :type vlan: String
+
+        :param ip: IP address to be assigned to the tagged interface
+        :type ip: String
+
+        :param cidr: CIDR associated with IP address
+        :type ip: String
+
+        :param mtu: MTU size
+        :type mtu: String
+
+        NOTE: This does not add the IP information in the fablib_data
         """
-        # TODO: Add docstring after doc networking classes
         if cidr:
             cidr = str(cidr)
         if mtu:
@@ -2732,13 +2747,29 @@ class Node:
         ip: str = None,
         cidr: str = None,
         mtu: str = None,
-        interface: str = None,
+        interface: Interface = None,
     ):
         """
-        .. deprecated:: 1.1.3.
-        """
-        # TODO: Add docstring after doc networking classes
+        Add VLAN tagged interface for a given interface and set IP address on it
 
+        :param os_iface: Interface name as seen by the OS such as eth1 etc.
+        :type os_iface: String
+
+        :param vlan: Vlan tag
+        :type vlan: String
+
+        :param ip: IP address to be assigned to the tagged interface
+        :type ip: String
+
+        :param cidr: CIDR associated with IP address
+        :type ip: String
+
+        :param mtu: MTU size
+        :type mtu: String
+
+        :param interface: Interface for which tagged interface has to be added
+        :type interface: Interface
+        """
         if vlan:
             vlan = str(vlan)
         if cidr:
@@ -2746,8 +2777,8 @@ class Node:
         if mtu:
             mtu = str(mtu)
 
+        ip_command = "sudo ip"
         try:
-            gateway = None
             if interface.get_network().get_layer() == NSLayer.L3:
                 if interface.get_network().get_type() in [
                     ServiceType.FABNetv6,
