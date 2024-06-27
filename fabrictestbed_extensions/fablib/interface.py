@@ -350,7 +350,9 @@ class Interface:
         """
         vlan = self.get_vlan()
         if not vlan:
-            label_allocations = self.get_fim_interface().get_property(pname="label_allocations")
+            label_allocations = self.get_fim_interface().get_property(
+                pname="label_allocations"
+            )
             if label_allocations:
                 return label_allocations.vlan
 
