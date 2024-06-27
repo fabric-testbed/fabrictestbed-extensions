@@ -341,6 +341,22 @@ class Interface:
         else:
             return None
 
+    def get_peer_port_vlan(self) -> str:
+        """
+        Returns the VLAN associated with the interface.
+        For shared NICs extracts it from label_allocations.
+
+        :return: VLAN to be used for Port Mirroring
+        :rtype: String
+        """
+        vlan = self.get_vlan()
+        if not vlan:
+            label_allocations = self.get_fim_interface().get_property(
+                pname="label_allocations"
+            )
+            if label_allocations:
+                return label_allocations.vlan
+
     def get_device_name(self) -> str:
         """
         Gets a name of the device name on the node
@@ -557,8 +573,8 @@ class Interface:
         """
         Set the VLAN on the FABRIC request.
 
-        :param addr: vlan
-        :type addr: String or int
+        :param vlan: vlan
+        :type vlan: String or int
         """
         if vlan:
             vlan = str(vlan)
@@ -622,19 +638,6 @@ class Interface:
         except:
             vlan = None
         return vlan
-
-    def get_bandwidth(self) -> int:
-        """
-        Gets the FABRIC bandwidth of an interface.
-
-        :return: VLAN
-        :rtype: String
-        """
-        try:
-            bw = self.get_fim_interface().get_property(pname="capacities").bw
-        except:
-            bw = None
-        return bw
 
     def get_reservation_id(self) -> str or None:
         try:
@@ -994,10 +997,22 @@ class Interface:
             # manual mode... do nothing
             pass
 
-    def add_mirror(self, port_name: str, name: str = "mirror"):
+    def add_mirror(self, port_name: str, name: str = "mirror", vlan: str = None):
+        """
+        Add Port Mirror Service
+
+        :param port_name: Mirror Port Name
+        :type port_name: String
+        :param vlan: Mirror Port vlan
+        :type vlan: String
+        :param name: Name of the Port Mirror service
+        :type name: String
+
+        """
         self.get_slice().get_fim_topology().add_port_mirror_service(
             name=name,
             from_interface_name=port_name,
+            from_interface_vlan=vlan,
             to_interface=self.get_fim_interface(),
         )
 
@@ -1033,12 +1048,18 @@ class Interface:
                 ipaddress.ip_network(ipv6_subnet, strict=False)
                 labels = Labels.update(labels, ipv6_subnet=ipv6_subnet)
 
-            self.get_fim().set_property('labels', labels)
+            self.get_fim().set_property("labels", labels)
         except Exception as e:
             logging.error(f"Failed to set the ip subnet e: {e}")
             raise e
 
     def get_subnet(self):
+        """
+        Get Subnet associated with the interface
+
+        :return: ipv4/ipv6 subnet associated with the interface
+        :rtype: String
+        """
         if self.get_fim() and self.get_fim().labels:
             if self.get_fim().labels.ipv4_subnet:
                 return self.get_fim().labels.ipv4_subnet
@@ -1046,6 +1067,12 @@ class Interface:
                 return self.get_fim().labels.ipv6_subnet
 
     def get_peer_subnet(self):
+        """
+        Get Peer Subnet associated with the interface
+
+        :return: peer ipv4/ipv6 subnet associated with the interface
+        :rtype: String
+        """
         if self.get_fim() and self.get_fim().peer_labels:
             if self.get_fim().peer_labels.ipv4_subnet:
                 return self.get_fim().peer_labels.ipv4_subnet
@@ -1053,13 +1080,31 @@ class Interface:
                 return self.get_fim().peer_labels.ipv6_subnet
 
     def get_peer_asn(self):
+        """
+        Get Peer ASN; Set only for Peered Interface using L3Peering via AL2S
+
+        :return: peer asn
+        :rtype: String
+        """
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.asn
 
     def get_peer_bgp_key(self):
+        """
+        Get Peer BGP Key; Set only for Peered Interface using L3Peering via AL2S
+
+        :return: peer BGP Key
+        :rtype: String
+        """
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.bgp_key
 
     def get_peer_account_id(self):
+        """
+        Get Peer Account Id associated with the interface
+
+        :return: peer account id associated with the interface (Used when interface is peered to AWS via AL2S)
+        :rtype: String
+        """
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.account_id
