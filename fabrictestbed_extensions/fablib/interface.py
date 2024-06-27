@@ -272,7 +272,12 @@ class Interface:
         return output_string
 
     def show(
-        self, fields=None, output: str = None, quiet: bool = False, colors: bool = False, pretty_names: bool = True
+        self,
+        fields=None,
+        output: str = None,
+        quiet: bool = False,
+        colors: bool = False,
+        pretty_names: bool = True,
     ):
         """
         Show a table containing the current interface attributes.
@@ -715,7 +720,9 @@ class Interface:
         :rtype: str
         """
         # Strip off the extra parts of the name added by FIM
-        prefix_length = len(f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-")
+        prefix_length = len(
+            f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"
+        )
         return self.get_name()[prefix_length:]
 
     def get_name(self) -> str:
