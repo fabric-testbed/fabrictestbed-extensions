@@ -157,6 +157,18 @@ class FacilityPort:
         vlan: Union[str, list] = None,
         bandwidth: int = 10,
     ):
+        """
+        Create a new facility port.
+
+        You might want to :py:meth:`Slice.add_facility_port()`, in
+        most cases.
+
+        :param Slice: Slice associated with the facility port.
+        :param name: name of the facility port.
+        :param site: site associated with the facility port.
+        :param vlan: VLAN.
+        :param bandwidth: bandwidth to be used, in Gbps.
+        """
         if isinstance(vlan, list):
             interfaces = []
             index = 1
