@@ -47,6 +47,10 @@ if TYPE_CHECKING:
 
 
 class FacilityPort:
+    """
+    A class for working with FABRIC facility ports.
+    """
+    
     fim_interface = None
     slice = None
 
