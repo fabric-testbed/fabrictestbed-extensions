@@ -144,6 +144,9 @@ class FacilityPort:
         return self.get_fim_interface().name
 
     def get_site(self) -> str:
+        """
+        Gets the site associated with the facility port.
+        """
         return self.fim_interface.site
 
     @staticmethod
