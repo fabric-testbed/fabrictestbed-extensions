@@ -79,6 +79,9 @@ class FacilityPort:
         return tabulate(table)
 
     def toJson(self):
+        """
+        Return a JSON representation of the facility port.
+        """
         return json.dumps(self.toDict(), indent=4)
 
     def get_pretty_name_dict(self):
@@ -87,6 +90,9 @@ class FacilityPort:
         }
 
     def toDict(self, skip=[]):
+        """
+        Return a Python `dict` representation of the facility port.
+        """
         return {"name": str(self.get_name())}
 
     def get_template_context(self):
