@@ -50,7 +50,7 @@ class FacilityPort:
     """
     A class for working with FABRIC facility ports.
     """
-    
+
     fim_interface = None
     slice = None
 
@@ -111,6 +111,9 @@ class FacilityPort:
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
+        """
+        Get a human-readable representation of the facility port.
+        """
         data = self.toDict(pretty_names=True)
 
         # fields = ["Name",
