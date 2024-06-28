@@ -1304,7 +1304,7 @@ class Interface:
             for fim_interface in self.get_fim().interface_list:
                 self.interfaces.append(
                     Interface(component=self.get_component(), fim_interface=fim_interface,
-                              model=str(InterfaceType.SubInterface))
+                              model=str(InterfaceType.SubInterface), parent=self)
                 )
 
         return self.interfaces
