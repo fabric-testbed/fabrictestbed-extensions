@@ -33,12 +33,14 @@ import ipaddress
 import json
 import logging
 from ipaddress import IPv4Address
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, List
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
-from fim.user import Labels
+from fim.user import Labels, InterfaceType
 from tabulate import tabulate
+
+from fabrictestbed_extensions.fablib.constants import Constants
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -89,6 +91,7 @@ class Interface:
         self.dev = None
         self.node = node
         self.model = model
+        self.interfaces = None
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -1278,3 +1281,66 @@ class Interface:
         """
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.account_id
+
+    def get_interfaces(self) -> List[Interface]:
+        """
+        Gets the interfaces attached to this fablib component's FABRIC component.
+
+        :return: a list of the interfaces on this component.
+        :rtype: List[Interface]
+        """
+
+        if not self.interfaces:
+            self.interfaces = []
+            for fim_interface in self.get_fim().interface_list:
+                self.interfaces.append(
+                    Interface(component=self.get_component(), fim_interface=fim_interface,
+                              model=str(InterfaceType.SubInterface))
+                )
+
+        return self.interfaces
+
+    def add_sub_interface(self, name: str, vlan: str, bw: int = 10):
+        """
+        Add a sub-interface to a dedicated NIC.
+
+        This method adds a sub-interface to a NIC (Network Interface Card) with the specified
+        name, VLAN (Virtual Local Area Network) ID, and bandwidth. It supports only specific
+        NIC models.
+
+        :param name: The name of the sub-interface.
+        :type name: str
+
+        :param vlan: The VLAN ID for the sub-interface.
+        :type vlan: str
+
+        :param bw: The bandwidth allocated to the sub-interface, in Gbps. Default is 10 Gbps.
+        :type bw: int
+
+        :raises Exception: If the NIC model does not support sub-interfaces.
+        """
+        if self.get_model() not in [Constants.CMP_NIC_ConnectX_5, Constants.CMP_NIC_ConnectX_6]:
+            raise Exception(f"Sub interfaces are only supported for the following NIC models: "
+                            f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}")
+
+        if self.get_fim():
+            self.get_fim().add_child_interface(name=name, labels=Labels(vlan=vlan, bw=bw))
+
+    def remove_sub_interface(self, name: str):
+        """
+        Remove a sub-interface from a dedicated NIC.
+
+        This method removes a sub-interface from a NIC with the specified name. It supports
+        only specific NIC models.
+
+        :param name: The name of the sub-interface to remove.
+        :type name: str
+
+        :raises Exception: If the NIC model does not support sub-interfaces.
+        """
+        if self.get_model() not in [Constants.CMP_NIC_ConnectX_5, Constants.CMP_NIC_ConnectX_6]:
+            raise Exception(f"Sub interfaces are only supported for the following NIC models: "
+                            f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}")
+
+        if self.get_fim():
+            self.get_fim().remove_child_interface(name=name)

@@ -44,6 +44,8 @@ from typing import TYPE_CHECKING
 
 import jinja2
 
+from fabrictestbed_extensions.fablib.constants import Constants
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
@@ -60,17 +62,17 @@ from tabulate import tabulate
 
 class Component:
     component_model_map = {
-        "NIC_Basic": ComponentModelType.SharedNIC_ConnectX_6,
-        "NIC_ConnectX_6": ComponentModelType.SmartNIC_ConnectX_6,
-        "NIC_ConnectX_5": ComponentModelType.SmartNIC_ConnectX_5,
-        "NIC_P4": "P4_DedicatedPort",
-        "NVME_P4510": ComponentModelType.NVME_P4510,
-        "GPU_TeslaT4": ComponentModelType.GPU_Tesla_T4,
-        "GPU_RTX6000": ComponentModelType.GPU_RTX6000,
-        "GPU_A40": ComponentModelType.GPU_A40,
-        "GPU_A30": ComponentModelType.GPU_A30,
-        "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
-        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280,
+        Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
+        Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
+        Constants.CMP_NIC_ConnectX_5: ComponentModelType.SmartNIC_ConnectX_5,
+        Constants.CMP_NIC_P4: Constants.P4_DedicatedPort,
+        Constants.CMP_NVME_P4510: ComponentModelType.NVME_P4510,
+        Constants.CMP_GPU_TeslaT4: ComponentModelType.GPU_Tesla_T4,
+        Constants.CMP_GPU_RTX6000: ComponentModelType.GPU_RTX6000,
+        Constants.CMP_GPU_A40: ComponentModelType.GPU_A40,
+        Constants.CMP_GPU_A30: ComponentModelType.GPU_A30,
+        Constants.CMP_NIC_OpenStack: ComponentModelType.SharedNIC_OpenStack_vNIC,
+        Constants.CMP_FPGA_Xilinx_U280: ComponentModelType.FPGA_Xilinx_U280,
     }
 
     def __str__(self):
@@ -448,25 +450,23 @@ class Component:
             str(self.get_type()) == "SmartNIC"
             and str(self.get_fim_model()) == "ConnectX-6"
         ):
-            return "NIC_ConnectX_6"
+            return Constants.CMP_NIC_ConnectX_6
         elif (
             str(self.get_type()) == "SmartNIC"
             and str(self.get_fim_model()) == "ConnectX-5"
         ):
-            return "NIC_ConnectX_5"
+            return Constants.CMP_NIC_ConnectX_5
         elif str(self.get_type()) == "NVME" and str(self.get_fim_model()) == "P4510":
-            return "NVME_P4510"
+            return Constants.CMP_NVME_P4510
         elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "Tesla T4":
-            return "GPU_TeslaT4"
+            return Constants.CMP_GPU_TeslaT4
         elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "RTX6000":
-            return "GPU_RTX6000"
+            return Constants.CMP_GPU_RTX6000
         elif (
             str(self.get_type()) == "SharedNIC"
             and str(self.get_fim_model()) == "ConnectX-6"
         ):
-            return "NIC_Basic"
-        else:
-            return None
+            return Constants.CMP_NIC_Basic
 
     def get_reservation_id(self) -> str or None:
         """
