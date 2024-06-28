@@ -139,6 +139,9 @@ class FacilityPort:
         return self.fim_interface
 
     def get_model(self) -> str:
+        """
+        Get fablib model name for the facility port.
+        """
         return "Facility_Port"
 
     def get_name(self) -> str:
