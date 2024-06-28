@@ -85,6 +85,9 @@ class FacilityPort:
         return json.dumps(self.toDict(), indent=4)
 
     def get_pretty_name_dict(self):
+        """
+        Return a mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
         }
