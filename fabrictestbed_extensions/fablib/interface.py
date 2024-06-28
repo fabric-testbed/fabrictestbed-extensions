@@ -727,8 +727,7 @@ class Interface:
         :return: Shortened name of the interface.
         :rtype: str
         """
-        interface_type = self.get_type()
-        if interface_type and interface_type == str(InterfaceType.SubInterface):
+        if self.parent:
             return self.get_name()
 
         # Strip off the extra parts of the name added by FIM
