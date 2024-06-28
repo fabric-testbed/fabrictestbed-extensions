@@ -1332,8 +1332,11 @@ class Interface:
             child_interface.set_properties(capacities=child_if_capacities)
             if not self.interfaces:
                 self.interfaces = []
-            self.interfaces.append(Interface(component=self.get_component(), fim_interface=child_interface,
-                                             model=str(InterfaceType.SubInterface)))
+
+            ch_iface = Interface(component=self.get_component(), fim_interface=child_interface,
+                                 model=str(InterfaceType.SubInterface))
+            self.interfaces.append(ch_iface)
+            return ch_iface
 
     def remove_sub_interface(self, name: str):
         """
