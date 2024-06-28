@@ -1324,7 +1324,14 @@ class Interface:
                             f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}")
 
         if self.get_fim():
-            self.get_fim().add_child_interface(name=name, labels=Labels(vlan=vlan, bw=bw))
+            child_interface = self.get_fim().add_child_interface(name=name, labels=Labels(vlan=vlan))
+            child_if_capacities = child_interface.get_property(pname="capacities")
+            child_if_capacities.bw = int(bw)
+            child_interface.set_properties(capacities=child_if_capacities)
+            if not self.interfaces:
+                self.interfaces = []
+            self.interfaces.append(Interface(component=self.get_component(), fim_interface=child_interface,
+                                             model=str(InterfaceType.SubInterface)))
 
     def remove_sub_interface(self, name: str):
         """
