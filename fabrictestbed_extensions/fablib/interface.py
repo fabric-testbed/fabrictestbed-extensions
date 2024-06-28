@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any, Union, List
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
-from fim.user import Labels, InterfaceType
+from fim.user import Labels, InterfaceType, Capacities
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -1326,6 +1326,8 @@ class Interface:
         if self.get_fim():
             child_interface = self.get_fim().add_child_interface(name=name, labels=Labels(vlan=vlan))
             child_if_capacities = child_interface.get_property(pname="capacities")
+            if not child_if_capacities:
+                child_if_capacities = Capacities()
             child_if_capacities.bw = int(bw)
             child_interface.set_properties(capacities=child_if_capacities)
             if not self.interfaces:
