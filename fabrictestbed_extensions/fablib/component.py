@@ -319,9 +319,12 @@ class Component:
         self.node = node
         self.interfaces = None
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(self, exclude_sub_interfaces: bool = False) -> List[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
+
+        :param exclude_sub_interfaces: Flag indicating if Sub interfaces should be included
+        :type exclude_sub_interfaces: bool
 
         :return: a list of the interfaces on this component.
         :rtype: List[Interface]
@@ -334,9 +337,10 @@ class Component:
             for fim_interface in self.get_fim_component().interface_list:
                 iface = Interface(component=self, fim_interface=fim_interface)
                 self.interfaces.append(iface)
-                child_interfaces = iface.get_interfaces()
-                if child_interfaces and len(child_interfaces):
-                    self.interfaces.extend(child_interfaces)
+                if not exclude_sub_interfaces:
+                    child_interfaces = iface.get_interfaces()
+                    if child_interfaces and len(child_interfaces):
+                        self.interfaces.extend(child_interfaces)
 
         return self.interfaces
 
