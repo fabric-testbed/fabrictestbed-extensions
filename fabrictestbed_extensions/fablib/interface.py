@@ -112,6 +112,7 @@ class Interface:
 
         table = [
             ["Name", self.get_name()],
+            ["Type", self.get_type()],
             ["Network", network_name],
             ["Bandwidth", self.get_bandwidth()],
             ["Mode", self.get_mode()],
@@ -159,6 +160,7 @@ class Interface:
         return {
             "name": "Name",
             "short_name": "Short Name",
+            "type": "Type",
             "node": "Node",
             "network": "Network",
             "bandwidth": "Bandwidth",
@@ -216,6 +218,7 @@ class Interface:
         return {
             "name": str(self.get_name()),
             "short_name": str(self.get_short_name()),
+            "type": str(self.get_type()),
             "node": str(node_name),
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
@@ -722,6 +725,10 @@ class Interface:
         :return: Shortened name of the interface.
         :rtype: str
         """
+        interface_type = self.get_type()
+        if interface_type and interface_type == str(InterfaceType.SubInterface):
+            return self.get_name()
+
         # Strip off the extra parts of the name added by FIM
         prefix_length = len(
             f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"
@@ -1356,3 +1363,12 @@ class Interface:
 
         if self.get_fim():
             self.get_fim().remove_child_interface(name=name)
+
+    def get_type(self) -> str:
+        """
+        Get Interface type
+        :return: get interface type
+        :rtype: String
+        """
+        if self.get_fim():
+            return self.get_fim().type
