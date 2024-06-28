@@ -68,6 +68,7 @@ class Interface:
         fim_interface: FimInterface = None,
         node: Union[Switch, FacilityPort] = None,
         model: str = None,
+        parent: Interface = None
     ):
         """
         .. note::
@@ -92,6 +93,7 @@ class Interface:
         self.node = node
         self.model = model
         self.interfaces = None
+        self.parent = parent
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -112,7 +114,6 @@ class Interface:
 
         table = [
             ["Name", self.get_name()],
-            ["Type", self.get_type()],
             ["Network", network_name],
             ["Bandwidth", self.get_bandwidth()],
             ["Mode", self.get_mode()],
@@ -160,7 +161,6 @@ class Interface:
         return {
             "name": "Name",
             "short_name": "Short Name",
-            "type": "Type",
             "node": "Node",
             "network": "Network",
             "bandwidth": "Bandwidth",
@@ -218,7 +218,6 @@ class Interface:
         return {
             "name": str(self.get_name()),
             "short_name": str(self.get_short_name()),
-            "type": str(self.get_type()),
             "node": str(node_name),
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
@@ -454,7 +453,10 @@ class Interface:
         :rtype: String
         """
         try:
-            mac = self.get_fim_interface().get_property(pname="label_allocations").mac
+            if self.parent:
+                mac = self.parent.get_mac()
+            else:
+                mac = self.get_fim_interface().get_property(pname="label_allocations").mac
         except:
             mac = None
 
