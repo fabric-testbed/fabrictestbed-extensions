@@ -99,6 +99,9 @@ class FacilityPort:
         return {"name": str(self.get_name())}
 
     def get_template_context(self):
+        """
+        TODO: when/why to use this method?
+        """
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
