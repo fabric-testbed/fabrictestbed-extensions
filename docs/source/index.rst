@@ -118,10 +118,10 @@ above.  Currently, contents of the configuration file will override
 values set using environment variables.
 
 
-FABLib classes
+FABLib modules
 --------------
 
-Most of FABLib's functionality comes wrapped in these classes:
+FABLib functionality is made available in these modules:
 
 .. toctree::
    :maxdepth: 1
