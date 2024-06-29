@@ -136,6 +136,13 @@ class FacilityPort:
         return table
 
     def get_fim_interface(self) -> FimNode:
+        """
+        .. warning::
+            Not recommended for most users.
+
+        Gets the node's FABRIC Information Model (fim) object.  This
+        method is used to access data at a lower level than FABlib.
+        """
         return self.fim_interface
 
     def get_model(self) -> str:
