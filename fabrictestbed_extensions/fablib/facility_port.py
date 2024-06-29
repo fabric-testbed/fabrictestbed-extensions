@@ -165,6 +165,7 @@ class FacilityPort:
     def get_name(self) -> str:
         """
         Gets the name of the FABRIC node.
+
         :return: the name of the node
         :rtype: String
         """
