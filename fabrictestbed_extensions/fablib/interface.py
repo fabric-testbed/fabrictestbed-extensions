@@ -824,6 +824,13 @@ class Interface:
         return return_ips
 
     def get_fim(self):
+        """
+        .. warning::
+
+            Not recommended for most users.
+
+        Get FABRIC Information Model (fim) object for the interface.
+        """
         return self.get_fim_interface()
 
     def set_user_data(self, user_data: dict):
