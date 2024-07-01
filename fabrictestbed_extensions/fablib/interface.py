@@ -959,6 +959,11 @@ class Interface:
         return True
 
     def config(self):
+        """
+        Configure the interface.
+
+        Called when a `.Node` is configured.
+        """
         network = self.get_network()
         if not network:
             logging.info(
