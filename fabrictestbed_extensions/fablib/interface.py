@@ -87,6 +87,9 @@ class Interface:
         self.node = node
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager` instance.
+        """
         return self.get_slice().get_fablib_manager()
 
     def __str__(self):
