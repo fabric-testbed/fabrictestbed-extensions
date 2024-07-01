@@ -948,6 +948,9 @@ class Interface:
         return fablib_data[self.MODE]
 
     def is_configured(self):
+        """
+        Return `True` if the interface is configured.
+        """
         fablib_data = self.get_fablib_data()
         is_configured = fablib_data.get(self.CONFIGURED)
         if is_configured is None or not bool(is_configured):
