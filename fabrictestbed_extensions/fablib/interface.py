@@ -891,7 +891,7 @@ class Interface:
 
         :param addr: address to be set, as `IPv4Address` or an
             `IPv6Address`.
-        :param mode: `"auto"` or `"manual"`.
+        :param mode: `"auto"`, `"manual"`, or `"config"`.
         """
         fablib_data = self.get_fablib_data()
         if mode:
@@ -925,6 +925,11 @@ class Interface:
             return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
+        """
+        Set the interface's configuration mode.
+
+        :param mode: `"auto"`, `"manual"`, or `"config"`.
+        """
         fablib_data = self.get_fablib_data()
         fablib_data[self.MODE] = mode
         self.set_fablib_data(fablib_data)
@@ -932,6 +937,9 @@ class Interface:
         return self
 
     def get_mode(self):
+        """
+        Get the interface's configuration mode.
+        """
         fablib_data = self.get_fablib_data()
         if self.MODE not in fablib_data:
             self.set_mode(self.CONFIG)
