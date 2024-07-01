@@ -754,6 +754,9 @@ class Interface:
             logging.warning(f"{e}")
 
     def get_ip_addr_show(self, dev=None):
+        """
+        Get the result of running `ip -j addr show` on the interface.
+        """
         try:
             if not dev:
                 dev = self.get_device_name()
