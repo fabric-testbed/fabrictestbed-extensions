@@ -870,6 +870,13 @@ class Interface:
         self.set_user_data(user_data)
 
     def set_network(self, network: NetworkService):
+        """
+        Associate a network with the interface.
+
+        Any existing network will be replaced by the new one.
+
+        :param network: a :py:class:`.NetworkService` object.
+        """
         current_network = self.get_network()
         if current_network:
             current_network.remove_interface(self)
