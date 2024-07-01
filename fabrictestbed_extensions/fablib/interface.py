@@ -633,6 +633,9 @@ class Interface:
             return ""
 
     def get_short_name(self):
+        """
+        Get short name for the interface.
+        """
         # strip of the extra parts of the name added by fim
         return self.get_name()[
             len(
