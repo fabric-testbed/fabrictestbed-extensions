@@ -586,6 +586,9 @@ class Interface:
         return vlan
 
     def get_reservation_id(self) -> str or None:
+        """
+        Get reservation ID for the interface.
+        """
         try:
             # TODO THIS DOESNT WORK.
             # print(f"{self.get_fim_interface()}")
