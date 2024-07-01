@@ -209,6 +209,9 @@ class Interface:
         }
 
     def get_numa_node(self) -> str:
+        """
+        Get NUMA node assoicated with the interface.
+        """
         if self.get_component() is not None:
             return self.get_component().get_numa_node()
 
