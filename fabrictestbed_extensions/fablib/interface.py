@@ -886,6 +886,13 @@ class Interface:
         return self
 
     def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
+        """
+        Set IP address.
+
+        :param addr: address to be set, as `IPv4Address` or an
+            `IPv6Address`.
+        :param mode: `"auto"` or `"manual"`.
+        """
         fablib_data = self.get_fablib_data()
         if mode:
             fablib_data[self.MODE] = str(mode)
