@@ -908,6 +908,9 @@ class Interface:
         return self
 
     def get_ip_addr(self):
+        """
+        Get IP address for the interface.
+        """
         fablib_data = self.get_fablib_data()
         if self.ADDR in fablib_data:
             try:
