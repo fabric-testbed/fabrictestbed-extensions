@@ -283,6 +283,9 @@ class Interface:
         return table
 
     def set_auto_config(self):
+        """
+        Set interface to auto-configure.
+        """
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=True)
         # fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
@@ -296,6 +299,9 @@ class Interface:
         # fim_iface.set_properties(labels=if_labels)
 
     def unset_auto_config(self):
+        """
+        Unset auto-configuration flag on the interface.
+        """
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
