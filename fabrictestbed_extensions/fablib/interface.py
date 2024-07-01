@@ -1018,6 +1018,9 @@ class Interface:
         )
 
     def delete(self):
+        """
+        Delete the interface.
+        """
         net = self.get_network()
 
         net.remove_interface(self)
