@@ -1005,6 +1005,12 @@ class Interface:
             pass
 
     def add_mirror(self, port_name: str, name: str = "mirror"):
+        """
+        Add port mirroring service to the interface.
+
+        :param port_name: Name of the port being mirrored.
+        :param name: Name of the mirror. Default is `"mirror"`.
+        """
         self.get_slice().get_fim_topology().add_port_mirror_service(
             name=name,
             from_interface_name=port_name,
