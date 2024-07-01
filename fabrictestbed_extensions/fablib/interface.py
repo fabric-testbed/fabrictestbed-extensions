@@ -1204,6 +1204,8 @@ class Interface:
         net = self.get_network()
         if net:
             net.remove_interface(self)
+            if self.parent and self.parent.get_fim():
+                self.parent.get_fim().remove_child_interface(name=self.get_name())
 
     def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
@@ -1345,25 +1347,6 @@ class Interface:
                                  model=str(InterfaceType.SubInterface))
             self.interfaces.append(ch_iface)
             return ch_iface
-
-    def remove_sub_interface(self, name: str):
-        """
-        Remove a sub-interface from a dedicated NIC.
-
-        This method removes a sub-interface from a NIC with the specified name. It supports
-        only specific NIC models.
-
-        :param name: The name of the sub-interface to remove.
-        :type name: str
-
-        :raises Exception: If the NIC model does not support sub-interfaces.
-        """
-        if self.get_model() not in [Constants.CMP_NIC_ConnectX_5, Constants.CMP_NIC_ConnectX_6]:
-            raise Exception(f"Sub interfaces are only supported for the following NIC models: "
-                            f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}")
-
-        if self.get_fim():
-            self.get_fim().remove_child_interface(name=name)
 
     def get_type(self) -> str:
         """
