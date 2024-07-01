@@ -132,6 +132,9 @@ class Interface:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return a mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
             "short_name": "Short Name",
