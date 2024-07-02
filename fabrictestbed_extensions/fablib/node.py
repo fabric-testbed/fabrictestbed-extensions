@@ -3069,9 +3069,7 @@ class Node:
 
     def run_update_commands(self):
         """
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Returns `True` if `run_update_commands` flag is set.
         """
         fablib_data = self.get_fablib_data()
         if fablib_data["run_update_commands"] == "True":
