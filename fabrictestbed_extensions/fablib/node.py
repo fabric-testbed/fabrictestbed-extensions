@@ -83,6 +83,10 @@ from fabrictestbed_extensions.fablib.interface import Interface
 
 
 class Node:
+    """
+    A class for working with FABRIC nodes.
+    """
+
     default_cores = 2
     default_ram = 8
     default_disk = 10
