@@ -923,36 +923,51 @@ class Slice:
 
         L2 networks types include:
 
-        - L2Bridge: a local Ethernet on a single site with unlimited interfaces.
-        - L2STS: a wide-area Ethernet on exactly two sites with unlimited interfaces.
-            Includes best effort performance and cannot, yet, support Basic NICs
-            residing on a single physical.
-        - L2PTP: a wide-area Ethernet on exactly two sites with exactly two interfaces.
-            QoS performance guarantees (coming soon!). Does not support Basic NICs.
-            Traffic arrives with VLAN tag and requires the node OS to configure
-            a VLAN interface.
+            - L2Bridge: a local Ethernet on a single site with
+              unlimited interfaces.
 
-        If the type argument is not set, FABlib will automatically choose the
-        L2 network type for you. In most cases the automatic network type is
-        the one you want. You can force a specific network type by setting the
-        type parameter to "L2Bridge", "L2STS", or "L2PTP".
+            - L2STS: a wide-area Ethernet on exactly two sites with
+              unlimited interfaces.  Includes best effort performance
+              and cannot, yet, support Basic NICs residing on a single
+              physical.
 
-        An exception will be raised if the set interfaces is not compatible
-        with the specified network type or if there is not compatible network
-        type for the given interface list.
+            - L2PTP: a wide-area Ethernet on exactly two sites with
+              exactly two interfaces.  QoS performance guarantees
+              (coming soon!).  Does not support Basic NICs.  Traffic
+              arrives with VLAN tag and requires the node OS to
+              configure a VLAN interface.
+
+        If the type argument is not set, FABlib will automatically
+        choose the L2 network type for you.  In most cases the
+        automatic network type is the one you want.  You can force a
+        specific network type by setting the type parameter to
+        "L2Bridge", "L2STS", or "L2PTP".
+
+        An exception will be raised if the set interfaces is not
+        compatible with the specified network type or if there is not
+        compatible network type for the given interface list.
 
         :param name: the name of the network service
         :type name: String
-        :param interfaces: a list of interfaces to build the network with
+
+        :param interfaces: a list of interfaces to build the network
+            with
         :type interfaces: List[Interface]
-        :param type: optional L2 network type "L2Bridge", "L2STS", or "L2PTP"
+
+        :param type: optional L2 network type "L2Bridge", "L2STS", or
+            "L2PTP"
         :type type: String
+
         :param subnet:
         :type subnet: ipaddress
+
         :param gateway:
         :type gateway: ipaddress
+
         :param user_data
+
         :type user_data: dict
+
         :return: a new L2 network service
         :rtype: NetworkService
         """
