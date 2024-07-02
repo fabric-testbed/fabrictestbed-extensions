@@ -2790,9 +2790,7 @@ class Node:
 
     def init_fablib_data(self):
         """
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Initialize fablib data.  Called by :py:meth:`new_node()`.
         """
         fablib_data = {
             "instantiated": "False",
@@ -2804,9 +2802,7 @@ class Node:
 
     def get_fablib_data(self):
         """
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Get fablib data. Usually used internally.
         """
         try:
             return self.get_user_data()["fablib_data"]
@@ -2815,9 +2811,7 @@ class Node:
 
     def set_fablib_data(self, fablib_data: dict):
         """
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Set fablib data. Usually used internally.
         """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
