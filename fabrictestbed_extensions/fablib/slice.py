@@ -996,40 +996,48 @@ class Slice:
 
         L3 networks types include:
 
-        - IPv4: An IPv4 network on the FABNetv4 internet
-        - IPv6: An IPv6 network on the FABNetv6 internet
+            - IPv4: An IPv4 network on the FABNetv4 internet
+
+            - IPv6: An IPv6 network on the FABNetv6 internet
 
         The FABNet networks are internal IP internets that span the
-        FABRIC testbed.  Adding a new L3 network to your FABRIC slice creates
-        an isolated network at a single site.  FABRIC issues each isolated
-        L3 network with an IP subnet (either IPv4 or IPv6) and a gateway used
-        to route traffic to the FABNet internet.
+        FABRIC testbed.  Adding a new L3 network to your FABRIC slice
+        creates an isolated network at a single site.  FABRIC issues
+        each isolated L3 network with an IP subnet (either IPv4 or
+        IPv6) and a gateway used to route traffic to the FABNet
+        internet.
 
-        Like the public Internet, all FABNet networks can send traffic to all
-        other FABnet networks of the same type. In other words, FABNet networks
-        can be used to communicate between your slices and slices owned by
-        other users.
+        Like the public Internet, all FABNet networks can send traffic
+        to all other FABnet networks of the same type.  In other
+        words, FABNet networks can be used to communicate between your
+        slices and slices owned by other users.
 
-        An exception will be raised if the set interfaces is not from a single
-        FABRIC site.  If you want to use L3 networks to connect slices that
-        are distributed across many site, you need to create a separate L3
-        network for each site.
+        An exception will be raised if the set interfaces is not from
+        a single FABRIC site.  If you want to use L3 networks to
+        connect slices that are distributed across many site, you need
+        to create a separate L3 network for each site.
 
-        It is important to note that by all nodes come with a default gateway
-        on a management network that use used to access your nodes (i.e. to
-        accept ssh connections).  To use an L3 dataplane network, you will need
-        to add routes to your nodes that selectively route traffic across the
-        new dataplane network. You must be careful to maintain the default
-        gateway settings if you want to be able to access the node using the
+        It is important to note that by all nodes come with a default
+        gateway on a management network that use used to access your
+        nodes (i.e. to accept ssh connections).  To use an L3
+        dataplane network, you will need to add routes to your nodes
+        that selectively route traffic across the new dataplane
+        network.  You must be careful to maintain the default gateway
+        settings if you want to be able to access the node using the
         management network.
 
         :param name: the name of the network service
         :type name: String
-        :param interfaces: a list of interfaces to build the network with
+
+        :param interfaces: a list of interfaces to build the network
+            with
         :type interfaces: List[Interface]
+
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
+
         :param user_data
+
         :type user_data: dict
 
         :return: a new L3 network service
