@@ -3037,9 +3037,7 @@ class Node:
 
     def is_instantiated(self):
         """
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Returns `True` if the node has been instantiated.
         """
         fablib_data = self.get_fablib_data()
         if "instantiated" not in fablib_data:
