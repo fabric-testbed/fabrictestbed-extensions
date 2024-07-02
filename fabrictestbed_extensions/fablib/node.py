@@ -1218,11 +1218,7 @@ class Node:
         self, private_key_file: str = None, get_private_key_passphrase: str = None
     ) -> paramiko.PKey:
         """
-        Get SSH pubkey for internal use.
-
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Get SSH pubkey, for internal use.
 
         :return: an SSH pubkey.
         :rtype: paramiko.PKey
