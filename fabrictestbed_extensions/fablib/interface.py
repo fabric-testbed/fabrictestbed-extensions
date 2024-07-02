@@ -111,7 +111,7 @@ class Interface:
             ["VLAN", self.get_vlan()],
             ["MAC", self.get_mac()],
             ["Physical Device", self.get_physical_os_interface_name()],
-            ["Device", self.get_os_interface()],
+            ["Device", self.get_device_name()],
             ["Address", self.get_ip_addr()],
             ["Numa Node", self.get_numa_node()],
         ]
@@ -177,7 +177,7 @@ class Interface:
         if self.get_node() and str(self.get_node().get_reservation_state()) == "Active":
             mac = str(self.get_mac())
             physical_dev = str(self.get_physical_os_interface_name())
-            dev = str(self.get_os_interface())
+            dev = str(self.get_device_name())
             ip_addr = str(self.get_ip_addr())
         else:
             mac = ""
@@ -316,30 +316,29 @@ class Interface:
         """
         try:
             fablib_data = self.get_fablib_data()
-            if "dev" in fablib_data:
-                return fablib_data["dev"]
+            if "dev" in fablib_data and fablib_data.get("dev"):
+                return fablib_data.get("dev")
             else:
                 # logging.debug(f"iface: {self}")
                 os_iface = self.get_physical_os_interface_name()
                 vlan = self.get_vlan()
 
                 fablib_data["base_dev"] = os_iface
-                if vlan is not None:
+
+                if os_iface and vlan:
                     os_iface = f"{os_iface}.{vlan}"
 
                 fablib_data["dev"] = os_iface
 
-                self.set_fablib_data(fablib_data)
+                if os_iface:
+                    self.set_fablib_data(fablib_data)
+            return os_iface
 
-        except:
-            os_iface = None
-
-        return os_iface
+        except Exception as e:
+            logging.error(f"get_device_name: error occurred - e: {e}")
 
     def get_os_interface(self) -> str:
         """
-        Deprecated: see interface.get_device_name()
-
         Gets a name of the interface the operating system uses for this
         FABLib interface.
 
@@ -348,6 +347,9 @@ class Interface:
 
         :return: OS interface name
         :rtype: String
+
+        .. deprecated:: 1.6.5
+           Use `get_device_name()` instead.
         """
         try:
             # logging.debug(f"iface: {self}")
@@ -719,8 +721,8 @@ class Interface:
 
             links = json.loads(stdout)
 
-            dev = self.get_os_interface()
-            if dev == None:
+            dev = self.get_device_name()
+            if dev is None:
                 return links
 
             for link in links:
@@ -733,7 +735,7 @@ class Interface:
     def get_ip_addr_show(self, dev=None):
         try:
             if not dev:
-                dev = self.get_os_interface()
+                dev = self.get_device_name()
 
             stdout, stderr = self.get_node().execute(
                 f"ip -j addr show {dev}", quiet=True
@@ -757,7 +759,7 @@ class Interface:
 
             addrs = json.loads(stdout)
 
-            dev = self.get_os_interface()
+            dev = self.get_device_name()
             # print(f"dev: {dev}")
 
             if dev is None:
@@ -782,14 +784,12 @@ class Interface:
         """
         return_ips = []
         try:
-            dev = self.get_os_interface()
-
             ip_addr = self.get_ip_addr()
 
             # print(f"{ip_addr}")
 
             for addr_info in ip_addr["addr_info"]:
-                if family == None:
+                if family is None:
                     return_ips.append(addr_info["local"])
                 else:
                     if addr_info["family"] == family:
