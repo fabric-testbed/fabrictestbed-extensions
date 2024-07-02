@@ -99,20 +99,9 @@ class FacilityPort:
         return {"name": str(self.get_name())}
 
     def get_template_context(self):
-        """
-        TODO: when/why to use this method?
-        """
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
-        """
-        TODO: what is render_template() actually for?  What is the
-        input_string parameter?
-
-        The only usage of render_template() I could find is in
-        fabric_examples/fablib_api/post_boot_task_templates/post_boot_task_templates.ipynb,
-        but it is not clear to me what it does.
-        """
         environment = jinja2.Environment()
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
