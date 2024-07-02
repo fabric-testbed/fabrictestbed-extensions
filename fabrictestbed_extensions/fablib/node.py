@@ -3059,9 +3059,7 @@ class Node:
 
     def set_instantiated(self, instantiated: bool = True):
         """
-        .. warning::
-
-            This method is for fablib internal use, and will be made private in the future.
+        Mark node as instantiated. Called by :py:meth:`config()`.
         """
         fablib_data = self.get_fablib_data()
         fablib_data["instantiated"] = str(instantiated)
