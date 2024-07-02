@@ -2766,6 +2766,9 @@ class Node:
         return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
 
     def get_fim(self):
+        """
+        Get FABRIC Information Model (fim) object for the node.
+        """
         return self.get_fim_node()
 
     def set_user_data(self, user_data: dict):
