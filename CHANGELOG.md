@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - create_ssh_config adds extra indentation (Issue [#300](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/300))
 - Remove duplicate Node.delete() method (Issue [#321](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321))
 
+## Added
+- Missing docstrings in facility_port module (Issue [#312](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/312))
+
 ## [1.6.4] - 2024-03-05
 
 ### Fixed

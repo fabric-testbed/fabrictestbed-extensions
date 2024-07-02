@@ -47,6 +47,10 @@ if TYPE_CHECKING:
 
 
 class FacilityPort:
+    """
+    A class for working with FABRIC facility ports.
+    """
+
     fim_interface = None
     slice = None
 
@@ -75,14 +79,23 @@ class FacilityPort:
         return tabulate(table)
 
     def toJson(self):
+        """
+        Return a JSON representation of the facility port.
+        """
         return json.dumps(self.toDict(), indent=4)
 
     def get_pretty_name_dict(self):
+        """
+        Return a mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
         }
 
     def toDict(self, skip=[]):
+        """
+        Return a Python `dict` representation of the facility port.
+        """
         return {"name": str(self.get_name())}
 
     def get_template_context(self):
@@ -98,6 +111,9 @@ class FacilityPort:
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
+        """
+        Get a human-readable representation of the facility port.
+        """
         data = self.toDict(pretty_names=True)
 
         # fields = ["Name",
@@ -120,20 +136,34 @@ class FacilityPort:
         return table
 
     def get_fim_interface(self) -> FimNode:
+        """
+        .. warning::
+            Not recommended for most users.
+
+        Gets the node's FABRIC Information Model (fim) object.  This
+        method is used to access data at a lower level than FABlib.
+        """
         return self.fim_interface
 
     def get_model(self) -> str:
+        """
+        Get fablib model name for the facility port.
+        """
         return "Facility_Port"
 
     def get_name(self) -> str:
         """
         Gets the name of the FABRIC node.
+
         :return: the name of the node
         :rtype: String
         """
         return self.get_fim_interface().name
 
     def get_site(self) -> str:
+        """
+        Gets the site associated with the facility port.
+        """
         return self.fim_interface.site
 
     @staticmethod
@@ -144,6 +174,18 @@ class FacilityPort:
         vlan: Union[str, list] = None,
         bandwidth: int = 10,
     ):
+        """
+        Create a new facility port.
+
+        You might want to :py:meth:`Slice.add_facility_port()`, in
+        most cases.
+
+        :param Slice: Slice associated with the facility port.
+        :param name: name of the facility port.
+        :param site: site associated with the facility port.
+        :param vlan: VLAN.
+        :param bandwidth: bandwidth to be used, in Gbps.
+        """
         if isinstance(vlan, list):
             interfaces = []
             index = 1
