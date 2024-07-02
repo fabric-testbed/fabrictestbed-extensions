@@ -2981,9 +2981,10 @@ class Node:
 
     def run_post_boot_tasks(self, log_dir: str = "."):
         """
-        .. warning::
+        Run post-boot tasks.  Called by :py:meth:`config()`.
 
-            This method is for fablib internal use, and will be made private in the future.
+        Post-boot tasks are list of commands associated with
+        `post_boot_tasks` in fablib data.
         """
         logging.debug(f"run_post_boot_tasks: {self.get_name()}")
         fablib_data = self.get_fablib_data()
