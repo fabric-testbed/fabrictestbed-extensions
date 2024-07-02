@@ -3020,9 +3020,10 @@ class Node:
 
     def run_post_update_commands(self, log_dir: str = "."):
         """
-        .. warning::
+        Run post-update commands.  Called by :py:meth:`config()`.
 
-            This method is for fablib internal use, and will be made private in the future.
+        Post-update commands are list of commands associated with
+        `post_update_commands` in fablib data.
         """
         fablib_data = self.get_fablib_data()
         if "post_update_commands" in fablib_data:
