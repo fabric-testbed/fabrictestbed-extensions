@@ -83,6 +83,10 @@ from fabrictestbed_extensions.fablib.interface import Interface
 
 
 class Node:
+    """
+    A class for working with FABRIC nodes.
+    """
+
     default_cores = 2
     default_ram = 8
     default_disk = 10
@@ -121,6 +125,9 @@ class Node:
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
         return self.slice.get_fablib_manager()
 
     def __str__(self):
@@ -230,6 +237,11 @@ class Node:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return mappings from non-pretty names to pretty names.
+
+        Pretty names are in table headers.
+        """
         return {
             "id": "ID",
             "name": "Name",
@@ -648,6 +660,9 @@ class Node:
         )
 
     def get_networks(self):
+        """
+        Get a list of networks attached to the node.
+        """
         networks = []
         for interface in self.get_interfaces():
             networks.append(interface.get_network())
@@ -1206,6 +1221,12 @@ class Node:
     def get_paramiko_key(
         self, private_key_file: str = None, get_private_key_passphrase: str = None
     ) -> paramiko.PKey:
+        """
+        Get SSH pubkey, for internal use.
+
+        :return: an SSH pubkey.
+        :rtype: paramiko.PKey
+        """
         # TODO: This is a bit of a hack and should probably test he keys for their types
         # rather than relying on execptions
         if get_private_key_passphrase:
@@ -2749,26 +2770,43 @@ class Node:
         return Component.new_storage(node=self, name=name, auto_mount=auto_mount)
 
     def get_fim(self):
+        """
+        Get FABRIC Information Model (fim) object for the node.
+        """
         return self.get_fim_node()
 
     def set_user_data(self, user_data: dict):
+        """
+        Set user data.
+
+        :param user_data: a `dict`.
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
     def get_user_data(self):
+        """
+        Get user data.
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except:
             return {}
 
     def delete(self):
+        """
+        Remove the node, including components connected to it.
+        """
         for component in self.get_components():
             component.delete()
 
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
 
     def init_fablib_data(self):
+        """
+        Initialize fablib data.  Called by :py:meth:`new_node()`.
+        """
         fablib_data = {
             "instantiated": "False",
             "run_update_commands": "False",
@@ -2778,12 +2816,18 @@ class Node:
         self.set_fablib_data(fablib_data)
 
     def get_fablib_data(self):
+        """
+        Get fablib data. Usually used internally.
+        """
         try:
             return self.get_user_data()["fablib_data"]
         except:
             return {}
 
     def set_fablib_data(self, fablib_data: dict):
+        """
+        Set fablib data. Usually used internally.
+        """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
@@ -2900,12 +2944,22 @@ class Node:
             return []
 
     def get_routes(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         try:
             return self.get_fablib_data()["routes"]
         except Exception as e:
             return []
 
     def config_routes(self):
+        """
+        .. warning::
+
+            This method is for fablib internal use, and will be made private in the future.
+        """
         routes = self.get_routes()
 
         for route in routes:
@@ -2931,6 +2985,12 @@ class Node:
             self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
 
     def run_post_boot_tasks(self, log_dir: str = "."):
+        """
+        Run post-boot tasks.  Called by :py:meth:`config()`.
+
+        Post-boot tasks are list of commands associated with
+        `post_boot_tasks` in fablib data.
+        """
         logging.debug(f"run_post_boot_tasks: {self.get_name()}")
         fablib_data = self.get_fablib_data()
         if "post_boot_tasks" in fablib_data:
@@ -2965,6 +3025,12 @@ class Node:
                 logging.error(f"Invalid post boot command: {command}")
 
     def run_post_update_commands(self, log_dir: str = "."):
+        """
+        Run post-update commands.  Called by :py:meth:`config()`.
+
+        Post-update commands are list of commands associated with
+        `post_update_commands` in fablib data.
+        """
         fablib_data = self.get_fablib_data()
         if "post_update_commands" in fablib_data:
             commands = fablib_data["post_update_commands"]
@@ -2977,6 +3043,9 @@ class Node:
             )
 
     def is_instantiated(self):
+        """
+        Returns `True` if the node has been instantiated.
+        """
         fablib_data = self.get_fablib_data()
         if "instantiated" not in fablib_data:
             logging.debug(
@@ -2996,11 +3065,17 @@ class Node:
             return False
 
     def set_instantiated(self, instantiated: bool = True):
+        """
+        Mark node as instantiated. Called by :py:meth:`config()`.
+        """
         fablib_data = self.get_fablib_data()
         fablib_data["instantiated"] = str(instantiated)
         self.set_fablib_data(fablib_data)
 
     def run_update_commands(self):
+        """
+        Returns `True` if `run_update_commands` flag is set.
+        """
         fablib_data = self.get_fablib_data()
         if fablib_data["run_update_commands"] == "True":
             return True
@@ -3008,6 +3083,9 @@ class Node:
             return False
 
     def set_run_update_commands(self, run_update_commands: bool = True):
+        """
+        Set `run_update_commands` flag.
+        """
         fablib_data = self.get_fablib_data()
         fablib_data["run_update_commands"] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
