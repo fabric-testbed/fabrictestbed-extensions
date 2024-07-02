@@ -3078,6 +3078,9 @@ class Node:
             return False
 
     def set_run_update_commands(self, run_update_commands: bool = True):
+        """
+        Set `run_update_commands` flag.
+        """
         fablib_data = self.get_fablib_data()
         fablib_data["run_update_commands"] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
