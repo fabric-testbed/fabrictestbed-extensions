@@ -1204,8 +1204,8 @@ class Interface:
         net = self.get_network()
         if net:
             net.remove_interface(self)
-            if self.parent and self.parent.get_fim():
-                self.parent.get_fim().remove_child_interface(name=self.get_name())
+        if self.parent and self.parent.get_fim():
+            self.parent.get_fim().remove_child_interface(name=self.get_name())
 
     def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
