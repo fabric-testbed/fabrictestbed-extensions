@@ -33,11 +33,11 @@ import ipaddress
 import json
 import logging
 from ipaddress import IPv4Address
-from typing import TYPE_CHECKING, Any, Union, List
+from typing import TYPE_CHECKING, Any, List, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
-from fim.user import Labels, InterfaceType, Capacities
+from fim.user import Capacities, InterfaceType, Labels
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -68,7 +68,7 @@ class Interface:
         fim_interface: FimInterface = None,
         node: Union[Switch, FacilityPort] = None,
         model: str = None,
-        parent: Interface = None
+        parent: Interface = None,
     ):
         """
         .. note::
@@ -456,7 +456,9 @@ class Interface:
             if self.parent:
                 mac = self.parent.get_mac()
             else:
-                mac = self.get_fim_interface().get_property(pname="label_allocations").mac
+                mac = (
+                    self.get_fim_interface().get_property(pname="label_allocations").mac
+                )
         except:
             mac = None
 
@@ -1304,8 +1306,12 @@ class Interface:
             self.interfaces = []
             for fim_interface in self.get_fim().interface_list:
                 self.interfaces.append(
-                    Interface(component=self.get_component(), fim_interface=fim_interface,
-                              model=str(InterfaceType.SubInterface), parent=self)
+                    Interface(
+                        component=self.get_component(),
+                        fim_interface=fim_interface,
+                        model=str(InterfaceType.SubInterface),
+                        parent=self,
+                    )
                 )
 
         return self.interfaces
@@ -1329,12 +1335,19 @@ class Interface:
 
         :raises Exception: If the NIC model does not support sub-interfaces.
         """
-        if self.get_model() not in [Constants.CMP_NIC_ConnectX_5, Constants.CMP_NIC_ConnectX_6]:
-            raise Exception(f"Sub interfaces are only supported for the following NIC models: "
-                            f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}")
+        if self.get_model() not in [
+            Constants.CMP_NIC_ConnectX_5,
+            Constants.CMP_NIC_ConnectX_6,
+        ]:
+            raise Exception(
+                f"Sub interfaces are only supported for the following NIC models: "
+                f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}"
+            )
 
         if self.get_fim():
-            child_interface = self.get_fim().add_child_interface(name=name, labels=Labels(vlan=vlan))
+            child_interface = self.get_fim().add_child_interface(
+                name=name, labels=Labels(vlan=vlan)
+            )
             child_if_capacities = child_interface.get_property(pname="capacities")
             if not child_if_capacities:
                 child_if_capacities = Capacities()
@@ -1343,8 +1356,11 @@ class Interface:
             if not self.interfaces:
                 self.interfaces = []
 
-            ch_iface = Interface(component=self.get_component(), fim_interface=child_interface,
-                                 model=str(InterfaceType.SubInterface))
+            ch_iface = Interface(
+                component=self.get_component(),
+                fim_interface=child_interface,
+                model=str(InterfaceType.SubInterface),
+            )
             self.interfaces.append(ch_iface)
             return ch_iface
 

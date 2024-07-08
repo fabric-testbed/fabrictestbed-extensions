@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Unreleased
 
 ### Fixed
+- Sub Interface Support (Issue [#350](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/350))
 - Advanced reservations (Issue [#345](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/345))
 - Port Mirroring with Basic NICs (Issue [#343](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/343))
 - P4 support (Issue [#340](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/340))
