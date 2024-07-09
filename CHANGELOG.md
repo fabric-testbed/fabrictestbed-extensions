@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove duplicate Node.delete() method (Issue [#321](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321))
 
 ## Added
+- Missing docstrings in interface module (Issue [#313](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/313))
 - Missing docstrings in facility_port module (Issue [#312](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/312))
 - Missing docstrings in node module (Issue [#318](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/318))
 - Sub Interface Support (Issue [#350](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/350))

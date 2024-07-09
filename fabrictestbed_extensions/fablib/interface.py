@@ -96,6 +96,9 @@ class Interface:
         self.parent = parent
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager` instance.
+        """
         return self.get_slice().get_fablib_manager()
 
     def __str__(self):
@@ -158,6 +161,9 @@ class Interface:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return a mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
             "short_name": "Short Name",
@@ -672,10 +678,14 @@ class Interface:
 
     def get_reservation_id(self) -> str or None:
         """
+<<<<<<< HEAD
         Gets the reservation id
 
         :return: reservation id
         :rtype: String
+=======
+        Get reservation ID for the interface.
+>>>>>>> 324ed47901d2ee19a7738aba30cc79fb027b17e3
         """
         try:
             return (
@@ -1035,7 +1045,7 @@ class Interface:
 
         :param addr: The IP address to assign to the interface (optional).
         :type addr: ipaddress.IPv4Address or ipaddress.IPv6Address, optional
-        :param mode: The mode for IP address allocation, e.g., 'AUTO' (optional).
+        :param mode: The mode for IP address allocation, e.g., `"auto"`, `"manual"`, or `"config"`.
         :type mode: str, optional
         :return: The current instance with the updated IP address.
         :rtype: self
@@ -1087,7 +1097,7 @@ class Interface:
         dictionary. The mode determines the configuration behavior of the
         interface.
 
-        :param mode: The mode to set for the interface (default is "config").
+        :param mode: The mode to set for the interface (default is "config"). Allowed values: `"auto"`, `"manual"`, or `"config"`..
         :type mode: str
         :return: The current instance with the updated mode.
         :rtype: self
@@ -1136,7 +1146,7 @@ class Interface:
 
     def config(self):
         """
-        Configure the interface based on its mode and network settings.
+        Configure the interface based on its mode and network settings. Called when a `.Node` is configured.
 
         This method configures the interface by setting its IP address and
         bringing it up. It checks the configuration mode and acts accordingly:
@@ -1190,7 +1200,6 @@ class Interface:
         :type vlan: String
         :param name: Name of the Port Mirror service
         :type name: String
-
         """
         self.get_slice().get_fim_topology().add_port_mirror_service(
             name=name,
