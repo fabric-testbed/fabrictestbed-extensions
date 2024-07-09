@@ -790,6 +790,9 @@ class NetworkService:
         return self.get_slice().get_fablib_manager()
 
     def get_site(self) -> str or None:
+        """
+        Gets site name on network service.
+        """
         try:
             return self.get_sliver().fim_sliver.site
         except Exception as e:
