@@ -784,6 +784,9 @@ class NetworkService:
         return self.slice
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
         return self.get_slice().get_fablib_manager()
 
     def get_site(self) -> str or None:
