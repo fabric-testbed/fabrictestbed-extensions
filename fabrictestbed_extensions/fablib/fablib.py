@@ -676,27 +676,30 @@ class FablibManager(Config):
 
     def validate_config(self):
         """
-        Validate and create Fablib config - checks if all the required configuration exists for slice
-        provisioning to work successfully
+        Validate and create Fablib config - checks if all the required
+        configuration exists for slice provisioning to work
+        successfully
 
-        - Checks Credential Manager Host is configured properly
+            - Checks Credential Manager Host is configured properly
 
-        - Checks Orchestrator Host is configured properly
+            - Checks Orchestrator Host is configured properly
 
-        - Checks Core API Host is configured properly
+            - Checks Core API Host is configured properly
 
-        - Checks Bastion Host is configured properly
+            - Checks Bastion Host is configured properly
 
-        - Check Sliver keys exist; create sliver keys if they do not exist
+            - Check Sliver keys exist; create sliver keys if they do
+              not exist
 
-        - Check Bastion keys exist and are not expired; update/create bastion keys if expired or do not exist
+            - Check Bastion keys exist and are not expired;
+              update/create bastion keys if expired or do not exist
 
-        - Check Bastion Username is configured
+            - Check Bastion Username is configured
 
-        - Check Project Id is configured
+            - Check Project Id is configured
 
-        .. deprecated:: 1.6.5
-           Use `verify_and_configure()` instead.
+        .. deprecated:: 1.6.5 Use `verify_and_configure()` instead.
+
         @raises Exception if the configuration is invalid
         """
         warnings.warn(
