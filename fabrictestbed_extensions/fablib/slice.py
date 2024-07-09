@@ -923,36 +923,51 @@ class Slice:
 
         L2 networks types include:
 
-        - L2Bridge: a local Ethernet on a single site with unlimited interfaces.
-        - L2STS: a wide-area Ethernet on exactly two sites with unlimited interfaces.
-            Includes best effort performance and cannot, yet, support Basic NICs
-            residing on a single physical.
-        - L2PTP: a wide-area Ethernet on exactly two sites with exactly two interfaces.
-            QoS performance guarantees (coming soon!). Does not support Basic NICs.
-            Traffic arrives with VLAN tag and requires the node OS to configure
-            a VLAN interface.
+            - L2Bridge: a local Ethernet on a single site with
+              unlimited interfaces.
 
-        If the type argument is not set, FABlib will automatically choose the
-        L2 network type for you. In most cases the automatic network type is
-        the one you want. You can force a specific network type by setting the
-        type parameter to "L2Bridge", "L2STS", or "L2PTP".
+            - L2STS: a wide-area Ethernet on exactly two sites with
+              unlimited interfaces.  Includes best effort performance
+              and cannot, yet, support Basic NICs residing on a single
+              physical.
 
-        An exception will be raised if the set interfaces is not compatible
-        with the specified network type or if there is not compatible network
-        type for the given interface list.
+            - L2PTP: a wide-area Ethernet on exactly two sites with
+              exactly two interfaces.  QoS performance guarantees
+              (coming soon!).  Does not support Basic NICs.  Traffic
+              arrives with VLAN tag and requires the node OS to
+              configure a VLAN interface.
+
+        If the type argument is not set, FABlib will automatically
+        choose the L2 network type for you.  In most cases the
+        automatic network type is the one you want.  You can force a
+        specific network type by setting the type parameter to
+        "L2Bridge", "L2STS", or "L2PTP".
+
+        An exception will be raised if the set interfaces is not
+        compatible with the specified network type or if there is not
+        compatible network type for the given interface list.
 
         :param name: the name of the network service
         :type name: String
-        :param interfaces: a list of interfaces to build the network with
+
+        :param interfaces: a list of interfaces to build the network
+            with
         :type interfaces: List[Interface]
-        :param type: optional L2 network type "L2Bridge", "L2STS", or "L2PTP"
+
+        :param type: optional L2 network type "L2Bridge", "L2STS", or
+            "L2PTP"
         :type type: String
+
         :param subnet:
         :type subnet: ipaddress
+
         :param gateway:
         :type gateway: ipaddress
+
         :param user_data
+
         :type user_data: dict
+
         :return: a new L2 network service
         :rtype: NetworkService
         """
@@ -981,40 +996,48 @@ class Slice:
 
         L3 networks types include:
 
-        - IPv4: An IPv4 network on the FABNetv4 internet
-        - IPv6: An IPv6 network on the FABNetv6 internet
+            - IPv4: An IPv4 network on the FABNetv4 internet
+
+            - IPv6: An IPv6 network on the FABNetv6 internet
 
         The FABNet networks are internal IP internets that span the
-        FABRIC testbed.  Adding a new L3 network to your FABRIC slice creates
-        an isolated network at a single site.  FABRIC issues each isolated
-        L3 network with an IP subnet (either IPv4 or IPv6) and a gateway used
-        to route traffic to the FABNet internet.
+        FABRIC testbed.  Adding a new L3 network to your FABRIC slice
+        creates an isolated network at a single site.  FABRIC issues
+        each isolated L3 network with an IP subnet (either IPv4 or
+        IPv6) and a gateway used to route traffic to the FABNet
+        internet.
 
-        Like the public Internet, all FABNet networks can send traffic to all
-        other FABnet networks of the same type. In other words, FABNet networks
-        can be used to communicate between your slices and slices owned by
-        other users.
+        Like the public Internet, all FABNet networks can send traffic
+        to all other FABnet networks of the same type.  In other
+        words, FABNet networks can be used to communicate between your
+        slices and slices owned by other users.
 
-        An exception will be raised if the set interfaces is not from a single
-        FABRIC site.  If you want to use L3 networks to connect slices that
-        are distributed across many site, you need to create a separate L3
-        network for each site.
+        An exception will be raised if the set interfaces is not from
+        a single FABRIC site.  If you want to use L3 networks to
+        connect slices that are distributed across many site, you need
+        to create a separate L3 network for each site.
 
-        It is important to note that by all nodes come with a default gateway
-        on a management network that use used to access your nodes (i.e. to
-        accept ssh connections).  To use an L3 dataplane network, you will need
-        to add routes to your nodes that selectively route traffic across the
-        new dataplane network. You must be careful to maintain the default
-        gateway settings if you want to be able to access the node using the
+        It is important to note that by all nodes come with a default
+        gateway on a management network that use used to access your
+        nodes (i.e. to accept ssh connections).  To use an L3
+        dataplane network, you will need to add routes to your nodes
+        that selectively route traffic across the new dataplane
+        network.  You must be careful to maintain the default gateway
+        settings if you want to be able to access the node using the
         management network.
 
         :param name: the name of the network service
         :type name: String
-        :param interfaces: a list of interfaces to build the network with
+
+        :param interfaces: a list of interfaces to build the network
+            with
         :type interfaces: List[Interface]
+
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
+
         :param user_data
+
         :type user_data: dict
 
         :return: a new L3 network service
