@@ -114,7 +114,7 @@ class FacilityPort:
         """
         Get a human-readable representation of the facility port.
         """
-        data = self.toDict(pretty_names=True)
+        data = self.toDict()
 
         # fields = ["Name",
         #         ]
