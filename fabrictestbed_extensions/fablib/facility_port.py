@@ -168,14 +168,14 @@ class FacilityPort:
 
     @staticmethod
     def new_facility_port(
-            slice: Slice = None,
-            name: str = None,
-            site: str = None,
-            vlan: Union[List, str] = None,
-            bandwidth: int = 10,
-            labels: Labels = None,
-            peer_labels: Labels = None,
-            capacities: Capacities = None,
+        slice: Slice = None,
+        name: str = None,
+        site: str = None,
+        vlan: Union[List, str] = None,
+        bandwidth: int = 10,
+        labels: Labels = None,
+        peer_labels: Labels = None,
+        capacities: Capacities = None,
     ) -> FacilityPort:
         """
         Create a new facility port in the given slice.

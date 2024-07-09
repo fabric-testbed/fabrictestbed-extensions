@@ -678,14 +678,14 @@ class Interface:
 
     def get_reservation_id(self) -> str or None:
         """
-<<<<<<< HEAD
-        Gets the reservation id
+        <<<<<<< HEAD
+                Gets the reservation id
 
-        :return: reservation id
-        :rtype: String
-=======
-        Get reservation ID for the interface.
->>>>>>> 324ed47901d2ee19a7738aba30cc79fb027b17e3
+                :return: reservation id
+                :rtype: String
+        =======
+                Get reservation ID for the interface.
+        >>>>>>> 324ed47901d2ee19a7738aba30cc79fb027b17e3
         """
         try:
             return (
