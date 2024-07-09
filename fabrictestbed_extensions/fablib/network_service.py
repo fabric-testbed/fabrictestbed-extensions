@@ -54,6 +54,10 @@ from fim.user.network_service import MirrorDirection
 
 
 class NetworkService:
+    """
+    A class for working with FABRIC network services.
+    """
+
     network_service_map = {
         "L2Bridge": ServiceType.L2Bridge,
         "L2PTP": ServiceType.L2PTP,
