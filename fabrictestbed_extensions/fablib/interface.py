@@ -33,12 +33,14 @@ import ipaddress
 import json
 import logging
 from ipaddress import IPv4Address
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, List, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
-from fim.user import Labels
+from fim.user import Capacities, InterfaceType, Labels
 from tabulate import tabulate
+
+from fabrictestbed_extensions.fablib.constants import Constants
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -66,6 +68,7 @@ class Interface:
         fim_interface: FimInterface = None,
         node: Union[Switch, FacilityPort] = None,
         model: str = None,
+        parent: Interface = None,
     ):
         """
         .. note::
@@ -89,6 +92,8 @@ class Interface:
         self.dev = None
         self.node = node
         self.model = model
+        self.interfaces = None
+        self.parent = parent
 
     def get_fablib_manager(self):
         return self.get_slice().get_fablib_manager()
@@ -448,7 +453,12 @@ class Interface:
         :rtype: String
         """
         try:
-            mac = self.get_fim_interface().get_property(pname="label_allocations").mac
+            if self.parent:
+                mac = self.parent.get_mac()
+            else:
+                mac = (
+                    self.get_fim_interface().get_property(pname="label_allocations").mac
+                )
         except:
             mac = None
 
@@ -719,6 +729,9 @@ class Interface:
         :return: Shortened name of the interface.
         :rtype: str
         """
+        if self.parent:
+            return self.get_name()
+
         # Strip off the extra parts of the name added by FIM
         prefix_length = len(
             f"{self.get_node().get_name()}-{self.get_component().get_short_name()}-"
@@ -1193,6 +1206,8 @@ class Interface:
         net = self.get_network()
         if net:
             net.remove_interface(self)
+        if self.parent and self.parent.get_fim():
+            self.parent.get_fim().remove_child_interface(name=self.get_name())
 
     def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
@@ -1278,3 +1293,82 @@ class Interface:
         """
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.account_id
+
+    def get_interfaces(self) -> List[Interface]:
+        """
+        Gets the interfaces attached to this fablib component's FABRIC component.
+
+        :return: a list of the interfaces on this component.
+        :rtype: List[Interface]
+        """
+
+        if not self.interfaces:
+            self.interfaces = []
+            for fim_interface in self.get_fim().interface_list:
+                self.interfaces.append(
+                    Interface(
+                        component=self.get_component(),
+                        fim_interface=fim_interface,
+                        model=str(InterfaceType.SubInterface),
+                        parent=self,
+                    )
+                )
+
+        return self.interfaces
+
+    def add_sub_interface(self, name: str, vlan: str, bw: int = 10):
+        """
+        Add a sub-interface to a dedicated NIC.
+
+        This method adds a sub-interface to a NIC (Network Interface Card) with the specified
+        name, VLAN (Virtual Local Area Network) ID, and bandwidth. It supports only specific
+        NIC models.
+
+        :param name: The name of the sub-interface.
+        :type name: str
+
+        :param vlan: The VLAN ID for the sub-interface.
+        :type vlan: str
+
+        :param bw: The bandwidth allocated to the sub-interface, in Gbps. Default is 10 Gbps.
+        :type bw: int
+
+        :raises Exception: If the NIC model does not support sub-interfaces.
+        """
+        if self.get_model() not in [
+            Constants.CMP_NIC_ConnectX_5,
+            Constants.CMP_NIC_ConnectX_6,
+        ]:
+            raise Exception(
+                f"Sub interfaces are only supported for the following NIC models: "
+                f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}"
+            )
+
+        if self.get_fim():
+            child_interface = self.get_fim().add_child_interface(
+                name=name, labels=Labels(vlan=vlan)
+            )
+            child_if_capacities = child_interface.get_property(pname="capacities")
+            if not child_if_capacities:
+                child_if_capacities = Capacities()
+            child_if_capacities.bw = int(bw)
+            child_interface.set_properties(capacities=child_if_capacities)
+            if not self.interfaces:
+                self.interfaces = []
+
+            ch_iface = Interface(
+                component=self.get_component(),
+                fim_interface=child_interface,
+                model=str(InterfaceType.SubInterface),
+            )
+            self.interfaces.append(ch_iface)
+            return ch_iface
+
+    def get_type(self) -> str:
+        """
+        Get Interface type
+        :return: get interface type
+        :rtype: String
+        """
+        if self.get_fim():
+            return self.get_fim().type

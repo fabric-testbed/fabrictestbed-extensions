@@ -1024,16 +1024,19 @@ class Node:
         except:
             return ""
 
-    def get_interfaces(self) -> List[Interface] or None:
+    def get_interfaces(self, include_subs: bool = True) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
 
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
         interfaces = []
         for component in self.get_components():
-            for interface in component.get_interfaces():
+            for interface in component.get_interfaces(include_subs=include_subs):
                 interfaces.append(interface)
 
         return interfaces
