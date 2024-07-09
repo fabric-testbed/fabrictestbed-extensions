@@ -829,6 +829,9 @@ class NetworkService:
             return None
 
     def get_sliver(self) -> OrchestratorSliver:
+        """
+        Gets the sliver.
+        """
         if not self.sliver and self.slice.isStable():
             self.sliver = self.slice.get_sliver(
                 reservation_id=self.get_reservation_id()
