@@ -87,6 +87,9 @@ class Interface:
         self.node = node
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager` instance.
+        """
         return self.get_slice().get_fablib_manager()
 
     def __str__(self):
@@ -129,6 +132,9 @@ class Interface:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return a mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
             "short_name": "Short Name",
@@ -203,6 +209,9 @@ class Interface:
         }
 
     def get_numa_node(self) -> str:
+        """
+        Get NUMA node assoicated with the interface.
+        """
         if self.get_component() is not None:
             return self.get_component().get_numa_node()
 
@@ -274,6 +283,9 @@ class Interface:
         return table
 
     def set_auto_config(self):
+        """
+        Set interface to auto-configure.
+        """
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=True)
         # fim_iface.labels = Labels.update(fim_iface.labels, ipv4.... )
@@ -287,6 +299,9 @@ class Interface:
         # fim_iface.set_properties(labels=if_labels)
 
     def unset_auto_config(self):
+        """
+        Unset auto-configuration flag on the interface.
+        """
         fim_iface = self.get_fim_interface()
         fim_iface.flags = Flags(auto_config=False)
 
@@ -571,6 +586,9 @@ class Interface:
         return vlan
 
     def get_reservation_id(self) -> str or None:
+        """
+        Get reservation ID for the interface.
+        """
         try:
             # TODO THIS DOESNT WORK.
             # print(f"{self.get_fim_interface()}")
@@ -615,6 +633,9 @@ class Interface:
             return ""
 
     def get_short_name(self):
+        """
+        Get short name for the interface.
+        """
         # strip of the extra parts of the name added by fim
         return self.get_name()[
             len(
@@ -733,6 +754,9 @@ class Interface:
             logging.warning(f"{e}")
 
     def get_ip_addr_show(self, dev=None):
+        """
+        Get the result of running `ip -j addr show` on the interface.
+        """
         try:
             if not dev:
                 dev = self.get_device_name()
@@ -800,31 +824,59 @@ class Interface:
         return return_ips
 
     def get_fim(self):
+        """
+        .. warning::
+
+            Not recommended for most users.
+
+        Get FABRIC Information Model (fim) object for the interface.
+        """
         return self.get_fim_interface()
 
     def set_user_data(self, user_data: dict):
+        """
+        Set user data on the interface.
+
+        :param user_data: a `dict`.
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
     def get_user_data(self):
+        """
+        Get user data on the interface.
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except Exception as e:
             return {}
 
     def get_fablib_data(self):
+        """
+        Get value associated with `fablib_data` key of user data.
+        """
         try:
             return self.get_user_data()["fablib_data"]
         except:
             return {}
 
     def set_fablib_data(self, fablib_data: dict):
+        """
+        Set value associated with `fablib_data` key of user data.
+        """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
 
     def set_network(self, network: NetworkService):
+        """
+        Associate a network with the interface.
+
+        Any existing network will be replaced by the new one.
+
+        :param network: a :py:class:`.NetworkService` object.
+        """
         current_network = self.get_network()
         if current_network:
             current_network.remove_interface(self)
@@ -834,6 +886,13 @@ class Interface:
         return self
 
     def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
+        """
+        Set IP address.
+
+        :param addr: address to be set, as `IPv4Address` or an
+            `IPv6Address`.
+        :param mode: `"auto"`, `"manual"`, or `"config"`.
+        """
         fablib_data = self.get_fablib_data()
         if mode:
             fablib_data[self.MODE] = str(mode)
@@ -849,6 +908,9 @@ class Interface:
         return self
 
     def get_ip_addr(self):
+        """
+        Get IP address for the interface.
+        """
         fablib_data = self.get_fablib_data()
         if self.ADDR in fablib_data:
             try:
@@ -863,6 +925,11 @@ class Interface:
             return self.get_ip_addr_ssh()
 
     def set_mode(self, mode: str = "config"):
+        """
+        Set the interface's configuration mode.
+
+        :param mode: `"auto"`, `"manual"`, or `"config"`.
+        """
         fablib_data = self.get_fablib_data()
         fablib_data[self.MODE] = mode
         self.set_fablib_data(fablib_data)
@@ -870,6 +937,9 @@ class Interface:
         return self
 
     def get_mode(self):
+        """
+        Get the interface's configuration mode.
+        """
         fablib_data = self.get_fablib_data()
         if self.MODE not in fablib_data:
             self.set_mode(self.CONFIG)
@@ -878,6 +948,9 @@ class Interface:
         return fablib_data[self.MODE]
 
     def is_configured(self):
+        """
+        Return `True` if the interface is configured.
+        """
         fablib_data = self.get_fablib_data()
         is_configured = fablib_data.get(self.CONFIGURED)
         if is_configured is None or not bool(is_configured):
@@ -886,6 +959,11 @@ class Interface:
         return True
 
     def config(self):
+        """
+        Configure the interface.
+
+        Called when a `.Node` is configured.
+        """
         network = self.get_network()
         if not network:
             logging.info(
@@ -927,6 +1005,12 @@ class Interface:
             pass
 
     def add_mirror(self, port_name: str, name: str = "mirror"):
+        """
+        Add port mirroring service to the interface.
+
+        :param port_name: Name of the port being mirrored.
+        :param name: Name of the mirror. Default is `"mirror"`.
+        """
         self.get_slice().get_fim_topology().add_port_mirror_service(
             name=name,
             from_interface_name=port_name,
@@ -934,6 +1018,9 @@ class Interface:
         )
 
     def delete(self):
+        """
+        Delete the interface.
+        """
         net = self.get_network()
 
         net.remove_interface(self)
