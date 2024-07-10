@@ -1066,6 +1066,9 @@ class NetworkService:
         return False
 
     def get_fim(self):
+        """
+        Gets the FABRIC information model (FIM) object.
+        """
         return self.get_fim_network_service()
 
     def set_user_data(self, user_data: dict):
