@@ -1617,6 +1617,7 @@ class Slice:
         if end_date is None and days is None:
             raise Exception("Either end_date or days must be specified!")
 
+        '''
         if days is not None:
             end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
                 "%Y-%m-%d %H:%M:%S %z"
@@ -1630,6 +1631,13 @@ class Slice:
             raise Exception(
                 "Failed to renew slice: {}, {}".format(return_status, result)
             )
+        '''
+
+        if end_date is not None:
+            end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
+            days = (end - datetime.now(timezone.utc)).days
+
+        self.submit(lease_in_days=days)
 
     def build_error_exception_string(self) -> str:
         """
@@ -2199,14 +2207,32 @@ class Slice:
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
 
+        lease_start_time_str = None
+        if lease_start_time:
+            lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
+
+        lease_end_time = None
+        if lease_in_days:
+            start_time = (
+                lease_start_time if lease_end_time else datetime.now(timezone.utc)
+            )
+            lease_end_time = (start_time + timedelta(days=lease_in_days)).strftime(
+                "%Y-%m-%d %H:%M:%S %z"
+            )
+
         # Request slice from Orchestrator
         if self._is_modify():
-            (
-                return_status,
-                slice_reservations,
-            ) = self.fablib_manager.get_slice_manager().modify(
-                slice_id=self.slice_id, slice_graph=slice_graph
-            )
+            if lease_in_days:
+                return_status, result = self.fablib_manager.get_slice_manager().renew(
+                    slice_object=self.sm_slice, new_lease_end_time=lease_end_time
+                )
+            else:
+                (
+                    return_status,
+                    slice_reservations,
+                ) = self.fablib_manager.get_slice_manager().modify(
+                    slice_id=self.slice_id, slice_graph=slice_graph
+                )
         else:
             # retrieve and validate SSH keys
             ssh_keys = list()
@@ -2225,19 +2251,6 @@ class Slice:
             for ssh_key in ssh_keys:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
-
-            lease_start_time_str = None
-            if lease_start_time:
-                lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
-
-            lease_end_time = None
-            if lease_in_days:
-                start_time = (
-                    lease_start_time if lease_end_time else datetime.now(timezone.utc)
-                )
-                lease_end_time = (start_time + timedelta(days=lease_in_days)).strftime(
-                    "%Y-%m-%d %H:%M:%S %z"
-                )
 
             (
                 return_status,
