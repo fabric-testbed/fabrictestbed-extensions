@@ -346,7 +346,7 @@ class Interface:
 
         :return: None
         """
-        fim_iface = self.get_fim_interface()
+        fim_iface = self.get_fim()
         fim_iface.flags = Flags(auto_config=True)
 
     def unset_auto_config(self):
@@ -359,7 +359,7 @@ class Interface:
 
         :return: None
         """
-        fim_iface = self.get_fim_interface()
+        fim_iface = self.get_fim()
         fim_iface.flags = Flags(auto_config=False)
 
     def get_peer_port_name(self) -> str or None:
@@ -386,7 +386,7 @@ class Interface:
         """
         vlan = self.get_vlan()
         if not vlan:
-            label_allocations = self.get_fim_interface().get_property(
+            label_allocations = self.get_fim().get_property(
                 pname="label_allocations"
             )
             if label_allocations:
@@ -463,7 +463,7 @@ class Interface:
                 mac = self.parent.get_mac()
             else:
                 mac = (
-                    self.get_fim_interface().get_property(pname="label_allocations").mac
+                    self.get_fim().get_property(pname="label_allocations").mac
                 )
         except:
             mac = None
@@ -613,9 +613,9 @@ class Interface:
         if vlan:
             vlan = str(vlan)
 
-        if_labels = self.get_fim_interface().get_property(pname="labels")
+        if_labels = self.get_fim().get_property(pname="labels")
         if_labels.vlan = str(vlan)
-        self.get_fim_interface().set_properties(labels=if_labels)
+        self.get_fim().set_properties(labels=if_labels)
 
         return self
 
@@ -629,9 +629,9 @@ class Interface:
         if not bw:
             return
 
-        if_capacities = self.get_fim_interface().get_property(pname="capacities")
+        if_capacities = self.get_fim().get_property(pname="capacities")
         if_capacities.bw = int(bw)
-        self.get_fim_interface().set_properties(capacities=if_capacities)
+        self.get_fim().set_properties(capacities=if_capacities)
 
         return self
 
@@ -660,8 +660,8 @@ class Interface:
         """
         if self.get_component() and self.get_component().get_model() == "NIC_Basic":
             return 100
-        else:
-            return self.get_fim_interface().capacities.bw
+        elif self.get_fim():
+            return self.get_fim().capacities.bw
 
     def get_vlan(self) -> str:
         """
@@ -671,25 +671,21 @@ class Interface:
         :rtype: String
         """
         try:
-            vlan = self.get_fim_interface().get_property(pname="labels").vlan
+            vlan = self.get_fim().get_property(pname="labels").vlan
         except:
             vlan = None
         return vlan
 
     def get_reservation_id(self) -> str or None:
         """
-        <<<<<<< HEAD
-                Gets the reservation id
+        Gets the reservation id
 
-                :return: reservation id
-                :rtype: String
-        =======
-                Get reservation ID for the interface.
-        >>>>>>> 324ed47901d2ee19a7738aba30cc79fb027b17e3
+        :return: reservation id
+        :rtype: String
         """
         try:
             return (
-                self.get_fim_interface()
+                self.get_fim()
                 .get_property(pname="reservation_info")
                 .reservation_id
             )
@@ -705,7 +701,7 @@ class Interface:
         """
         try:
             return (
-                self.get_fim_interface()
+                self.get_fim()
                 .get_property(pname="reservation_info")
                 .reservation_state
             )
@@ -721,7 +717,7 @@ class Interface:
         """
         try:
             return (
-                self.get_fim_interface()
+                self.get_fim()
                 .get_property(pname="reservation_info")
                 .error_message
             )
@@ -755,7 +751,7 @@ class Interface:
         :return: the name of this interface
         :rtype: String
         """
-        return self.get_fim_interface().name
+        return self.get_fim().name
 
     def get_component(self) -> Component:
         """
@@ -1205,7 +1201,7 @@ class Interface:
             name=name,
             from_interface_name=port_name,
             from_interface_vlan=vlan,
-            to_interface=self.get_fim_interface(),
+            to_interface=self.get_fim(),
         )
 
     def delete(self):
