@@ -660,7 +660,7 @@ class Interface:
         """
         if self.get_component() and self.get_component().get_model() == "NIC_Basic":
             return 100
-        elif self.get_fim():
+        elif self.get_fim() and self.get_fim().capacities:
             return self.get_fim().capacities.bw
 
     def get_vlan(self) -> str:
