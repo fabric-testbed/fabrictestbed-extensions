@@ -680,6 +680,7 @@ class FablibManager(Config):
         self.links = None
         self.facility_ports = None
         self.auto_token_refresh = auto_token_refresh
+        self.last_resources_filtered_by_time = False
 
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
@@ -1497,7 +1498,15 @@ Host * !bastion.fabric-testbed.net
         :return: the resources object
         :rtype: Resources
         """
-        if not self.resources:
+        if not update:
+            if start or end:
+                update = True
+                self.last_resources_filtered_by_time = True
+            elif self.last_resources_filtered_by_time:
+                update = True
+                self.last_resources_filtered_by_time = False
+
+        if not self.resources or start or end:
             self.get_available_resources(
                 update=update,
                 force_refresh=force_refresh,
