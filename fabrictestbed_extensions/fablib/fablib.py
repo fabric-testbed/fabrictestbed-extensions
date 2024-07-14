@@ -1506,17 +1506,14 @@ Host * !bastion.fabric-testbed.net
                 update = True
                 self.last_resources_filtered_by_time = False
 
-        if not self.resources or start or end:
-            self.get_available_resources(
-                update=update,
-                force_refresh=force_refresh,
-                start=start,
-                end=end,
-                avoid=avoid,
-                includes=includes,
-            )
-
-        return self.resources
+        return self.get_available_resources(
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
+        )
 
     def get_random_site(
         self, avoid: List[str] = [], filter_function=None, update: bool = True
