@@ -173,9 +173,9 @@ class FacilityPort:
         site: str = None,
         vlan: Union[List, str] = None,
         bandwidth: int = 10,
+        mtu: int = None,
         labels: Labels = None,
         peer_labels: Labels = None,
-        capacities: Capacities = None,
     ) -> FacilityPort:
         """
         Create a new facility port in the given slice.
@@ -188,15 +188,16 @@ class FacilityPort:
         :param site: The site where the facility port will be located.
         :param vlan: A list or single string representing the VLANs for the facility port.
         :param bandwidth: The bandwidth capacity for the facility port, default is 10.
+        :param mtu: MTU size
         :param labels: Labels associated with the facility port.
         :param peer_labels: Peer labels associated with the facility port.
-        :param capacities: The capacities object representing the bandwidth capacities.
         :return: A FacilityPort object representing the created facility port.
         """
-        if capacities is None:
-            if not bandwidth:
-                bandwidth = 10
-            capacities = Capacities(bw=bandwidth)
+        if not bandwidth:
+            bandwidth = 10
+        capacities = Capacities(bw=bandwidth)
+        if mtu:
+            capacities.mtu = mtu
 
         interfaces = None
 

@@ -1096,7 +1096,8 @@ class Slice:
         vlan: Union[str, list] = None,
         labels: Labels = None,
         peer_labels: Labels = None,
-        capacities: Capacities = None,
+        bandwidth: int = 10,
+        mtu: int = None,
     ) -> FacilityPort:
         """
         Adds a new L2 facility port to this slice
@@ -1111,8 +1112,10 @@ class Slice:
         :type: labels: Labels
         :param peer_labels: peer labels for the facility port such as VLAN, ip sub net, bgp key - used for AL2S Peering
         :type: peer_labels: Labels
-        :param capacities: capacities for the facility port such as bandwidth
-        :type: capacities: Capacities
+        :param bandwidth: bandwidth
+        :type: bandwidth: int
+        :param mtu: MTU size
+        :type: mtu: int
         :return: a new L2 facility port
         :rtype: NetworkService
         """
@@ -1123,7 +1126,8 @@ class Slice:
             vlan=vlan,
             labels=labels,
             peer_labels=peer_labels,
-            capacities=capacities,
+            bandwidth=bandwidth,
+            mtu=mtu
         )
 
     def add_node(
