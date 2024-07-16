@@ -1097,7 +1097,7 @@ class Slice:
         labels: Labels = None,
         peer_labels: Labels = None,
         capacities: Capacities = None,
-    ) -> NetworkService:
+    ) -> FacilityPort:
         """
         Adds a new L2 facility port to this slice
 
@@ -1616,22 +1616,6 @@ class Slice:
         """
         if end_date is None and days is None:
             raise Exception("Either end_date or days must be specified!")
-
-        '''
-        if days is not None:
-            end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
-                "%Y-%m-%d %H:%M:%S %z"
-            )
-
-        return_status, result = self.fablib_manager.get_slice_manager().renew(
-            slice_object=self.sm_slice, new_lease_end_time=end_date
-        )
-
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to renew slice: {}, {}".format(return_status, result)
-            )
-        '''
 
         if end_date is not None:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
