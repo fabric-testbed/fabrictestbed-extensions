@@ -1127,7 +1127,7 @@ class Slice:
             labels=labels,
             peer_labels=peer_labels,
             bandwidth=bandwidth,
-            mtu=mtu
+            mtu=mtu,
         )
 
     def add_node(

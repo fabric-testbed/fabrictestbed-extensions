@@ -386,9 +386,7 @@ class Interface:
         """
         vlan = self.get_vlan()
         if not vlan:
-            label_allocations = self.get_fim().get_property(
-                pname="label_allocations"
-            )
+            label_allocations = self.get_fim().get_property(pname="label_allocations")
             if label_allocations:
                 return label_allocations.vlan
 
@@ -462,9 +460,7 @@ class Interface:
             if self.parent:
                 mac = self.parent.get_mac()
             else:
-                mac = (
-                    self.get_fim().get_property(pname="label_allocations").mac
-                )
+                mac = self.get_fim().get_property(pname="label_allocations").mac
         except:
             mac = None
 
@@ -684,11 +680,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return (
-                self.get_fim()
-                .get_property(pname="reservation_info")
-                .reservation_id
-            )
+            return self.get_fim().get_property(pname="reservation_info").reservation_id
         except:
             return None
 
@@ -701,9 +693,7 @@ class Interface:
         """
         try:
             return (
-                self.get_fim()
-                .get_property(pname="reservation_info")
-                .reservation_state
+                self.get_fim().get_property(pname="reservation_info").reservation_state
             )
         except:
             return None
@@ -716,11 +706,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return (
-                self.get_fim()
-                .get_property(pname="reservation_info")
-                .error_message
-            )
+            return self.get_fim().get_property(pname="reservation_info").error_message
         except:
             return ""
 
