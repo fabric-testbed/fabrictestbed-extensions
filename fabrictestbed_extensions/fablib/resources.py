@@ -623,7 +623,7 @@ class Resources:
         :return: The FIM of the resources.
         :rtype: AdvertisedTopology
         """
-        return self.get_fim()
+        return self.get_fim(update=update)
 
     def get_fim(self, update: bool = False) -> AdvertisedTopology:
         """
