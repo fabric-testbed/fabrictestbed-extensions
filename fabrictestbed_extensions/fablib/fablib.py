@@ -68,14 +68,16 @@ import json
 import logging
 import os
 import random
-import time
+import traceback
 import warnings
+
+from fabrictestbed_extensions.fablib.site import Host, Site
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import pandas as pd
 import paramiko
@@ -89,6 +91,7 @@ from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
+    from fabrictestbed_extensions.fablib.node import Node
 
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
@@ -140,6 +143,16 @@ class fablib:
         :rtype: str
         """
         return fablib.get_default_fablib_manager().list_sites(latlon=latlon)
+
+    @staticmethod
+    def list_hosts() -> object:
+        """
+        Get a string used to print a tabular list of sites with state
+
+        :return: tabulated string of site state
+        :rtype: str
+        """
+        return fablib.get_default_fablib_manager().list_hosts()
 
     @staticmethod
     def list_links() -> object:
@@ -667,6 +680,7 @@ class FablibManager(Config):
         self.links = None
         self.facility_ports = None
         self.auto_token_refresh = auto_token_refresh
+        self.last_resources_filtered_by_time = False
 
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
@@ -754,7 +768,7 @@ class FablibManager(Config):
             logging.info("Project is not specified")
             raise Exception("Bastion User name is not specified")
 
-        self.create_ssh_config()
+        self.create_ssh_config(overwrite=True)
 
         print("Configuration is valid and please save the config!")
 
@@ -800,12 +814,16 @@ class FablibManager(Config):
 
         dir_path = os.path.dirname(bastion_ssh_config_file)
         if not os.path.exists(dir_path):
-            msg = (
-                f"Directory {dir_path} does not exist, can not create ssh_config file!"
-            )
-            print(msg)
-            logging.error(msg)
-            raise Exception(msg)
+            try:
+                os.makedirs(dir_path)
+            except OSError as e:
+                msg = (
+                    f"Directory {dir_path} does not exist, Failed to create directory {dir_path}: {e}, "
+                    f"can not create ssh_config file!"
+                )
+                print(msg)
+                logging.error(msg)
+                raise Exception(msg)
 
         with open(bastion_ssh_config_file, "w") as f:
             f.write(
@@ -978,12 +996,17 @@ Host * !bastion.fabric-testbed.net
         """
         dir_path = os.path.dirname(private_file_path)
         if not os.path.exists(dir_path):
-            msg = (
-                f"Directory {dir_path} does not exist, can not create {key_type} keys!"
-            )
-            print(msg)
-            logging.error(msg)
-            raise Exception(msg)
+            try:
+                os.makedirs(dir_path)
+            except OSError as e:
+                msg = (
+                    f"Directory {dir_path} does not exist! Failed to create directory {dir_path}: {e}, "
+                    f"cannot create {key_type} keys!"
+                )
+                print(msg)
+                logging.error(msg)
+                raise Exception(msg)
+
         comment = os.path.basename(private_file_path)
         ssh_keys = self.get_slice_manager().create_ssh_keys(
             key_type=key_type,
@@ -1072,6 +1095,10 @@ Host * !bastion.fabric-testbed.net
         pretty_names: bool = True,
         force_refresh: bool = False,
         latlon: bool = True,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1107,10 +1134,24 @@ Host * !bastion.fabric-testbed.net
         :param force_refresh:
         :type force_refresh: bool
         :param latlon: convert address to latlon, makes online call to openstreetmaps.org
-        :rtype: Object
+        :type: Object
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param avoid: list of sites to avoid
+        :type: list of string
+        :param includes: list of sites to include
+        :type: list of string
+
         """
         return self.get_resources(
-            update=update, force_refresh=force_refresh
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
         ).list_sites(
             output=output,
             fields=fields,
@@ -1118,6 +1159,78 @@ Host * !bastion.fabric-testbed.net
             filter_function=filter_function,
             pretty_names=pretty_names,
             latlon=latlon,
+        )
+
+    def list_hosts(
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
+    ) -> object:
+        """
+        Lists all the hosts and their attributes.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','ConnectX-5 Available', 'NVMe Total']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['ConnectX-5 Available'] > 3 and s['NVMe Available'] <= 10
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :return: table in format specified by output parameter
+        :param update:
+        :type update: bool
+        :param pretty_names:
+        :type pretty_names: bool
+        :param force_refresh:
+        :type force_refresh: bool
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+        :param avoid: list of sites to avoid
+        :type: list of string
+        :param includes: list of sites to include
+        :type: list of string
+
+        """
+        return self.get_resources(
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
+        ).list_hosts(
+            output=output,
+            fields=fields,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names=pretty_names,
         )
 
     def list_links(
@@ -1352,19 +1465,55 @@ Host * !bastion.fabric-testbed.net
         return self.facility_ports
 
     def get_resources(
-        self, update: bool = True, force_refresh: bool = False
+        self,
+        update: bool = True,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> Resources:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
 
+        :param update:
+        :type update: bool
+
+        :param force_refresh:
+        :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
+
         :return: the resources object
         :rtype: Resources
         """
-        if not self.resources:
-            self.get_available_resources(update=update, force_refresh=force_refresh)
+        if not update:
+            if start or end:
+                update = True
+                self.last_resources_filtered_by_time = True
+            elif self.last_resources_filtered_by_time:
+                update = True
+                self.last_resources_filtered_by_time = False
 
-        return self.resources
+        return self.get_available_resources(
+            update=update,
+            force_refresh=force_refresh,
+            start=start,
+            end=end,
+            avoid=avoid,
+            includes=includes,
+        )
 
     def get_random_site(
         self, avoid: List[str] = [], filter_function=None, update: bool = True
@@ -1567,7 +1716,13 @@ Host * !bastion.fabric-testbed.net
         return topology.sites[site]
 
     def get_available_resources(
-        self, update: bool = False, force_refresh: bool = False
+        self,
+        update: bool = False,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> Resources:
         """
         Get the available resources.
@@ -1577,15 +1732,44 @@ Host * !bastion.fabric-testbed.net
         information.
 
         :param update:
+        :type update: bool
+
         :param force_refresh:
+        :type force_refresh: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param avoid: list of sites to avoid
+        :type: list of string
+
+        :param includes: list of sites to include
+        :type: list of string
+
         :return: Available Resources object
         """
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
-            self.resources = Resources(self, force_refresh=force_refresh)
+            self.resources = Resources(
+                self,
+                force_refresh=force_refresh,
+                start=start,
+                end=end,
+                avoid=avoid,
+                includes=includes,
+            )
         elif update:
-            self.resources.update(force_refresh=force_refresh)
+            self.resources.update(
+                force_refresh=force_refresh,
+                start=start,
+                end=end,
+                avoid=avoid,
+                includes=includes,
+            )
 
         return self.resources
 
@@ -2182,17 +2366,6 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def create_list_tableXXX(data, fields=None):
-        table = []
-        for entry in data:
-            row = []
-            for field in fields:
-                row.append(entry[field])
-
-            table.append(row)
-        return table
-
-    @staticmethod
     def create_show_table(data, fields=None, pretty_names_dict={}):
         table = []
         if fields is None:
@@ -2212,12 +2385,136 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def create_show_tableXXX(data, fields=None):
-        table = []
-        if fields is None:
-            for key, value in data.items():
-                table.append([key, value])
-        else:
-            for field in fields:
-                table.append([field, data[field]])
-        return table
+    def __can_allocate_node_in_host(
+        host: Host, node: Node, allocated: dict, site: Site
+    ) -> Tuple[bool, str]:
+        """
+        Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
+
+        :return: Tuple indicating status for validation and error message in case of failure
+        :rtype: Tuple[bool, str]
+        """
+        if host is None or site is None:
+            return (
+                True,
+                f"Ignoring validation: Host: {host}, Site: {site} not available.",
+            )
+
+        msg = f"Node can be allocated on the host: {host.get_name()}."
+
+        if host.get_state() != "Active":
+            msg = f"Node cannot be allocated on {host.get_name()}, {host.get_name()} is in {host.get_state()}!"
+            return False, msg
+
+        allocated_core = allocated.setdefault("core", 0)
+        allocated_ram = allocated.setdefault("ram", 0)
+        allocated_disk = allocated.setdefault("disk", 0)
+        available_cores = host.get_core_available()
+        available_ram = host.get_ram_available()
+        available_disk = host.get_disk_available()
+
+        if (
+            node.get_requested_cores() > available_cores
+            or node.get_requested_disk() > available_disk
+            or node.get_requested_ram() > available_ram
+        ):
+            msg = f"Insufficient Resources: Host: {host.get_name()} does not meet core/ram/disk requirements."
+            return False, msg
+
+        # Check if there are enough components available
+        for c in node.get_components():
+            comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
+            substrate_component = host.get_component(comp_model_type=comp_model_type)
+            if not substrate_component:
+                msg = f"Invalid Request: Host: {host.get_name()} does not have the requested component: {comp_model_type}."
+                return False, msg
+
+            allocated_comp_count = allocated.setdefault(comp_model_type, 0)
+            available_comps = (
+                substrate_component.capacities.unit
+                - (
+                    substrate_component.capacity_allocations.unit
+                    if substrate_component.capacity_allocations
+                    else 0
+                )
+                - allocated_comp_count
+            )
+            if available_comps <= 0:
+                msg = f"Insufficient Resources: Host: {host.get_name()} has reached the limit for component: {comp_model_type}."
+                return False, msg
+
+            allocated[comp_model_type] += 1
+
+        allocated["core"] += node.get_requested_cores()
+        allocated["ram"] += node.get_requested_ram()
+        allocated["disk"] += node.get_requested_disk()
+
+        return True, msg
+
+    def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
+        """
+        Validate a node w.r.t available resources on a site before submission
+
+        :return: Tuple indicating status for validation and error message in case of failure
+        :rtype: Tuple[bool, str]
+        """
+        try:
+            error = None
+            if allocated is None:
+                allocated = {}
+            site = self.get_resources().get_site(site_name=node.get_site())
+
+            if not site:
+                logging.warning(
+                    f"Ignoring validation: Site: {node.get_site()} not available in resources."
+                )
+                return (
+                    True,
+                    f"Ignoring validation: Site: {node.get_site()} not available in resources.",
+                )
+
+            site_state = site.get_state()
+            if site_state != "Active":
+                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
+                logging.error(msg)
+                return False, msg
+            hosts = site.get_hosts()
+            if not hosts:
+                msg = f"Node cannot be validated, host information not available for {site}."
+                logging.error(msg)
+                return False, msg
+
+            if node.get_host():
+                if node.get_host() not in hosts:
+                    msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
+                    logging.error(msg)
+                    return False, msg
+
+                host = hosts.get(node.get_host())
+
+                allocated_comps = allocated.setdefault(node.get_host(), {})
+                status, error = self.__can_allocate_node_in_host(
+                    host=host, node=node, allocated=allocated_comps, site=site
+                )
+
+                if not status:
+                    logging.error(error)
+                    return status, error
+
+            for host in hosts.values():
+                allocated_comps = allocated.setdefault(host.get_name(), {})
+                status, error = self.__can_allocate_node_in_host(
+                    host=host, node=node, allocated=allocated_comps, site=site
+                )
+                if status:
+                    return status, error
+
+            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.get_name()}."
+            if error:
+                msg += f" Details: {error}"
+            logging.error(msg)
+            return False, msg
+        except Exception as e:
+            logging.error(e)
+            logging.error(traceback.format_exc())
+            return False, str(e)

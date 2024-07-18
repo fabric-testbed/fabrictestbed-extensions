@@ -44,6 +44,8 @@ from typing import TYPE_CHECKING
 
 import jinja2
 
+from fabrictestbed_extensions.fablib.constants import Constants
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
@@ -60,16 +62,17 @@ from tabulate import tabulate
 
 class Component:
     component_model_map = {
-        "NIC_Basic": ComponentModelType.SharedNIC_ConnectX_6,
-        "NIC_ConnectX_6": ComponentModelType.SmartNIC_ConnectX_6,
-        "NIC_ConnectX_5": ComponentModelType.SmartNIC_ConnectX_5,
-        "NVME_P4510": ComponentModelType.NVME_P4510,
-        "GPU_TeslaT4": ComponentModelType.GPU_Tesla_T4,
-        "GPU_RTX6000": ComponentModelType.GPU_RTX6000,
-        "GPU_A40": ComponentModelType.GPU_A40,
-        "GPU_A30": ComponentModelType.GPU_A30,
-        "NIC_OpenStack": ComponentModelType.SharedNIC_OpenStack_vNIC,
-        "FPGA_Xilinx_U280": ComponentModelType.FPGA_Xilinx_U280,
+        Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
+        Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
+        Constants.CMP_NIC_ConnectX_5: ComponentModelType.SmartNIC_ConnectX_5,
+        Constants.CMP_NIC_P4: Constants.P4_DedicatedPort,
+        Constants.CMP_NVME_P4510: ComponentModelType.NVME_P4510,
+        Constants.CMP_GPU_TeslaT4: ComponentModelType.GPU_Tesla_T4,
+        Constants.CMP_GPU_RTX6000: ComponentModelType.GPU_RTX6000,
+        Constants.CMP_GPU_A40: ComponentModelType.GPU_A40,
+        Constants.CMP_GPU_A30: ComponentModelType.GPU_A30,
+        Constants.CMP_NIC_OpenStack: ComponentModelType.SharedNIC_OpenStack_vNIC,
+        Constants.CMP_FPGA_Xilinx_U280: ComponentModelType.FPGA_Xilinx_U280,
     }
 
     def __str__(self):
@@ -259,32 +262,6 @@ class Component:
             fields=fields, output=output, quiet=quiet, filter_function=filter_function
         )
 
-    # def list_interfaces(self) -> List[str]:
-    #     """
-    #     Creates a tabulated string describing all components in the slice.
-    #
-    #     Intended for printing a list of all components.
-    #
-    #     :return: Tabulated srting of all components information
-    #     :rtype: String
-    #     """
-    #     table = []
-    #     for iface in self.get_interfaces():
-    #         network_name = ""
-    #         if iface.get_network():
-    #             network_name = iface.get_network().get_name()
-    #
-    #         table.append( [     iface.get_name(),
-    #                             network_name,
-    #                             iface.get_bandwidth(),
-    #                             iface.get_vlan(),
-    #                             iface.get_mac(),
-    #                             iface.get_physical_os_interface_name(),
-    #                             iface.get_os_interface(),
-    #                             ] )
-    #
-    #     return tabulate(table, headers=["Name", "Network", "Bandwidth", "VLAN", "MAC", "Physical OS Interface", "OS Interface" ])
-
     @staticmethod
     def calculate_name(node: Node = None, name: str = None) -> str:
         """
@@ -342,9 +319,12 @@ class Component:
         self.node = node
         self.interfaces = None
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(self, include_subs: bool = True) -> List[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
 
         :return: a list of the interfaces on this component.
         :rtype: List[Interface]
@@ -355,9 +335,12 @@ class Component:
         if not self.interfaces:
             self.interfaces = []
             for fim_interface in self.get_fim_component().interface_list:
-                self.interfaces.append(
-                    Interface(component=self, fim_interface=fim_interface)
-                )
+                iface = Interface(component=self, fim_interface=fim_interface)
+                self.interfaces.append(iface)
+                if include_subs:
+                    child_interfaces = iface.get_interfaces()
+                    if child_interfaces and len(child_interfaces):
+                        self.interfaces.extend(child_interfaces)
 
         return self.interfaces
 
@@ -473,25 +456,23 @@ class Component:
             str(self.get_type()) == "SmartNIC"
             and str(self.get_fim_model()) == "ConnectX-6"
         ):
-            return "NIC_ConnectX_6"
+            return Constants.CMP_NIC_ConnectX_6
         elif (
             str(self.get_type()) == "SmartNIC"
             and str(self.get_fim_model()) == "ConnectX-5"
         ):
-            return "NIC_ConnectX_5"
+            return Constants.CMP_NIC_ConnectX_5
         elif str(self.get_type()) == "NVME" and str(self.get_fim_model()) == "P4510":
-            return "NVME_P4510"
+            return Constants.CMP_NVME_P4510
         elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "Tesla T4":
-            return "GPU_TeslaT4"
+            return Constants.CMP_GPU_TeslaT4
         elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "RTX6000":
-            return "GPU_RTX6000"
+            return Constants.CMP_GPU_RTX6000
         elif (
             str(self.get_type()) == "SharedNIC"
             and str(self.get_fim_model()) == "ConnectX-6"
         ):
-            return "NIC_Basic"
-        else:
-            return None
+            return Constants.CMP_NIC_Basic
 
     def get_reservation_id(self) -> str or None:
         """
@@ -669,8 +650,9 @@ class Component:
             return {}
 
     def delete(self):
-        for interface in self.get_interfaces():
-            interface.delete()
+        if self.get_interfaces():
+            for interface in self.get_interfaces():
+                interface.delete()
 
         self.get_slice().get_fim_topology().nodes[
             self.get_node().get_name()

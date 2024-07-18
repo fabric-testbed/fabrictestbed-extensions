@@ -32,8 +32,11 @@ Methods to work with FABRIC `network services`_.
 from __future__ import annotations
 
 import logging
+import threading
 from typing import TYPE_CHECKING, List, Union
 
+from fim.slivers.path_info import Path
+from fim.user import ERO
 from tabulate import tabulate
 
 if TYPE_CHECKING:
@@ -46,7 +49,7 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 import jinja2
-from fabrictestbed.slice_editor import Labels
+from fabrictestbed.slice_editor import Capacities, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
@@ -79,39 +82,53 @@ class NetworkService:
     fim_special_service_types = ["PortMirror"]
 
     @staticmethod
-    def get_fim_l2network_service_types() -> List[str]:
+    def __get_fim_l2network_service_types() -> List[str]:
         """
-        Not inteded for API use
+        Not intended for API use. Returns a list of FIM L2 network service types.
+
+        :return: List of FIM L2 network service types.
+        :rtype: List[str]
         """
         return NetworkService.fim_l2network_service_types
 
     @staticmethod
-    def get_fim_l3network_service_types() -> List[str]:
+    def __get_fim_l3network_service_types() -> List[str]:
         """
-        Not inteded for API use
+        Not intended for API use. Returns a list of FIM L3 network service types.
+
+        :return: List of FIM L3 network service types.
+        :rtype: List[str]
         """
         return NetworkService.fim_l3network_service_types
 
     @staticmethod
-    def get_fim_special_service_types() -> List[str]:
+    def __get_fim_special_service_types() -> List[str]:
         """
-        Not intended for API use
+        Not intended for API use. Returns a list of FIM special service types.
+
+        :return: List of FIM special service types.
+        :rtype: List[str]
         """
         return NetworkService.fim_special_service_types
 
     @staticmethod
     def get_fim_network_service_types() -> List[str]:
         """
-        Not inteded for API use
+        Not intended for API use. Returns a list of all FIM network service types.
+
+        :return: List of all FIM network service types.
+        :rtype: List[str]
         """
         return (
-            NetworkService.get_fim_l2network_service_types()
-            + NetworkService.get_fim_l3network_service_types()
-            + NetworkService.get_fim_special_service_types()
+            NetworkService.__get_fim_l2network_service_types()
+            + NetworkService.__get_fim_l3network_service_types()
+            + NetworkService.__get_fim_special_service_types()
         )
 
     @staticmethod
-    def calculate_l2_nstype(interfaces: List[Interface] = None) -> ServiceType:
+    def __calculate_l2_nstype(
+        interfaces: List[Interface] = None, ero_enabled: bool = False
+    ) -> ServiceType:
         """
         Not inteded for API use
 
@@ -119,6 +136,10 @@ class NetworkService:
 
         :param interfaces: a list of interfaces
         :type interfaces: list[Interface]
+
+        :param ero_enabled: Flag indicating if ERO is specified
+        :type ero_enabled: bool
+
         :raises Exception: if no network service type is not appropriate for the number of interfaces
         :return: the network service type
         :rtype: ServiceType
@@ -152,10 +173,8 @@ class NetworkService:
             # basically the layer-2 point-to-point server template applied is not popping
             # vlan tags over the MPLS tunnel between two facility ports.
             if (
-                includes_facility_port
-                and facility_port_interfaces < 2
-                and not basic_nic_count
-            ):
+                (includes_facility_port and facility_port_interfaces < 2) or ero_enabled
+            ) and not basic_nic_count:
                 # For now WAN FacilityPorts require L2PTP
                 rtn_nstype = NetworkService.network_service_map["L2PTP"]
             elif len(interfaces) >= 2:
@@ -168,7 +187,7 @@ class NetworkService:
         return rtn_nstype
 
     @staticmethod
-    def validate_nstype(type, interfaces):
+    def __validate_nstype(type, interfaces):
         """
         Not intended for API use
 
@@ -183,6 +202,9 @@ class NetworkService:
         :return: true if the network service type is valid based on the number of interfaces
         :rtype: bool
         """
+        # Just an empty network created; NS type would be validated when add_interface is invoked.
+        if not len(interfaces):
+            return True
 
         from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
@@ -268,6 +290,7 @@ class NetworkService:
         slice: Slice = None,
         name: str = None,
         mirror_interface_name: str = None,
+        mirror_interface_vlan: str = None,
         receive_interface: Interface or None = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
@@ -322,6 +345,7 @@ class NetworkService:
         fim_network_service = slice.topology.add_port_mirror_service(
             name=name,
             from_interface_name=mirror_interface_name,
+            from_interface_vlan=mirror_interface_vlan,
             to_interface=receive_interface.fim_interface,
             direction=direction,
         )
@@ -339,6 +363,7 @@ class NetworkService:
         interfaces: List[Interface] = [],
         type: str = None,
         user_data={},
+        technology: str = None,
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -362,12 +387,13 @@ class NetworkService:
         # validate nstype and interface List
         # NetworkService.validate_nstype(nstype, interfaces)
 
-        return NetworkService.new_network_service(
+        return NetworkService.__new_network_service(
             slice=slice,
             name=name,
             nstype=nstype,
             interfaces=interfaces,
             user_data=user_data,
+            technology=technology,
         )
 
     @staticmethod
@@ -395,21 +421,23 @@ class NetworkService:
         :rtype: NetworkService
         """
         if type is None:
-            nstype = NetworkService.calculate_l2_nstype(interfaces=interfaces)
+            nstype = NetworkService.__calculate_l2_nstype(interfaces=interfaces)
         else:
-            if type in NetworkService.get_fim_l2network_service_types():
+            if type in NetworkService.__get_fim_l2network_service_types():
                 nstype = NetworkService.network_service_map[type]
             else:
                 raise Exception(
                     f"Invalid l2 network type: {type}. Please choose from "
-                    f"{NetworkService.get_fim_l2network_service_types()} or None for automatic selection"
+                    f"{NetworkService.__get_fim_l2network_service_types()} or None for automatic selection"
                 )
 
         # validate nstype and interface List
-        NetworkService.validate_nstype(nstype, interfaces)
+        NetworkService.__validate_nstype(nstype, interfaces)
 
         # Set default VLANs for P2P networks that did not pass in VLANs
-        if nstype == ServiceType.L2PTP:  # or nstype == ServiceType.L2STS:
+        if nstype == ServiceType.L2PTP and len(
+            interfaces
+        ):  # or nstype == ServiceType.L2STS:
             vlan1 = interfaces[0].get_vlan()
             vlan2 = interfaces[1].get_vlan()
 
@@ -429,7 +457,7 @@ class NetworkService:
             #    if interface.get_model() != 'NIC_Basic' and not interface.get_vlan():
             #
             #        interface.set_vlan("100")
-        network_service = NetworkService.new_network_service(
+        network_service = NetworkService.__new_network_service(
             slice=slice,
             name=name,
             nstype=nstype,
@@ -439,12 +467,13 @@ class NetworkService:
         return network_service
 
     @staticmethod
-    def new_network_service(
+    def __new_network_service(
         slice: Slice = None,
         name: str = None,
         nstype: ServiceType = None,
         interfaces: List[Interface] = [],
         user_data: dict = {},
+        technology: str = None,
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -459,6 +488,9 @@ class NetworkService:
         :param nstype: the type of network service to create
         :type nstype: ServiceType
         :param interfaces: a list of interfaces to
+        :type interfaces: List
+        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :type technology: str
         :return: the new fablib network service
         :rtype: NetworkService
         """
@@ -470,7 +502,7 @@ class NetworkService:
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
-            name=name, nstype=nstype, interfaces=fim_interfaces
+            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology
         )
 
         network_service = NetworkService(
@@ -484,21 +516,24 @@ class NetworkService:
     @staticmethod
     def get_l3network_services(slice: Slice = None) -> list:
         """
-        Not intended for API use.
+        Gets all L3 networks services in this slice
+
+        :return: List of all network services in this slice
+        :rtype: List[NetworkService]
         """
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
         fim_network_service = None
         logging.debug(
-            f"NetworkService.get_fim_l3network_service_types(): {NetworkService.get_fim_l3network_service_types()}"
+            f"NetworkService.get_fim_l3network_service_types(): {NetworkService.__get_fim_l3network_service_types()}"
         )
 
         for net_name, net in topology.network_services.items():
             logging.debug(f"scanning network: {net_name}, net: {net}")
             if (
                 str(net.get_property("type"))
-                in NetworkService.get_fim_l3network_service_types()
+                in NetworkService.__get_fim_l3network_service_types()
             ):
                 logging.debug(f"returning network: {net_name}, net: {net}")
                 rtn_network_services.append(
@@ -510,7 +545,13 @@ class NetworkService:
     @staticmethod
     def get_l3network_service(slice: Slice = None, name: str = None):
         """
-        Not inteded for API use.
+        Gets a particular L3 network service from this slice.
+
+
+        :param name: Name network
+        :type name: String
+        :return: network services on this slice
+        :rtype: list[NetworkService]
         """
         for net in NetworkService.get_l3network_services(slice=slice):
             if net.get_name() == name:
@@ -537,7 +578,7 @@ class NetworkService:
         for net_name, net in topology.network_services.items():
             if (
                 str(net.get_property("type"))
-                in NetworkService.get_fim_l2network_service_types()
+                in NetworkService.__get_fim_l2network_service_types()
             ):
                 rtn_network_services.append(
                     NetworkService(slice=slice, fim_network_service=net)
@@ -569,7 +610,10 @@ class NetworkService:
     @staticmethod
     def get_network_services(slice: Slice = None) -> list:
         """
-        Not inteded for API use.
+        Gets all network services (L2 and L3) in this slice
+
+        :return: List of all network services in this slice
+        :rtype: List[NetworkService]
         """
 
         topology = slice.get_fim_topology()
@@ -590,7 +634,12 @@ class NetworkService:
     @staticmethod
     def get_network_service(slice: Slice = None, name: str = None):
         """
-        Not inteded for API use.
+        Gest a particular network service from this slice.
+
+        :param name: the name of the network service to search for
+        :type name: str
+        :return: a particular network service
+        :rtype: NetworkService
         """
         for net in NetworkService.get_network_services(slice=slice):
             if net.get_name() == name:
@@ -628,6 +677,7 @@ class NetworkService:
             pass
 
         self.sliver = None
+        self.lock = threading.Lock()
 
     def __str__(self):
         """
@@ -1015,6 +1065,11 @@ class NetworkService:
                     )
                 except:
                     logging.warning(f"interface not found: {interface.name}")
+                    from fabrictestbed_extensions.fablib.interface import Interface
+
+                    self.interfaces.append(
+                        Interface(fim_interface=interface, node=self)
+                    )
 
         return self.interfaces
 
@@ -1091,7 +1146,10 @@ class NetworkService:
 
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
-            new_nstype = NetworkService.calculate_l2_nstype(interfaces=new_interfaces)
+            ero_enabled = True if self.get_fim().ero else False
+            new_nstype = NetworkService.__calculate_l2_nstype(
+                interfaces=new_interfaces, ero_enabled=ero_enabled
+            )
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
             else:
@@ -1133,7 +1191,10 @@ class NetworkService:
 
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
-            new_nstype = NetworkService.calculate_l2_nstype(interfaces=interfaces)
+            ero_enabled = True if self.get_fim().ero else False
+            new_nstype = NetworkService.__calculate_l2_nstype(
+                interfaces=interfaces, ero_enabled=ero_enabled
+            )
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
 
@@ -1189,24 +1250,28 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
-        subnet = self.get_subnet()
-        allocated_ips = self.get_allocated_ips()
+        try:
+            self.lock.acquire()
+            subnet = self.get_subnet()
+            allocated_ips = self.get_allocated_ips()
 
-        if addr:
-            # if addr != subnet.network_address and addr not in allocated_ips:
-            if addr not in allocated_ips:
-                self.set_allocated_ip(addr)
-                return addr
-        elif (
-            type(subnet) == ipaddress.IPv4Network
-            or type(subnet) == ipaddress.IPv6Network
-        ):
-            for host in subnet:
-                if host != subnet.network_address and host not in allocated_ips:
-                    self.set_allocated_ip(host)
+            if addr:
+                # if addr != subnet.network_address and addr not in allocated_ips:
+                if addr not in allocated_ips:
+                    self.set_allocated_ip(addr)
+                    return addr
+            elif (
+                type(subnet) == ipaddress.IPv4Network
+                or type(subnet) == ipaddress.IPv6Network
+            ):
+                for host in subnet:
+                    if host != subnet.network_address and host not in allocated_ips:
+                        self.set_allocated_ip(host)
 
-                    return host
-        return None
+                        return host
+            return None
+        finally:
+            self.lock.release()
 
     def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
         fablib_data = self.get_fablib_data()
@@ -1221,10 +1286,14 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def free_ip(self, addr: IPv4Address or IPv6Address):
-        allocated_ips = self.get_allocated_ips()
-        if addr in allocated_ips:
-            allocated_ips.remove(addr)
-        self.set_allocated_ips(allocated_ips)
+        try:
+            self.lock.acquire()
+            allocated_ips = self.get_allocated_ips()
+            if addr in allocated_ips:
+                allocated_ips.remove(addr)
+            self.set_allocated_ips(allocated_ips)
+        finally:
+            self.lock.release()
 
     def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
         labels = self.fim_network_service.labels
@@ -1250,11 +1319,22 @@ class NetworkService:
             return False
 
     def set_instantiated(self, instantiated: bool = True):
+        """
+        Set instantiated flag in the fablib_data saved in UserData blob in the FIM model
+        :param instantiated: flag indicating if the service has been instantiated or not
+        :type instantiated: bool
+        """
         fablib_data = self.get_fablib_data()
         fablib_data["instantiated"] = str(instantiated)
         self.set_fablib_data(fablib_data)
 
     def config(self):
+        """
+        Sets up the meta data for the Network Service
+        - For layer3 services, Subnet, gateway and allocated IPs are updated/maintained fablib_data saved in
+          UserData blob in the FIM model
+        - For layer2 services, no action is taken
+        """
         if not self.is_instantiated():
             self.set_instantiated(True)
 
@@ -1269,3 +1349,74 @@ class NetworkService:
             if self.get_gateway() not in allocated_ips:
                 allocated_ips.append(self.get_gateway())
             self.set_allocated_ip(self.get_gateway())
+
+    def peer(
+        self,
+        other: NetworkService,
+        labels: Labels,
+        peer_labels: Labels,
+        capacities: Capacities,
+    ):
+        """
+        Peer a network service; used for AL2S peering between FABRIC Networks and Cloud Networks
+        Peer this network service to another. A few constraints are enforced like services being
+        of the same type. Both services will have ServicePort interfaces facing each other over a link.
+        It typically requires labels and capacities to put on the interface facing the other service
+
+        :param other: network service to be peered
+        :type other: NetworkService
+        :param labels: labels
+        :type labels: Labels
+        :param peer_labels: peer labels
+        :type peer_labels: Labels
+        :param capacities: capacities
+        :type capacities: Capacities
+
+        """
+        # Peer Cloud L3VPN with FABRIC L3VPN
+        self.get_fim().peer(
+            other.get_fim(),
+            labels=labels,
+            peer_labels=peer_labels,
+            capacities=capacities,
+        )
+
+    def set_l2_route_hops(self, hops: List[str]):
+        """
+        Explicitly define the sequence of sites or hops to be used for a layer 2 connection.
+
+        Users provide a list of site names, which are then mapped by the ControlFramework to the corresponding
+        layer 2 loopback IP addresses utilized by the Explicit Route Options in the Network Service configuration
+        on the switch.
+
+        :param hops: A list of site names to be used as hops.
+        :type hops: List[str]
+        """
+        # Do nothing if hops is None or empty list
+        if not hops or not len(hops):
+            return
+
+        interfaces = self.get_interfaces()
+
+        if len(interfaces) != 2 or self.get_type() not in [
+            ServiceType.L2STS,
+            ServiceType.L2PTP,
+        ]:
+            raise Exception(
+                "Network path can only be specified for a Point to Point Layer2 connection!"
+            )
+
+        ifs_sites = []
+        for ifs in interfaces:
+            ifs_sites.append(ifs.get_site())
+
+        resources = self.get_fablib_manager().get_resources()
+        resources.validate_requested_ero_path(
+            source=ifs_sites[0], end=ifs_sites[1], hops=hops
+        )
+        p = Path()
+        p.set_symmetric(hops)
+        e = ERO()
+        e.set(payload=p)
+        ns_type = self.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=True)
+        self.get_fim().set_properties(type=ns_type, ero=e)

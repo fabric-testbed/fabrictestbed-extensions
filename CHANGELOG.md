@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Unreleased
 
 ### Fixed
+- Error *may* be inaccurate or wrong when I issue an invalid configuration. (Issue [#304](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/304))
 - Get Device Name and corresponding deprecated function (Issue[#341](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/341))
 - Failures when adding interfaces to a network (Issue[#329](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/329))
 - Add Facility Port to allow adding multiple interfaces (Issue [#289](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/289))
@@ -20,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing docstrings in interface module (Issue [#313](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/313))
 - Missing docstrings in facility_port module (Issue [#312](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/312))
 - Missing docstrings in node module (Issue [#318](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/318))
+- Sub Interface Support (Issue [#350](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/350))
+- Advanced reservations (Issue [#345](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/345))
+- Port Mirroring with Basic NICs (Issue [#343](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/343))
+- P4 support (Issue [#340](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/340))
+- ERO Support (Issue [#338](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/338))
+- List hosts (Issue [#331](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/331))
+- AL2S Support (Issue [#325](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/325))
+- Deny infeasible slices (Issue [#326](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/326))
+- Add display of switch port name to network service table listing (Issue [#152](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/152))
 
 ## [1.6.4] - 2024-03-05
 
