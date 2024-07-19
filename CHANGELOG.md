@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # [1.7.1] - 07/19/2024
 
 ### Fixed
-- Use cached resource information unless fresh information explicitly requested (Issue [#321](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321))
+- Use cached resource information unless fresh information explicitly requested (Issue [#352](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/352))
 
 # [1.7.0] - 07/18/2024
 
