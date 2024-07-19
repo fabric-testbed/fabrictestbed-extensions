@@ -2242,8 +2242,14 @@ class Slice:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
-            if lease_start_time and lease_end_time and (lease_end_time - lease_start_time) < timedelta(minutes=60):
-                raise Exception("Requested Lease Time range should be at least 60 minutes long!")
+            if (
+                lease_start_time
+                and lease_end_time
+                and (lease_end_time - lease_start_time) < timedelta(minutes=60)
+            ):
+                raise Exception(
+                    "Requested Lease Time range should be at least 60 minutes long!"
+                )
 
             (
                 return_status,

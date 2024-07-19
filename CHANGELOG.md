@@ -6,7 +6,12 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# Unreleased
+# [1.7.1] - 07/19/2024
+
+### Fixed
+- Use cached resource information unless fresh information explicitly requested (Issue [#321](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/321))
+
+# [1.7.0] - 07/18/2024
 
 ### Fixed
 - Error *may* be inaccurate or wrong when I issue an invalid configuration. (Issue [#304](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/304))

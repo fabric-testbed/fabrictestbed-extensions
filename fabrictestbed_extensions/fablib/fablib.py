@@ -1289,8 +1289,10 @@ Host * !bastion.fabric-testbed.net
         fields: str = None,
         quiet: bool = False,
         filter_function=None,
-        update: bool = True,
+        update: bool = False,
         pretty_names=True,
+        start: datetime = None,
+        end: datetime = None,
     ) -> object:
         """
         Lists all the facility ports and their attributes.
@@ -1312,20 +1314,34 @@ Host * !bastion.fabric-testbed.net
 
         :param output: output format
         :type output: str
+
         :param fields: list of fields (table columns) to show
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
+
         :param filter_function: lambda function
         :type filter_function: lambda
+
         :param update:
         :type update: bool
+
         :param pretty_names:
         :type pretty_names: bool
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
-        return self.get_facility_ports(update=update).list_facility_ports(
+        return self.get_facility_ports(
+            update=update, start=start, end=end
+        ).list_facility_ports(
             output=output,
             fields=fields,
             quiet=quiet,
@@ -1447,7 +1463,12 @@ Host * !bastion.fabric-testbed.net
 
         return self.links
 
-    def get_facility_ports(self, update: bool = True) -> FacilityPorts:
+    def get_facility_ports(
+        self,
+        update: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+    ) -> FacilityPorts:
         """
         Get the facility ports.
 
@@ -1455,12 +1476,27 @@ Host * !bastion.fabric-testbed.net
         services. Otherwise, this method returns the existing information.
 
         :param update:
+
+        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
+        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :type: datetime
+
         :return: Links
         """
+        if not update:
+            if start or end:
+                update = True
+                self.last_resources_filtered_by_time = True
+            elif self.last_resources_filtered_by_time:
+                update = True
+                self.last_resources_filtered_by_time = False
+
         if self.facility_ports is None:
             self.facility_ports = FacilityPorts(self)
         elif update:
-            self.facility_ports.update()
+            self.facility_ports.update(start=start, end=end)
 
         return self.facility_ports
 
