@@ -1091,7 +1091,7 @@ Host * !bastion.fabric-testbed.net
         fields: str = None,
         quiet: bool = False,
         filter_function=None,
-        update: bool = True,
+        update: bool = False,
         pretty_names: bool = True,
         force_refresh: bool = False,
         latlon: bool = True,
@@ -1466,7 +1466,7 @@ Host * !bastion.fabric-testbed.net
 
     def get_resources(
         self,
-        update: bool = True,
+        update: bool = False,
         force_refresh: bool = False,
         start: datetime = None,
         end: datetime = None,
