@@ -1751,6 +1751,9 @@ Host * !bastion.fabric-testbed.net
 
         :return: Available Resources object
         """
+        if start and end and (end - start) < datetime.timedelta(minutes=60):
+            raise Exception("Time range should be at least 60 minutes long!")
+
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
