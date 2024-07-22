@@ -1,5 +1,5 @@
-node
-====
+switch
+======
 
 .. automodule:: fabrictestbed_extensions.fablib.switch
    :members:
