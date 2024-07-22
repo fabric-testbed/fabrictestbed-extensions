@@ -2185,6 +2185,7 @@ class Slice:
 
         :return: slice_id
         """
+        slice_reservations = None
 
         if not wait:
             progress = False
@@ -2200,11 +2201,13 @@ class Slice:
             lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
 
         lease_end_time = None
+        lease_end_time_str = None
         if lease_in_days:
             start_time = (
                 lease_start_time if lease_end_time else datetime.now(timezone.utc)
             )
-            lease_end_time = (start_time + timedelta(days=lease_in_days)).strftime(
+            lease_end_time = start_time + timedelta(days=lease_in_days)
+            lease_end_time_str = (start_time + timedelta(days=lease_in_days)).strftime(
                 "%Y-%m-%d %H:%M:%S %z"
             )
 
@@ -2212,7 +2215,7 @@ class Slice:
         if self._is_modify():
             if lease_in_days:
                 return_status, result = self.fablib_manager.get_slice_manager().renew(
-                    slice_object=self.sm_slice, new_lease_end_time=lease_end_time
+                    slice_object=self.sm_slice, new_lease_end_time=lease_end_time_str
                 )
             else:
                 (
@@ -2240,6 +2243,15 @@ class Slice:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
+            if (
+                lease_start_time
+                and lease_end_time
+                and (lease_end_time - lease_start_time) < timedelta(minutes=60)
+            ):
+                raise Exception(
+                    "Requested Lease Time range should be at least 60 minutes long!"
+                )
+
             (
                 return_status,
                 slice_reservations,
@@ -2247,7 +2259,7 @@ class Slice:
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
-                lease_end_time=lease_end_time,
+                lease_end_time=lease_end_time_str,
                 lease_start_time=lease_start_time_str,
             )
             if return_status == Status.OK:
@@ -2297,7 +2309,7 @@ class Slice:
                 else:
                     print("Running post boot config ... ", end="")
 
-            if advance_allocation and post_boot_config:
+            if not advance_allocation and post_boot_config:
                 self.post_boot_config()
         else:
             self.update()
