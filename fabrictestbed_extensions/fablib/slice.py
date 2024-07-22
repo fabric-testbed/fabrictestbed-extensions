@@ -2297,7 +2297,7 @@ class Slice:
                 else:
                     print("Running post boot config ... ", end="")
 
-            if advance_allocation and post_boot_config:
+            if not advance_allocation and post_boot_config:
                 self.post_boot_config()
         else:
             self.update()
