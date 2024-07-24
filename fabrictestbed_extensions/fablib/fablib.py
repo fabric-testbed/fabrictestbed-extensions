@@ -1553,7 +1553,7 @@ Host * !bastion.fabric-testbed.net
 
     def get_random_site(
         self, avoid: List[str] = [],
-            filter_function=None, update: bool = False,
+            filter_function=None, update: bool = True,
             start: datetime = None,
             end: datetime = None,
     ) -> str:
@@ -1566,16 +1566,11 @@ Host * !bastion.fabric-testbed.net
         :type filter_function:
         :param update: flag indicating if fetch latest availability information
         :type update: bool
-        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
-        :type: datetime
-        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
-        :type: datetime
         :return: one site name
         :rtype: String
         """
         return self.get_random_sites(
             count=1, avoid=avoid, filter_function=filter_function, update=update,
-            start=start, end=end
         )[0]
 
     def get_random_sites(
@@ -1583,10 +1578,8 @@ Host * !bastion.fabric-testbed.net
         count: int = 1,
         avoid: List[str] = [],
         filter_function=None,
-        update: bool = False,
+        update: bool = True,
         unique: bool = True,
-        start: datetime = None,
-        end: datetime = None,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
@@ -1601,10 +1594,6 @@ Host * !bastion.fabric-testbed.net
         :type update: bool
         :return: one site name
         :param unique:
-        :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
-        :type: datetime
-        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
-        :type: datetime
         :return: list of random site names.
         :rtype: List[Sting]
         """
@@ -1635,8 +1624,6 @@ Host * !bastion.fabric-testbed.net
             update=update,
             # if filter function is not specified, no need for latlon
             latlon=True if filter_function else False,
-            start=start,
-            end=end
         )
 
         sites = list(map(lambda x: x["name"], site_list))
