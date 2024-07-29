@@ -1335,6 +1335,9 @@ class Interface:
                 f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}"
             )
 
+        # Hack for finding interfaces
+        name = f"{self.get_name()}-{name}"
+
         if self.get_fim():
             child_interface = self.get_fim().add_child_interface(
                 name=name, labels=Labels(vlan=vlan)
