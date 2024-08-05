@@ -1355,8 +1355,11 @@ class NetworkService:
 
     def set_instantiated(self, instantiated: bool = True):
         """
-        Set instantiated flag in the fablib_data saved in UserData blob in the FIM model
-        :param instantiated: flag indicating if the service has been instantiated or not
+        Set instantiated flag in the fablib_data saved in UserData
+        blob in the FIM model.
+
+        :param instantiated: flag indicating if the service has been
+            instantiated or not
         :type instantiated: bool
         """
         fablib_data = self.get_fablib_data()
