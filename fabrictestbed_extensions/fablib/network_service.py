@@ -1266,6 +1266,9 @@ class NetworkService:
         self.set_user_data(user_data)
 
     def set_subnet(self, subnet: IPv4Network or IPv6Network):
+        """
+        Add subnet info to the network service.
+        """
         fablib_data = self.get_fablib_data()
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
@@ -1274,6 +1277,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def set_gateway(self, gateway: IPv4Address or IPv6Address):
+        """
+        Add gateway info to the network service.
+        """
         fablib_data = self.get_fablib_data()
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
