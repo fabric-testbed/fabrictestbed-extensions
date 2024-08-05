@@ -1311,6 +1311,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
+        """
+        Allocate an IP for the network service.
+        """
         try:
             self.lock.acquire()
             subnet = self.get_subnet()
