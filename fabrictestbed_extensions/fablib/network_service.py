@@ -1127,11 +1127,19 @@ class NetworkService:
         return self.get_fim_network_service()
 
     def set_user_data(self, user_data: dict):
+        """
+        Set user data.
+
+        :param user_data: a `dict`.
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
     def get_user_data(self):
+        """
+        Get user data.
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except:
