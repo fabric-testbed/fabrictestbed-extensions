@@ -1555,9 +1555,7 @@ Host * !bastion.fabric-testbed.net
         self,
         avoid: List[str] = [],
         filter_function=None,
-        update: bool = True,
-        start: datetime = None,
-        end: datetime = None,
+        update: bool = True
     ) -> str:
         """
         Get a random site.
@@ -1575,7 +1573,7 @@ Host * !bastion.fabric-testbed.net
             count=1,
             avoid=avoid,
             filter_function=filter_function,
-            update=update,
+            update=update
         )[0]
 
     def get_random_sites(
