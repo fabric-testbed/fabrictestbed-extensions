@@ -1360,9 +1360,12 @@ class NetworkService:
     def config(self):
         """
         Sets up the meta data for the Network Service
-        - For layer3 services, Subnet, gateway and allocated IPs are updated/maintained fablib_data saved in
-          UserData blob in the FIM model
-        - For layer2 services, no action is taken
+
+            - For layer3 services, Subnet, gateway and allocated IPs
+              are updated/maintained fablib_data saved in UserData
+              blob in the FIM model
+
+            - For layer2 services, no action is taken
         """
         if not self.is_instantiated():
             self.set_instantiated(True)
