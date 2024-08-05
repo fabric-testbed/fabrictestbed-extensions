@@ -1338,6 +1338,9 @@ class NetworkService:
             self.lock.release()
 
     def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
+        """
+        Set a list of IPs to be "allocated IPs".
+        """
         fablib_data = self.get_fablib_data()
         allocated_ips_strs = []
         for ip in allocated_ips:
