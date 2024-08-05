@@ -779,25 +779,30 @@ class NetworkService:
         """
         Show a table containing the current network attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: "text", "pandas", and "json"
+        that determine the format of the output that is returned and
+        (optionally) displayed/printed.  This is controlled by the
+        parameter ``output``, which can be one of:
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        - ``"text"``: string formatted with tabular
+        - ``"pandas"``: pandas dataframe
+        - ``"json"``: string in json format
 
-        fields: json output will include all available fields.
-
-        Example: fields=['Name','State']
-
-        :param output: output format
+        :param output: Output format (``"text"``, ``"pandas"``, or
+            ``"json"``)
         :type output: str
-        :param fields: list of fields to show
+
+        :param fields: List of fields to show.  JSON output will
+            include all available fields.  Example:
+            ``fields=['Name','State']``
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
+
         :param colors: True to specify state colors for pandas output
         :type colors: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
