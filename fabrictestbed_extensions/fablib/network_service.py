@@ -1300,6 +1300,9 @@ class NetworkService:
             return []
 
     def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
+        """
+        Add ``addr`` to the list of allocated IPs.
+        """
         fablib_data = self.get_fablib_data()
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
