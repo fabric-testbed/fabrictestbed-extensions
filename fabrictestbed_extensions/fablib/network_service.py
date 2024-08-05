@@ -1366,6 +1366,9 @@ class NetworkService:
             self.lock.release()
 
     def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
+        """
+        Mark a list of IPs as publicly routable.
+        """
         labels = self.fim_network_service.labels
         if labels is None:
             labels = Labels()
