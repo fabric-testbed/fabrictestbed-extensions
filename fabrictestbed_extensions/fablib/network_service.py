@@ -1287,6 +1287,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def get_allocated_ips(self):
+        """
+        Get the list of IP addesses allocated for the network service.
+        """
         try:
             allocated_ips = []
             for addr in self.get_fablib_data()["subnet"]["allocated_ips"]:
