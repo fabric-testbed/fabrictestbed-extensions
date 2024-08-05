@@ -1353,6 +1353,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def free_ip(self, addr: IPv4Address or IPv6Address):
+        """
+        Remove an IP from the list of allocated IPs.
+        """
         try:
             self.lock.acquire()
             allocated_ips = self.get_allocated_ips()
