@@ -1162,6 +1162,9 @@ class NetworkService:
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
+        """
+        Add an :py:class:`.Interface` to the network service.
+        """
         if self.get_type() == ServiceType.PortMirror:
             raise Exception(
                 "Interfaces cannot be attached to PortMirror service - they can only"
@@ -1209,6 +1212,9 @@ class NetworkService:
             self.get_fim().connect_interface(interface=interface.get_fim())
 
     def remove_interface(self, interface: Interface):
+        """
+        Remove an :py:class:`.Interface` from the network service.
+        """
         iface_fablib_data = interface.get_fablib_data()
 
         self.free_ip(interface.get_ip_addr())
