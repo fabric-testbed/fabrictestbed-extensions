@@ -1249,12 +1249,18 @@ class NetworkService:
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
 
     def get_fablib_data(self):
+        """
+        Get value associated with `fablib_data` key of user data.
+        """
         try:
             return self.get_user_data()["fablib_data"]
         except:
             return {}
 
     def set_fablib_data(self, fablib_data: dict):
+        """
+        Set value associated with `fablib_data` key of user data.
+        """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
