@@ -1552,10 +1552,7 @@ Host * !bastion.fabric-testbed.net
         )
 
     def get_random_site(
-        self,
-        avoid: List[str] = [],
-        filter_function=None,
-        update: bool = True
+        self, avoid: List[str] = [], filter_function=None, update: bool = True
     ) -> str:
         """
         Get a random site.
@@ -1570,10 +1567,7 @@ Host * !bastion.fabric-testbed.net
         :rtype: String
         """
         return self.get_random_sites(
-            count=1,
-            avoid=avoid,
-            filter_function=filter_function,
-            update=update
+            count=1, avoid=avoid, filter_function=filter_function, update=update
         )[0]
 
     def get_random_sites(
