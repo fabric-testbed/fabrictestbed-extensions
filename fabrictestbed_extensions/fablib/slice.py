@@ -56,14 +56,16 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
+from fim.user import Capacities, Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+from fabrictestbed_extensions.fablib.switch import Switch
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
@@ -204,9 +206,13 @@ class Slice:
                 color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "ModifyOK":
                 color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
+            elif val == "AllocatedOK":
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "StableError":
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             elif val == "ModifyError":
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
+            elif val == "AllocatedError":
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             elif val == "Configuring":
                 color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
@@ -760,7 +766,45 @@ class Slice:
         return self.fablib_manager.get_default_slice_private_key()
 
     def is_dead_or_closing(self):
+        """
+        Tests is the slice is Dead or Closing state.
+
+        :return: True if slice is Dead or Closing state, False otherwise
+        :rtype: Bool
+        """
         if self.get_state() in ["Closing", "Dead"]:
+            return True
+        else:
+            return False
+
+    def is_advanced_allocation(self) -> bool:
+        """
+        Checks if slice is requested in future
+
+        :return: True if slice is Allocated and starts in future, False otherwise
+        :rtype: Bool
+        """
+        now = datetime.now(timezone.utc)
+        lease_start = (
+            datetime.strptime(self.get_lease_start(), Constants.LEASE_TIME_FORMAT)
+            if self.get_lease_start()
+            else None
+        )
+        if lease_start and lease_start > now and self.is_allocated():
+            return True
+        return False
+
+    def is_allocated(self) -> bool:
+        """
+        Tests is the slice is in Allocated State.
+
+        :return: True if slice is Allocated, False otherwise
+        :rtype: Bool
+        """
+        if (
+            self.get_state() in ["AllocatedOK", "AllocatedError"]
+            and self.get_lease_start()
+        ):
             return True
         else:
             return False
@@ -794,18 +838,13 @@ class Slice:
         :rtype: str
         """
 
-        if self.sm_slice == None:
-            state = None
-        else:
-            try:
-                state = self.sm_slice.state
-            except Exception as e:
-                logging.warning(
-                    f"Exception in get_state from non-None sm_slice. Returning None state: {e}"
-                )
-                state = None
-
-        return state
+        try:
+            if self.sm_slice is not None:
+                return self.sm_slice.state
+        except Exception as e:
+            logging.warning(
+                f"Exception in get_state from non-None sm_slice. Returning None state: {e}"
+            )
 
     def get_name(self) -> str:
         """
@@ -833,18 +872,13 @@ class Slice:
         :rtype: String
         """
 
-        if self.sm_slice is None:
-            lease_end_time = None
-        else:
-            try:
-                lease_end_time = self.sm_slice.lease_end_time
-            except Exception as e:
-                logging.warning(
-                    f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
-                )
-                lease_end_time = None
-
-        return lease_end_time
+        try:
+            if self.sm_slice is not None:
+                return self.sm_slice.lease_end_time
+        except Exception as e:
+            logging.warning(
+                f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
+            )
 
     def get_lease_start(self) -> str:
         """
@@ -853,19 +887,13 @@ class Slice:
         :return: timestamp when lease starts
         :rtype: String
         """
-
-        if self.sm_slice is None:
-            lease_start_time = None
-        else:
-            try:
-                lease_start_time = self.sm_slice.lease_start_time
-            except Exception as e:
-                logging.warning(
-                    f"Exception in get_lease_start from non-None sm_slice. Returning None state: {e}"
-                )
-                lease_start_time = None
-
-        return lease_start_time
+        try:
+            if self.sm_slice is not None:
+                return self.sm_slice.lease_start_time
+        except Exception as e:
+            logging.warning(
+                f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
+            )
 
     def get_project_id(self) -> str:
         """
@@ -881,6 +909,7 @@ class Slice:
         name: str,
         mirror_interface_name: str,
         receive_interface: Interface or None = None,
+        mirror_interface_vlan: str = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
@@ -893,6 +922,7 @@ class Slice:
         :param name: Name of the service
         :param mirror_interface_name: Name of the interface on the
             dataplane switch to mirror
+        :param mirror_interface_vlan: Vlan of the interface
         :param receive_interface: Interface in the topology belonging
             to a SmartNIC component
         :param mirror_direction: String 'rx', 'tx' or 'both'
@@ -904,6 +934,7 @@ class Slice:
             slice=self,
             name=name,
             mirror_interface_name=mirror_interface_name,
+            mirror_interface_vlan=mirror_interface_vlan,
             receive_interface=receive_interface,
             mirror_direction=mirror_direction,
         )
@@ -990,6 +1021,7 @@ class Slice:
         interfaces: List[Interface] = [],
         type: str = "IPv4",
         user_data: dict = {},
+        technology: str = None,
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -1039,6 +1071,8 @@ class Slice:
         :param user_data
 
         :type user_data: dict
+        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :type technology: str
 
         :return: a new L3 network service
         :rtype: NetworkService
@@ -1052,11 +1086,19 @@ class Slice:
             interfaces=interfaces,
             type=type,
             user_data=user_data,
+            technology=technology,
         )
 
     def add_facility_port(
-        self, name: str = None, site: str = None, vlan: Union[str, list] = None
-    ) -> NetworkService:
+        self,
+        name: str = None,
+        site: str = None,
+        vlan: Union[str, list] = None,
+        labels: Labels = None,
+        peer_labels: Labels = None,
+        bandwidth: int = 10,
+        mtu: int = None,
+    ) -> FacilityPort:
         """
         Adds a new L2 facility port to this slice
 
@@ -1066,11 +1108,26 @@ class Slice:
         :type site: String
         :param vlan: vlan
         :type vlan: String
+        :param labels: labels for the facility port such as VLAN, ip sub net
+        :type: labels: Labels
+        :param peer_labels: peer labels for the facility port such as VLAN, ip sub net, bgp key - used for AL2S Peering
+        :type: peer_labels: Labels
+        :param bandwidth: bandwidth
+        :type: bandwidth: int
+        :param mtu: MTU size
+        :type: mtu: int
         :return: a new L2 facility port
         :rtype: NetworkService
         """
         return FacilityPort.new_facility_port(
-            slice=self, name=name, site=site, vlan=vlan
+            slice=self,
+            name=name,
+            site=site,
+            vlan=vlan,
+            labels=labels,
+            peer_labels=peer_labels,
+            bandwidth=bandwidth,
+            mtu=mtu,
         )
 
     def add_node(
@@ -1085,6 +1142,8 @@ class Slice:
         host: str = None,
         user_data: dict = {},
         avoid: List[str] = [],
+        validate: bool = False,
+        raise_exception: bool = False,
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1128,10 +1187,23 @@ class Slice:
             random site.
         :type avoid: List[String]
 
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case of Failure
+        :type raise_exception: bool
+
         :return: a new node
         :rtype: Node
         """
-        node = Node.new_node(slice=self, name=name, site=site, avoid=avoid)
+        node = Node.new_node(
+            slice=self,
+            name=name,
+            site=site,
+            avoid=avoid,
+            validate=validate,
+            raise_exception=raise_exception,
+        )
 
         node.init_fablib_data()
 
@@ -1154,6 +1226,83 @@ class Slice:
         self.nodes = None
         self.interfaces = None
 
+        if validate:
+            status, error = self.get_fablib_manager().validate_node(node=node)
+            if not status:
+                node.delete()
+                node = None
+                logging.warning(error)
+                if raise_exception:
+                    raise ValueError(error)
+        return node
+
+    def add_switch(
+        self,
+        name: str,
+        site: str = None,
+        user_data: dict = None,
+        avoid: List[str] = None,
+        validate: bool = False,
+        raise_exception: bool = False,
+    ) -> Switch:
+        """
+        Creates a new switch on this fablib slice.
+
+        :param name: Name of the new switch
+        :type name: String
+
+        :param site: (Optional) Name of the site to deploy the node
+            on.  Default to a random site.
+        :type site: String
+
+        :param user_data
+        :type user_data: dict
+
+        :param avoid: (Optional) A list of sites to avoid is allowing
+            random site.
+        :type avoid: List[String]
+
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case of Failure
+        :type raise_exception: bool
+
+        :return: a new node
+        :rtype: Node
+        """
+        if not user_data:
+            user_data = {}
+        if not avoid:
+            avoid = []
+
+        node = Switch.new_switch(
+            slice=self,
+            name=name,
+            site=site,
+            avoid=avoid,
+            validate=validate,
+            raise_exception=raise_exception,
+        )
+
+        node.init_fablib_data()
+
+        user_data_working = node.get_user_data()
+        for k, v in user_data.items():
+            user_data_working[k] = v
+        node.set_user_data(user_data_working)
+
+        self.nodes = None
+        self.interfaces = None
+
+        if validate:
+            status, error = self.get_fablib_manager().validate_node(node=node)
+            if not status:
+                node.delete()
+                node = None
+                logging.warning(error)
+                if raise_exception:
+                    raise ValueError(error)
         return node
 
     def get_object_by_reservation(
@@ -1350,7 +1499,6 @@ class Slice:
             return NetworkService.get_l3network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
-        return None
 
     def get_l2networks(self) -> List[NetworkService]:
         """
@@ -1379,7 +1527,6 @@ class Slice:
             return NetworkService.get_l2network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
-        return None
 
     def get_network_services(self) -> List[NetworkService]:
         """
@@ -1435,7 +1582,6 @@ class Slice:
             return NetworkService.get_network_service(self, name)
         except Exception as e:
             logging.info(e, exc_info=True)
-        return None
 
     def delete(self):
         """
@@ -1443,6 +1589,9 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
+        if not self.sm_slice:
+            self.topology = None
+            return
         return_status, result = self.fablib_manager.get_slice_manager().delete(
             slice_object=self.sm_slice
         )
@@ -1472,19 +1621,11 @@ class Slice:
         if end_date is None and days is None:
             raise Exception("Either end_date or days must be specified!")
 
-        if days is not None:
-            end_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
-                "%Y-%m-%d %H:%M:%S %z"
-            )
+        if end_date is not None:
+            end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
+            days = (end - datetime.now(timezone.utc)).days
 
-        return_status, result = self.fablib_manager.get_slice_manager().renew(
-            slice_object=self.sm_slice, new_lease_end_time=end_date
-        )
-
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to renew slice: {}, {}".format(return_status, result)
-            )
+        self.submit(lease_in_days=days)
 
     def build_error_exception_string(self) -> str:
         """
@@ -1677,7 +1818,7 @@ class Slice:
         Only use this method after a non-blocking submit call and only call it
         once.
         """
-        if self.is_dead_or_closing():
+        if self.is_dead_or_closing() or self.is_allocated():
             print(
                 f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
             )
@@ -1733,8 +1874,8 @@ class Slice:
         )  # ({time.time() - start:.0f} sec)")
 
         for thread in concurrent.futures.as_completed(threads.keys()):
+            node = threads[thread]
             try:
-                node = threads[thread]
                 result = thread.result()
                 # print(result)
                 print(
@@ -1789,7 +1930,7 @@ class Slice:
 
             if (
                 node.get_reservation_state() == "Active"
-                and node.get_management_ip() == None
+                and node.get_management_ip() is None
             ):
                 logging.warning(
                     f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
@@ -1804,7 +1945,7 @@ class Slice:
                         in [ipaddress.IPv4Network, ipaddress.IPv6Network]
                         or not type(net.get_gateway())
                         in [ipaddress.IPv4Address, ipaddress.IPv6Address]
-                        or net.get_available_ips() == None
+                        or net.get_available_ips() is None
                     ):
                         logging.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
@@ -1859,6 +2000,7 @@ class Slice:
             time.sleep(interval)
 
             stable = False
+            allocated = False
             self.update_slice()
             self.update_slivers()
 
@@ -1871,6 +2013,14 @@ class Slice:
                     hasNetworks = False
                 if self.isReady():
                     break
+            elif self.is_advanced_allocation():
+                allocated = True
+                self.update()
+                if len(self.get_interfaces()) > 0:
+                    hasNetworks = True
+                else:
+                    hasNetworks = False
+                break
             else:
                 if verbose:
                     self.update()
@@ -1909,7 +2059,6 @@ class Slice:
                     display(node_table)
                 if hasNetworks and network_table:
                     display(network_table)
-
             else:
                 if slice_show_table:
                     display(slice_show_table)
@@ -1942,11 +2091,14 @@ class Slice:
         if hasNetworks and network_table:
             display(network_table)
 
-        print(f"\nTime to stable {time.time() - start:.0f} seconds")
+        print(f"\nTime to {self.get_state()} {time.time() - start:.0f} seconds")
 
-        print("Running post_boot_config ... ")
-        self.post_boot_config()
-        print(f"Time to post boot config {time.time() - start:.0f} seconds")
+        if stable:
+            print("Running post_boot_config ... ")
+            self.post_boot_config()
+            print(f"Time to post boot config {time.time() - start:.0f} seconds")
+        elif allocated:
+            print("Future allocation - skipping post_boot_config ... ")
 
         # Last update to get final data for display
         # no longer needed because post_boot_config does this
@@ -1983,7 +2135,9 @@ class Slice:
         post_boot_config: bool = True,
         wait_ssh: bool = True,
         extra_ssh_keys: List[str] = None,
+        lease_start_time: datetime = None,
         lease_in_days: int = None,
+        validate: bool = False,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -1996,32 +2150,80 @@ class Slice:
 
 
         :param wait: indicator for whether to wait for the slice's resources to be active
+        :type wait: bool
+
         :param wait_timeout: how many seconds to wait on the slice resources
+        :type wait_timeout: int
+
         :param wait_interval: how often to check on the slice resources
+        :type wait_interval: int
+
         :param progress: indicator for whether to show progress while waiting
+        :type progress: bool
+
         :param wait_jupyter: Special wait for jupyter notebooks.
+        :type wait_jupyter: str
+
         :param post_boot_config:
+        :type post_boot_config: bool
+
         :param wait_ssh:
+        :type wait_ssh: bool
+
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
+        :type extra_ssh_keys: List[str]
+
+        :param lease_start_time: Optional lease start in UTC time format: %Y-%m-%d %H:%M:%S %z
+        :type lease_start_time: datetime
+
         :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
                               only used for create.
+        :type lease_in_days: int
+
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
         :return: slice_id
         """
+        slice_reservations = None
 
         if not wait:
             progress = False
 
+        if validate:
+            self.validate()
+
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
 
+        lease_start_time_str = None
+        if lease_start_time:
+            lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
+
+        lease_end_time = None
+        lease_end_time_str = None
+        if lease_in_days:
+            start_time = (
+                lease_start_time if lease_end_time else datetime.now(timezone.utc)
+            )
+            lease_end_time = start_time + timedelta(days=lease_in_days)
+            lease_end_time_str = (start_time + timedelta(days=lease_in_days)).strftime(
+                "%Y-%m-%d %H:%M:%S %z"
+            )
+
         # Request slice from Orchestrator
         if self._is_modify():
-            (
-                return_status,
-                slice_reservations,
-            ) = self.fablib_manager.get_slice_manager().modify(
-                slice_id=self.slice_id, slice_graph=slice_graph
-            )
+            if lease_in_days:
+                return_status, result = self.fablib_manager.get_slice_manager().renew(
+                    slice_object=self.sm_slice, new_lease_end_time=lease_end_time_str
+                )
+            else:
+                (
+                    return_status,
+                    slice_reservations,
+                ) = self.fablib_manager.get_slice_manager().modify(
+                    slice_id=self.slice_id, slice_graph=slice_graph
+                )
         else:
             # retrieve and validate SSH keys
             ssh_keys = list()
@@ -2041,11 +2243,14 @@ class Slice:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
-            lease_end_time = None
-            if lease_in_days:
-                lease_end_time = (
-                    datetime.now(timezone.utc) + timedelta(days=lease_in_days)
-                ).strftime("%Y-%m-%d %H:%M:%S %z")
+            if (
+                lease_start_time
+                and lease_end_time
+                and (lease_end_time - lease_start_time) < timedelta(minutes=60)
+            ):
+                raise Exception(
+                    "Requested Lease Time range should be at least 60 minutes long!"
+                )
 
             (
                 return_status,
@@ -2054,7 +2259,8 @@ class Slice:
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
-                lease_end_time=lease_end_time,
+                lease_end_time=lease_end_time_str,
+                lease_start_time=lease_start_time_str,
             )
             if return_status == Status.OK:
                 logging.info(
@@ -2096,10 +2302,14 @@ class Slice:
                     timeout=wait_timeout, interval=wait_interval, progress=progress
                 )
 
+            advance_allocation = self.is_advanced_allocation()
             if progress:
-                print("Running post boot config ... ", end="")
+                if advance_allocation:
+                    print("Future allocation - skipping post_boot_config ... ")
+                else:
+                    print("Running post boot config ... ", end="")
 
-            if post_boot_config:
+            if not advance_allocation and post_boot_config:
                 self.post_boot_config()
         else:
             self.update()
@@ -2612,3 +2822,31 @@ class Slice:
             return False
         else:
             return True
+
+    def validate(self, raise_exception: bool = True) -> Tuple[bool, Dict[str, str]]:
+        """
+        Validate the slice w.r.t available resources before submission
+
+        :param raise_exception: raise exception if validation fails
+        :type raise_exception: bool
+
+        :return: Tuple indicating status for validation and dictionary of the errors corresponding to
+                 each requested node
+        :rtype: Tuple[bool, Dict[str, str]]
+        """
+        allocated = {}
+        errors = {}
+        nodes_to_remove = []
+        for n in self.get_nodes():
+            status, error = self.get_fablib_manager().validate_node(
+                node=n, allocated=allocated
+            )
+            if not status:
+                nodes_to_remove.append(n)
+                errors[n.get_name()] = error
+                logging.warning(f"{n.get_name()} - {error}")
+        for n in nodes_to_remove:
+            n.delete()
+        if raise_exception and len(errors):
+            raise Exception(f"Slice validation failed - {errors}!")
+        return len(errors) == 0, errors

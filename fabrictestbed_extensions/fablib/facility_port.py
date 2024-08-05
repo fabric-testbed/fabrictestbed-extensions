@@ -114,7 +114,7 @@ class FacilityPort:
         """
         Get a human-readable representation of the facility port.
         """
-        data = self.toDict(pretty_names=True)
+        data = self.toDict()
 
         # fields = ["Name",
         #         ]
@@ -171,43 +171,58 @@ class FacilityPort:
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        vlan: Union[str, list] = None,
+        vlan: Union[List, str] = None,
         bandwidth: int = 10,
-    ):
+        mtu: int = None,
+        labels: Labels = None,
+        peer_labels: Labels = None,
+    ) -> FacilityPort:
         """
-        Create a new facility port.
+        Create a new facility port in the given slice.
 
         You might want to :py:meth:`Slice.add_facility_port()`, in
         most cases.
 
-        :param Slice: Slice associated with the facility port.
-        :param name: name of the facility port.
-        :param site: site associated with the facility port.
-        :param vlan: VLAN.
-        :param bandwidth: bandwidth to be used, in Gbps.
+        :param slice: The slice in which the facility port will be created.
+        :param name: The name of the facility port.
+        :param site: The site where the facility port will be located.
+        :param vlan: A list or single string representing the VLANs for the facility port.
+        :param bandwidth: The bandwidth capacity for the facility port, default is 10.
+        :param mtu: MTU size
+        :param labels: Labels associated with the facility port.
+        :param peer_labels: Peer labels associated with the facility port.
+        :return: A FacilityPort object representing the created facility port.
         """
-        if isinstance(vlan, list):
-            interfaces = []
+        if not bandwidth:
+            bandwidth = 10
+        capacities = Capacities(bw=bandwidth)
+        if mtu:
+            capacities.mtu = mtu
+
+        interfaces = None
+
+        if vlan:
             index = 1
+            interfaces = []
+            if isinstance(vlan, str):
+                vlan = [vlan]
+
             for v in vlan:
                 iface_tuple = (
                     f"iface-{index}",
                     Labels(vlan=v),
-                    Capacities(bw=bandwidth),
+                    capacities,
                 )
                 interfaces.append(iface_tuple)
-            fim_facility_port = slice.get_fim_topology().add_facility(
-                name=name,
-                site=site,
-                interfaces=interfaces,
-            )
-        else:
-            fim_facility_port = slice.get_fim_topology().add_facility(
-                name=name,
-                site=site,
-                capacities=Capacities(bw=bandwidth),
-                labels=Labels(vlan=vlan),
-            )
+
+        fim_facility_port = slice.get_fim_topology().add_facility(
+            name=name,
+            site=site,
+            capacities=capacities,
+            labels=labels,
+            peer_labels=peer_labels,
+            interfaces=interfaces,
+        )
         return FacilityPort(slice, fim_facility_port)
 
     @staticmethod

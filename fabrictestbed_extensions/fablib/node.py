@@ -45,27 +45,24 @@ You would add a node and operate on it like so::
 
 from __future__ import annotations
 
-import concurrent.futures
 import ipaddress
 import json
 import logging
-import os
 import re
 import select
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
+from fim.user import NodeType
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.network_service import NetworkService
-from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -92,7 +89,13 @@ class Node:
     default_disk = 10
     default_image = "default_rocky_8"
 
-    def __init__(self, slice: Slice, node: FimNode):
+    def __init__(
+        self,
+        slice: Slice,
+        node: FimNode,
+        validate: bool = False,
+        raise_exception: bool = False,
+    ):
         """
         Node constructor, usually invoked by ``Slice.add_node()``.
 
@@ -101,12 +104,22 @@ class Node:
 
         :param node: the FIM node that this Node represents
         :type node: Node
+
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case validation failes
+        :type raise_exception: bool
+
         """
         super().__init__()
         self.fim_node = node
         self.slice = slice
         self.host = None
         self.ip_addr_list_json = None
+        self.validate = validate
+        self.raise_exception = raise_exception
+        self.node_type = NodeType.VM
 
         # Try to set the username.
         try:
@@ -171,7 +184,12 @@ class Node:
 
     @staticmethod
     def new_node(
-        slice: Slice = None, name: str = None, site: str = None, avoid: List[str] = []
+        slice: Slice = None,
+        name: str = None,
+        site: str = None,
+        avoid: List[str] = [],
+        validate: bool = False,
+        raise_exception: bool = False,
     ):
         """
         Not intended for API call.  See: Slice.add_node()
@@ -191,14 +209,27 @@ class Node:
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
 
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case of failure
+        :type raise_exception: bool
+
         :return: a new fablib node
         :rtype: Node
         """
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
+            [site] = slice.get_fablib_manager().get_random_sites(
+                avoid=avoid,
+            )
 
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
-        node = Node(slice, slice.topology.add_node(name=name, site=site))
+        node = Node(
+            slice,
+            slice.topology.add_node(name=name, site=site),
+            validate=validate,
+            raise_exception=raise_exception,
+        )
         node.set_capacities(
             cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
         )
@@ -833,6 +864,18 @@ class Node:
         except:
             return None
 
+    def get_requested_cores(self) -> int or None:
+        """
+        Gets the requested number of cores on the FABRIC node.
+
+        :return: the requested number of cores on the node
+        :rtype: int
+        """
+        try:
+            return self.get_fim_node().get_property(pname="capacities").core
+        except:
+            return 0
+
     def get_ram(self) -> int or None:
         """
         Gets the amount of RAM on the FABRIC node.
@@ -845,6 +888,18 @@ class Node:
         except:
             return None
 
+    def get_requested_ram(self) -> int or None:
+        """
+        Gets the requested amount of RAM on the FABRIC node.
+
+        :return: the requested amount of RAM on the node
+        :rtype: int
+        """
+        try:
+            return self.get_fim_node().get_property(pname="capacities").ram
+        except:
+            return 0
+
     def get_disk(self) -> int or None:
         """
         Gets the amount of disk space on the FABRIC node.
@@ -856,6 +911,18 @@ class Node:
             return self.get_fim_node().get_property(pname="capacity_allocations").disk
         except:
             return None
+
+    def get_requested_disk(self) -> int or None:
+        """
+        Gets the amount of disk space on the FABRIC node.
+
+        :return: the amount of disk space on the node
+        :rtype: int
+        """
+        try:
+            return self.get_fim_node().get_property(pname="capacities").disk
+        except:
+            return 0
 
     def get_image(self) -> str or None:
         """
@@ -891,11 +958,14 @@ class Node:
         try:
             if self.host is not None:
                 return self.host
-            return (
-                self.get_fim_node()
-                .get_property(pname="label_allocations")
-                .instance_parent
+            label_allocations = self.get_fim_node().get_property(
+                pname="label_allocations"
             )
+            labels = self.get_fim_node().get_property(pname="labels")
+            if label_allocations:
+                return label_allocations.instance_parent
+            if labels:
+                return labels.instance_parent
         except:
             return None
 
@@ -969,16 +1039,19 @@ class Node:
         except:
             return ""
 
-    def get_interfaces(self) -> List[Interface] or None:
+    def get_interfaces(self, include_subs: bool = True) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
 
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
         interfaces = []
         for component in self.get_components():
-            for interface in component.get_interfaces():
+            for interface in component.get_interfaces(include_subs=include_subs):
                 interfaces.append(interface)
 
         return interfaces
@@ -1126,9 +1199,18 @@ class Node:
         :return: the new component
         :rtype: Component
         """
-        return Component.new_component(
+        component = Component.new_component(
             node=self, model=model, name=name, user_data=user_data
         )
+        if self.validate:
+            status, error = self.get_fablib_manager().validate_node(node=self)
+            if not status:
+                component.delete()
+                component = None
+                logging.warning(error)
+                if self.raise_exception:
+                    raise ValueError(error)
+        return component
 
     def get_components(self) -> List[Component]:
         """
@@ -2577,9 +2659,24 @@ class Node:
         mtu: str = None,
     ):
         """
-        .. deprecated:: 1.1.3.
+        Configure IP Address on network interface as seen inside the VM
+        :param os_iface: Interface name as seen by the OS such as eth1 etc.
+        :type os_iface: String
+
+        :param vlan: Vlan tag
+        :type vlan: String
+
+        :param ip: IP address to be assigned to the tagged interface
+        :type ip: String
+
+        :param cidr: CIDR associated with IP address
+        :type ip: String
+
+        :param mtu: MTU size
+        :type mtu: String
+
+        NOTE: This does not add the IP information in the fablib_data
         """
-        # TODO: Add docstring after doc networking classes
         if cidr:
             cidr = str(cidr)
         if mtu:
@@ -2674,13 +2771,29 @@ class Node:
         ip: str = None,
         cidr: str = None,
         mtu: str = None,
-        interface: str = None,
+        interface: Interface = None,
     ):
         """
-        .. deprecated:: 1.1.3.
-        """
-        # TODO: Add docstring after doc networking classes
+        Add VLAN tagged interface for a given interface and set IP address on it
 
+        :param os_iface: Interface name as seen by the OS such as eth1 etc.
+        :type os_iface: String
+
+        :param vlan: Vlan tag
+        :type vlan: String
+
+        :param ip: IP address to be assigned to the tagged interface
+        :type ip: String
+
+        :param cidr: CIDR associated with IP address
+        :type ip: String
+
+        :param mtu: MTU size
+        :type mtu: String
+
+        :param interface: Interface for which tagged interface has to be added
+        :type interface: Interface
+        """
         if vlan:
             vlan = str(vlan)
         if cidr:
@@ -2688,8 +2801,8 @@ class Node:
         if mtu:
             mtu = str(mtu)
 
+        ip_command = "sudo ip"
         try:
-            gateway = None
             if interface.get_network().get_layer() == NSLayer.L3:
                 if interface.get_network().get_type() in [
                     ServiceType.FABNetv6,
@@ -2796,7 +2909,8 @@ class Node:
 
     def delete(self):
         """
-        Remove the node, including components connected to it.
+        Remove the node from the slice. All components and interfaces associated with
+        the Node are removed from the Slice.
         """
         for component in self.get_components():
             component.delete()
@@ -3268,7 +3382,7 @@ class Node:
         VM INFO looks like:
         In this example below, no CPU pinning has been applied so CPU Affinity lists all the CPUs
         After the pinning has been applied, CPU Affinity would show only the pinned CPU
-        [{'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '20.2s', 'State': 'running', 'VCPU': '0'},
+            [{'CPU': '116', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '20.2s', 'State': 'running', 'VCPU': '0'},
         {'CPU': '118', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '9.0s', 'State': 'running', 'VCPU': '1'},
         {'CPU': '117', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.9s', 'State': 'running', 'VCPU': '2'},
         {'CPU': '119', 'CPU Affinity': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127', 'CPU time': '8.8s', 'State': 'running', 'VCPU': '3'},
@@ -3421,7 +3535,9 @@ class Node:
 
     def os_reboot(self):
         """
-        Reboot the node.
+        Request Openstack to reboot the VM.
+        NOTE: This is not same as rebooting the VM via reboot or init 6 command.
+        Instead this is like openstack server reboot.
         """
         status = self.poa(operation="reboot")
         if status == "Failed":
