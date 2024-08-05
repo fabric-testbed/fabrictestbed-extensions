@@ -772,6 +772,8 @@ class Node:
             self.username = "freebsd"
         elif "openbsd" in self.get_image():
             self.username = "openbsd"
+        elif "kali" in self.get_image():
+            self.username = "kali"
         else:
             self.username = None
 
