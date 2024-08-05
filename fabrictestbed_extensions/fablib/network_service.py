@@ -1381,6 +1381,9 @@ class NetworkService:
         self.fim_network_service.set_properties(labels=labels)
 
     def init_fablib_data(self):
+        """
+        Initialize fablib data.
+        """
         fablib_data = {"instantiated": "False", "mode": "manual"}
         self.set_fablib_data(fablib_data)
 
