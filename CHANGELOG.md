@@ -6,12 +6,20 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [1.7.1] - 07/19/2024
+## [1.7.3] - 08/05/2024
+### Fixed
+- Add kali linux user name and prefix subinterface name with Node name (Issue [#356](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/356))
+
+## [1.7.2] - 07/22/2024
+### Fixed
+- Post Boot config check to run for current slices (PR [#353](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/353))
+
+## [1.7.1] - 07/19/2024
 
 ### Fixed
 - Use cached resource information unless fresh information explicitly requested (Issue [#352](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/352))
 
-# [1.7.0] - 07/18/2024
+## [1.7.0] - 07/18/2024
 
 ### Fixed
 - Error *may* be inaccurate or wrong when I issue an invalid configuration. (Issue [#304](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/304))
