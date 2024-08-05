@@ -1388,6 +1388,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def is_instantiated(self):
+        """
+        Return ``True`` if network service has been instantiated.
+        """
         fablib_data = self.get_fablib_data()
         if "instantiated" in fablib_data and fablib_data["instantiated"] == "True":
             return True
