@@ -573,22 +573,26 @@ class Resources:
     ):
         """
         Update the available resources by querying the FABRIC services
+
         :param force_refresh: force a refresh of available testbed
             resources.
         :type force_refresh: bool
 
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
+
         :type: datetime
 
-        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
+        :param end: end time in UTC format: %Y-%m-%d %H:%M:%S %z
+
         :type: datetime
 
         :param avoid: list of sites to avoid
+
         :type: list of string
 
         :param includes: list of sites to include
-        :type: list of string
 
+        :type: list of string
         """
         logging.info(f"Updating available resources")
         return_status, topology = (
