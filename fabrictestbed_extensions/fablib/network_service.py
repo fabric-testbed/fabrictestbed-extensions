@@ -1243,6 +1243,9 @@ class NetworkService:
         self.get_fim().disconnect_interface(interface=interface.get_fim())
 
     def delete(self):
+        """
+        Delete the network service.
+        """
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
 
     def get_fablib_data(self):
