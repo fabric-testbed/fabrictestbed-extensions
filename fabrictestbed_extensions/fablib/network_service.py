@@ -57,6 +57,10 @@ from fim.user.network_service import MirrorDirection
 
 
 class NetworkService:
+    """
+    A class for working with FABRIC network services.
+    """
+
     network_service_map = {
         "L2Bridge": ServiceType.L2Bridge,
         "L2PTP": ServiceType.L2PTP,
@@ -713,6 +717,11 @@ class NetworkService:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return mappings from non-pretty names to pretty names.
+
+        Pretty names are used when rendering table headers.
+        """
         return {
             "id": "ID",
             "name": "Name",
@@ -770,25 +779,30 @@ class NetworkService:
         """
         Show a table containing the current network attributes.
 
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
+        There are several output options: "text", "pandas", and "json"
+        that determine the format of the output that is returned and
+        (optionally) displayed/printed.  This is controlled by the
+        parameter ``output``, which can be one of:
 
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
+        - ``"text"``: string formatted with tabular
+        - ``"pandas"``: pandas dataframe
+        - ``"json"``: string in json format
 
-        fields: json output will include all available fields.
-
-        Example: fields=['Name','State']
-
-        :param output: output format
+        :param output: Output format (``"text"``, ``"pandas"``, or
+            ``"json"``)
         :type output: str
-        :param fields: list of fields to show
+
+        :param fields: List of fields to show.  JSON output will
+            include all available fields.  Example:
+            ``fields=['Name','State']``
         :type fields: List[str]
+
         :param quiet: True to specify printing/display
         :type quiet: bool
+
         :param colors: True to specify state colors for pandas output
         :type colors: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
         """
@@ -825,9 +839,15 @@ class NetworkService:
         return self.slice
 
     def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
         return self.get_slice().get_fablib_manager()
 
     def get_site(self) -> str or None:
+        """
+        Gets site name on network service.
+        """
         try:
             return self.get_sliver().fim_sliver.site
         except Exception as e:
@@ -864,6 +884,9 @@ class NetworkService:
             return None
 
     def get_sliver(self) -> OrchestratorSliver:
+        """
+        Gets the sliver.
+        """
         if not self.sliver and self.slice.isStable():
             self.sliver = self.slice.get_sliver(
                 reservation_id=self.get_reservation_id()
@@ -1103,14 +1126,25 @@ class NetworkService:
         return False
 
     def get_fim(self):
+        """
+        Gets the FABRIC information model (FIM) object.
+        """
         return self.get_fim_network_service()
 
     def set_user_data(self, user_data: dict):
+        """
+        Set user data.
+
+        :param user_data: a `dict`.
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
     def get_user_data(self):
+        """
+        Get user data.
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except:
@@ -1133,6 +1167,9 @@ class NetworkService:
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
+        """
+        Add an :py:class:`.Interface` to the network service.
+        """
         if self.get_type() == ServiceType.PortMirror:
             raise Exception(
                 "Interfaces cannot be attached to PortMirror service - they can only"
@@ -1180,6 +1217,9 @@ class NetworkService:
             self.get_fim().connect_interface(interface=interface.get_fim())
 
     def remove_interface(self, interface: Interface):
+        """
+        Remove an :py:class:`.Interface` from the network service.
+        """
         iface_fablib_data = interface.get_fablib_data()
 
         self.free_ip(interface.get_ip_addr())
@@ -1203,20 +1243,32 @@ class NetworkService:
         self.get_fim().disconnect_interface(interface=interface.get_fim())
 
     def delete(self):
+        """
+        Delete the network service.
+        """
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
 
     def get_fablib_data(self):
+        """
+        Get value associated with `fablib_data` key of user data.
+        """
         try:
             return self.get_user_data()["fablib_data"]
         except:
             return {}
 
     def set_fablib_data(self, fablib_data: dict):
+        """
+        Set value associated with `fablib_data` key of user data.
+        """
         user_data = self.get_user_data()
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
 
     def set_subnet(self, subnet: IPv4Network or IPv6Network):
+        """
+        Add subnet info to the network service.
+        """
         fablib_data = self.get_fablib_data()
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
@@ -1225,6 +1277,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def set_gateway(self, gateway: IPv4Address or IPv6Address):
+        """
+        Add gateway info to the network service.
+        """
         fablib_data = self.get_fablib_data()
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
@@ -1232,6 +1287,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def get_allocated_ips(self):
+        """
+        Get the list of IP addesses allocated for the network service.
+        """
         try:
             allocated_ips = []
             for addr in self.get_fablib_data()["subnet"]["allocated_ips"]:
@@ -1242,6 +1300,9 @@ class NetworkService:
             return []
 
     def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
+        """
+        Add ``addr`` to the list of allocated IPs.
+        """
         fablib_data = self.get_fablib_data()
         if "subnet" not in fablib_data:
             fablib_data["subnet"] = {}
@@ -1250,6 +1311,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
+        """
+        Allocate an IP for the network service.
+        """
         try:
             self.lock.acquire()
             subnet = self.get_subnet()
@@ -1274,6 +1338,9 @@ class NetworkService:
             self.lock.release()
 
     def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
+        """
+        Set a list of IPs to be "allocated IPs".
+        """
         fablib_data = self.get_fablib_data()
         allocated_ips_strs = []
         for ip in allocated_ips:
@@ -1286,6 +1353,9 @@ class NetworkService:
         self.set_fablib_data(fablib_data)
 
     def free_ip(self, addr: IPv4Address or IPv6Address):
+        """
+        Remove an IP from the list of allocated IPs.
+        """
         try:
             self.lock.acquire()
             allocated_ips = self.get_allocated_ips()
@@ -1296,6 +1366,9 @@ class NetworkService:
             self.lock.release()
 
     def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
+        """
+        Mark a list of IPs as publicly routable.
+        """
         labels = self.fim_network_service.labels
         if labels is None:
             labels = Labels()
@@ -1308,10 +1381,16 @@ class NetworkService:
         self.fim_network_service.set_properties(labels=labels)
 
     def init_fablib_data(self):
+        """
+        Initialize fablib data.
+        """
         fablib_data = {"instantiated": "False", "mode": "manual"}
         self.set_fablib_data(fablib_data)
 
     def is_instantiated(self):
+        """
+        Return ``True`` if network service has been instantiated.
+        """
         fablib_data = self.get_fablib_data()
         if "instantiated" in fablib_data and fablib_data["instantiated"] == "True":
             return True
@@ -1320,8 +1399,11 @@ class NetworkService:
 
     def set_instantiated(self, instantiated: bool = True):
         """
-        Set instantiated flag in the fablib_data saved in UserData blob in the FIM model
-        :param instantiated: flag indicating if the service has been instantiated or not
+        Set instantiated flag in the fablib_data saved in UserData
+        blob in the FIM model.
+
+        :param instantiated: flag indicating if the service has been
+            instantiated or not
         :type instantiated: bool
         """
         fablib_data = self.get_fablib_data()
@@ -1331,9 +1413,12 @@ class NetworkService:
     def config(self):
         """
         Sets up the meta data for the Network Service
-        - For layer3 services, Subnet, gateway and allocated IPs are updated/maintained fablib_data saved in
-          UserData blob in the FIM model
-        - For layer2 services, no action is taken
+
+            - For layer3 services, Subnet, gateway and allocated IPs
+              are updated/maintained fablib_data saved in UserData
+              blob in the FIM model
+
+            - For layer2 services, no action is taken
         """
         if not self.is_instantiated():
             self.set_instantiated(True)
