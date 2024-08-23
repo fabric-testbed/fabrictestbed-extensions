@@ -3312,7 +3312,7 @@ class Node:
 
         status, poa_info = (
             self.get_fablib_manager()
-            .get_slice_manager()
+            .get_manager()
             .poa(
                 sliver_id=self.get_reservation_id(),
                 operation=operation,
@@ -3336,7 +3336,7 @@ class Node:
         while poa_state not in states and attempt < retry:
             status, poa_info_status = (
                 self.get_fablib_manager()
-                .get_slice_manager()
+                .get_manager()
                 .get_poas(poa_id=poa_info[0].poa_id)
             )
             attempt += 1
@@ -3737,7 +3737,7 @@ class Node:
         # Fetch the public key from portal
         if sliver_key_name is not None:
             ssh_keys = (
-                self.get_fablib_manager().get_slice_manager().get_ssh_keys(email=email)
+                self.get_fablib_manager().get_manager().get_ssh_keys(email=email)
             )
             found = None
             if ssh_keys is not None and len(ssh_keys):

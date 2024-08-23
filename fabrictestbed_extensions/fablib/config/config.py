@@ -64,6 +64,10 @@ class Config:
             Constants.ENV_VAR: Constants.FABRIC_CORE_API_HOST,
             Constants.DEFAULT: Constants.DEFAULT_FABRIC_CORE_API_HOST,
         },
+        Constants.AM_HOST: {
+            Constants.ENV_VAR: Constants.FABRIC_AM_HOST,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_AM_HOST,
+        },
         Constants.TOKEN_LOCATION: {
             Constants.ENV_VAR: Constants.FABRIC_TOKEN_LOCATION,
             Constants.DEFAULT: Constants.DEFAULT_TOKEN_LOCATION,
@@ -117,6 +121,7 @@ class Config:
         Constants.CREDMGR_HOST: "Credential Manager",
         Constants.ORCHESTRATOR_HOST: "Orchestrator",
         Constants.CORE_API_HOST: "Core API",
+        Constants.AM_HOST: "Artifact Manager",
         Constants.TOKEN_LOCATION: "Token File",
         Constants.PROJECT_ID: "Project ID",
         Constants.BASTION_USERNAME: "Bastion Username",
@@ -141,6 +146,7 @@ class Config:
         credmgr_host: str = None,
         orchestrator_host: str = None,
         core_api_host: str = None,
+        am_host: str = None,
         token_location: str = None,
         project_id: str = None,
         bastion_username: str = None,
@@ -183,6 +189,9 @@ class Config:
 
         if core_api_host is not None:
             self.set_core_api_host(core_api_host=core_api_host)
+
+        if am_host is not None:
+            self.set_am_host(am_host=am_host)
 
         if token_location is not None:
             self.set_token_location(token_location=token_location)
@@ -432,6 +441,23 @@ class Config:
         :type core_api_host: String
         """
         self.runtime_config[Constants.CORE_API_HOST] = core_api_host
+
+    def get_am_host(self) -> str:
+        """
+        Gets the am host value.
+
+        :return: the am host site
+        :rtype: String
+        """
+        return self.get_config().get(Constants.AM_HOST)
+
+    def set_am_host(self, am_host: str):
+        """
+        Sets the am host value.
+        :param am_host: core_api host
+        :type am_host: String
+        """
+        self.runtime_config[Constants.AM_HOST] = am_host
 
     def get_token_location(self) -> str:
         """

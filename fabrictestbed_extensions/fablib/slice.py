@@ -591,7 +591,7 @@ class Slice:
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.fablib_manager.get_slice_manager().slices(
+        return_status, slices = self.fablib_manager.get_manager().slices(
             excludes=[],
             slice_id=self.slice_id,
             name=self.slice_name,
@@ -635,7 +635,7 @@ class Slice:
         (
             return_status,
             new_topo,
-        ) = self.fablib_manager.get_slice_manager().get_slice_topology(
+        ) = self.fablib_manager.get_manager().get_slice_topology(
             slice_object=self.sm_slice, as_self=self.user_only
         )
         if return_status != Status.OK:
@@ -661,7 +661,7 @@ class Slice:
 
         if self.sm_slice is None:
             return
-        status, slivers = self.fablib_manager.get_slice_manager().slivers(
+        status, slivers = self.fablib_manager.get_manager().slivers(
             slice_object=self.sm_slice, as_self=self.user_only
         )
         if status == Status.OK:
@@ -1592,7 +1592,7 @@ class Slice:
         if not self.sm_slice:
             self.topology = None
             return
-        return_status, result = self.fablib_manager.get_slice_manager().delete(
+        return_status, result = self.fablib_manager.get_manager().delete(
             slice_object=self.sm_slice
         )
 
@@ -1684,7 +1684,7 @@ class Slice:
         if progress:
             print("Waiting for slice .", end="")
         while time.time() < timeout_start + timeout:
-            return_status, slices = self.fablib_manager.get_slice_manager().slices(
+            return_status, slices = self.fablib_manager.get_manager().slices(
                 excludes=[],
                 slice_id=self.slice_id,
                 name=self.slice_name,
@@ -2214,14 +2214,14 @@ class Slice:
         # Request slice from Orchestrator
         if self._is_modify():
             if lease_in_days:
-                return_status, result = self.fablib_manager.get_slice_manager().renew(
+                return_status, result = self.fablib_manager.get_manager().renew(
                     slice_object=self.sm_slice, new_lease_end_time=lease_end_time_str
                 )
             else:
                 (
                     return_status,
                     slice_reservations,
-                ) = self.fablib_manager.get_slice_manager().modify(
+                ) = self.fablib_manager.get_manager().modify(
                     slice_id=self.slice_id, slice_graph=slice_graph
                 )
         else:
@@ -2255,7 +2255,7 @@ class Slice:
             (
                 return_status,
                 slice_reservations,
-            ) = self.fablib_manager.get_slice_manager().create(
+            ) = self.fablib_manager.get_manager().create(
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
@@ -2738,7 +2738,7 @@ class Slice:
         (
             return_status,
             slice_reservations,
-        ) = self.fablib_manager.get_slice_manager().modify(
+        ) = self.fablib_manager.get_manager().modify(
             slice_id=self.slice_id, slice_graph=slice_graph
         )
         if return_status != Status.OK:
@@ -2782,7 +2782,7 @@ class Slice:
         Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
-        return_status, topology = self.fablib_manager.get_slice_manager().modify_accept(
+        return_status, topology = self.fablib_manager.get_manager().modify_accept(
             slice_id=self.slice_id
         )
         if return_status != Status.OK:
