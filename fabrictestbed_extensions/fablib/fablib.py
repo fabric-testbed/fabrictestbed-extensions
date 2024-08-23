@@ -74,6 +74,7 @@ import warnings
 from fabrictestbed.external_api.artifact_manager import Visibility
 from fabrictestbed.fabric_manager import FabricManager
 
+from fabrictestbed_extensions.fablib.artifact import Artifact
 from fabrictestbed_extensions.fablib.site import Host, Site
 
 warnings.filterwarnings("always", category=DeprecationWarning)
@@ -2594,7 +2595,7 @@ Host * !bastion.fabric-testbed.net
 
     def create_artifact(self, artifact_title: str, description_short: str, description_long: str, authors: List[str],
                         tags: List[str], visibility: Visibility = Visibility.Author,
-                        update_existing: bool = True) -> dict:
+                        update_existing: bool = True) -> Artifact:
         """
         Create a new artifact or update an existing one.
 
@@ -2608,19 +2609,91 @@ Host * !bastion.fabric-testbed.net
         :return: Dictionary containing the artifact details
         :raises FabricManagerException: If there is an error in creating or updating the artifact.
         """
-        return self.get_manager().create_artifact(artifact_title=artifact_title, description_short=description_short,
-                                                  description_long=description_long, authors=authors,
-                                                  tags=tags, visibility=visibility, update_existing=update_existing)
+        artifact_info = self.get_manager().create_artifact(artifact_title=artifact_title,
+                                                           description_short=description_short,
+                                                           description_long=description_long, authors=authors,
+                                                           tags=tags, visibility=visibility,
+                                                           update_existing=update_existing)
+        return Artifact(artifact_info=artifact_info, fablib_manager=self)
 
-    def list_artifacts(self, search: str = None) -> list:
+    def get_artifacts(
+        self,
+        artifact_title: str = None,
+        artifact_id: str = None,
+        tag: str = None,
+    ) -> List[Artifact]:
+        """
+        Gets a list of artifacts either based on artifact id, artifact title or tag.
+        :param artifact_title:
+        :param artifact_id:
+        :param tag:
+
+        :return: a list of Artifacts
+        :rtype: List[Artifact]
+        """
+        import time
+
+        if self.get_log_level() == logging.DEBUG:
+            start = time.time()
+
+        if artifact_id:
+            artifact = self.get_manager().get_artifact(artifact_title=artifact_title)
+            artifacts = [artifact]
+        elif artifact_title:
+            artifacts = self.get_manager().list_artifacts(search=artifact_title)
+        elif tag:
+            artifacts = self.get_manager().list_artifacts(search=tag)
+        else:
+            artifacts = []
+
+        if self.get_log_level() == logging.DEBUG:
+            end = time.time()
+            logging.debug(
+                f"Running self.get_manager().list_artifacts(): elapsed time: {end - start} seconds"
+            )
+
+        return_artifacts = []
+        for a in artifacts:
+            return_artifacts.append(
+                Artifact(artifact_info=a, fablib_manager=self)
+            )
+        return return_artifacts
+
+    def list_artifacts(
+            self,
+            output=None,
+            fields=None,
+            quiet=False,
+            filter_function=None,
+            pretty_names=True,
+    ) -> object:
         """
         List artifacts based on a search query.
 
         :param search: Search query for filtering artifacts
-        :return: List of artifacts
+        :param output: Output format - 'text', 'pandas', 'json'
+        :param fields: List of fields (table columns) to show
+        :param quiet: True to suppress printing/display
+        :param filter_function: Lambda function to filter data by field values
+        :param pretty_names: Whether to use pretty names for fields
+        :return: Table in format specified by output parameter
         :raises FabricManagerException: If there is an error in listing the artifacts.
         """
-        return self.get_manager().list_artifacts(search=search)
+        # Fetch the list of artifacts from the manager
+        table = self.get_artifacts()
+
+        # Use the existing list_table function for output formatting
+        table = self.list_table(
+            table,
+            fields=fields,
+            title="Artifacts",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=Artifact.pretty_names if pretty_names else None
+        )
+
+        return table
 
     def delete_artifact(self, artifact_id: str = None, artifact_title: str = None):
         """
@@ -2636,21 +2709,6 @@ Host * !bastion.fabric-testbed.net
         :raises FabricManagerException: If an error occurs during the deletion process.
         """
         self.get_manager().delete_artifact(artifact_id=artifact_id, artifact_title=artifact_title)
-
-    def get_artifact(self, artifact_id: str = None, artifact_title: str = None):
-        """
-        Retrieve an artifact by its ID or title.
-
-        This method retrieves an artifact from the system based on either its `artifact_id` or `artifact_title`.
-        If `artifact_id` is not provided, the method will search for the artifact using `artifact_title`.
-
-        :param artifact_id: The unique identifier of the artifact to retrieve.
-        :param artifact_title: The title of the artifact to retrieve.
-        :return: A dictionary containing the artifact details.
-        :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the retrieval process.
-        """
-        return self.get_manager().get_artifact(artifact_id=artifact_id, artifact_title=artifact_title)
 
     def get_tags(self):
         """
