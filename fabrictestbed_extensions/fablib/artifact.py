@@ -85,14 +85,20 @@ class Artifact:
         """
         Convert artifact information into a dictionary
         """
+        authors = []
+        for a in self.artifact_info.get("authors"):
+            authors.append(a.get("email"))
+        versions = []
+        for v in self.artifact_info.get("versions"):
+            versions.append(f"{v.get('version')}#{v.get('urn')}")
         d = {
             "title": self.artifact_info.get("title"),
             "uuid": self.artifact_info.get("uuid"),
             "description_short": self.artifact_info.get("description_short"),
             "description_long": self.artifact_info.get("description_long"),
             "project_name": self.artifact_info.get("project_name"),
-            "authors": self.artifact_info.get("authors"),
-            "versions": self.artifact_info.get("versions"),
+            "authors": ", ".join(authors),
+            "versions": ", ".join(versions),
             "visibility": self.artifact_info.get("visibility"),
             "created": self.artifact_info.get("created"),
             "modified": self.artifact_info.get("modified"),

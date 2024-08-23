@@ -2644,7 +2644,7 @@ Host * !bastion.fabric-testbed.net
         elif tag:
             artifacts = self.get_manager().list_artifacts(search=tag)
         else:
-            artifacts = []
+            artifacts = self.get_manager().list_artifacts()
 
         if self.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -2680,7 +2680,7 @@ Host * !bastion.fabric-testbed.net
         :raises FabricManagerException: If there is an error in listing the artifacts.
         """
         # Fetch the list of artifacts from the manager
-        table = self.get_artifacts()
+        table = [a.to_dict() for a in self.get_artifacts()]
 
         # Use the existing list_table function for output formatting
         table = self.list_table(
