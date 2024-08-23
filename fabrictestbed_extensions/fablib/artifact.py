@@ -98,7 +98,7 @@ class Artifact:
             "description_long": self.artifact_info.get("description_long"),
             "project_name": self.artifact_info.get("project_name"),
             "authors": ", ".join(authors),
-            "versions": ", ".join(versions),
+            "versions": "\n ".join(versions),
             "visibility": self.artifact_info.get("visibility"),
             "created": self.artifact_info.get("created"),
             "modified": self.artifact_info.get("modified"),
