@@ -26,9 +26,8 @@
 import tarfile
 import ipywidgets as widgets
 from IPython.display import display
-import os
-
 from fabrictestbed_extensions.fablib.fablib import FablibManager
+import os
 
 
 class ArtifactManagerUI:
@@ -45,9 +44,13 @@ class ArtifactManagerUI:
         List of artifacts retrieved from FablibManager.
     error_output : widgets.Output
         Widget to display error messages.
+    title_filter : widgets.Text
+        Text input widget for filtering artifacts by title.
+    grid : widgets.GridBox
+        GridBox widget displaying the artifact information.
     """
 
-    def __init__(self, fablib_mgr: FablibManager, download_dir="/home/fabric/work"):
+    def __init__(self, fablib: FablibManager, download_dir: str="/home/fabric/work"):
         """
         Initializes the ArtifactManagerUI with a specified download directory.
 
@@ -57,9 +60,18 @@ class ArtifactManagerUI:
             The directory where artifacts will be downloaded (default is "/home/fabric/work").
         """
         self.download_dir = download_dir
-        self.fablib = fablib_mgr
+        self.fablib = fablib
         self.artifacts = self.fablib.get_manager().list_artifacts()
         self.error_output = widgets.Output()
+        self.title_filter = widgets.Text(
+            description='Filter by Title:',
+            placeholder='Enter title keyword',
+            layout=widgets.Layout(width='100%')
+        )
+        self.title_filter.observe(self.filter_artifacts, names='value')
+
+        # Initialize grid as None
+        self.grid = None
 
     def download_artifact_handler(self, artifact_title: str, version_urn: str, version: str):
         """
@@ -99,12 +111,33 @@ class ArtifactManagerUI:
             except Exception as e:
                 print(f"Failed to download artifact: {e}")
 
-    def create_ui(self):
+    def filter_artifacts(self, change):
         """
-        Creates and displays the user interface for interacting with artifacts.
+        Filters artifacts based on the title filter text input.
 
-        The UI includes a grid displaying artifact details and version-specific download buttons.
+        Parameters
+        ----------
+        change : dict
+            The change dictionary containing the new value of the text input.
         """
+        filter_text = self.title_filter.value.lower()
+        filtered_artifacts = [artifact for artifact in self.artifacts
+                              if filter_text in artifact['title'].lower()]
+        self.update_ui(filtered_artifacts)
+
+    def update_ui(self, artifacts):
+        """
+        Updates the UI with the given list of artifacts.
+
+        Parameters
+        ----------
+        artifacts : list
+            The list of artifacts to be displayed in the UI.
+        """
+        # Clear existing grid content, if any
+        if self.grid is not None:
+            self.grid.children = []  # Clear the grid's content without removing the widget itself
+
         # Define table headers
         headers = [
             widgets.HTML(value="<b>Title</b>"),
@@ -115,10 +148,10 @@ class ArtifactManagerUI:
         ]
 
         # Prepare grid items
-        grid_items = headers
+        grid_items = headers.copy()
 
         # Build interactive UI for each artifact
-        for artifact in self.artifacts:
+        for artifact in artifacts:
             title_label = widgets.HTML(value=artifact['title'])
             authors_label = widgets.HTML(value=', '.join([author['name'] for author in artifact['authors']]))
             description_label = widgets.HTML(value=artifact['description_short'])
@@ -145,21 +178,31 @@ class ArtifactManagerUI:
             grid_items.extend([title_label, authors_label, description_label, tags_label, versions_box])
 
         # Create and display the grid layout
-        grid = widgets.GridBox(
-            grid_items,
-            layout=widgets.Layout(
-                grid_template_columns="repeat(5, 25%)",
-                grid_gap="10px",
-                align_items="center"
+        if self.grid is None:
+            self.grid = widgets.GridBox(
+                grid_items,
+                layout=widgets.Layout(
+                    grid_template_columns="repeat(5, 25%)",
+                    grid_gap="10px",
+                    align_items="center"
+                )
             )
-        )
+        else:
+            self.grid.children = grid_items
 
-        # Display the grid and error output
-        display(grid)
+        # Display the filter and the grid
+        display(self.title_filter)
+        display(self.grid)
         display(self.error_output)
+
+    def create_ui(self):
+        """
+        Creates and displays the user interface for interacting with artifacts.
+        """
+        self.update_ui(self.artifacts)
 
 
 if __name__ == '__main__':
     # Create an instance of the class and render the UI
-    artifact_manager_ui = ArtifactManagerUI(fablib_mgr=FablibManager())
+    artifact_manager_ui = ArtifactManagerUI(fablib=FablibManager())
     artifact_manager_ui.create_ui()
