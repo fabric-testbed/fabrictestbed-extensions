@@ -2741,7 +2741,7 @@ Host * !bastion.fabric-testbed.net
                                                           artifact_title=artifact_title)
 
     def download_artifact(self, download_dir: str, artifact_id: str = None, artifact_title: str = None,
-                          version: str = None, version_urn: str = None):
+                          version: str = None, version_urn: str = None) -> str:
         """
         Download an artifact to a specified directory.
 
@@ -2757,5 +2757,6 @@ Host * !bastion.fabric-testbed.net
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
         :raises FabricManagerException: If an error occurs during the download process.
         """
-        self.get_manager().download_artifact(download_dir=download_dir, artifact_id=artifact_id,
-                                             artifact_title=artifact_title, version=version, version_urn=version_urn)
+        return self.get_manager().download_artifact(download_dir=download_dir, artifact_id=artifact_id,
+                                                    artifact_title=artifact_title, version=version,
+                                                    version_urn=version_urn)
