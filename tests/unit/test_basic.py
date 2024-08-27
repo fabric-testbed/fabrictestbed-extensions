@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from fabrictestbed.fabric_manager import FabricManagerException
+from fabrictestbed.token_manager.token_manager import TokenManagerException
 from fabrictestbed.util.constants import Constants
 
 from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
@@ -62,7 +63,7 @@ class FablibManagerTests(unittest.TestCase):
         os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.DUMMY_TOKEN_LOCATION
         self.assertRaises(
-            FabricManagerException, FablibManager, fabric_rc=self.rcfile.name
+            TokenManagerException, FablibManager, fabric_rc=self.rcfile.name
         )
 
     def test_fablib_manager_test_only_token_location(self):
