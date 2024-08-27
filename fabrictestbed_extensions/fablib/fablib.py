@@ -71,6 +71,10 @@ import random
 import traceback
 import warnings
 
+from fabrictestbed.external_api.artifact_manager import Visibility
+from fabrictestbed.fabric_manager import FabricManager
+
+from fabrictestbed_extensions.fablib.artifact import Artifact
 from fabrictestbed_extensions.fablib.site import Host, Site
 
 warnings.filterwarnings("always", category=DeprecationWarning)
@@ -408,7 +412,7 @@ class fablib:
         :return: the slice manager on this fablib object
         :rtype: SliceManager
         """
-        return fablib.get_default_fablib_manager().get_slice_manager()
+        return fablib.get_default_fablib_manager().get_manager()
 
     @staticmethod
     def new_slice(name: str) -> Slice:
@@ -589,6 +593,7 @@ class FablibManager(Config):
         credmgr_host: str = None,
         orchestrator_host: str = None,
         core_api_host: str = None,
+        am_host: str = None,
         token_location: str = None,
         project_id: str = None,
         bastion_username: str = None,
@@ -626,7 +631,9 @@ class FablibManager(Config):
             to ``"${HOME}/work/fabric_config/fabric_rc"``.
         :param credmgr_host: Name of credential manager host.
         :param orchestrator_host: Name of FABRIC orchestrator host.
-        :param fabric_token: Path to the file that contains your
+        :param core_api_host: Name of Core API host.
+        :param am_host: Name of Aggregate Manager host.
+        :param token_location: Path to the file that contains your
             FABRIC auth token.
         :param project_id: Your FABRIC project ID, obtained from
             https://cm.fabric-testbed.net/, usually via FABRIC portal.
@@ -656,6 +663,7 @@ class FablibManager(Config):
             credmgr_host=credmgr_host,
             orchestrator_host=orchestrator_host,
             core_api_host=core_api_host,
+            am_host=am_host,
             token_location=token_location,
             project_id=project_id,
             bastion_username=bastion_username,
@@ -675,7 +683,7 @@ class FablibManager(Config):
             else:
                 self.output = "text"
 
-        self.slice_manager = None
+        self.manager = None
         self.resources = None
         self.links = None
         self.facility_ports = None
@@ -685,7 +693,7 @@ class FablibManager(Config):
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.setup_logging()
-            self.__build_slice_manager()
+            self.__build_manager()
         self.required_check()
 
     def validate_config(self):
@@ -779,7 +787,7 @@ class FablibManager(Config):
         :return returns a dictionary containing User's Information
         :rtype: dict
         """
-        return self.get_slice_manager().get_user_info()
+        return self.get_manager().get_user_info()
 
     def determine_bastion_username(self):
         """
@@ -1008,7 +1016,7 @@ Host * !bastion.fabric-testbed.net
                 raise Exception(msg)
 
         comment = os.path.basename(private_file_path)
-        ssh_keys = self.get_slice_manager().create_ssh_keys(
+        ssh_keys = self.get_manager().create_ssh_keys(
             key_type=key_type,
             description=description,
             comment=comment,
@@ -1032,20 +1040,21 @@ Host * !bastion.fabric-testbed.net
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
         return self.ssh_thread_pool_executor
 
-    def __build_slice_manager(self) -> SliceManager:
+    def __build_manager(self) -> FabricManager:
         """
         Not a user facing API call.
 
-        Creates a new SliceManager object.
+        Creates a new FabricManager object.
 
-        :return: a new SliceManager
-        :rtype: SliceManager
+        :return: a new FabricManager
+        :rtype: FabricManager
         """
         try:
             logging.info(
                 f"orchestrator_host={self.get_orchestrator_host()},"
                 f"credmgr_host={self.get_credmgr_host()},"
                 f"core_api_host={self.get_core_api_host()},"
+                f"am_host={self.get_am_host()},"
                 f"project_id={self.get_project_id()},"
                 f"token_location={self.get_token_location()},"
                 f"initialize=True,"
@@ -1055,26 +1064,27 @@ Host * !bastion.fabric-testbed.net
             Utils.is_reachable(hostname=self.get_orchestrator_host())
             Utils.is_reachable(hostname=self.get_core_api_host())
 
-            self.slice_manager = SliceManager(
+            self.manager = FabricManager(
                 oc_host=self.get_orchestrator_host(),
                 cm_host=self.get_credmgr_host(),
                 core_api_host=self.get_core_api_host(),
+                am_host=self.get_am_host(),
                 project_id=self.get_project_id(),
                 token_location=self.get_token_location(),
                 initialize=True,
                 scope="all",
                 auto_refresh=self.auto_token_refresh,
             )
-            self.slice_manager.initialize()
-            logging.debug("Slice manager initialized!")
+            self.manager.initialize()
+            logging.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager
-            self.set_project_id(project_id=self.slice_manager.project_id)
+            self.set_project_id(project_id=self.manager.project_id)
             self.determine_bastion_username()
         except Exception as e:
             logging.error(e, exc_info=True)
             raise e
 
-        return self.slice_manager
+        return self.manager
 
     def get_site_names(self) -> List[str]:
         """
@@ -1694,7 +1704,7 @@ Host * !bastion.fabric-testbed.net
         finally:
             bastion_client.close()
 
-    def set_slice_manager(self, slice_manager: SliceManager):
+    def set_slice_manager(self, slice_manager: FabricManager):
         """
         Not intended as API call
 
@@ -1702,10 +1712,11 @@ Host * !bastion.fabric-testbed.net
 
         :param slice_manager: the slice manager to set
         :type slice_manager: SliceManager
+        .. deprecated:: 1.7.3 Use `set_manager()` instead.
         """
-        self.slice_manager = slice_manager
+        self.set_manager(manager=slice_manager)
 
-    def get_slice_manager(self) -> SliceManager:
+    def get_slice_manager(self) -> FabricManager:
         """
         Not intended as API call
 
@@ -1714,8 +1725,32 @@ Host * !bastion.fabric-testbed.net
 
         :return: the slice manager on this fablib object
         :rtype: SliceManager
+        .. deprecated:: 1.7.3 Use `get_manager()` instead.
         """
-        return self.slice_manager
+        return self.get_manager()
+
+    def set_manager(self, manager: FabricManager):
+        """
+        Not intended as API call
+
+        Sets the manager of this fablib object.
+
+        :param manager: the manager to set
+        :type manager: FabricManager
+        """
+        self.manager = manager
+
+    def get_manager(self) -> FabricManager:
+        """
+        Not intended as API call
+
+
+        Gets the manager of this fablib object.
+
+        :return: the manager on this fablib object
+        :rtype: FabricManager
+        """
+        return self.manager
 
     def new_slice(self, name: str) -> Slice:
         """
@@ -1741,7 +1776,7 @@ Host * !bastion.fabric-testbed.net
         :rtype: Node
         """
         logging.info(f"Updating get_site_advertisement")
-        return_status, topology = self.get_slice_manager().resources()
+        return_status, topology = self.get_manager().resources()
         if return_status != Status.OK:
             raise Exception(
                 "Failed to get advertised_topology: {}, {}".format(
@@ -1834,7 +1869,7 @@ Host * !bastion.fabric-testbed.net
         :return: a list of fim models of slices
         :rtype: List[Slice]
         """
-        return_status, slices = self.get_slice_manager().slices(
+        return_status, slices = self.get_manager().slices(
             excludes=excludes, limit=200, as_self=user_only
         )
 
@@ -1987,7 +2022,7 @@ Host * !bastion.fabric-testbed.net
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.get_slice_manager().slices(
+        return_status, slices = self.get_manager().slices(
             excludes=excludes,
             name=slice_name,
             slice_id=slice_id,
@@ -2557,3 +2592,197 @@ Host * !bastion.fabric-testbed.net
             logging.error(e)
             logging.error(traceback.format_exc())
             return False, str(e)
+
+    def create_artifact(
+        self,
+        artifact_title: str,
+        description_short: str,
+        description_long: str,
+        authors: List[str],
+        tags: List[str],
+        visibility: Visibility = Visibility.Author,
+        update_existing: bool = True,
+    ) -> Artifact:
+        """
+        Create a new artifact or update an existing one.
+
+        :param artifact_title: Title of the artifact
+        :param description_short: Short description of the artifact
+        :param description_long: Long description of the artifact
+        :param authors: List of authors associated with the artifact
+        :param tags: List of tags associated with the artifact
+        :param visibility: Visibility level of the artifact
+        :param update_existing: Flag indicating whether to update an existing artifact
+        :return: Dictionary containing the artifact details
+        :raises FabricManagerException: If there is an error in creating or updating the artifact.
+        """
+        artifact_info = self.get_manager().create_artifact(
+            artifact_title=artifact_title,
+            description_short=description_short,
+            description_long=description_long,
+            authors=authors,
+            tags=tags,
+            visibility=visibility,
+            update_existing=update_existing,
+        )
+        return Artifact(artifact_info=artifact_info, fablib_manager=self)
+
+    def get_artifacts(
+        self,
+        artifact_title: str = None,
+        artifact_id: str = None,
+        tag: str = None,
+    ) -> List[Artifact]:
+        """
+        Gets a list of artifacts either based on artifact id, artifact title or tag.
+        :param artifact_title:
+        :param artifact_id:
+        :param tag:
+
+        :return: a list of Artifacts
+        :rtype: List[Artifact]
+        """
+        import time
+
+        if self.get_log_level() == logging.DEBUG:
+            start = time.time()
+
+        if artifact_id:
+            artifacts = self.get_manager().list_artifacts(artifact_id=artifact_id)
+        elif artifact_title:
+            artifacts = self.get_manager().list_artifacts(search=artifact_title)
+        elif tag:
+            artifacts = self.get_manager().list_artifacts(search=tag)
+        else:
+            artifacts = self.get_manager().list_artifacts()
+
+        if self.get_log_level() == logging.DEBUG:
+            end = time.time()
+            logging.debug(
+                f"Running self.get_manager().list_artifacts(): elapsed time: {end - start} seconds"
+            )
+
+        return_artifacts = []
+        for a in artifacts:
+            return_artifacts.append(Artifact(artifact_info=a, fablib_manager=self))
+        return return_artifacts
+
+    def list_artifacts(
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ) -> object:
+        """
+        List artifacts based on a search query.
+
+        :param search: Search query for filtering artifacts
+        :param output: Output format - 'text', 'pandas', 'json'
+        :param fields: List of fields (table columns) to show
+        :param quiet: True to suppress printing/display
+        :param filter_function: Lambda function to filter data by field values
+        :param pretty_names: Whether to use pretty names for fields
+        :return: Table in format specified by output parameter
+        :raises FabricManagerException: If there is an error in listing the artifacts.
+        """
+        # Fetch the list of artifacts from the manager
+        table = [a.to_dict() for a in self.get_artifacts()]
+
+        # Use the existing list_table function for output formatting
+        table = self.list_table(
+            table,
+            fields=fields,
+            title="Artifacts",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            pretty_names_dict=Artifact.pretty_names if pretty_names else None,
+        )
+
+        return table
+
+    def delete_artifact(self, artifact_id: str = None, artifact_title: str = None):
+        """
+        Delete an artifact by its ID or title.
+
+        This method deletes an artifact from the system. Either the `artifact_id` or `artifact_title`
+        must be provided to identify the artifact to be deleted. If `artifact_id` is not provided,
+        the method will search for the artifact using `artifact_title` and then delete it.
+
+        :param artifact_id: The unique identifier of the artifact to be deleted.
+        :param artifact_title: The title of the artifact to be deleted.
+        :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
+        :raises FabricManagerException: If an error occurs during the deletion process.
+        """
+        self.get_manager().delete_artifact(
+            artifact_id=artifact_id, artifact_title=artifact_title
+        )
+
+    def get_tags(self):
+        """
+        Retrieve all tags associated with artifacts.
+
+        This method returns a list of all tags that are associated with artifacts in the system.
+        Tags are useful for categorizing and searching for artifacts.
+
+        :return: A list of tags.
+        :raises FabricManagerException: If an error occurs while retrieving the tags.
+        """
+        return self.get_manager().get_tags()
+
+    def upload_file_to_artifact(
+        self, file_to_upload: str, artifact_id: str = None, artifact_title: str = None
+    ) -> dict:
+        """
+        Upload a file to an existing artifact.
+
+        This method uploads a file to an artifact identified by either its `artifact_id` or `artifact_title`.
+        If `artifact_id` is not provided, the method will search for the artifact using `artifact_title`
+        before uploading the file.
+
+        :param file_to_upload: The path to the file that should be uploaded.
+        :param artifact_id: The unique identifier of the artifact to which the file will be uploaded.
+        :param artifact_title: The title of the artifact to which the file will be uploaded.
+        :return: A dictionary containing the details of the uploaded file.
+        :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
+        :raises FabricManagerException: If an error occurs during the upload process.
+        """
+        return self.get_manager().upload_file_to_artifact(
+            file_to_upload=file_to_upload,
+            artifact_id=artifact_id,
+            artifact_title=artifact_title,
+        )
+
+    def download_artifact(
+        self,
+        download_dir: str,
+        artifact_id: str = None,
+        artifact_title: str = None,
+        version: str = None,
+        version_urn: str = None,
+    ) -> str:
+        """
+        Download an artifact to a specified directory.
+
+        This method downloads an artifact identified by either its `artifact_id` or `artifact_title` to the
+        specified `download_dir`.
+        If `artifact_id` is not provided, the method will search for the artifact using `artifact_title`.
+
+        :param download_dir: The directory where the artifact will be downloaded.
+        :param artifact_id: The unique identifier of the artifact to download.
+        :param artifact_title: The title of the artifact to download.
+        :param version: The specific version of the artifact to download (optional).
+        :param version_urn: Version urn for the artifact
+        :return: The path to the downloaded artifact.
+        :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
+        :raises FabricManagerException: If an error occurs during the download process.
+        """
+        return self.get_manager().download_artifact(
+            download_dir=download_dir,
+            artifact_id=artifact_id,
+            artifact_title=artifact_title,
+            version=version,
+            version_urn=version_urn,
+        )

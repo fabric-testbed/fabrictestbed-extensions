@@ -597,7 +597,7 @@ class Resources:
         logging.info(f"Updating available resources")
         return_status, topology = (
             self.get_fablib_manager()
-            .get_slice_manager()
+            .get_manager()
             .resources(
                 force_refresh=force_refresh,
                 level=2,
