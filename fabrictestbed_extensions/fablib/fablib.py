@@ -2593,9 +2593,16 @@ Host * !bastion.fabric-testbed.net
             logging.error(traceback.format_exc())
             return False, str(e)
 
-    def create_artifact(self, artifact_title: str, description_short: str, description_long: str, authors: List[str],
-                        tags: List[str], visibility: Visibility = Visibility.Author,
-                        update_existing: bool = True) -> Artifact:
+    def create_artifact(
+        self,
+        artifact_title: str,
+        description_short: str,
+        description_long: str,
+        authors: List[str],
+        tags: List[str],
+        visibility: Visibility = Visibility.Author,
+        update_existing: bool = True,
+    ) -> Artifact:
         """
         Create a new artifact or update an existing one.
 
@@ -2609,11 +2616,15 @@ Host * !bastion.fabric-testbed.net
         :return: Dictionary containing the artifact details
         :raises FabricManagerException: If there is an error in creating or updating the artifact.
         """
-        artifact_info = self.get_manager().create_artifact(artifact_title=artifact_title,
-                                                           description_short=description_short,
-                                                           description_long=description_long, authors=authors,
-                                                           tags=tags, visibility=visibility,
-                                                           update_existing=update_existing)
+        artifact_info = self.get_manager().create_artifact(
+            artifact_title=artifact_title,
+            description_short=description_short,
+            description_long=description_long,
+            authors=authors,
+            tags=tags,
+            visibility=visibility,
+            update_existing=update_existing,
+        )
         return Artifact(artifact_info=artifact_info, fablib_manager=self)
 
     def get_artifacts(
@@ -2637,8 +2648,7 @@ Host * !bastion.fabric-testbed.net
             start = time.time()
 
         if artifact_id:
-            artifact = self.get_manager().get_artifact(artifact_title=artifact_title)
-            artifacts = [artifact]
+            artifacts = self.get_manager().list_artifacts(artifact_id=artifact_id)
         elif artifact_title:
             artifacts = self.get_manager().list_artifacts(search=artifact_title)
         elif tag:
@@ -2654,18 +2664,16 @@ Host * !bastion.fabric-testbed.net
 
         return_artifacts = []
         for a in artifacts:
-            return_artifacts.append(
-                Artifact(artifact_info=a, fablib_manager=self)
-            )
+            return_artifacts.append(Artifact(artifact_info=a, fablib_manager=self))
         return return_artifacts
 
     def list_artifacts(
-            self,
-            output=None,
-            fields=None,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ) -> object:
         """
         List artifacts based on a search query.
@@ -2690,7 +2698,7 @@ Host * !bastion.fabric-testbed.net
             output=output,
             quiet=quiet,
             filter_function=filter_function,
-            pretty_names_dict=Artifact.pretty_names if pretty_names else None
+            pretty_names_dict=Artifact.pretty_names if pretty_names else None,
         )
 
         return table
@@ -2708,7 +2716,9 @@ Host * !bastion.fabric-testbed.net
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
         :raises FabricManagerException: If an error occurs during the deletion process.
         """
-        self.get_manager().delete_artifact(artifact_id=artifact_id, artifact_title=artifact_title)
+        self.get_manager().delete_artifact(
+            artifact_id=artifact_id, artifact_title=artifact_title
+        )
 
     def get_tags(self):
         """
@@ -2722,12 +2732,15 @@ Host * !bastion.fabric-testbed.net
         """
         return self.get_manager().get_tags()
 
-    def upload_file_to_artifact(self, file_to_upload: str, artifact_id: str = None, artifact_title: str = None) -> dict:
+    def upload_file_to_artifact(
+        self, file_to_upload: str, artifact_id: str = None, artifact_title: str = None
+    ) -> dict:
         """
         Upload a file to an existing artifact.
 
         This method uploads a file to an artifact identified by either its `artifact_id` or `artifact_title`.
-        If `artifact_id` is not provided, the method will search for the artifact using `artifact_title` before uploading the file.
+        If `artifact_id` is not provided, the method will search for the artifact using `artifact_title`
+        before uploading the file.
 
         :param file_to_upload: The path to the file that should be uploaded.
         :param artifact_id: The unique identifier of the artifact to which the file will be uploaded.
@@ -2736,16 +2749,25 @@ Host * !bastion.fabric-testbed.net
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
         :raises FabricManagerException: If an error occurs during the upload process.
         """
-        return self.get_manager().upload_file_to_artifact(file_to_upload=file_to_upload,
-                                                          artifact_id=artifact_id,
-                                                          artifact_title=artifact_title)
+        return self.get_manager().upload_file_to_artifact(
+            file_to_upload=file_to_upload,
+            artifact_id=artifact_id,
+            artifact_title=artifact_title,
+        )
 
-    def download_artifact(self, download_dir: str, artifact_id: str = None, artifact_title: str = None,
-                          version: str = None, version_urn: str = None) -> str:
+    def download_artifact(
+        self,
+        download_dir: str,
+        artifact_id: str = None,
+        artifact_title: str = None,
+        version: str = None,
+        version_urn: str = None,
+    ) -> str:
         """
         Download an artifact to a specified directory.
 
-        This method downloads an artifact identified by either its `artifact_id` or `artifact_title` to the specified `download_dir`.
+        This method downloads an artifact identified by either its `artifact_id` or `artifact_title` to the
+        specified `download_dir`.
         If `artifact_id` is not provided, the method will search for the artifact using `artifact_title`.
 
         :param download_dir: The directory where the artifact will be downloaded.
@@ -2757,6 +2779,10 @@ Host * !bastion.fabric-testbed.net
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
         :raises FabricManagerException: If an error occurs during the download process.
         """
-        return self.get_manager().download_artifact(download_dir=download_dir, artifact_id=artifact_id,
-                                                    artifact_title=artifact_title, version=version,
-                                                    version_urn=version_urn)
+        return self.get_manager().download_artifact(
+            download_dir=download_dir,
+            artifact_id=artifact_id,
+            artifact_title=artifact_title,
+            version=version,
+            version_urn=version_urn,
+        )

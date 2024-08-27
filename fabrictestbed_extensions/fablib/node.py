@@ -3736,9 +3736,7 @@ class Node:
 
         # Fetch the public key from portal
         if sliver_key_name is not None:
-            ssh_keys = (
-                self.get_fablib_manager().get_manager().get_ssh_keys(email=email)
-            )
+            ssh_keys = self.get_fablib_manager().get_manager().get_ssh_keys(email=email)
             found = None
             if ssh_keys is not None and len(ssh_keys):
                 for item in ssh_keys:

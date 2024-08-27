@@ -36,7 +36,7 @@ class Artifact:
         "versions": "Versions",
         "created": "Created",
         "modified": "Modified",
-        "tags": "Tags"
+        "tags": "Tags",
     }
 
     def __init__(self, artifact_info: dict, fablib_manager):
@@ -95,7 +95,7 @@ class Artifact:
             "title": self.artifact_info.get("title"),
             "uuid": self.artifact_info.get("uuid"),
             "description_short": self.artifact_info.get("description_short"),
-            #"description_long": self.artifact_info.get("description_long"),
+            # "description_long": self.artifact_info.get("description_long"),
             "project_name": self.artifact_info.get("project_name"),
             "authors": ", ".join(authors),
             "versions": "\n".join(versions),
@@ -105,4 +105,3 @@ class Artifact:
         }
 
         return d
-
