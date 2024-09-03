@@ -1092,7 +1092,7 @@ class Slice:
             type=type,
             user_data=user_data,
             technology=technology,
-            subnet=subnet
+            subnet=subnet,
         )
 
     def add_facility_port(
