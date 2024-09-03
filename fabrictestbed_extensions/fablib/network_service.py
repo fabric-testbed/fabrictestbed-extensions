@@ -1108,11 +1108,13 @@ class NetworkService:
                     )
                 except:
                     logging.warning(f"interface not found: {interface.name}")
+                    ''' Commenting this code as not sure why this was added for now.
                     from fabrictestbed_extensions.fablib.interface import Interface
 
                     self.interfaces.append(
                         Interface(fim_interface=interface, node=self)
                     )
+                    '''
 
         return self.interfaces
 
