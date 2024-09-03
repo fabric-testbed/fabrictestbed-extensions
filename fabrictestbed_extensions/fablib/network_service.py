@@ -522,10 +522,12 @@ class NetworkService:
         )
 
         if subnet:
-            if nstype ==  ServiceType.FABNetv4:
-                fim_network_service.gateway = Gateway(lab=Labels(ipv4_subnet=subnet.with_prefixlen))
-            elif nstype in  [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
-                fim_network_service.gateway = Gateway(lab=Labels(ipv6_subnet=subnet.with_prefixlen))
+            if nstype == ServiceType.FABNetv4:
+                fim_network_service.gateway = Gateway(lab=Labels(ipv4_subnet=subnet.with_prefixlen,
+                                                                 ipv4=str(next(subnet.hosts()))))
+            elif nstype in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
+                fim_network_service.gateway = Gateway(lab=Labels(ipv6_subnet=subnet.with_prefixlen,
+                                                                 ipv6=str(next(subnet.hosts()))))
 
         network_service = NetworkService(
             slice=slice, fim_network_service=fim_network_service
