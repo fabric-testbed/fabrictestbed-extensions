@@ -755,12 +755,15 @@ class Interface:
         :return: the model of this interface's component
         :rtype: str
         """
-        if self.model:
-            return self.model
-        elif self.node:
-            return self.node.get_model()
-        else:
-            return self.get_component().get_model()
+        try:
+            if self.model:
+                return self.model
+            elif self.node:
+                return self.node.get_model()
+            else:
+                return self.get_component().get_model()
+        except Exception:
+            return ""
 
     def get_site(self) -> str:
         """

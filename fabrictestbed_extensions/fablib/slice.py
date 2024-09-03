@@ -59,7 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fim.user import Capacities, Labels, NodeType
+from fim.user import Labels
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
@@ -1022,6 +1022,7 @@ class Slice:
         type: str = "IPv4",
         user_data: dict = {},
         technology: str = None,
+        subnet: ipaddress.ip_network = None,
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -1069,10 +1070,14 @@ class Slice:
         :type type: String
 
         :param user_data
-
         :type user_data: dict
+
         :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
         :type technology: str
+
+        :param subnet: Request a specific subnet for FabNetv4, FabNetv6 or FabNetv6Ext services.
+                       It's ignored for any other services.
+        :type ipaddress.ip_network
 
         :return: a new L3 network service
         :rtype: NetworkService
@@ -1087,6 +1092,7 @@ class Slice:
             type=type,
             user_data=user_data,
             technology=technology,
+            subnet=subnet,
         )
 
     def add_facility_port(
