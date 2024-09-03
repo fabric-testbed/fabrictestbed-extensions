@@ -36,7 +36,7 @@ import threading
 from typing import TYPE_CHECKING, List, Union
 
 from fim.slivers.path_info import Path
-from fim.user import ERO
+from fim.user import ERO, Gateway
 from tabulate import tabulate
 
 if TYPE_CHECKING:
@@ -368,6 +368,7 @@ class NetworkService:
         type: str = None,
         user_data={},
         technology: str = None,
+        subnet: ipaddress.ip_network = None,
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -398,6 +399,7 @@ class NetworkService:
             interfaces=interfaces,
             user_data=user_data,
             technology=technology,
+            subnet=subnet
         )
 
     @staticmethod
@@ -478,6 +480,7 @@ class NetworkService:
         interfaces: List[Interface] = [],
         user_data: dict = {},
         technology: str = None,
+        subnet: ipaddress.ip_network = None,
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -487,14 +490,23 @@ class NetworkService:
 
         :param slice: the fabric slice to build the network service with
         :type slice: Slice
+
         :param name: the name of the new network service
         :type name: str
+
         :param nstype: the type of network service to create
         :type nstype: ServiceType
+
         :param interfaces: a list of interfaces to
         :type interfaces: List
+
         :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
         :type technology: str
+
+        :param subnet: Request a specific subnet for FabNetv4, FabNetv6 or FabNetv6Ext services.
+                       It's ignored for any other services.
+        :type ipaddress.ip_network
+
         :return: the new fablib network service
         :rtype: NetworkService
         """
@@ -508,6 +520,12 @@ class NetworkService:
         fim_network_service = slice.topology.add_network_service(
             name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology
         )
+
+        if subnet:
+            if nstype ==  ServiceType.FABNetv4:
+                fim_network_service.gateway = Gateway(lab=Labels(ipv4_subnet=subnet.with_prefixlen))
+            elif nstype in  [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
+                fim_network_service.gateway = Gateway(lab=Labels(ipv6_subnet=subnet.with_prefixlen))
 
         network_service = NetworkService(
             slice=slice, fim_network_service=fim_network_service
