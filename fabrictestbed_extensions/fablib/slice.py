@@ -596,6 +596,7 @@ class Slice:
             slice_id=self.slice_id,
             name=self.slice_name,
             as_self=self.user_only,
+            graph_format="NONE"
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
