@@ -628,10 +628,10 @@ class Slice:
         )
 
         # Update topology
-        if self.sm_slice.model is not None and self.sm_slice.model != "":
-            self.topology = ExperimentTopology()
-            self.topology.load(graph_string=self.sm_slice.model)
-            return
+        #if self.sm_slice.model is not None and self.sm_slice.model != "":
+        #    self.topology = ExperimentTopology()
+        #    self.topology.load(graph_string=self.sm_slice.model)
+        #    return
 
         (
             return_status,
@@ -1835,6 +1835,9 @@ class Slice:
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
         )
 
+        # Make sure we have the latest topology
+        self.update()
+
         for network in self.get_networks():
             network.config()
 
@@ -2779,7 +2782,6 @@ class Slice:
             if progress:
                 print("Running post boot config ... ", end="")
 
-            self.update()
             if post_boot_config:
                 self.post_boot_config()
         else:
