@@ -1693,9 +1693,9 @@ Host * !bastion.fabric-testbed.net
                 return True
 
         except paramiko.SSHException as e:
+            note = "Hint: check your bastion key. Is it valid? Is it expired?"
             logging.error(
-                f"Error connecting to bastion host {bastion_host} "
-                f"(hint: check your bastion key setup?): {e}"
+                f"Error connecting to bastion host {bastion_host}: {e} ({note})"
             )
 
             # Since Python 3.11, we have BaseException.add_note(),
@@ -1707,11 +1707,9 @@ Host * !bastion.fabric-testbed.net
             # With Python versions prior to that, we just append a
             # hint to BaseException.args tuple.
             if sys.version_info.minor >= 11:
-                e.add_note("Hint: check your bastion key. Is it valid? Is it expired?")
+                e.add_note(note)
             else:
-                e.args = e.args + (
-                    "Hint: check your bastion key. Is it valid? Is it expired?",
-                )
+                e.args = e.args + (note,)
 
             raise e
         except Exception as e:
