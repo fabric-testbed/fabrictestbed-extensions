@@ -640,7 +640,7 @@ class FablibManager(Config):
             https://cm.fabric-testbed.net/, usually via FABRIC portal.
         :param bastion_username: Your username on FABRIC bastion host,
             obtained from FABRIC portal.
-        :param bastion_key_filename: Path to your bastion SSH key.
+        :param bastion_key_location: Path to your bastion SSH key.
         :param log_file: Path where fablib logs are written; defaults
             to ``"/tmp/fablib/fablib.log"``.
         :param log_level: Level of detail in the logs written.
