@@ -26,6 +26,7 @@ class BastionHostTests(unittest.TestCase):
         Test bastion with an empty username.
         """
         fm = FablibManager(offline=True, bastion_username="")
+        self.assertEqual(fm.get_bastion_username(), "")
         self.assertRaises(paramiko.ssh_exception.SSHException, fm.probe_bastion_host)
 
     def test_probe_bastion_host_empty_key(self):
@@ -35,6 +36,7 @@ class BastionHostTests(unittest.TestCase):
         keyfile = tempfile.NamedTemporaryFile()
 
         fm = FablibManager(offline=True, bastion_key_location=keyfile.name)
+        self.assertEqual(fm.get_bastion_key_location(), keyfile.name)
         self.assertRaises(paramiko.ssh_exception.SSHException, fm.probe_bastion_host)
 
     def test_probe_bastion_host_bad_key(self):
@@ -47,4 +49,5 @@ class BastionHostTests(unittest.TestCase):
         rsa_key.write_private_key_file(keyfile.name)
 
         fm = FablibManager(offline=True, bastion_key_location=keyfile.name)
+        self.assertEqual(fm.get_bastion_key_location(), keyfile.name)
         self.assertRaises(paramiko.ssh_exception.SSHException, fm.probe_bastion_host)
