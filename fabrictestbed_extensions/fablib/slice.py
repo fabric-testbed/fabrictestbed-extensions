@@ -1632,7 +1632,7 @@ class Slice:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
             days = (end - datetime.now(timezone.utc)).days
 
-        self.submit(lease_in_days=days)
+        self.submit(lease_in_days=days, post_boot_config=False)
 
     def build_error_exception_string(self) -> str:
         """
