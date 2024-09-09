@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing docstrings in network_service module (Issue [#313](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/314))
 - Artifact Manager Support (Issue [#358](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/358))
 - FabNet user specified subnets (Issue [#361](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/361))
+- Renew Slice leaves the slivers in ActiveTicketed State (Issue [#364](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/364))
+- get_management_os_interface and get_dataplane_os_interfaces doesn't take into account IPv6 addresses. (Issue [#362](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/362))
 
 ## [1.7.3] - 08/05/2024
 ### Fixed

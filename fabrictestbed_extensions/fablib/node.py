@@ -53,7 +53,7 @@ import select
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union, Optional
 
 import jinja2
 import paramiko
@@ -2274,26 +2274,49 @@ class Node:
             return False
         return True
 
-    def get_management_os_interface(self) -> str or None:
+    def get_management_os_interface(self) -> Optional[str]:
         """
         Gets the name of the management interface used by the node's
-        operating system.
+        operating system, based on the default route.
 
-        :return: interface name
-        :rtype: String
+        :return: Name of the management interface or None if not found
+        :rtype: Optional[str]
         """
-        # TODO: Add docstring after doc networking classes
-        # Assumes that the default route uses the management network
         logging.debug(f"{self.get_name()}->get_management_os_interface")
-        stdout, stderr = self.execute("sudo ip -j route list", quiet=True)
-        stdout_json = json.loads(stdout)
 
-        for i in stdout_json:
-            if i["dst"] == "default":
-                logging.debug(
-                    f"{self.get_name()}->get_management_os_interface: management_os_interface {i['dev']}"
-                )
-                return i["dev"]
+        # Check both IPv4 and IPv6 routes
+        for ip_version in ["ip", "ip -6"]:
+            interface = self._get_default_interface(ip_version)
+            if interface:
+                return interface
+
+        logging.warning(f"{self.get_name()}->get_management_os_interface: No management interface found")
+        return None
+
+    def _get_default_interface(self, ip_version: str) -> Optional[str]:
+        """
+        Helper method to get the default interface for a given IP version.
+
+        :param ip_version: 'ip' for IPv4 or 'ip -6' for IPv6
+        :return: Name of the default interface or None if not found
+        """
+        command = f"sudo {ip_version} -j route list"
+        logging.debug(f"Executing: {command}")
+
+        try:
+            stdout, stderr = self.execute(command, quiet=True)
+            stdout_json = json.loads(stdout)
+
+            for route in stdout_json:
+                if route.get("dst") == "default":
+                    interface = route.get("dev")
+                    logging.debug(f"Found default route on {ip_version} with interface: {interface}")
+                    return interface
+        except (json.JSONDecodeError, KeyError) as e:
+            logging.error(f"Failed to parse route list for {ip_version}: {e}")
+        except Exception as e:
+            logging.error(f"Error executing command '{command}': {e}")
+
         return None
 
     def get_dataplane_os_interfaces(self) -> List[dict]:
