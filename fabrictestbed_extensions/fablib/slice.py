@@ -1965,7 +1965,7 @@ class Slice:
 
         return True
 
-    def wait_jupyter(self, timeout: int = 1800, interval: int = 30, verbose=False):
+    def wait_jupyter(self, timeout: int = 1800, interval: int = 30, verbose=False, post_boot_config: bool = True):
         """
         Waits for the slice to be in a stable and displays jupyter compliant tables of the slice progress.
 
@@ -1975,6 +1975,9 @@ class Slice:
         :type interval: int
         :param verbose:
         :type verbose: bool
+
+        :param post_boot_config:
+        :type post_boot_config: bool
 
         :raises Exception: if the slice state is undesirable, or waiting times out
         :return: the stable slice on the slice manager
@@ -2101,9 +2104,10 @@ class Slice:
         print(f"\nTime to {self.get_state()} {time.time() - start:.0f} seconds")
 
         if stable:
-            print("Running post_boot_config ... ")
-            self.post_boot_config()
-            print(f"Time to post boot config {time.time() - start:.0f} seconds")
+            if post_boot_config:
+                print("Running post_boot_config ... ")
+                self.post_boot_config()
+                print(f"Time to post boot config {time.time() - start:.0f} seconds")
         elif allocated:
             print("Future allocation - skipping post_boot_config ... ")
 
@@ -2296,7 +2300,7 @@ class Slice:
             and wait_jupyter == "text"
             and self.fablib_manager.is_jupyter_notebook()
         ):
-            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval, post_boot_config=post_boot_config)
             return self.slice_id
 
         elif wait:
@@ -2762,7 +2766,7 @@ class Slice:
             and wait_jupyter == "text"
             and self.fablib_manager.is_jupyter_notebook()
         ):
-            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval, post_boot_config=post_boot_config)
             return self.slice_id
 
         elif wait:
