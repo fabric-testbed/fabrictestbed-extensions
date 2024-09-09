@@ -68,6 +68,7 @@ import json
 import logging
 import os
 import random
+import sys
 import traceback
 import warnings
 
@@ -639,7 +640,7 @@ class FablibManager(Config):
             https://cm.fabric-testbed.net/, usually via FABRIC portal.
         :param bastion_username: Your username on FABRIC bastion host,
             obtained from FABRIC portal.
-        :param bastion_key_filename: Path to your bastion SSH key.
+        :param bastion_key_location: Path to your bastion SSH key.
         :param log_file: Path where fablib logs are written; defaults
             to ``"/tmp/fablib/fablib.log"``.
         :param log_level: Level of detail in the logs written.
@@ -690,9 +691,10 @@ class FablibManager(Config):
         self.auto_token_refresh = auto_token_refresh
         self.last_resources_filtered_by_time = False
 
+        self.setup_logging()
+
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
-            self.setup_logging()
             self.__build_manager()
         self.required_check()
 
@@ -1692,10 +1694,24 @@ Host * !bastion.fabric-testbed.net
                 return True
 
         except paramiko.SSHException as e:
+            note = "Hint: check your bastion key. Is it valid? Is it expired?"
             logging.error(
-                f"Error connecting to bastion host {bastion_host} "
-                f"(hint: check your bastion key setup?): {e}"
+                f"Error connecting to bastion host {bastion_host}: {e} ({note})"
             )
+
+            # Since Python 3.11, we have BaseException.add_note(),
+            # which is a nicer way of adding some extra information to
+            # the exception.
+            #
+            # https://docs.python.org/3.11/whatsnew/3.11.html#pep-678-exceptions-can-be-enriched-with-notes
+            #
+            # With Python versions prior to that, we just append a
+            # hint to BaseException.args tuple.
+            if sys.version_info.minor >= 11:
+                e.add_note(note)
+            else:
+                e.args = e.args + (note,)
+
             raise e
         except Exception as e:
             logging.error(f"Error connecting to bastion host {bastion_host}: {e}")
