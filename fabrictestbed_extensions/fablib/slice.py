@@ -2108,6 +2108,8 @@ class Slice:
                 print("Running post_boot_config ... ")
                 self.post_boot_config()
                 print(f"Time to post boot config {time.time() - start:.0f} seconds")
+            else:
+                self.update()
         elif allocated:
             print("Future allocation - skipping post_boot_config ... ")
 
