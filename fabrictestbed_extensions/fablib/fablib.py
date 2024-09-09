@@ -68,6 +68,7 @@ import json
 import logging
 import os
 import random
+import sys
 import traceback
 import warnings
 
@@ -1696,6 +1697,22 @@ Host * !bastion.fabric-testbed.net
                 f"Error connecting to bastion host {bastion_host} "
                 f"(hint: check your bastion key setup?): {e}"
             )
+
+            # Since Python 3.11, we have BaseException.add_note(),
+            # which is a nicer way of adding some extra information to
+            # the exception.
+            #
+            # https://docs.python.org/3.11/whatsnew/3.11.html#pep-678-exceptions-can-be-enriched-with-notes
+            #
+            # With Python versions prior to that, we just append a
+            # hint to BaseException.args tuple.
+            if sys.version_info.minor >= 11:
+                e.add_note("Hint: check your bastion key. Is it valid? Is it expired?")
+            else:
+                e.args = e.args + (
+                    "Hint: check your bastion key. Is it valid? Is it expired?",
+                )
+
             raise e
         except Exception as e:
             logging.error(f"Error connecting to bastion host {bastion_host}: {e}")
