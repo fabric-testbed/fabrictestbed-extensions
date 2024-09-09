@@ -34,7 +34,7 @@ class BastionHostTests(unittest.TestCase):
         """
         keyfile = tempfile.NamedTemporaryFile()
 
-        fm = FablibManager(offline=True, bastion_key_filename=keyfile.name)
+        fm = FablibManager(offline=True, bastion_key_location=keyfile.name)
         self.assertRaises(paramiko.ssh_exception.SSHException, fm.probe_bastion_host)
 
     def test_probe_bastion_host_bad_key(self):
@@ -46,5 +46,5 @@ class BastionHostTests(unittest.TestCase):
         rsa_key = paramiko.RSAKey.generate(bits=2048)
         rsa_key.write_private_key_file(keyfile.name)
 
-        fm = FablibManager(offline=True, bastion_key_filename=keyfile.name)
+        fm = FablibManager(offline=True, bastion_key_location=keyfile.name)
         self.assertRaises(paramiko.ssh_exception.SSHException, fm.probe_bastion_host)
