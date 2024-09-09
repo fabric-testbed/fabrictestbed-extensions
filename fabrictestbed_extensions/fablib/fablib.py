@@ -691,9 +691,10 @@ class FablibManager(Config):
         self.auto_token_refresh = auto_token_refresh
         self.last_resources_filtered_by_time = False
 
+        self.setup_logging()
+
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
-            self.setup_logging()
             self.__build_manager()
         self.required_check()
 
