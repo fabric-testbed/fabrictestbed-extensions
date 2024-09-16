@@ -671,11 +671,17 @@ class Slice:
         raise Exception(f"{slivers}")
 
     def get_sliver(self, reservation_id: str) -> OrchestratorSliver:
+        """
+        Returns the sliver associated with the reservation ID.
+        """
         slivers = self.get_slivers()
         sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
         return sliver
 
     def get_slivers(self) -> List[OrchestratorSliver]:
+        """
+        Returns slivers associated with the slice.
+        """
         if not self.slivers:
             logging.debug(f"get_slivers", stack_info=False)
             self.update_slivers()
@@ -1917,7 +1923,7 @@ class Slice:
         """
         Returns `True` if the slice is ready; else returns `False`.
         """
-        
+
         if not self.isStable():
             logging.debug(
                 f"isReady: {self.get_name()} not stable ({self.get_state()}), returning false"
