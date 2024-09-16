@@ -275,6 +275,9 @@ class fablib:
 
     @staticmethod
     def show_config():
+        """
+        Show current FABlib configuration parameters.
+        """
         return fablib.get_default_fablib_manager().show_config()
 
     @staticmethod
