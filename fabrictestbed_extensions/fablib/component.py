@@ -645,6 +645,12 @@ class Component:
         return Component(node=node, fim_component=fim_component)
 
     def get_fim(self):
+        """
+        Gets the component's FABRIC Information Model (fim) object.
+
+        This method is used to access data at a lower level than
+        FABlib.
+        """
         return self.get_fim_component()
 
     def set_user_data(self, user_data: dict):
