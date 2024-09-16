@@ -2180,6 +2180,19 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_text(table, quiet=False):
+        """
+        Make a table in text form suitable for terminal.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param table: A list of lists.
+        :param quiet: Setting this to `False` causes the table to be
+            printed.
+
+        :return: A table formatted by tabulate library.
+        :rtype: str
+        """
         printable_table = tabulate(table)
 
         if not quiet:
