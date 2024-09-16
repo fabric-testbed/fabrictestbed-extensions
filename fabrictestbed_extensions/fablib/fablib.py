@@ -2272,6 +2272,19 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_json(data, quiet=False):
+        """
+        Make a table in JSON format.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param data: A list of lists.
+        :param quiet: Setting this to `False` causes the JSON string
+            to be printed.
+
+        :return: Table in JSON format.
+        :rtype: str
+        """
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
