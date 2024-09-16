@@ -1,5 +1,5 @@
-switch
-======
+artifact
+========
 
 .. automodule:: fabrictestbed_extensions.fablib.artifact
    :members:

@@ -1,5 +1,5 @@
-switch
-======
+artifact_manager_ui
+===================
 
 .. automodule:: fabrictestbed_extensions.ui.artifact_manager_ui
    :members:

@@ -1075,15 +1075,17 @@ class Slice:
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
 
-        :param user_data
+        :param user_data:
         :type user_data: dict
 
-        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :param technology: Specify the technology used should be set
+            to AL2S when using for AL2S peering; otherwise None
         :type technology: str
 
-        :param subnet: Request a specific subnet for FabNetv4, FabNetv6 or FabNetv6Ext services.
-                       It's ignored for any other services.
-        :type ipaddress.ip_network
+        :param subnet: Request a specific subnet for FabNetv4,
+            FabNetv6 or FabNetv6Ext services.  It's ignored for any
+            other services.
+        :type subnet: ipaddress.ip_network
 
         :return: a new L3 network service
         :rtype: NetworkService

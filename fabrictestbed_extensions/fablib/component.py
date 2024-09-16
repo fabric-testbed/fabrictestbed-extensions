@@ -61,6 +61,10 @@ from tabulate import tabulate
 
 
 class Component:
+    """
+    A class for working with FABRIC components.
+    """
+
     component_model_map = {
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
         Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
@@ -97,6 +101,9 @@ class Component:
         return tabulate(table)
 
     def get_fablib_manager(self):
+        """
+        Get the Fabric library manager associated with the component.
+        """
         return self.get_slice().get_fablib_manager()
 
     def toJson(self):
@@ -110,6 +117,9 @@ class Component:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Returns the mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
             "short_name": "Short Name",
@@ -384,6 +394,9 @@ class Component:
         return self.node.get_site()
 
     def get_short_name(self):
+        """
+        Gets the short name of the component.
+        """
         # strip of the extra parts of the name added by fim
         return self.get_name()[len(f"{self.get_node().get_name()}-") :]
 
@@ -636,20 +649,48 @@ class Component:
         return Component(node=node, fim_component=fim_component)
 
     def get_fim(self):
+        """
+        Gets the component's FABRIC Information Model (fim) object.
+
+        This method is used to access data at a lower level than
+        FABlib.
+        """
         return self.get_fim_component()
 
     def set_user_data(self, user_data: dict):
+        """
+        Set the user data for the component.
+
+        This method stores the given user data dictionary as a JSON
+        string in the FIM object associated with the component.
+
+        :param user_data: The user data to be set.
+        :type user_data: dict
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
-    def get_user_data(self):
+    def get_user_data(self) -> dict:
+        """
+        Retrieve the user data for the component.
+
+        This method fetches the user data stored in the FIM object
+        associated with the component and returns it as a dictionary.
+        If an error occurs, it returns an empty dictionary.
+
+        :return: The user data dictionary.
+        :rtype: dict
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except:
             return {}
 
     def delete(self):
+        """
+        Remove the component from the slice/node.
+        """
         if self.get_interfaces():
             for interface in self.get_interfaces():
                 interface.delete()
