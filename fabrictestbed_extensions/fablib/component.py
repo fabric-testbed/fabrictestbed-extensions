@@ -684,6 +684,9 @@ class Component:
             return {}
 
     def delete(self):
+        """
+        Remove the component from the slice/node.
+        """
         if self.get_interfaces():
             for interface in self.get_interfaces():
                 interface.delete()
