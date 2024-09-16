@@ -97,6 +97,9 @@ class Component:
         return tabulate(table)
 
     def get_fablib_manager(self):
+        """
+        Get the Fabric library manager associated with the component.
+        """
         return self.get_slice().get_fablib_manager()
 
     def toJson(self):
