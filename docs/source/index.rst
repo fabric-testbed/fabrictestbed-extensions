@@ -131,11 +131,11 @@ FABLib functionality is made available in these modules:
    node
    component
    interface
-   switch.rst
+   switch
    network_service
-   facility_port.rst
-   resources.rst
-   site.rst
+   facility_port
+   resources
+   site
    artifact
    artifact_manager_ui
 
