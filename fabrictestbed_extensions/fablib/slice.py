@@ -1913,7 +1913,11 @@ class Slice:
         except ValueError:
             return "Invalid"
 
-    def isReady(self, update=False):
+    def isReady(self, update=False) -> bool:
+        """
+        Returns `True` if the slice is ready; else returns `False`.
+        """
+        
         if not self.isStable():
             logging.debug(
                 f"isReady: {self.get_name()} not stable ({self.get_state()}), returning false"
