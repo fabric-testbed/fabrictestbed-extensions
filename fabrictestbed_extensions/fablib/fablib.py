@@ -586,6 +586,10 @@ class fablib:
 
 
 class FablibManager(Config):
+    """
+    The main class to use when interacting with the testbed.
+    """
+
     FABNETV4_SUBNET = IPv4Network("10.128.0.0/10")
     FABNETV6_SUBNET = IPv6Network("2602:FCFB:00::/40")
 
