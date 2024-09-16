@@ -384,6 +384,9 @@ class Component:
         return self.node.get_site()
 
     def get_short_name(self):
+        """
+        Gets the short name of the component.
+        """
         # strip of the extra parts of the name added by fim
         return self.get_name()[len(f"{self.get_node().get_name()}-") :]
 
