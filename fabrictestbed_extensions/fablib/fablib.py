@@ -1050,6 +1050,9 @@ Host * !bastion.fabric-testbed.net
         os.chmod(public_file_path, 0o644)
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
+        """
+        Get :py:class:`ThreadPoolExecutor` that runs SSH commands.
+        """
         return self.ssh_thread_pool_executor
 
     def __build_manager(self) -> FabricManager:
