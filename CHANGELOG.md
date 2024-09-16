@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FabNet user specified subnets (Issue [#361](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/361))
 - Print a hint when bastion probe fails (Issue [#363](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/363))
 - Missing docstrings in resources module (Issue [#315](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/315))
+- Missing docstrings in slice module (Issue [#316](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/316))
 
 ## [1.7.3] - 08/05/2024
 ### Fixed
