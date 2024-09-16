@@ -113,6 +113,9 @@ class Component:
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Returns the mapping used when rendering table headers.
+        """
         return {
             "name": "Name",
             "short_name": "Short Name",
