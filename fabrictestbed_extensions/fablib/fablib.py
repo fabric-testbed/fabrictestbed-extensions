@@ -2323,6 +2323,38 @@ Host * !bastion.fabric-testbed.net
         quiet=False,
         pretty_names_dict={},
     ):
+        """
+        Format and optionally display a table.
+
+        :param data: The table data, probably a list of lists.
+        :type data:
+
+        :param fields: Table headers, as a list of strings.
+        :type fields:
+
+        :param title: Table title.
+        :type title: str
+
+        :param title_font_size: Font size to use in table title, when
+            displaying the table in a Jupyter notebook.
+        :type title_font_size: str
+
+        :param output: The table format.  Options are: "text" (or
+            "default"), or "json", or "dict", or "pandas" (or
+            "jupyter_default").
+        :type output: str
+
+        :param quiet: Display the table, in addition to returning a
+            table in the required `output` format.
+        :type quiet: bool
+
+        :param pretty_names_dict: A mapping of non-pretty names to
+            pretty names to use in table headers.
+        :type pretty_names_dict: dict
+
+        :return: Depends on `output` parameter.
+        :rtype: Depends on `output` parameter.
+        """
         if output is None:
             output = self.output.lower()
 
