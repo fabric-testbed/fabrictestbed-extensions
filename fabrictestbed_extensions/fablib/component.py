@@ -654,11 +654,30 @@ class Component:
         return self.get_fim_component()
 
     def set_user_data(self, user_data: dict):
+        """
+        Set the user data for the component.
+
+        This method stores the given user data dictionary as a JSON
+        string in the FIM object associated with the component.
+
+        :param user_data: The user data to be set.
+        :type user_data: dict
+        """
         self.get_fim().set_property(
             pname="user_data", pval=UserData(json.dumps(user_data))
         )
 
-    def get_user_data(self):
+    def get_user_data(self) -> dict:
+        """
+        Retrieve the user data for the component.
+
+        This method fetches the user data stored in the FIM object
+        associated with the component and returns it as a dictionary.
+        If an error occurs, it returns an empty dictionary.
+
+        :return: The user data dictionary.
+        :rtype: dict
+        """
         try:
             return json.loads(str(self.get_fim().get_property(pname="user_data")))
         except:
