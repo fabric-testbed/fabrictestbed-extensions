@@ -582,6 +582,9 @@ class fablib:
 
     @staticmethod
     def is_jupyter_notebook() -> bool:
+        """
+        Check if we're running inside a Jupyter notebook.
+        """
         return fablib.get_default_fablib_manager().is_jupyter_notebook()
 
 
