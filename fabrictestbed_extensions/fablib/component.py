@@ -61,6 +61,10 @@ from tabulate import tabulate
 
 
 class Component:
+    """
+    A class for working with FABRIC components.
+    """
+
     component_model_map = {
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
         Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
