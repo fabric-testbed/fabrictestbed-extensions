@@ -2815,6 +2815,9 @@ class Slice:
         self.update_slice()
 
     def get_user_data(self):
+        """
+        Retrieve user data associated with the slice.
+        """
         user_data = {}
         for node in self.get_nodes():
             user_data[node.get_name()] = node.get_user_data()
