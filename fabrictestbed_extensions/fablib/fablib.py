@@ -2294,6 +2294,20 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_dict(data, quiet=False):
+        """
+        Show the table.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param data: The table as a Python object; likely a list of
+            lists.
+        :param quiet: Setting this to `False` causes the table to be
+            printed.
+
+        :return: The table as a Python object.
+        :rtype: str
+        """
         if not quiet:
             print(f"{data}")
 
