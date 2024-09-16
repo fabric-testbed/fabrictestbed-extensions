@@ -136,6 +136,8 @@ FABLib functionality is made available in these modules:
    facility_port.rst
    resources.rst
    site.rst
+   artifact
+   artifact_manager_ui
 
 
 Indices and tables
