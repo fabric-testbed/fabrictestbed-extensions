@@ -48,6 +48,7 @@ class Resources:
     """
     A class for working with FABRIC resources.
     """
+
     def __init__(
         self,
         fablib_manager,
@@ -838,7 +839,7 @@ class Links(Resources):
     """
     A class for working with network links.
     """
-    
+
     link_pretty_names = {
         "site_names": "Sites",
         "node_id": "Link Name",
@@ -943,7 +944,7 @@ class FacilityPorts(Resources):
     """
     A class for working with FABRIC facility ports.
     """
-    
+
     link_pretty_names = {
         "name": "Name",
         "site_name": "Site",

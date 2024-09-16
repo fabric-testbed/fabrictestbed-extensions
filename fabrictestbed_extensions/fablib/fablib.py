@@ -1745,7 +1745,7 @@ Host * !bastion.fabric-testbed.net
 
         .. deprecated:: 1.7.3
            Use `get_manager()` instead.
-       """
+        """
         return self.get_manager()
 
     def set_manager(self, manager: FabricManager):
