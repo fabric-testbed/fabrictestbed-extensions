@@ -2204,6 +2204,21 @@ Host * !bastion.fabric-testbed.net
     def show_table_jupyter(
         table, headers=None, title="", title_font_size="1.25em", quiet=False
     ):
+        """
+        Make a table in text form suitable for Jupyter notebooks.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param table: A list of lists.
+        :param title: The table title.
+        :param title_font_size: Font size to use for the table title.
+        :param quiet: Setting this to `False` causes the table to be
+            displayed.
+
+        :return: a Pandas dataframe.
+        :rtype: pd.DataFrame
+        """
         printable_table = pd.DataFrame(table)
 
         properties = {
