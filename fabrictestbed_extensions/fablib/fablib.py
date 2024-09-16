@@ -1728,7 +1728,9 @@ Host * !bastion.fabric-testbed.net
 
         :param slice_manager: the slice manager to set
         :type slice_manager: SliceManager
-        .. deprecated:: 1.7.3 Use `set_manager()` instead.
+
+        .. deprecated:: 1.7.3
+           Use `set_manager()` instead.
         """
         self.set_manager(manager=slice_manager)
 
@@ -1736,12 +1738,13 @@ Host * !bastion.fabric-testbed.net
         """
         Not intended as API call
 
-
         Gets the slice manager of this fablib object.
 
         :return: the slice manager on this fablib object
         :rtype: SliceManager
-        .. deprecated:: 1.7.3 Use `get_manager()` instead.
+
+        .. deprecated:: 1.7.3
+           Use `get_manager()` instead.
         """
         return self.get_manager()
 
