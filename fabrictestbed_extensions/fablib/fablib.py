@@ -82,7 +82,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 import pandas as pd
 import paramiko
@@ -2552,7 +2552,24 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def create_show_table(data, fields=None, pretty_names_dict={}):
+    def create_show_table(
+        data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
+        pretty_names_dict: dict[str, str] = {},
+    ) -> List[[Any, Any]]:
+        """
+        Form a table that we can display.
+
+        You should not have to use this method directly; this is used
+        by :py:meth:`show_table()`.
+
+        :param data: Input data.
+        :param fields: List of column field names.
+        :param pretty_names_dict: Mapping from non-pretty to pretty
+            names, to be used as column labels.
+
+        :return: A list that can be formatted as a table.
+        """
         table = []
         if fields is None:
             for key, value in data.items():
