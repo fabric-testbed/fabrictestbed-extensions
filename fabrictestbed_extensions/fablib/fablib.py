@@ -2402,13 +2402,27 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def list_table_jupyter(
-        table,
-        headers=None,
-        title="",
-        title_font_size="1.25em",
+        table: List[List[Any]],
+        headers: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
         output=None,
-        quiet=False,
+        quiet: bool = False,
     ):
+        """
+        Format a table as a Pandas DataFrame.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param table: A list that :py:func:`tabulate()` can use.
+        :param headers: List of column headers.
+        :param title: Table title, set as caption for the DataFrame.
+        :param output: Unused.
+        :param quiet: Display the table when ``False``.
+
+        :return: A Pandas DataFrame.
+        """
         if len(table) == 0:
             return None
 
