@@ -2498,7 +2498,18 @@ Host * !bastion.fabric-testbed.net
         return printable_table
 
     @staticmethod
-    def list_table_json(data, quiet=False):
+    def list_table_json(data: List[Dict[str, str]], quiet: bool = False):
+        """
+        Return a JSON representation of table data.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param data: Data to be formatted as JSON.
+        :param quiet: Prints the JSON string when ``False``.
+
+        :return: Some JSON.
+        """
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
