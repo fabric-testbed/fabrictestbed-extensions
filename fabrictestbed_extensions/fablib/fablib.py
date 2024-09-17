@@ -2586,7 +2586,7 @@ Host * !bastion.fabric-testbed.net
         data: Dict[str, Any],
         fields: Union[List[str], None] = None,
         pretty_names_dict: dict[str, str] = {},
-    ) -> List[[Any, Any]]:
+    ) -> List[List[str]]:
         """
         Form a table that we can display.
 
