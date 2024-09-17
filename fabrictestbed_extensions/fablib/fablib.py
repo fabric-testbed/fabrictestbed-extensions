@@ -82,7 +82,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Tuple, Union
 
 import pandas as pd
 import paramiko
@@ -2485,15 +2485,32 @@ Host * !bastion.fabric-testbed.net
 
     def list_table(
         self,
-        data,
-        fields=None,
-        title="",
-        title_font_size="1.25em",
-        output=None,
-        quiet=False,
-        filter_function=None,
-        pretty_names_dict={},
+        data: List[Dict[str, str]],
+        fields: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output: Union[str, None] = None,
+        quiet: bool = False,
+        filter_function: Union[Callable[[Iterable], bool], None] = None,
+        pretty_names_dict: Dict[str, str] = {},
     ):
+        """
+        Format a list into a table that we can display.
+
+        :param data: Data to be formatted.
+        :param fields: List of column headings.
+        :param title: Table title.
+        :param title_font_size: Font size of the table title.
+        :param output: Output format, which can be one of ``"text"``,
+            ``"json"``, ``"list"``, or ``"pandas"``.
+        :param quiet: Prints the table when ``True``.
+        :param filter_function: A lambda that can be used to filter
+            the input data.
+        :param pretty_names_dict: A mapping from non-pretty names to
+            pretty names, used in column headings.
+
+        :return: Input :py:obj:`data` formatted as a table.
+        """
         if filter_function:
             data = list(filter(filter_function, data))
 
