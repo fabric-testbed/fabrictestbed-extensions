@@ -2558,7 +2558,20 @@ Host * !bastion.fabric-testbed.net
             logging.error(f"Unknown output type: {output}")
 
     @staticmethod
-    def create_list_table(data, fields=None):
+    def create_list_table(
+        data: List[Dict[str, str]], fields: Union[List[str], None] = None
+    ):
+        """
+        Format a list as a table.
+
+        This method is used by :py:meth:`list_table()`; you do not
+        have to use this directly.
+
+        :param data: Data to be formatted.
+        :param fields: List of column titles.
+
+        :return: Tabular data.
+        """
         table = []
         for entry in data:
             row = []
