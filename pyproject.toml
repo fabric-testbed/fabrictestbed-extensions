@@ -84,4 +84,4 @@ ignore-private = true
 ignore-semiprivate = true
 omit-covered-files = true
 verbose = 0
-exclude = ["tests"]
+exclude = ["tests", "fabrictestbed_extensions/editors"]
