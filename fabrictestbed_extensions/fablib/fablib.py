@@ -2500,7 +2500,7 @@ Host * !bastion.fabric-testbed.net
     @staticmethod
     def list_table_json(data: List[Dict[str, str]], quiet: bool = False):
         """
-        Return a JSON representation of table data.
+        Return a JSON representation of tabular data.
 
         This is a helper method called by :py:meth:`list_table()`; you
         should use that method instead of invoking this directly.
@@ -2518,7 +2518,18 @@ Host * !bastion.fabric-testbed.net
         return json_str
 
     @staticmethod
-    def list_table_list(data, quiet=False):
+    def list_table_list(data: List[Dict[str, str]], quiet: bool = False):
+        """
+        Return text representation of tabular data.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param data: Data to be formatted.
+        :param quiet: Prints the string when ``False``.
+
+        :return: A table-formatted string.
+        """
         if not quiet:
             print(f"{data}")
 
