@@ -2315,11 +2315,11 @@ Host * !bastion.fabric-testbed.net
 
     def show_table(
         self,
-        data: List[List[Any]],
-        fields: List[str] = None,
+        data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
         title: str = "",
         title_font_size: str = "1.25em",
-        output: str = None,
+        output: Union[str, None] = None,
         quiet: bool = False,
         pretty_names_dict: Dict[str, str] = {},
     ):
