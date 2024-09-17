@@ -72,3 +72,16 @@ addopts = "-ra -q"
 # tests will require some manual setup (namely token acquisition), and
 # thus we can't run them on CI.
 testpaths = ["tests/unit/"]
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = true
+ignore-module = true
+ignore-nested-functions = true
+ignore-nested-classes = true
+ignore-private = true
+ignore-semiprivate = true
+omit-covered-files = true
+verbose = 0
+exclude = ["tests"]
