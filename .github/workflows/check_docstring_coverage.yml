@@ -1,3 +1,9 @@
+# A check to ensure that our docstring coverage remains pretty good.
+#
+# We use interrogate (https://interrogate.readthedocs.io/) to check
+# docstring coverage.  Settings are under `[tool.interrogate]` section
+# of the pyproject.toml file in the top-level directory.
+
 name: Check docstring coverage
 
 on:
