@@ -82,7 +82,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 import pandas as pd
 import paramiko
@@ -2315,22 +2315,22 @@ Host * !bastion.fabric-testbed.net
 
     def show_table(
         self,
-        data,
-        fields=None,
-        title="",
-        title_font_size="1.25em",
-        output=None,
-        quiet=False,
-        pretty_names_dict={},
+        data: List[List[Any]],
+        fields: List[str] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output: str = None,
+        quiet: bool = False,
+        pretty_names_dict: Dict[str, str] = {},
     ):
         """
         Format and optionally display a table.
 
-        :param data: The table data, probably a list of lists.
-        :type data:
+        :param data: Data to be presented in the table.
+        :type data: List[List]
 
         :param fields: Table headers, as a list of strings.
-        :type fields:
+        :type fields: List[str]
 
         :param title: Table title.
         :type title: str
