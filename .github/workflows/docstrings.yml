@@ -1,0 +1,34 @@
+name: Check docstring coverage
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+          cache: 'pip'  # cache pip dependencies
+          cache-dependency-path: pyproject.toml
+
+      # See https://github.com/JackMcKew/python-interrogate-check
+      - name: Check docstring coverage with interrogate
+        uses: JackMcKew/python-interrogate-check@v0.1.2
+        with:
+          path: "fabrictestbed_extensions"
+          fail-under: "92"
