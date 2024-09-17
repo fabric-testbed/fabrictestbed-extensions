@@ -2373,7 +2373,23 @@ Host * !bastion.fabric-testbed.net
             logging.error(f"Unknown output type: {output}")
 
     @staticmethod
-    def list_table_text(table, headers=None, quiet=False):
+    def list_table_text(
+        table: List[List[Any]],
+        headers: Union[List[str], None] = None,
+        quiet: bool = False,
+    ):
+        """
+        Format a table as text.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param table: A list that :py:func:`tabulate()` can use.
+        :param headers: List of column headers.
+        :param quiet: Print the table when ``False``.
+
+        :return: A table-formatted string.
+        """
         if headers is not None:
             printable_table = tabulate(table, headers=headers)
         else:
