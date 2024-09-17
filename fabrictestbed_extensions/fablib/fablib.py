@@ -1623,8 +1623,13 @@ Host * !bastion.fabric-testbed.net
         :rtype: List[Sting]
         """
 
-        # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
+            """
+            Filter out "impossible" sites.
+
+            Always filter out sites in maintenance and sites that
+            can't support any VMs.
+            """
             if filter_function is None:
                 if site["state"] == "Active" and site["hosts"] > 0:
                     return True
