@@ -114,6 +114,9 @@ class fablib:
 
     @staticmethod
     def get_default_fablib_manager():
+        """
+        Get or create an internal :py:class:`FablibManager` instance.
+        """
         if fablib.default_fablib_manager is None:
             fablib.default_fablib_manager = FablibManager()
 
