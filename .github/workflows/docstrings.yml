@@ -26,9 +26,11 @@ jobs:
           cache: 'pip'  # cache pip dependencies
           cache-dependency-path: pyproject.toml
 
-      # See https://github.com/JackMcKew/python-interrogate-check
+      - name: Install interrogate
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install interrogate==1.7.0
+
       - name: Check docstring coverage with interrogate
-        uses: JackMcKew/python-interrogate-check@v0.1.2
-        with:
-          path: "fabrictestbed_extensions"
-          fail-under: "92"
+        run: |
+          python -m interrogate -vv fabrictestbed_extensions
