@@ -2327,33 +2327,26 @@ Host * !bastion.fabric-testbed.net
         Format and optionally display a table.
 
         :param data: Data to be presented in the table.
-        :type data: List[List]
 
         :param fields: Table headers, as a list of strings.
-        :type fields: List[str]
 
         :param title: Table title.
-        :type title: str
 
         :param title_font_size: Font size to use in table title, when
             displaying the table in a Jupyter notebook.
-        :type title_font_size: str
 
-        :param output: The table format.  Options are: "text" (or
-            "default"), or "json", or "dict", or "pandas" (or
-            "jupyter_default").
-        :type output: str
+        :param output: The table format.  Options are: ``"text"`` (or
+            ``"default"``), or ``"json"``, or ``"dict"``, or
+            ``"pandas"`` (or ``"jupyter_default"``).
 
         :param quiet: Display the table, in addition to returning a
             table in the required `output` format.
-        :type quiet: bool
 
         :param pretty_names_dict: A mapping from non-pretty names to
             pretty names to use in table headers.
-        :type pretty_names_dict: Dict[str,str]
 
         :return: Input :py:obj:`data` formatted as a table.
-        :rtype: Depends on `output` parameter.
+        :rtype: Depends on :py:obj:`output` parameter.
         """
         if output is None:
             output = self.output.lower()
