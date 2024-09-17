@@ -2348,11 +2348,11 @@ Host * !bastion.fabric-testbed.net
             table in the required `output` format.
         :type quiet: bool
 
-        :param pretty_names_dict: A mapping of non-pretty names to
+        :param pretty_names_dict: A mapping from non-pretty names to
             pretty names to use in table headers.
-        :type pretty_names_dict: dict
+        :type pretty_names_dict: Dict[str,str]
 
-        :return: Depends on `output` parameter.
+        :return: Input :py:obj:`data` formatted as a table.
         :rtype: Depends on `output` parameter.
         """
         if output is None:
