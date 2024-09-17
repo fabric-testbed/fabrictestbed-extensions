@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing docstrings in resources module (Issue [#315](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/315))
 - Missing docstrings in slice module (Issue [#316](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/316))
 - Missing docstrings in component module (Issue [#317](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/317))
+- Missing docstrings in fablib module (Issue [#319](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/319))
 
 ## [1.7.3] - 08/05/2024
 ### Fixed

@@ -82,7 +82,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Tuple, Union
 
 import pandas as pd
 import paramiko
@@ -114,6 +114,9 @@ class fablib:
 
     @staticmethod
     def get_default_fablib_manager():
+        """
+        Get or create an internal :py:class:`FablibManager` instance.
+        """
         if fablib.default_fablib_manager is None:
             fablib.default_fablib_manager = FablibManager()
 
@@ -275,6 +278,9 @@ class fablib:
 
     @staticmethod
     def show_config():
+        """
+        Show current FABlib configuration parameters.
+        """
         return fablib.get_default_fablib_manager().show_config()
 
     @staticmethod
@@ -579,10 +585,17 @@ class fablib:
 
     @staticmethod
     def is_jupyter_notebook() -> bool:
+        """
+        Check if we're running inside a Jupyter notebook.
+        """
         return fablib.get_default_fablib_manager().is_jupyter_notebook()
 
 
 class FablibManager(Config):
+    """
+    The main class to use when interacting with the testbed.
+    """
+
     FABNETV4_SUBNET = IPv4Network("10.128.0.0/10")
     FABNETV6_SUBNET = IPv6Network("2602:FCFB:00::/40")
 
@@ -1040,6 +1053,9 @@ Host * !bastion.fabric-testbed.net
         os.chmod(public_file_path, 0o644)
 
     def get_ssh_thread_pool_executor(self) -> ThreadPoolExecutor:
+        """
+        Get :py:class:`ThreadPoolExecutor` that runs SSH commands.
+        """
         return self.ssh_thread_pool_executor
 
     def __build_manager(self) -> FabricManager:
@@ -1607,8 +1623,13 @@ Host * !bastion.fabric-testbed.net
         :rtype: List[Sting]
         """
 
-        # Always filter out sites in maintenance and sites that can't support any VMs
         def combined_filter_function(site):
+            """
+            Filter out "impossible" sites.
+
+            Always filter out sites in maintenance and sites that
+            can't support any VMs.
+            """
             if filter_function is None:
                 if site["state"] == "Active" and site["hosts"] > 0:
                     return True
@@ -2167,6 +2188,19 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_text(table, quiet=False):
+        """
+        Make a table in text form suitable for terminal.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param table: A list of lists.
+        :param quiet: Setting this to `False` causes the table to be
+            printed.
+
+        :return: A table formatted by tabulate library.
+        :rtype: str
+        """
         printable_table = tabulate(table)
 
         if not quiet:
@@ -2178,6 +2212,21 @@ Host * !bastion.fabric-testbed.net
     def show_table_jupyter(
         table, headers=None, title="", title_font_size="1.25em", quiet=False
     ):
+        """
+        Make a table in text form suitable for Jupyter notebooks.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param table: A list of lists.
+        :param title: The table title.
+        :param title_font_size: Font size to use for the table title.
+        :param quiet: Setting this to `False` causes the table to be
+            displayed.
+
+        :return: a Pandas dataframe.
+        :rtype: pd.DataFrame
+        """
         printable_table = pd.DataFrame(table)
 
         properties = {
@@ -2231,6 +2280,19 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_json(data, quiet=False):
+        """
+        Make a table in JSON format.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param data: A list of lists.
+        :param quiet: Setting this to `False` causes the JSON string
+            to be printed.
+
+        :return: Table in JSON format.
+        :rtype: str
+        """
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
@@ -2240,6 +2302,20 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_dict(data, quiet=False):
+        """
+        Show the table.
+
+        You normally will not use this method directly; you should
+        rather use :py:meth:`show_table()`.
+
+        :param data: The table as a Python object; likely a list of
+            lists.
+        :param quiet: Setting this to `False` causes the table to be
+            printed.
+
+        :return: The table as a Python object.
+        :rtype: str
+        """
         if not quiet:
             print(f"{data}")
 
@@ -2247,14 +2323,39 @@ Host * !bastion.fabric-testbed.net
 
     def show_table(
         self,
-        data,
-        fields=None,
-        title="",
-        title_font_size="1.25em",
-        output=None,
-        quiet=False,
-        pretty_names_dict={},
+        data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output: Union[str, None] = None,
+        quiet: bool = False,
+        pretty_names_dict: Dict[str, str] = {},
     ):
+        """
+        Format and optionally display a table.
+
+        :param data: Data to be presented in the table.
+
+        :param fields: Table headers, as a list of strings.
+
+        :param title: Table title.
+
+        :param title_font_size: Font size to use in table title, when
+            displaying the table in a Jupyter notebook.
+
+        :param output: The table format.  Options are: ``"text"`` (or
+            ``"default"``), or ``"json"``, or ``"dict"``, or
+            ``"pandas"`` (or ``"jupyter_default"``).
+
+        :param quiet: Display the table, in addition to returning a
+            table in the required `output` format.
+
+        :param pretty_names_dict: A mapping from non-pretty names to
+            pretty names to use in table headers.
+
+        :return: Input :py:obj:`data` formatted as a table.
+        :rtype: Depends on :py:obj:`output` parameter.
+        """
         if output is None:
             output = self.output.lower()
 
@@ -2280,7 +2381,23 @@ Host * !bastion.fabric-testbed.net
             logging.error(f"Unknown output type: {output}")
 
     @staticmethod
-    def list_table_text(table, headers=None, quiet=False):
+    def list_table_text(
+        table: List[List[Any]],
+        headers: Union[List[str], None] = None,
+        quiet: bool = False,
+    ):
+        """
+        Format a table as text.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param table: A list that :py:func:`tabulate()` can use.
+        :param headers: List of column headers.
+        :param quiet: Print the table when ``False``.
+
+        :return: A table-formatted string.
+        """
         if headers is not None:
             printable_table = tabulate(table, headers=headers)
         else:
@@ -2293,13 +2410,27 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def list_table_jupyter(
-        table,
-        headers=None,
-        title="",
-        title_font_size="1.25em",
+        table: List[List[Any]],
+        headers: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
         output=None,
-        quiet=False,
+        quiet: bool = False,
     ):
+        """
+        Format a table as a Pandas DataFrame.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param table: A list that :py:func:`tabulate()` can use.
+        :param headers: List of column headers.
+        :param title: Table title, set as caption for the DataFrame.
+        :param output: Unused.
+        :param quiet: Display the table when ``False``.
+
+        :return: A Pandas DataFrame.
+        """
         if len(table) == 0:
             return None
 
@@ -2375,7 +2506,18 @@ Host * !bastion.fabric-testbed.net
         return printable_table
 
     @staticmethod
-    def list_table_json(data, quiet=False):
+    def list_table_json(data: List[Dict[str, str]], quiet: bool = False):
+        """
+        Return a JSON representation of tabular data.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param data: Data to be formatted as JSON.
+        :param quiet: Prints the JSON string when ``False``.
+
+        :return: Some JSON.
+        """
         json_str = json.dumps(data, indent=4)
 
         if not quiet:
@@ -2384,7 +2526,18 @@ Host * !bastion.fabric-testbed.net
         return json_str
 
     @staticmethod
-    def list_table_list(data, quiet=False):
+    def list_table_list(data: List[Dict[str, str]], quiet: bool = False):
+        """
+        Return text representation of tabular data.
+
+        This is a helper method called by :py:meth:`list_table()`; you
+        should use that method instead of invoking this directly.
+
+        :param data: Data to be formatted.
+        :param quiet: Prints the string when ``False``.
+
+        :return: A table-formatted string.
+        """
         if not quiet:
             print(f"{data}")
 
@@ -2392,15 +2545,32 @@ Host * !bastion.fabric-testbed.net
 
     def list_table(
         self,
-        data,
-        fields=None,
-        title="",
-        title_font_size="1.25em",
-        output=None,
-        quiet=False,
-        filter_function=None,
-        pretty_names_dict={},
+        data: List[Dict[str, str]],
+        fields: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output: Union[str, None] = None,
+        quiet: bool = False,
+        filter_function: Union[Callable[[Iterable], bool], None] = None,
+        pretty_names_dict: Dict[str, str] = {},
     ):
+        """
+        Format a list into a table that we can display.
+
+        :param data: Data to be formatted.
+        :param fields: List of column headings.
+        :param title: Table title.
+        :param title_font_size: Font size of the table title.
+        :param output: Output format, which can be one of ``"text"``,
+            ``"json"``, ``"list"``, or ``"pandas"``.
+        :param quiet: Prints the table when ``True``.
+        :param filter_function: A lambda that can be used to filter
+            the input data.
+        :param pretty_names_dict: A mapping from non-pretty names to
+            pretty names, used in column headings.
+
+        :return: Input :py:obj:`data` formatted as a table.
+        """
         if filter_function:
             data = list(filter(filter_function, data))
 
@@ -2448,7 +2618,20 @@ Host * !bastion.fabric-testbed.net
             logging.error(f"Unknown output type: {output}")
 
     @staticmethod
-    def create_list_table(data, fields=None):
+    def create_list_table(
+        data: List[Dict[str, str]], fields: Union[List[str], None] = None
+    ):
+        """
+        Format a list as a table.
+
+        This method is used by :py:meth:`list_table()`; you do not
+        have to use this directly.
+
+        :param data: Data to be formatted.
+        :param fields: List of column titles.
+
+        :return: Tabular data.
+        """
         table = []
         for entry in data:
             row = []
@@ -2459,7 +2642,24 @@ Host * !bastion.fabric-testbed.net
         return table
 
     @staticmethod
-    def create_show_table(data, fields=None, pretty_names_dict={}):
+    def create_show_table(
+        data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
+        pretty_names_dict: dict[str, str] = {},
+    ) -> List[List[str]]:
+        """
+        Form a table that we can display.
+
+        You should not have to use this method directly; this is used
+        by :py:meth:`show_table()`.
+
+        :param data: Input data.
+        :param fields: List of column field names.
+        :param pretty_names_dict: Mapping from non-pretty to pretty
+            names, to be used as column labels.
+
+        :return: A list that can be formatted as a table.
+        """
         table = []
         if fields is None:
             for key, value in data.items():
