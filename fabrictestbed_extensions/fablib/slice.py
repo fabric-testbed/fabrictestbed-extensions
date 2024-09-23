@@ -2224,17 +2224,17 @@ class Slice:
         options = locals().copy()
         options.update(kwargs)
 
-        wait = options.get('wait', wait)
-        wait_timeout = options.get('wait_timeout', wait_timeout)
-        wait_interval = options.get('wait_interval', wait_interval)
-        progress = options.get('progress', progress)
-        wait_jupyter = options.get('wait_jupyter', wait_jupyter)
-        post_boot_config = options.get('post_boot_config', post_boot_config)
-        wait_ssh = options.get('wait_ssh', wait_ssh)
-        extra_ssh_keys = options.get('extra_ssh_keys', extra_ssh_keys)
-        lease_start_time = options.get('lease_start_time', lease_start_time)
-        lease_in_days = options.get('lease_in_days', lease_in_days)
-        validate = options.get('validate', validate)
+        wait = options.get("wait", wait)
+        wait_timeout = options.get("wait_timeout", wait_timeout)
+        wait_interval = options.get("wait_interval", wait_interval)
+        progress = options.get("progress", progress)
+        wait_jupyter = options.get("wait_jupyter", wait_jupyter)
+        post_boot_config = options.get("post_boot_config", post_boot_config)
+        wait_ssh = options.get("wait_ssh", wait_ssh)
+        extra_ssh_keys = options.get("extra_ssh_keys", extra_ssh_keys)
+        lease_start_time = options.get("lease_start_time", lease_start_time)
+        lease_in_days = options.get("lease_in_days", lease_in_days)
+        validate = options.get("validate", validate)
         slice_reservations = None
 
         if not wait:
