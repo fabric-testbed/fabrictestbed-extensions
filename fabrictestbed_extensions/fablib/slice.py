@@ -672,11 +672,17 @@ class Slice:
         raise Exception(f"{slivers}")
 
     def get_sliver(self, reservation_id: str) -> OrchestratorSliver:
+        """
+        Returns the sliver associated with the reservation ID.
+        """
         slivers = self.get_slivers()
         sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
         return sliver
 
     def get_slivers(self) -> List[OrchestratorSliver]:
+        """
+        Returns slivers associated with the slice.
+        """
         if not self.slivers:
             logging.debug(f"get_slivers", stack_info=False)
             self.update_slivers()
@@ -1070,15 +1076,17 @@ class Slice:
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
 
-        :param user_data
+        :param user_data:
         :type user_data: dict
 
-        :param technology: Specify the technology used should be set to AL2S when using for AL2S peering; otherwise None
+        :param technology: Specify the technology used should be set
+            to AL2S when using for AL2S peering; otherwise None
         :type technology: str
 
-        :param subnet: Request a specific subnet for FabNetv4, FabNetv6 or FabNetv6Ext services.
-                       It's ignored for any other services.
-        :type ipaddress.ip_network
+        :param subnet: Request a specific subnet for FabNetv4,
+            FabNetv6 or FabNetv6Ext services.  It's ignored for any
+            other services.
+        :type subnet: ipaddress.ip_network
 
         :return: a new L3 network service
         :rtype: NetworkService
@@ -1917,7 +1925,11 @@ class Slice:
         except ValueError:
             return "Invalid"
 
-    def isReady(self, update=False):
+    def isReady(self, update=False) -> bool:
+        """
+        Returns `True` if the slice is ready; else returns `False`.
+        """
+
         if not self.isStable():
             logging.debug(
                 f"isReady: {self.get_name()} not stable ({self.get_state()}), returning false"
@@ -2815,6 +2827,9 @@ class Slice:
         self.update_slice()
 
     def get_user_data(self):
+        """
+        Retrieve user data associated with the slice.
+        """
         user_data = {}
         for node in self.get_nodes():
             user_data[node.get_name()] = node.get_user_data()

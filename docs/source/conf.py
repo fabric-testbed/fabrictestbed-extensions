@@ -32,6 +32,9 @@ extensions = [
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
+    "sphinx_autodoc_typehints",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -45,6 +48,11 @@ exclude_patterns = []
 # Use __init__ method’s docstrings in class docs.  Other options are
 # "class" and "both".
 autoclass_content = "init"
+
+# Link to Python stdlib docs when possible.
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+}
 
 # -- Options for HTML output -------------------------------------------------
 

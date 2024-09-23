@@ -38,10 +38,18 @@ from fabrictestbed_extensions.utils.utils import Utils
 
 
 class ConfigException(Exception):
+    """
+    An exception class to represent configuration errors.
+    """
+
     pass
 
 
 class Config:
+    """
+    A class that represents fablib configuration.
+    """
+
     LOG_LEVELS = {
         "DEBUG": logging.DEBUG,
         "INFO": logging.INFO,
@@ -744,6 +752,9 @@ class Config:
         return self.REQUIRED_ATTRS_PRETTY_NAMES
 
     def save_config(self):
+        """
+        Write the configuration file.
+        """
         if self.config_file_path is None:
             print("Config file path not set!")
             return

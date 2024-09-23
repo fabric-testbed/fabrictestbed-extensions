@@ -12,12 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing docstrings in network_service module (Issue [#313](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/314))
 - Artifact Manager Support (Issue [#358](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/358))
 - FabNet user specified subnets (Issue [#361](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/361))
+- Print a hint when bastion probe fails (Issue [#363](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/363))
+- Missing docstrings in resources module (Issue [#315](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/315))
+- Missing docstrings in slice module (Issue [#316](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/316))
+- Missing docstrings in component module (Issue [#317](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/317))
+- Missing docstrings in fablib module (Issue [#319](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/319))
+- Missing docstrings in fablib.config module (Issue [#320](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/320))
 - Renew Slice leaves the slivers in ActiveTicketed State (Issue [#364](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/364))
 - get_management_os_interface and get_dataplane_os_interfaces doesn't take into account IPv6 addresses. (Issue [#362](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/362))
 - Disable post boot config for renew (Issue [#373](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/373))
 - slice.renew() should pass **kwargs through to slice.submit() (Issue [#374](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/374))
 - node.execute() retry parameter is off-by-one (and/or misnamed) (Issue [#375](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/375))
- 
 
 ## [1.7.3] - 08/05/2024
 ### Fixed
