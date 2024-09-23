@@ -1254,15 +1254,6 @@ class Node:
         :rtype: str
         """
 
-        # ssh_command = self.get_fablib_manager().get_ssh_command_line()
-
-        # return self.template_substitution(ssh_command)
-
-        # try:
-        #    return self.template_substitution(self.get_fablib_manager().get_ssh_command_line())
-        # except:
-        #    return self.get_fablib_manager().get_ssh_command_line()
-
         try:
             return self.render_template(
                 self.get_fablib_manager().get_ssh_command_line(),
@@ -1270,22 +1261,6 @@ class Node:
             )
         except:
             return self.get_fablib_manager().get_ssh_command_line()
-
-        # for key,val in self.toDict(skip=["SSH Command"]).items():
-        #    remove_str = '${'+str(key).strip()+'}'
-        #    add_str = str(val)
-        #    ssh_command = ssh_command.replace(remove_str, add_str)
-
-        # for key,val in self.get_fablib_manager().get_config().items():
-        #    remove_str = '${'+str(key).strip()+'}'
-        #    add_str = str(val)
-        #    ssh_command = ssh_command.replace(remove_str, add_str)
-
-        # return ssh_command
-
-        # return 'ssh -i {} -F /path/to/your/ssh/config/file {}@{}'.format(self.get_private_key_file(),
-        #                                   self.get_username(),
-        #                                   self.get_management_ip())
 
     def validIPAddress(self, IP: str) -> str:
         """
