@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FabNet user specified subnets (Issue [#361](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/361))
 - Renew Slice leaves the slivers in ActiveTicketed State (Issue [#364](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/364))
 - get_management_os_interface and get_dataplane_os_interfaces doesn't take into account IPv6 addresses. (Issue [#362](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/362))
+- Disable post boot config for renew (Issue [#373](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/373))
+- slice.renew() should pass **kwargs through to slice.submit() (Issue [#374](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/374))
+- node.execute() retry parameter is off-by-one (and/or misnamed) (Issue [#375](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/375))
+ 
 
 ## [1.7.3] - 08/05/2024
 ### Fixed
