@@ -596,7 +596,7 @@ class Slice:
             slice_id=self.slice_id,
             name=self.slice_name,
             as_self=self.user_only,
-            graph_format="NONE"
+            graph_format="NONE",
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -628,7 +628,7 @@ class Slice:
         )
 
         # Update topology
-        #if self.sm_slice.model is not None and self.sm_slice.model != "":
+        # if self.sm_slice.model is not None and self.sm_slice.model != "":
         #    self.topology = ExperimentTopology()
         #    self.topology.load(graph_string=self.sm_slice.model)
         #    return
@@ -1980,7 +1980,13 @@ class Slice:
 
         return True
 
-    def wait_jupyter(self, timeout: int = 1800, interval: int = 30, verbose=False, post_boot_config: bool = True):
+    def wait_jupyter(
+        self,
+        timeout: int = 1800,
+        interval: int = 30,
+        verbose=False,
+        post_boot_config: bool = True,
+    ):
         """
         Waits for the slice to be in a stable and displays jupyter compliant tables of the slice progress.
 
@@ -2318,7 +2324,11 @@ class Slice:
             and wait_jupyter == "text"
             and self.fablib_manager.is_jupyter_notebook()
         ):
-            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval, post_boot_config=post_boot_config)
+            self.wait_jupyter(
+                timeout=wait_timeout,
+                interval=wait_interval,
+                post_boot_config=post_boot_config,
+            )
             return self.slice_id
 
         elif wait:
@@ -2784,7 +2794,11 @@ class Slice:
             and wait_jupyter == "text"
             and self.fablib_manager.is_jupyter_notebook()
         ):
-            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval, post_boot_config=post_boot_config)
+            self.wait_jupyter(
+                timeout=wait_timeout,
+                interval=wait_interval,
+                post_boot_config=post_boot_config,
+            )
             return self.slice_id
 
         elif wait:

@@ -53,7 +53,7 @@ import select
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import jinja2
 import paramiko
@@ -2292,7 +2292,9 @@ class Node:
             if interface:
                 return interface
 
-        logging.warning(f"{self.get_name()}->get_management_os_interface: No management interface found")
+        logging.warning(
+            f"{self.get_name()}->get_management_os_interface: No management interface found"
+        )
         return None
 
     def _get_default_interface(self, ip_version: str) -> Optional[str]:
@@ -2312,7 +2314,9 @@ class Node:
             for route in stdout_json:
                 if route.get("dst") == "default":
                     interface = route.get("dev")
-                    logging.debug(f"Found default route on {ip_version} with interface: {interface}")
+                    logging.debug(
+                        f"Found default route on {ip_version} with interface: {interface}"
+                    )
                     return interface
         except (json.JSONDecodeError, KeyError) as e:
             logging.error(f"Failed to parse route list for {ip_version}: {e}")
