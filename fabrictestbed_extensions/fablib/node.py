@@ -1509,7 +1509,8 @@ class Node:
         else:
             node_key_passphrase = self.get_private_key_passphrase()
 
-        for attempt in range(int(retry)):
+        attempt = 0
+        while attempt < max(1, int(retry)):
             try:
                 key = self.get_paramiko_key(
                     private_key_file=node_key_file,
@@ -1610,7 +1611,7 @@ class Node:
                                 stderrbytes = stderr.channel.recv_stderr(
                                     len(c.in_stderr_buffer)
                                 )
-                                if quiet == False:
+                                if not quiet:
                                     print(
                                         "\x1b[31m",
                                         str(stderrbytes, "utf-8").replace("\\n", "\n"),
@@ -1678,6 +1679,7 @@ class Node:
 
             # Clean-up of open connections and files.
             finally:
+                attempt += 1
                 try:
                     client.close()
                 except Exception as e:
