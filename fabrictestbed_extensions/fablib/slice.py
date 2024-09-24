@@ -596,6 +596,7 @@ class Slice:
             slice_id=self.slice_id,
             name=self.slice_name,
             as_self=self.user_only,
+            graph_format="NONE",
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -627,10 +628,10 @@ class Slice:
         )
 
         # Update topology
-        if self.sm_slice.model is not None and self.sm_slice.model != "":
-            self.topology = ExperimentTopology()
-            self.topology.load(graph_string=self.sm_slice.model)
-            return
+        # if self.sm_slice.model is not None and self.sm_slice.model != "":
+        #    self.topology = ExperimentTopology()
+        #    self.topology.load(graph_string=self.sm_slice.model)
+        #    return
 
         (
             return_status,
@@ -1617,7 +1618,7 @@ class Slice:
 
         self.topology = None
 
-    def renew(self, end_date: str = None, days: int = None):
+    def renew(self, end_date: str = None, days: int = None, **kwargs):
         """
         Renews the FABRIC slice's lease to the new end date.
 
@@ -1639,7 +1640,7 @@ class Slice:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
             days = (end - datetime.now(timezone.utc)).days
 
-        self.submit(lease_in_days=days)
+        self.submit(lease_in_days=days, post_boot_config=False, **kwargs)
 
     def build_error_exception_string(self) -> str:
         """
@@ -1842,6 +1843,9 @@ class Slice:
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
         )
 
+        # Make sure we have the latest topology
+        self.update()
+
         for network in self.get_networks():
             network.config()
 
@@ -1976,7 +1980,13 @@ class Slice:
 
         return True
 
-    def wait_jupyter(self, timeout: int = 1800, interval: int = 30, verbose=False):
+    def wait_jupyter(
+        self,
+        timeout: int = 1800,
+        interval: int = 30,
+        verbose=False,
+        post_boot_config: bool = True,
+    ):
         """
         Waits for the slice to be in a stable and displays jupyter compliant tables of the slice progress.
 
@@ -1986,6 +1996,9 @@ class Slice:
         :type interval: int
         :param verbose:
         :type verbose: bool
+
+        :param post_boot_config:
+        :type post_boot_config: bool
 
         :raises Exception: if the slice state is undesirable, or waiting times out
         :return: the stable slice on the slice manager
@@ -2112,9 +2125,12 @@ class Slice:
         print(f"\nTime to {self.get_state()} {time.time() - start:.0f} seconds")
 
         if stable:
-            print("Running post_boot_config ... ")
-            self.post_boot_config()
-            print(f"Time to post boot config {time.time() - start:.0f} seconds")
+            if post_boot_config:
+                print("Running post_boot_config ... ")
+                self.post_boot_config()
+                print(f"Time to post boot config {time.time() - start:.0f} seconds")
+            else:
+                self.update()
         elif allocated:
             print("Future allocation - skipping post_boot_config ... ")
 
@@ -2156,6 +2172,7 @@ class Slice:
         lease_start_time: datetime = None,
         lease_in_days: int = None,
         validate: bool = False,
+        **kwargs,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2203,6 +2220,21 @@ class Slice:
 
         :return: slice_id
         """
+        # Use kwargs to update only the arguments provided
+        options = locals().copy()
+        options.update(kwargs)
+
+        wait = options.get("wait", wait)
+        wait_timeout = options.get("wait_timeout", wait_timeout)
+        wait_interval = options.get("wait_interval", wait_interval)
+        progress = options.get("progress", progress)
+        wait_jupyter = options.get("wait_jupyter", wait_jupyter)
+        post_boot_config = options.get("post_boot_config", post_boot_config)
+        wait_ssh = options.get("wait_ssh", wait_ssh)
+        extra_ssh_keys = options.get("extra_ssh_keys", extra_ssh_keys)
+        lease_start_time = options.get("lease_start_time", lease_start_time)
+        lease_in_days = options.get("lease_in_days", lease_in_days)
+        validate = options.get("validate", validate)
         slice_reservations = None
 
         if not wait:
@@ -2307,7 +2339,11 @@ class Slice:
             and wait_jupyter == "text"
             and self.fablib_manager.is_jupyter_notebook()
         ):
-            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            self.wait_jupyter(
+                timeout=wait_timeout,
+                interval=wait_interval,
+                post_boot_config=post_boot_config,
+            )
             return self.slice_id
 
         elif wait:
@@ -2773,7 +2809,11 @@ class Slice:
             and wait_jupyter == "text"
             and self.fablib_manager.is_jupyter_notebook()
         ):
-            self.wait_jupyter(timeout=wait_timeout, interval=wait_interval)
+            self.wait_jupyter(
+                timeout=wait_timeout,
+                interval=wait_interval,
+                post_boot_config=post_boot_config,
+            )
             return self.slice_id
 
         elif wait:
@@ -2784,7 +2824,6 @@ class Slice:
             if progress:
                 print("Running post boot config ... ", end="")
 
-            self.update()
             if post_boot_config:
                 self.post_boot_config()
         else:

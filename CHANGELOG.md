@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing docstrings in component module (Issue [#317](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/317))
 - Missing docstrings in fablib module (Issue [#319](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/319))
 - Missing docstrings in fablib.config module (Issue [#320](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/320))
+- Renew Slice leaves the slivers in ActiveTicketed State (Issue [#364](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/364))
+- get_management_os_interface and get_dataplane_os_interfaces doesn't take into account IPv6 addresses. (Issue [#362](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/362))
+- Disable post boot config for renew (Issue [#373](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/373))
+- slice.renew() should pass **kwargs through to slice.submit() (Issue [#374](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/374))
+- node.execute() retry parameter is off-by-one (and/or misnamed) (Issue [#375](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/375))
+- FacilityPort.show() errors out (Issue [#346](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/346))
+
 
 ## [1.7.3] - 08/05/2024
 ### Fixed
