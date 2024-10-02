@@ -201,4 +201,5 @@ class Constants:
     CMP_GPU_A30 = "GPU_A30"
     CMP_NIC_OpenStack = "NIC_OpenStack"
     CMP_FPGA_Xilinx_U280 = "FPGA_Xilinx_U280"
+    CMP_FPGA_Xilinx_SN1022 = "FPGA_Xilinx_SN1022"
     P4_DedicatedPort = "P4_DedicatedPort"
