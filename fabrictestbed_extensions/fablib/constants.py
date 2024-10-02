@@ -183,6 +183,7 @@ class Constants:
     GPU_A30 = "GPU-A30"
     GPU_A40 = "GPU-A40"
     FPGA_XILINX_U280 = "FPGA-Xilinx-U280"
+    FPGA_XILINX_SN1022 = "FPGA-Xilinx-SN1022"
     CORES = "Cores"
     RAM = "Ram"
     DISK = "Disk"
