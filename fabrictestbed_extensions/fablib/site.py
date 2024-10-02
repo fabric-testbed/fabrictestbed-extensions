@@ -105,6 +105,11 @@ class ResourceConstants:
             Constants.PRETTY_NAME: "U280",
             Constants.HEADER_NAME: "FPGA-Xilinx-U280",
         },
+        Constants.FPGA_XILINX_SN1022: {
+            Constants.NON_PRETTY_NAME: "fpga_sn1022",
+            Constants.PRETTY_NAME: "SN1022",
+            Constants.HEADER_NAME: "FPGA-Xilinx-SN1022",
+        },
     }
     pretty_names = {
         "name": "Name",

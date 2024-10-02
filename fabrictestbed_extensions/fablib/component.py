@@ -77,6 +77,7 @@ class Component:
         Constants.CMP_GPU_A30: ComponentModelType.GPU_A30,
         Constants.CMP_NIC_OpenStack: ComponentModelType.SharedNIC_OpenStack_vNIC,
         Constants.CMP_FPGA_Xilinx_U280: ComponentModelType.FPGA_Xilinx_U280,
+        Constants.CMP_FPGA_Xilinx_SN1022: ComponentModelType.FPGA_Xilinx_SN1022,
     }
 
     def __str__(self):
