@@ -130,10 +130,10 @@ class Slice:
         :rtype: String
         """
         table = [
-            ["Slice Name", self.sm_slice.name],
-            ["Slice ID", self.sm_slice.slice_id],
-            ["Slice State", self.sm_slice.state],
-            ["Lease End", self.sm_slice.lease_end_time],
+            ["Slice Name", self.get_name()],
+            ["Slice ID", self.get_slice_id()],
+            ["Slice State", self.get_state()],
+            ["Lease End", self.get_lease_end()],
         ]
 
         return tabulate(table)
@@ -913,7 +913,8 @@ class Slice:
         :return: project id
         :rtype: String
         """
-        return self.sm_slice.project_id
+        if self.sm_slice:
+            return self.sm_slice.project_id
 
     def add_port_mirror_service(
         self,
