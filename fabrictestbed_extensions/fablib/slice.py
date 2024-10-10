@@ -708,7 +708,7 @@ class Slice:
         except Exception as e:
             logging.warning(f"slice.update_slivers failed: {e}")
 
-        #self.nodes = None
+        # self.nodes = None
         self.interfaces = None
         self.update_topology()
 
@@ -1465,7 +1465,11 @@ class Slice:
         current_node_names = set(current_topology_nodes.keys())
 
         # Identify and remove nodes that are not in the current topology
-        nodes_to_remove = [node_name for node_name in self.nodes.keys() if node_name not in current_node_names]
+        nodes_to_remove = [
+            node_name
+            for node_name in self.nodes.keys()
+            if node_name not in current_node_names
+        ]
 
         for node_name in nodes_to_remove:
             self.nodes.pop(node_name)

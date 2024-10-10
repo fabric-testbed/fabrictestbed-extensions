@@ -721,7 +721,16 @@ class FablibManager(Config):
             if slice_object.get_slice_id():
                 self.__slices_by_id[slice_object.get_slice_id()] = slice_object
 
-    def _get_slice_from_cache(self, slice_id: str = None, slice_name: str = None) -> Slice:
+    def _remove_slice_from_cache(self, slice_object: Slice):
+        with self.lock:
+            if slice_object.get_slice_id() and slice_object.get_slice_id() in self.__slices_by_id:
+                self.__slices_by_id.pop(slice_object.get_slice_id())
+            if slice_object.get_name() and slice_object.get_name() in self.__slices_by_name:
+                self.__slices_by_name.pop(slice_object.get_name())
+
+    def _get_slice_from_cache(
+        self, slice_id: str = None, slice_name: str = None
+    ) -> Slice:
         with self.lock:
             if slice_id:
                 return self.__slices_by_id.get(slice_id)
@@ -1949,6 +1958,7 @@ Host * !bastion.fabric-testbed.net
         filter_function=None,
         pretty_names=True,
         user_only: bool = True,
+        show_un_submitted: bool = False
     ):
         """
         Lists all the slices created by a user.
@@ -1983,10 +1993,12 @@ Host * !bastion.fabric-testbed.net
         :type pretty_names: bool
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
+        :param show_un_submitted: True indicates to also show unsubmitted slices
+        :type show_un_submitted: bool
         :rtype: Object
         """
         table = []
-        for slice in self.get_slices(excludes=excludes, user_only=user_only):
+        for slice in self.get_slices(excludes=excludes, user_only=user_only, show_un_submitted=show_un_submitted):
             table.append(slice.toDict())
 
         if pretty_names:
@@ -2013,6 +2025,7 @@ Host * !bastion.fabric-testbed.net
         quiet=False,
         pretty_names=True,
         user_only: bool = True,
+        show_un_submitted: bool = False
     ):
         """
         Show a table with all the properties of a specific site
@@ -2042,11 +2055,13 @@ Host * !bastion.fabric-testbed.net
         :type pretty_names: bool
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
+        :param show_un_submitted: True indicates to also show unsubmitted slices
+        :type show_un_submitted: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
-        slice = self.get_slice(name=name, slice_id=id, user_only=user_only)
+        slice = self.get_slice(name=name, slice_id=id, user_only=user_only, show_un_submitted=show_un_submitted)
 
         return slice.show(
             output=output, fields=fields, quiet=quiet, pretty_names=pretty_names
@@ -2058,6 +2073,7 @@ Host * !bastion.fabric-testbed.net
         slice_name: str = None,
         slice_id: str = None,
         user_only: bool = True,
+        show_un_submitted: bool = False,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -2072,6 +2088,8 @@ Host * !bastion.fabric-testbed.net
         :param slice_id:
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
+        :param show_un_submitted: Show unsubmitted slices;
+        :type show_un_submitted: bool
 
         :return: a list of slices
         :rtype: List[Slice]
@@ -2081,8 +2099,10 @@ Host * !bastion.fabric-testbed.net
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        existing_slice = self._get_slice_from_cache(slice_id=slice_id, slice_name=slice_name)
-        if existing_slice and existing_slice.get_slice_id():
+        existing_slice = self._get_slice_from_cache(
+            slice_id=slice_id, slice_name=slice_name
+        )
+        if existing_slice and (existing_slice.get_slice_id() or show_un_submitted):
             existing_slice.update()
             return_slices = [existing_slice]
             return return_slices
@@ -2104,7 +2124,9 @@ Host * !bastion.fabric-testbed.net
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                slice_object = Slice.get_slice(self, sm_slice=slice, user_only=user_only)
+                slice_object = Slice.get_slice(
+                    self, sm_slice=slice, user_only=user_only
+                )
                 self._cache_slice(slice_object=slice_object)
                 return_slices.append(slice_object)
         else:
@@ -2112,7 +2134,11 @@ Host * !bastion.fabric-testbed.net
         return return_slices
 
     def get_slice(
-        self, name: str = None, slice_id: str = None, user_only: bool = True
+        self,
+        name: str = None,
+        slice_id: str = None,
+        user_only: bool = True,
+        show_un_submitted: bool = False,
     ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
@@ -2128,6 +2154,8 @@ Host * !bastion.fabric-testbed.net
         :type slice_id: String
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
+        :param show_un_submitted: Show unsubmitted slices
+        :type show_un_submitted: bool
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
         :rtype: Slice
@@ -2136,7 +2164,10 @@ Host * !bastion.fabric-testbed.net
         if slice_id:
             # if getting by slice_id consider all slices
             slices = self.get_slices(
-                excludes=[], slice_id=slice_id, user_only=user_only
+                excludes=[],
+                slice_id=slice_id,
+                user_only=user_only,
+                show_un_submitted=show_un_submitted,
             )
 
             if len(slices) == 1:
@@ -2149,6 +2180,7 @@ Host * !bastion.fabric-testbed.net
                 excludes=[SliceState.Dead, SliceState.Closing],
                 slice_name=name,
                 user_only=user_only,
+                show_un_submitted=show_un_submitted
             )
 
             if len(slices) > 0:
@@ -2169,8 +2201,9 @@ Host * !bastion.fabric-testbed.net
         :param slice_name: the name of the slice to delete
         :type slice_name: String
         """
-        slice = self.get_slice(slice_name)
+        slice = self.get_slice(slice_name, show_un_submitted=True)
         slice.delete()
+        self._remove_slice_from_cache(slice_object=slice)
 
     def delete_all(self, progress: bool = True):
         """
@@ -2179,13 +2212,14 @@ Host * !bastion.fabric-testbed.net
         :param progress: optional progress printing to stdout
         :type progress: Bool
         """
-        slices = self.get_slices()
+        slices = self.get_slices(show_un_submitted=True)
 
         for slice in slices:
             try:
                 if progress:
                     print(f"Deleting slice {slice.get_name()}", end="")
                 slice.delete()
+                self._remove_slice_from_cache(slice_object=slice)
                 if progress:
                     print(f", Success!")
             except Exception as e:
