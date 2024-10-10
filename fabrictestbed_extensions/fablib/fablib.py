@@ -69,6 +69,7 @@ import logging
 import os
 import random
 import sys
+import threading
 import traceback
 import warnings
 
@@ -710,7 +711,22 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.__build_manager()
         self.required_check()
-        self.slices = {}
+        self.lock = threading.Lock()
+        self.__slices_by_name = {}
+        self.__slices_by_id = {}
+
+    def _cache_slice(self, slice_object: Slice):
+        with self.lock:
+            self.__slices_by_name[slice_object.get_name()] = slice_object
+            if slice_object.get_slice_id():
+                self.__slices_by_id[slice_object.get_slice_id()] = slice_object
+
+    def _get_slice_from_cache(self, slice_id: str = None, slice_name: str = None) -> Slice:
+        with self.lock:
+            if slice_id:
+                return self.__slices_by_id.get(slice_id)
+            elif slice_name:
+                return self.__slices_by_name.get(slice_id)
 
     def validate_config(self):
         """
@@ -1804,7 +1820,7 @@ Host * !bastion.fabric-testbed.net
         """
         # fabric = fablib()
         new_slice = Slice.new_slice(self, name=name)
-        self.slices[name] = new_slice
+        self._cache_slice(slice_object=new_slice)
         return new_slice
 
     def get_site_advertisement(self, site: str) -> FimNode:
@@ -2065,14 +2081,7 @@ Host * !bastion.fabric-testbed.net
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        existing_slice = None
-        if slice_name:
-            existing_slice = self.slices.get(slice_name)
-        elif slice_id:
-            for s in self.slices.values():
-                if s.get_slice_id() == slice_id:
-                    existing_slice = s
-
+        existing_slice = self._get_slice_from_cache(slice_id=slice_id, slice_name=slice_name)
         if existing_slice and existing_slice.get_slice_id():
             existing_slice.update()
             return_slices = [existing_slice]
@@ -2095,9 +2104,9 @@ Host * !bastion.fabric-testbed.net
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                return_slices.append(
-                    Slice.get_slice(self, sm_slice=slice, user_only=user_only)
-                )
+                slice_object = Slice.get_slice(self, sm_slice=slice, user_only=user_only)
+                self._cache_slice(slice_object=slice_object)
+                return_slices.append(slice_object)
         else:
             raise Exception(f"Failed to get slices: {slices}")
         return return_slices
