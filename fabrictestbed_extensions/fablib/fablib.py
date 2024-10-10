@@ -726,7 +726,7 @@ class FablibManager(Config):
             if slice_id:
                 return self.__slices_by_id.get(slice_id)
             elif slice_name:
-                return self.__slices_by_name.get(slice_id)
+                return self.__slices_by_name.get(slice_name)
 
     def validate_config(self):
         """
