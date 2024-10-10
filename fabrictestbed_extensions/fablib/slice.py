@@ -1447,6 +1447,10 @@ class Slice:
         :rtype: Node
         """
         try:
+            if self.nodes and len(self.nodes):
+                for n in self.nodes:
+                    if n.get_name() == name:
+                        return n
             return Node.get_node(self, self.get_fim_topology().nodes[name])
         except Exception as e:
             logging.info(e, exc_info=True)
@@ -1640,6 +1644,7 @@ class Slice:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
             days = (end - datetime.now(timezone.utc)).days
 
+        # Directly pass the kwargs to submit
         self.submit(lease_in_days=days, post_boot_config=False, **kwargs)
 
     def build_error_exception_string(self) -> str:
@@ -2172,7 +2177,6 @@ class Slice:
         lease_start_time: datetime = None,
         lease_in_days: int = None,
         validate: bool = False,
-        **kwargs,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2220,21 +2224,6 @@ class Slice:
 
         :return: slice_id
         """
-        # Use kwargs to update only the arguments provided
-        options = locals().copy()
-        options.update(kwargs)
-
-        wait = options.get("wait", wait)
-        wait_timeout = options.get("wait_timeout", wait_timeout)
-        wait_interval = options.get("wait_interval", wait_interval)
-        progress = options.get("progress", progress)
-        wait_jupyter = options.get("wait_jupyter", wait_jupyter)
-        post_boot_config = options.get("post_boot_config", post_boot_config)
-        wait_ssh = options.get("wait_ssh", wait_ssh)
-        extra_ssh_keys = options.get("extra_ssh_keys", extra_ssh_keys)
-        lease_start_time = options.get("lease_start_time", lease_start_time)
-        lease_in_days = options.get("lease_in_days", lease_in_days)
-        validate = options.get("validate", validate)
         slice_reservations = None
 
         if not wait:

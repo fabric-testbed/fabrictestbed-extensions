@@ -710,6 +710,7 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.__build_manager()
         self.required_check()
+        self.slices = {}
 
     def validate_config(self):
         """
@@ -1802,7 +1803,9 @@ Host * !bastion.fabric-testbed.net
         :rtype: Slice
         """
         # fabric = fablib()
-        return Slice.new_slice(self, name=name)
+        new_slice = Slice.new_slice(self, name=name)
+        self.slices[name] = new_slice
+        return new_slice
 
     def get_site_advertisement(self, site: str) -> FimNode:
         """
@@ -2061,6 +2064,19 @@ Host * !bastion.fabric-testbed.net
 
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
+
+        existing_slice = None
+        if slice_name:
+            existing_slice = self.slices.get(slice_name)
+        elif slice_id:
+            for s in self.slices.values():
+                if s.get_slice_id() == slice_id:
+                    existing_slice = s
+
+        if existing_slice and existing_slice.get_slice_id():
+            existing_slice.update()
+            return_slices = [existing_slice]
+            return return_slices
 
         return_status, slices = self.get_manager().slices(
             excludes=excludes,
