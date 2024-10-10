@@ -622,6 +622,9 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        if not self.sm_slice:
+            return
+
         self.update_topology_count += 1
         logging.info(
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
@@ -655,13 +658,14 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        if self.sm_slice is None:
+            return
+
         self.update_slivers_count += 1
         logging.debug(
             f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}"
         )
 
-        if self.sm_slice is None:
-            return
         status, slivers = self.fablib_manager.get_manager().slivers(
             slice_object=self.sm_slice, as_self=self.user_only
         )
