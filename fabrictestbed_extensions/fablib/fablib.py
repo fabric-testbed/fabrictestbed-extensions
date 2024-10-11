@@ -715,13 +715,13 @@ class FablibManager(Config):
         self.__slices_by_name = {}
         self.__slices_by_id = {}
 
-    def _cache_slice(self, slice_object: Slice):
+    def cache_slice(self, slice_object: Slice):
         with self.lock:
             self.__slices_by_name[slice_object.get_name()] = slice_object
             if slice_object.get_slice_id():
                 self.__slices_by_id[slice_object.get_slice_id()] = slice_object
 
-    def _remove_slice_from_cache(self, slice_object: Slice):
+    def remove_slice_from_cache(self, slice_object: Slice):
         with self.lock:
             if slice_object.get_slice_id() and slice_object.get_slice_id() in self.__slices_by_id:
                 self.__slices_by_id.pop(slice_object.get_slice_id())
@@ -1829,7 +1829,6 @@ Host * !bastion.fabric-testbed.net
         """
         # fabric = fablib()
         new_slice = Slice.new_slice(self, name=name)
-        self._cache_slice(slice_object=new_slice)
         return new_slice
 
     def get_site_advertisement(self, site: str) -> FimNode:
@@ -2127,7 +2126,6 @@ Host * !bastion.fabric-testbed.net
                 slice_object = Slice.get_slice(
                     self, sm_slice=slice, user_only=user_only
                 )
-                self._cache_slice(slice_object=slice_object)
                 return_slices.append(slice_object)
         else:
             raise Exception(f"Failed to get slices: {slices}")
@@ -2203,7 +2201,6 @@ Host * !bastion.fabric-testbed.net
         """
         slice = self.get_slice(slice_name, show_un_submitted=True)
         slice.delete()
-        self._remove_slice_from_cache(slice_object=slice)
 
     def delete_all(self, progress: bool = True):
         """
@@ -2219,7 +2216,6 @@ Host * !bastion.fabric-testbed.net
                 if progress:
                     print(f"Deleting slice {slice.get_name()}", end="")
                 slice.delete()
-                self._remove_slice_from_cache(slice_object=slice)
                 if progress:
                     print(f", Success!")
             except Exception as e:

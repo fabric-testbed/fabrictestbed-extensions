@@ -444,6 +444,8 @@ class Slice:
         """
         slice = Slice(fablib_manager=fablib_manager, name=name)
         slice.topology = ExperimentTopology()
+        if fablib_manager:
+            fablib_manager.cache_slice(slice_object=slice)
         return slice
 
     @staticmethod
@@ -469,6 +471,8 @@ class Slice:
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.name
         slice.user_only = user_only
+        if fablib_manager:
+            fablib_manager.cache_slice(slice_object=slice)
 
         try:
             slice.update_topology()
@@ -1659,6 +1663,9 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
+        if self.get_fablib_manager():
+            self.get_fablib_manager().remove_slice_from_cache(slice_object=self)
+
         if not self.sm_slice:
             self.topology = None
             return
