@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - node.execute() retry parameter is off-by-one (and/or misnamed) (Issue [#375](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/375))
 - FacilityPort.show() errors out (Issue [#346](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/346))
 - Add support for FPGA model SN1022 (Issue [#382](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/382))
+- Node objects returned from slice.get_node(name) are not the same as the node objects returned from slice.get_nodes() (Issue [#380](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380))
+- Multiple calls to fablib.get_slice(name) in the same interpreter yield different objects (Issue [#379](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/379))
+- FablibManager.get_slices doesn't return unsubmitted slices created by new_slice() (Issue [#294](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/294))
 
 
 ## [1.7.3] - 08/05/2024
