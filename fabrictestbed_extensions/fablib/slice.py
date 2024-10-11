@@ -1439,6 +1439,8 @@ class Slice:
         - After processing, it removes any nodes from self.nodes that
           are no longer present in the current topology.
 
+        https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380
+
         :raises: Logs an exception if an error occurs during initialization.
         """
         # Initialize nodes dictionary if not already present

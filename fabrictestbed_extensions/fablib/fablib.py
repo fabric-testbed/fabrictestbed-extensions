@@ -712,25 +712,54 @@ class FablibManager(Config):
             self.__build_manager()
         self.required_check()
         self.lock = threading.Lock()
+        # These dictionaries are maintained to keep cache of the slice objects created
+        # Use the same objects when user queries for slices
+        # This was added to address the concerns for
+        # https://github.com/fabric-testbed/fabrictestbed-extensions/issues/379
         self.__slices_by_name = {}
         self.__slices_by_id = {}
 
     def cache_slice(self, slice_object: Slice):
+        """
+        Caches a Slice object by its name and ID.
+
+        Adds the given slice object to both the `__slices_by_name` and `__slices_by_id`
+        dictionaries for quick retrieval based on either its name or its ID.
+
+        :param slice_object: The Slice object to be cached.
+        :type slice_object: Slice
+        """
         with self.lock:
             self.__slices_by_name[slice_object.get_name()] = slice_object
             if slice_object.get_slice_id():
                 self.__slices_by_id[slice_object.get_slice_id()] = slice_object
 
     def remove_slice_from_cache(self, slice_object: Slice):
+        """
+        Removes a Slice object from the cache by its name and ID.
+
+        Removes the slice from both `__slices_by_name` and `__slices_by_id` if present.
+
+        :param slice_object: The Slice object to be removed from the cache.
+        :type slice_object: Slice
+        """
         with self.lock:
             if slice_object.get_slice_id() and slice_object.get_slice_id() in self.__slices_by_id:
                 self.__slices_by_id.pop(slice_object.get_slice_id())
             if slice_object.get_name() and slice_object.get_name() in self.__slices_by_name:
                 self.__slices_by_name.pop(slice_object.get_name())
 
-    def _get_slice_from_cache(
-        self, slice_id: str = None, slice_name: str = None
-    ) -> Slice:
+    def _get_slice_from_cache(self, slice_id: str = None, slice_name: str = None) -> Slice:
+        """
+        Retrieves a Slice object from the cache by its ID or name.
+
+        Returns the cached slice if it exists, based on either the slice ID or name.
+
+        :param slice_id: The ID of the slice to retrieve.
+        :param slice_name: The name of the slice to retrieve.
+        :return: The Slice object if found, or None.
+        :rtype: Slice
+        """
         with self.lock:
             if slice_id:
                 return self.__slices_by_id.get(slice_id)
