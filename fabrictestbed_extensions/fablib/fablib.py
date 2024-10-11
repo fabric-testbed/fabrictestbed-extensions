@@ -744,12 +744,20 @@ class FablibManager(Config):
         :type slice_object: Slice
         """
         with self.lock:
-            if slice_object.get_slice_id() and slice_object.get_slice_id() in self.__slices_by_id:
+            if (
+                slice_object.get_slice_id()
+                and slice_object.get_slice_id() in self.__slices_by_id
+            ):
                 self.__slices_by_id.pop(slice_object.get_slice_id())
-            if slice_object.get_name() and slice_object.get_name() in self.__slices_by_name:
+            if (
+                slice_object.get_name()
+                and slice_object.get_name() in self.__slices_by_name
+            ):
                 self.__slices_by_name.pop(slice_object.get_name())
 
-    def _get_slice_from_cache(self, slice_id: str = None, slice_name: str = None) -> Slice:
+    def _get_slice_from_cache(
+        self, slice_id: str = None, slice_name: str = None
+    ) -> Slice:
         """
         Retrieves a Slice object from the cache by its ID or name.
 
@@ -1986,7 +1994,7 @@ Host * !bastion.fabric-testbed.net
         filter_function=None,
         pretty_names=True,
         user_only: bool = True,
-        show_un_submitted: bool = False
+        show_un_submitted: bool = False,
     ):
         """
         Lists all the slices created by a user.
@@ -2026,7 +2034,9 @@ Host * !bastion.fabric-testbed.net
         :rtype: Object
         """
         table = []
-        for slice in self.get_slices(excludes=excludes, user_only=user_only, show_un_submitted=show_un_submitted):
+        for slice in self.get_slices(
+            excludes=excludes, user_only=user_only, show_un_submitted=show_un_submitted
+        ):
             table.append(slice.toDict())
 
         if pretty_names:
@@ -2053,7 +2063,7 @@ Host * !bastion.fabric-testbed.net
         quiet=False,
         pretty_names=True,
         user_only: bool = True,
-        show_un_submitted: bool = False
+        show_un_submitted: bool = False,
     ):
         """
         Show a table with all the properties of a specific site
@@ -2089,7 +2099,12 @@ Host * !bastion.fabric-testbed.net
         :rtype: Object
         """
 
-        slice = self.get_slice(name=name, slice_id=id, user_only=user_only, show_un_submitted=show_un_submitted)
+        slice = self.get_slice(
+            name=name,
+            slice_id=id,
+            user_only=user_only,
+            show_un_submitted=show_un_submitted,
+        )
 
         return slice.show(
             output=output, fields=fields, quiet=quiet, pretty_names=pretty_names
@@ -2207,7 +2222,7 @@ Host * !bastion.fabric-testbed.net
                 excludes=[SliceState.Dead, SliceState.Closing],
                 slice_name=name,
                 user_only=user_only,
-                show_un_submitted=show_un_submitted
+                show_un_submitted=show_un_submitted,
             )
 
             if len(slices) > 0:
