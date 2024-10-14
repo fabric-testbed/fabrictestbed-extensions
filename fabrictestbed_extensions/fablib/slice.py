@@ -109,8 +109,8 @@ class Slice:
         self.slivers = []
         self.fablib_manager = fablib_manager
 
-        self.nodes = None
-        self.interfaces = None
+        self.nodes = {}
+        self.interfaces = {}
         self.update_topology_count = 0
         self.update_slivers_count = 0
         self.update_slice_count = 0
@@ -130,10 +130,10 @@ class Slice:
         :rtype: String
         """
         table = [
-            ["Slice Name", self.sm_slice.name],
-            ["Slice ID", self.sm_slice.slice_id],
-            ["Slice State", self.sm_slice.state],
-            ["Lease End", self.sm_slice.lease_end_time],
+            ["Slice Name", self.get_name()],
+            ["Slice ID", self.get_slice_id()],
+            ["Slice State", self.get_state()],
+            ["Lease End", self.get_lease_end()],
         ]
 
         return tabulate(table)
@@ -444,6 +444,8 @@ class Slice:
         """
         slice = Slice(fablib_manager=fablib_manager, name=name)
         slice.topology = ExperimentTopology()
+        if fablib_manager:
+            fablib_manager.cache_slice(slice_object=slice)
         return slice
 
     @staticmethod
@@ -469,6 +471,8 @@ class Slice:
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.name
         slice.user_only = user_only
+        if fablib_manager:
+            fablib_manager.cache_slice(slice_object=slice)
 
         try:
             slice.update_topology()
@@ -622,6 +626,9 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        if not self.sm_slice:
+            return
+
         self.update_topology_count += 1
         logging.info(
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
@@ -655,13 +662,14 @@ class Slice:
 
         :raises Exception: if topology could not be gotten from slice manager
         """
+        if self.sm_slice is None:
+            return
+
         self.update_slivers_count += 1
         logging.debug(
             f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}"
         )
 
-        if self.sm_slice is None:
-            return
         status, slivers = self.fablib_manager.get_manager().slivers(
             slice_object=self.sm_slice, as_self=self.user_only
         )
@@ -708,7 +716,7 @@ class Slice:
         except Exception as e:
             logging.warning(f"slice.update_slivers failed: {e}")
 
-        self.nodes = None
+        # self.nodes = None
         self.interfaces = None
         self.update_topology()
 
@@ -909,7 +917,8 @@ class Slice:
         :return: project id
         :rtype: String
         """
-        return self.sm_slice.project_id
+        if self.sm_slice:
+            return self.sm_slice.project_id
 
     def add_port_mirror_service(
         self,
@@ -1417,6 +1426,66 @@ class Slice:
             pass
         return return_components
 
+    def __initialize_nodes(self):
+        """
+        Initializes the node objects for the current topology by populating
+        the self.nodes dictionary with node instances.
+
+        - If self.nodes is empty, it initializes it as an empty dictionary.
+        - It iterates through the nodes in the FIM topology and adds them
+          to self.nodes if they do not already exist.
+        - If a node already exists in the dictionary, it updates its
+          fim_node reference to match the current topology.
+        - After processing, it removes any nodes from self.nodes that
+          are no longer present in the current topology.
+
+        https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380
+
+        :raises: Logs an exception if an error occurs during initialization.
+        """
+        # Initialize nodes dictionary if not already present
+        if not self.nodes:
+            self.nodes = {}
+
+        try:
+            # Get the current FIM topology nodes
+            current_topology_nodes = self.get_fim_topology().nodes
+
+            # Update the nodes dictionary with current topology nodes
+            for node_name, node in current_topology_nodes.items():
+                if node_name not in self.nodes:
+                    # Add new node to the dictionary if it doesn't exist
+                    self.nodes[node_name] = Node.get_node(self, node)
+                else:
+                    # Update existing node's fim_node reference
+                    self.nodes[node_name].fim_node = node
+
+            # Remove nodes that are no longer present in the current topology
+            self.__remove_deleted_nodes(current_topology_nodes)
+
+        except Exception as e:
+            logging.error(f"Error initializing nodes: {e}")
+
+    def __remove_deleted_nodes(self, current_topology_nodes):
+        """
+        Removes nodes from self.nodes that are not present in the current topology.
+
+        :param current_topology_nodes: A dictionary of nodes currently in the topology.
+        """
+        # Create a set of current node names for quick lookup
+        current_node_names = set(current_topology_nodes.keys())
+
+        # Identify and remove nodes that are not in the current topology
+        nodes_to_remove = [
+            node_name
+            for node_name in self.nodes.keys()
+            if node_name not in current_node_names
+        ]
+
+        for node_name in nodes_to_remove:
+            self.nodes.pop(node_name)
+            logging.debug(f"Removed extra node: {node_name}")
+
     def get_nodes(self) -> List[Node]:
         """
         Gets a list of all nodes in this slice.
@@ -1424,18 +1493,8 @@ class Slice:
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
-
-        if not self.nodes:
-            self.nodes = []
-            # fails for topology that does not have nodes
-            try:
-                for node_name, node in self.get_fim_topology().nodes.items():
-                    self.nodes.append(Node.get_node(self, node))
-            except Exception as e:
-                logging.info(f"get_nodes: exception {e}")
-                pass
-
-        return self.nodes
+        self.__initialize_nodes()
+        return list(self.nodes.values())
 
     def get_node(self, name: str) -> Node:
         """
@@ -1447,6 +1506,8 @@ class Slice:
         :rtype: Node
         """
         try:
+            if self.nodes and len(self.nodes) and name in self.nodes:
+                return self.nodes.get(name)
             return Node.get_node(self, self.get_fim_topology().nodes[name])
         except Exception as e:
             logging.info(e, exc_info=True)
@@ -1604,6 +1665,9 @@ class Slice:
 
         :raises Exception: if deleting the slice fails
         """
+        if self.get_fablib_manager():
+            self.get_fablib_manager().remove_slice_from_cache(slice_object=self)
+
         if not self.sm_slice:
             self.topology = None
             return
@@ -1640,6 +1704,7 @@ class Slice:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
             days = (end - datetime.now(timezone.utc)).days
 
+        # Directly pass the kwargs to submit
         self.submit(lease_in_days=days, post_boot_config=False, **kwargs)
 
     def build_error_exception_string(self) -> str:
@@ -2172,7 +2237,6 @@ class Slice:
         lease_start_time: datetime = None,
         lease_in_days: int = None,
         validate: bool = False,
-        **kwargs,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2220,21 +2284,6 @@ class Slice:
 
         :return: slice_id
         """
-        # Use kwargs to update only the arguments provided
-        options = locals().copy()
-        options.update(kwargs)
-
-        wait = options.get("wait", wait)
-        wait_timeout = options.get("wait_timeout", wait_timeout)
-        wait_interval = options.get("wait_interval", wait_interval)
-        progress = options.get("progress", progress)
-        wait_jupyter = options.get("wait_jupyter", wait_jupyter)
-        post_boot_config = options.get("post_boot_config", post_boot_config)
-        wait_ssh = options.get("wait_ssh", wait_ssh)
-        extra_ssh_keys = options.get("extra_ssh_keys", extra_ssh_keys)
-        lease_start_time = options.get("lease_start_time", lease_start_time)
-        lease_in_days = options.get("lease_in_days", lease_in_days)
-        validate = options.get("validate", validate)
         slice_reservations = None
 
         if not wait:
