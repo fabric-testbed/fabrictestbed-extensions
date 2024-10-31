@@ -761,9 +761,9 @@ V1Switch(
             return False
 
     def get_switch_features(self):
-         """
-         Get feature information from the switch.
-         """
+        """
+        Get feature information from the switch.
+        """
 
         result = {}
         result["Running"] = self.get_switch_config("Running")
