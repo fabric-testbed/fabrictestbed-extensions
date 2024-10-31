@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Node objects returned from slice.get_node(name) are not the same as the node objects returned from slice.get_nodes() (Issue [#380](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380))
 - Multiple calls to fablib.get_slice(name) in the same interpreter yield different objects (Issue [#379](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/379))
 - FablibManager.get_slices doesn't return unsubmitted slices created by new_slice() (Issue [#294](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/294))
+- Add support for Attestable Switch from CREASE project (PR [#386](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/386))
 
 
 ## [1.7.3] - 08/05/2024
