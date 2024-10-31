@@ -65,6 +65,10 @@ from fabrictestbed_extensions.fablib.node import Node
 
 
 class Attestable_Switch(Node):
+    """
+    A class that abstracts programmable network elements (switches and NICs). These elements may be attestable -- that is, they provide runtime evidence about their configuration.
+    """
+
     default_cores = 4
     default_ram = 8
     default_disk = 50
@@ -111,6 +115,7 @@ class Attestable_Switch(Node):
         :param setup_and_configure: set up and configure the attestable switch in post-boot config.
         :type setup_and_configure: bool
         """
+
         super().__init__(slice, node, validate, raise_exception)
 
         logging.info(f"Creating Attestable Switch {self.get_name()}.")
@@ -145,6 +150,10 @@ class Attestable_Switch(Node):
             self.cfg = self.get_switch_data(soft=False)
 
     def get_switch_data(self, soft=True):
+        """
+        Get switch-specific configuration data.
+        """
+
         if soft:
             return self.cfg
         else:
@@ -154,12 +163,20 @@ class Attestable_Switch(Node):
                 return None
 
     def set_switch_data(self, switch_data: dict):
+        """
+        Set switch-specific configuration data.
+        """
+
         self.cfg = switch_data
         user_data = self.get_user_data()
         user_data["attestable_switch_config"] = switch_data
         self.set_user_data(user_data)
 
     def get_switch_config(self, k, quiet=True):
+        """
+        Get run-time configurable, switch-specific configuration data.
+        """
+
         (out, _) = self.execute(
             f"cat {Attestable_Switch.crease_path_prefix + k}", quiet=quiet
         )
@@ -171,18 +188,34 @@ class Attestable_Switch(Node):
             return False
 
     def prep_switch_config_update(self, k, v):
+        """
+        Support function for commit_switch_config_update().
+        """
+
         return (k, str(v))
 
     def commit_switch_config_update(self, cfg_update):
+        """
+        Set run-time configurable, switch-specific configuration data.
+        """
+
         s = ""
         for k, v in cfg_update:
             s += f"echo '{v}' > {Attestable_Switch.crease_path_prefix + k}; "
         self.execute(s)
 
     def get_port_names(self):
+        """
+        Get the port names of the switch.
+        """
+
         return self.get_switch_data()["ports"]
 
     def get_port_interfaces(self):
+        """
+        Get the interface names of the switch's ports.
+        """
+
         result = {}
         for port in self.get_switch_data()["portmap"].keys():
             result[port] = self.get_slice().get_interface(
@@ -191,11 +224,19 @@ class Attestable_Switch(Node):
         return result
 
     def get_port_interface(self, port_name):
+        """
+        Get the interface name of a switch's port name.
+        """
+
         return self.get_slice().get_interface(
             name=self.get_switch_data()["portmap"][port_name]
         )
 
     def get_port_device_listing(self):
+        """
+        Get the name-to-interface mapping for a switch.
+        """
+
         mapping = {}
         for ifa in self.get_interfaces():
             mapping[ifa.get_component().get_short_name()] = ifa.get_device_name()
@@ -235,6 +276,10 @@ class Attestable_Switch(Node):
 
     @staticmethod
     def name(orig_name):
+        """
+        Devise a consistent naming prefix for switches.
+        """
+
         assert orig_name is not None
         as_name_prefix = (
             "attestable_switch_" + Attestable_Switch.__version_short__ + "_"
@@ -328,10 +373,20 @@ class Attestable_Switch(Node):
 
     @staticmethod
     def get_attestable_switch(slice: Slice = None, node=None):
+        """
+        Returns a fresh reference to a switch using existing FABRIC resources.
+        """
+
         return Attestable_Switch(slice, node)
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Return mappings from non-pretty names to pretty names.
+
+        Pretty names are in table headers.
+        """
+
         r = Node.get_pretty_name_dict()
         r["ports"] = "Switch ports"
         return r
@@ -350,6 +405,10 @@ class Attestable_Switch(Node):
         return rtn_dict
 
     def switch_config(self, log_dir="."):
+        """
+        Post-boot configuration for the switch.
+        """
+
         from_raw_image = self.get_switch_data()["from_raw_image"]
 
         if self.get_switch_data()["setup_and_configure"]:
@@ -493,6 +552,10 @@ V1Switch(
             )
 
     def check(self, quiet=True):
+        """
+        Check whether the switch was initialised correctly.
+        """
+
         result = True
 
         (out, _) = self.execute("sudo sysctl net.ipv4.ip_forward", quiet=True)
@@ -527,6 +590,10 @@ V1Switch(
         RA_port=None,
         RA_et=None,
     ):
+        """
+        Start the switch executing, and have it run a P4 program.
+        """
+
         if not force and self.get_switch_config("Running"):
             print("Switch already running")
             return False
@@ -595,6 +662,10 @@ V1Switch(
         return result
 
     def stop_switch(self, dry=False, quiet=True, force=False):
+        """
+        Stop the switch from executing.
+        """
+
         if not force and not self.get_switch_config("Running"):
             print("Switch not running")
             return False
@@ -630,6 +701,10 @@ V1Switch(
         return result
 
     def load_program(self, filename, dry=False, quiet=True):
+        """
+        Runtime update of a P4 program on a running switch.
+        """
+
         output_file = os.path.splitext(os.path.basename(filename))[0] + ".json"
         commands = [
             f"p4c --target bmv2 --arch v1model ~/{os.path.basename(filename)}",
@@ -657,6 +732,10 @@ V1Switch(
             return False
 
     def run_command(self, cmd, dry=False, quiet=False):
+        """
+        Run a CLI command on the switch.
+        """
+
         command = f"echo '{cmd}' | {Attestable_Switch.bmv_prefix}simple_switch_CLI"
 
         stdout = []
@@ -682,6 +761,10 @@ V1Switch(
             return False
 
     def get_switch_features(self):
+         """
+         Get feature information from the switch.
+         """
+
         result = {}
         result["Running"] = self.get_switch_config("Running")
         if self.get_switch_config("Running"):
@@ -694,6 +777,10 @@ V1Switch(
         return result
 
     def get_version(self):
+        """
+        Get version information from the switch.
+        """
+
         commands = [
             "[ ! -d ~/bmv2-remote-attestation ] && cd ~ && sudo ln -s /usr/local/bmv2-remote-attestation",
             f"{Attestable_Switch.bmv_prefix}simple_switch -v",

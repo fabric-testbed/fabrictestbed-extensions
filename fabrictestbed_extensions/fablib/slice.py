@@ -1279,6 +1279,9 @@ class Slice:
         from_raw_image: bool = False,
         setup_and_configure: bool = True,
     ) -> Attestable_Switch:
+        """
+        Creates a new attestable switch on this fablib slice.
+        """
 
         assert (
             ports
@@ -1569,6 +1572,10 @@ class Slice:
         return list(self.nodes.values())
 
     def get_attestable_switches(self) -> List[Attestable_Switch]:
+        """
+        Get list of attestable switches in the fablib slice.
+        """
+
         result = []
         for node in self.get_nodes():
             if "attestable_switch_config" in node.get_user_data():
@@ -1577,6 +1584,10 @@ class Slice:
         return result
 
     def get_attestable_switch(self, name: str) -> Attestable_Switch:
+        """
+        Get reference to an attestable switch in the fablib slice.
+        """
+
         name = Attestable_Switch.name(name)
         try:
             return Attestable_Switch.get_attestable_switch(
