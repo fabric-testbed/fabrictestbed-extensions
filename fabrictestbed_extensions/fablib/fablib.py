@@ -1160,6 +1160,9 @@ Host * !bastion.fabric-testbed.net
             logging.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager
             self.set_project_id(project_id=self.manager.project_id)
+            self.runtime_config[Constants.PROJECT_NAME] = (
+                self.manager.get_project_name()
+            )
             self.determine_bastion_username()
         except Exception as e:
             logging.error(e, exc_info=True)

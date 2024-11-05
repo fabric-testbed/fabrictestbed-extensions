@@ -111,6 +111,7 @@ class Constants:
     AM_HOST = "am_host"
     TOKEN_LOCATION = "token_location"
     PROJECT_ID = "project_id"
+    PROJECT_NAME = "project_name"
     BASTION_HOST = "bastion_host"
     BASTION_USERNAME = "bastion_username"
     BASTION_KEY_LOCATION = "bastion_key_location"
