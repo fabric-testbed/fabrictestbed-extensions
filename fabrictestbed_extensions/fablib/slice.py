@@ -83,6 +83,7 @@ from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_manager import Status
 from tabulate import tabulate
 
+from fabrictestbed_extensions.fablib.attestable_switch import Attestable_Switch
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.network_service import NetworkService
@@ -1260,6 +1261,80 @@ class Slice:
                     raise ValueError(error)
         return node
 
+    def add_attestable_switch(
+        self,
+        name: str,
+        site: str = None,
+        cores: int = 4,
+        ram: int = 8,
+        disk: int = 50,
+        image: str = Attestable_Switch.default_image,
+        ports: List[str] = None,
+        instance_type: str = None,
+        host: str = None,
+        user_data: dict = {},
+        avoid: List[str] = [],
+        validate: bool = False,
+        raise_exception: bool = False,
+        from_raw_image: bool = False,
+        setup_and_configure: bool = True,
+    ) -> Attestable_Switch:
+        """
+        Creates a new attestable switch on this fablib slice.
+        """
+
+        assert (
+            ports
+            and isinstance(ports, list)
+            and all(isinstance(port, str) for port in ports)
+        )
+
+        name = Attestable_Switch.name(name)
+
+        aswitch = Attestable_Switch.new_attestable_switch(
+            slice=self,
+            name=name,
+            site=site,
+            avoid=avoid,
+            validate=validate,
+            raise_exception=raise_exception,
+            ports=ports,
+            from_raw_image=from_raw_image,
+            setup_and_configure=setup_and_configure,
+        )
+
+        aswitch.init_fablib_data()
+
+        user_data_working = aswitch.get_user_data()
+        for k, v in user_data.items():
+            user_data_working[k] = v
+        aswitch.set_user_data(user_data_working)
+
+        if instance_type:
+            aswitch.set_instance_type(instance_type)
+        else:
+            aswitch.set_capacities(cores=cores, ram=ram, disk=disk)
+
+        if image:
+            aswitch.set_image(image)
+
+        if host:
+            aswitch.set_host(host)
+
+        self.nodes = None
+        self.interfaces = None
+
+        if validate:
+            status, error = self.get_fablib_manager().validate_node(node=aswitch)
+            if not status:
+                aswitch.delete()
+                aswitch = None
+                logging.warning(error)
+                if raise_exception:
+                    raise ValueError(error)
+
+        return aswitch
+
     def add_switch(
         self,
         name: str,
@@ -1495,6 +1570,32 @@ class Slice:
         """
         self.__initialize_nodes()
         return list(self.nodes.values())
+
+    def get_attestable_switches(self) -> List[Attestable_Switch]:
+        """
+        Get list of attestable switches in the fablib slice.
+        """
+
+        result = []
+        for node in self.get_nodes():
+            if "attestable_switch_config" in node.get_user_data():
+                aswitch = self.get_attestable_switch(name=node.get_name())
+                result.append(aswitch)
+        return result
+
+    def get_attestable_switch(self, name: str) -> Attestable_Switch:
+        """
+        Get reference to an attestable switch in the fablib slice.
+        """
+
+        name = Attestable_Switch.name(name)
+        try:
+            return Attestable_Switch.get_attestable_switch(
+                self, self.get_fim_topology().nodes[name]
+            )
+        except Exception as e:
+            logging.info(e, exc_info=True)
+            raise Exception(f"Attestable Switch not found: {name}")
 
     def get_node(self, name: str) -> Node:
         """
@@ -1978,6 +2079,15 @@ class Slice:
         print("Saving fablib data... ", end="")
         self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
         self.update()
+
+        for node in self.get_nodes():
+            if "attestable_switch_config" in node.get_user_data():
+                logging.info(
+                    f"switch config: {str(node.get_user_data()['attestable_switch_config'])}"
+                )
+                aswitch = self.get_attestable_switch(name=node.get_name())
+                aswitch.switch_config()
+
         print(" Done!")
 
     def validIPAddress(self, IP: str) -> str:
