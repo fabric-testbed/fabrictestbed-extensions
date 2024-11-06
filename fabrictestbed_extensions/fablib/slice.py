@@ -2411,12 +2411,20 @@ class Slice:
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
 
-        start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z") if lease_start_time else None
-        end_time_str = lease_end_time.strftime("%Y-%m-%d %H:%M:%S %z") if lease_end_time else None
+        start_time_str = (
+            lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
+            if lease_start_time
+            else None
+        )
+        end_time_str = (
+            lease_end_time.strftime("%Y-%m-%d %H:%M:%S %z") if lease_end_time else None
+        )
 
         # Create slice now or Renew slice
         if lease_in_hours and not lease_start_time and not lease_end_time:
-            end_time_str = (datetime.now(timezone.utc) + timedelta(hours=lease_in_hours)).strftime("%Y-%m-%d %H:%M:%S %z")
+            end_time_str = (
+                datetime.now(timezone.utc) + timedelta(hours=lease_in_hours)
+            ).strftime("%Y-%m-%d %H:%M:%S %z")
 
         # Request slice from Orchestrator
         if self._is_modify():
@@ -2459,7 +2467,7 @@ class Slice:
                 ssh_key=ssh_keys,
                 lease_end_time=end_time_str,
                 lease_start_time=start_time_str,
-                lifetime=lease_in_hours
+                lifetime=lease_in_hours,
             )
             if return_status == Status.OK:
                 logging.info(

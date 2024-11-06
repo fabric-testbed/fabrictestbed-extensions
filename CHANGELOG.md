@@ -8,7 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.8.0 - TBD
 
+### Added
+- Advance Scheduling Improvements (Issue [#388](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/388))
 
 ## [1.7.4] - 11/05/2024 
 
