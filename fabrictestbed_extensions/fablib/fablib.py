@@ -949,6 +949,10 @@ Host * !bastion.fabric-testbed.net
             if now > expires_on_dt:
                 keys_to_remove.append(key)
                 continue
+            key_type = key.get(Constants.FABRIC_KEY_TYPE)
+            if key_type and key_type != Constants.KEY_TYPE_BASTION:
+                keys_to_remove.append(key)
+                continue
 
         for key in keys_to_remove:
             ssh_keys.remove(key)
@@ -1160,6 +1164,9 @@ Host * !bastion.fabric-testbed.net
             logging.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager
             self.set_project_id(project_id=self.manager.project_id)
+            self.runtime_config[Constants.PROJECT_NAME] = (
+                self.manager.get_project_name()
+            )
             self.determine_bastion_username()
         except Exception as e:
             logging.error(e, exc_info=True)
