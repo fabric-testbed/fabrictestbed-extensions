@@ -177,10 +177,7 @@ class Config:
         """
         if fabric_rc is None:
             fabric_rc = Constants.DEFAULT_FABRIC_RC
-            if not os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
-                Path.mkdir(Constants.DEFAULT_FABRIC_CONFIG_DIR, exist_ok=True)
-                Path(fabric_rc).touch()
-            elif os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
+            if os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
                 Path(fabric_rc).touch()
 
         if fabric_rc and os.path.exists(fabric_rc):
