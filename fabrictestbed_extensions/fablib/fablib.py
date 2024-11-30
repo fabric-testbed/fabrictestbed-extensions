@@ -837,9 +837,9 @@ class FablibManager(Config):
         Utils.is_reachable(hostname=self.get_core_api_host(), port=443)
         Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
 
-        if self.get_default_slice_public_key_file() is not None and \
+        if self.get_default_slice_private_key_file() is not None and \
                 self.get_bastion_key_location() is not None and \
-                self.get_default_slice_public_key_file() == self.get_bastion_key_location():
+                self.get_default_slice_private_key_file() == self.get_bastion_key_location():
             logging.error("Sliver Key and Bastion key can not be same! Please use different key names!")
             raise Exception("Sliver Key and Bastion key can not be same! Please use different key names!")
 
