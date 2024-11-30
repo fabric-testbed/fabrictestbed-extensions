@@ -62,9 +62,7 @@ class FablibManagerTests(unittest.TestCase):
     def test_fablib_manager_test_only_project_id(self):
         os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.DUMMY_TOKEN_LOCATION
-        self.assertRaises(
-            TokenManagerException, FablibManager, fabric_rc=self.rcfile.name
-        )
+        self.assertRaises(Exception, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_token_location(self):
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = "dummy"

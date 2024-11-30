@@ -132,6 +132,7 @@ class Config:
         Constants.AM_HOST: "Artifact Manager",
         Constants.TOKEN_LOCATION: "Token File",
         Constants.PROJECT_ID: "Project ID",
+        Constants.PROJECT_NAME: "Project Name",
         Constants.BASTION_USERNAME: "Bastion Username",
         Constants.BASTION_KEY_LOCATION: "Bastion Private Key File",
         Constants.BASTION_HOST: "Bastion Host",
@@ -570,6 +571,14 @@ class Config:
         :type: String
         """
         self.runtime_config[Constants.PROJECT_ID] = project_id
+
+    def get_project_name(self):
+        """
+        Get the Project Name:
+        :return: Project Name
+        :rtype: String
+        """
+        return self.runtime_config.get(Constants.PROJECT_NAME)
 
     def set_log_level(self, log_level: str = "INFO"):
         """
