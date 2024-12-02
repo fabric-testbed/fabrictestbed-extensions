@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-
+### Fixed
+- Ensure slice key and bastion key names are not identical (Issue [#389](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/389))
 
 ## [1.7.4] - 11/05/2024 
 
