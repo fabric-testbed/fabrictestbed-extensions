@@ -752,6 +752,9 @@ class Node:
         :param username: Optional username parameter.  The username
             likely should be picked to match the image type.
         """
+        if self.get_fim_node().type == NodeType.Switch and not username:
+            self.username = "fabric"
+            return
         if username is not None:
             self.username = username
         elif "default_centos9_stream" == self.get_image():

@@ -357,9 +357,3 @@ class Switch(Node):
             interfaces.append(Interface(node=self, fim_interface=ifs, model="NIC_P4"))
 
         return interfaces
-
-    def set_username(self, username: str = None):
-        self.username = Constants.FABRIC_USER
-
-    def get_username(self) -> str:
-        return Constants.FABRIC_USER
