@@ -69,7 +69,7 @@ class Switch(Node):
         super(Switch, self).__init__(
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
-        self.username = "rare"
+        self.username = "fabric"
 
     def __str__(self):
         """
@@ -140,7 +140,7 @@ class Switch(Node):
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Switch(
             slice,
-            slice.topology.add_switch(name=name, site=site),
+            slice.topology.add_switch(name=name, site=site, image="onl"),
             validate=validate,
             raise_exception=raise_exception,
         )

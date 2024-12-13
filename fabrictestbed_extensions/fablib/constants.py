@@ -166,6 +166,7 @@ class Constants:
     SSH_KEYS = "sshkeys"
     EXPIRES_ON = "expires_on"
     LEASE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"
+    FABRIC_KEY_TYPE = "fabric_key_type"
 
     NON_PRETTY_NAME = "non_pretty_name"
     PRETTY_NAME = "pretty_name"

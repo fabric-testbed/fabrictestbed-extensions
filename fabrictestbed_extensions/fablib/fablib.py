@@ -837,6 +837,19 @@ class FablibManager(Config):
         Utils.is_reachable(hostname=self.get_core_api_host(), port=443)
         Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
 
+        if (
+            self.get_default_slice_private_key_file() is not None
+            and self.get_bastion_key_location() is not None
+            and self.get_default_slice_private_key_file()
+            == self.get_bastion_key_location()
+        ):
+            logging.error(
+                "Sliver Key and Bastion key can not be same! Please use different key names!"
+            )
+            raise Exception(
+                "Sliver Key and Bastion key can not be same! Please use different key names!"
+            )
+
         self.validate_and_update_bastion_keys()
 
         if (
@@ -947,6 +960,10 @@ Host * !bastion.fabric-testbed.net
             expires_on_dt = datetime.datetime.fromisoformat(expires_on)
             now = datetime.datetime.now(tz=datetime.timezone.utc)
             if now > expires_on_dt:
+                keys_to_remove.append(key)
+                continue
+            key_type = key.get(Constants.FABRIC_KEY_TYPE)
+            if key_type and key_type != Constants.KEY_TYPE_BASTION:
                 keys_to_remove.append(key)
                 continue
 

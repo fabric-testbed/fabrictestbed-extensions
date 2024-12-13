@@ -774,6 +774,8 @@ class Node:
             self.username = "openbsd"
         elif "kali" in self.get_image():
             self.username = "kali"
+        elif "onl" in self.get_image():
+            self.username = "fabric"
         else:
             self.username = None
 

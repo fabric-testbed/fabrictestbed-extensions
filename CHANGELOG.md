@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+<<<<<<< HEAD
 ## 1.8.0 - TBD
 
 ### Added
 - Advance Scheduling Improvements (Issue [#388](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/388))
+=======
+### Fixed
+- Ensure slice key and bastion key names are not identical (Issue [#389](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/389))
+>>>>>>> b752af49b5c3a6dc72a90081639e603bf037a597
 
 ## [1.7.4] - 11/05/2024 
 
