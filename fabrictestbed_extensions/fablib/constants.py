@@ -206,3 +206,5 @@ class Constants:
     CMP_FPGA_Xilinx_U280 = "FPGA_Xilinx_U280"
     CMP_FPGA_Xilinx_SN1022 = "FPGA_Xilinx_SN1022"
     P4_DedicatedPort = "P4_DedicatedPort"
+
+    FABRIC_USER = "fabric"

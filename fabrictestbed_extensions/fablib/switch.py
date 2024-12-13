@@ -32,6 +32,7 @@ import jinja2
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
+from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.node import Node
 
@@ -69,7 +70,7 @@ class Switch(Node):
         super(Switch, self).__init__(
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
-        self.username = "fabric"
+        self.username = Constants.FABRIC_USER
 
     def __str__(self):
         """
@@ -358,4 +359,7 @@ class Switch(Node):
         return interfaces
 
     def set_username(self, username: str = None):
-        self.username = "fabric"
+        self.username = Constants.FABRIC_USER
+
+    def get_username(self) -> str:
+        return Constants.FABRIC_USER
