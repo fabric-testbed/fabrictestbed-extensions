@@ -140,7 +140,7 @@ class Switch(Node):
         logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Switch(
             slice,
-            slice.topology.add_switch(name=name, site=site, image="onl"),
+            slice.topology.add_switch(name=name, site=site),
             validate=validate,
             raise_exception=raise_exception,
         )
@@ -356,3 +356,6 @@ class Switch(Node):
             interfaces.append(Interface(node=self, fim_interface=ifs, model="NIC_P4"))
 
         return interfaces
+
+    def set_username(self, username: str = None):
+        self.username = "fabric"
