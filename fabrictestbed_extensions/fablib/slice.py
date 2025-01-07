@@ -59,7 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fim.user import Labels
+from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
@@ -2043,6 +2043,9 @@ class Slice:
         threads = {}
 
         for node in self.get_nodes():
+            # Skip post boot config for P4 Switch
+            if node.get_fim_node().type == NodeType.Switch:
+                continue
             # Run configuration on newly created nodes and on modify.
             logging.info(
                 f"Configuring {node.get_name()} "
