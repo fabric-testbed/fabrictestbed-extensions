@@ -6,17 +6,14 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-
-<<<<<<< HEAD
-## 1.8.0 - TBD
+## 1.8.0 - 01/07/2025
 
 ### Added
 - Advance Scheduling Improvements (Issue [#388](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/388))
-=======
+- Support for P4 switches (Issue [#392](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/392))
+
 ### Fixed
 - Ensure slice key and bastion key names are not identical (Issue [#389](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/389))
->>>>>>> b752af49b5c3a6dc72a90081639e603bf037a597
 
 ## [1.7.4] - 11/05/2024 
 
