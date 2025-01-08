@@ -2355,8 +2355,6 @@ class Node:
                   result of ``ip addr list``.
         """
         try:
-            if self.get_node() and self.get_node().get_fim_node().type == NodeType.Switch:
-                return None
             if self.ip_addr_list_json is not None and not update:
                 return self.ip_addr_list_json
             else:

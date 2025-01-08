@@ -2043,9 +2043,6 @@ class Slice:
         threads = {}
 
         for node in self.get_nodes():
-            # Skip post boot config for P4 Switch
-            if node.get_fim_node().type == NodeType.Switch:
-                continue
             # Run configuration on newly created nodes and on modify.
             logging.info(
                 f"Configuring {node.get_name()} "
