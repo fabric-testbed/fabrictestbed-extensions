@@ -59,7 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fim.user import Labels
+from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
@@ -1806,7 +1806,7 @@ class Slice:
             days = (end - datetime.now(timezone.utc)).days
 
         # Directly pass the kwargs to submit
-        self.submit(lease_in_days=days, post_boot_config=False, **kwargs)
+        self.submit(lease_in_hours=(days * 24), post_boot_config=False, **kwargs)
 
     def build_error_exception_string(self) -> str:
         """
@@ -2345,7 +2345,8 @@ class Slice:
         wait_ssh: bool = True,
         extra_ssh_keys: List[str] = None,
         lease_start_time: datetime = None,
-        lease_in_days: int = None,
+        lease_end_time: datetime = None,
+        lease_in_hours: int = None,
         validate: bool = False,
     ) -> str:
         """
@@ -2382,12 +2383,17 @@ class Slice:
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
         :type extra_ssh_keys: List[str]
 
-        :param lease_start_time: Optional lease start in UTC time format: %Y-%m-%d %H:%M:%S %z
+        :param lease_start_time: Optional lease start time in UTC format: %Y-%m-%d %H:%M:%S %z.
+                           Specifies the beginning of the time range to search for available resources valid for `lease_in_hours`.
         :type lease_start_time: datetime
 
-        :param lease_in_days: Optional lease duration in days, by default the slice is active for 24 hours i.e 1 day,
-                              only used for create.
-        :type lease_in_days: int
+        :param lease_end_time: Optional lease end time in UTC format: %Y-%m-%d %H:%M:%S %z.
+                         Specifies the end of the time range to search for available resources valid for `lease_in_hours`.
+        :type lease_end_time: datetime
+
+        :param lease_in_hours: Optional lease duration in hours. By default, the slice remains active for 24 hours (1 day).
+                               This parameter is only applicable during creation.
+        :type lease_in_hours: int
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
@@ -2405,26 +2411,26 @@ class Slice:
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
 
-        lease_start_time_str = None
-        if lease_start_time:
-            lease_start_time_str = lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
+        start_time_str = (
+            lease_start_time.strftime("%Y-%m-%d %H:%M:%S %z")
+            if lease_start_time
+            else None
+        )
+        end_time_str = (
+            lease_end_time.strftime("%Y-%m-%d %H:%M:%S %z") if lease_end_time else None
+        )
 
-        lease_end_time = None
-        lease_end_time_str = None
-        if lease_in_days:
-            start_time = (
-                lease_start_time if lease_end_time else datetime.now(timezone.utc)
-            )
-            lease_end_time = start_time + timedelta(days=lease_in_days)
-            lease_end_time_str = (start_time + timedelta(days=lease_in_days)).strftime(
-                "%Y-%m-%d %H:%M:%S %z"
-            )
+        # Create slice now or Renew slice
+        if lease_in_hours and not lease_start_time and not lease_end_time:
+            end_time_str = (
+                datetime.now(timezone.utc) + timedelta(hours=lease_in_hours)
+            ).strftime("%Y-%m-%d %H:%M:%S %z")
 
         # Request slice from Orchestrator
         if self._is_modify():
-            if lease_in_days:
+            if lease_in_hours:
                 return_status, result = self.fablib_manager.get_manager().renew(
-                    slice_object=self.sm_slice, new_lease_end_time=lease_end_time_str
+                    slice_object=self.sm_slice, new_lease_end_time=end_time_str
                 )
             else:
                 (
@@ -2452,15 +2458,6 @@ class Slice:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
-            if (
-                lease_start_time
-                and lease_end_time
-                and (lease_end_time - lease_start_time) < timedelta(minutes=60)
-            ):
-                raise Exception(
-                    "Requested Lease Time range should be at least 60 minutes long!"
-                )
-
             (
                 return_status,
                 slice_reservations,
@@ -2468,8 +2465,9 @@ class Slice:
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
-                lease_end_time=lease_end_time_str,
-                lease_start_time=lease_start_time_str,
+                lease_end_time=end_time_str,
+                lease_start_time=start_time_str,
+                lifetime=lease_in_hours,
             )
             if return_status == Status.OK:
                 logging.info(
