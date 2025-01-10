@@ -62,6 +62,7 @@ from fim.user import NodeType
 from IPython.core.display_functions import display
 from tabulate import tabulate
 
+from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 
 if TYPE_CHECKING:
@@ -753,10 +754,12 @@ class Node:
             likely should be picked to match the image type.
         """
         if self.get_fim_node().type == NodeType.Switch and not username:
-            self.username = "fabric"
+            self.username = Constants.FABRIC_USER
             return
         if username is not None:
             self.username = username
+        elif "default_centos10_stream" == self.get_image():
+            self.username = "cloud-user"
         elif "default_centos9_stream" == self.get_image():
             self.username = "cloud-user"
         elif "centos" in self.get_image():
