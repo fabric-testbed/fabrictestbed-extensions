@@ -67,6 +67,7 @@ class Component:
 
     component_model_map = {
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
+        Constants.CMP_NIC_BlueField2_ConnectX_6: ComponentModelType.SmartNIC_BlueField_2_ConnectX_6,
         Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
         Constants.CMP_NIC_ConnectX_5: ComponentModelType.SmartNIC_ConnectX_5,
         Constants.CMP_NIC_P4: Constants.P4_DedicatedPort,
@@ -471,6 +472,11 @@ class Component:
             and str(self.get_fim_model()) == "ConnectX-6"
         ):
             return Constants.CMP_NIC_ConnectX_6
+        if (
+            str(self.get_type()) == "SmartNIC"
+            and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
+        ):
+            return Constants.CMP_NIC_BlueField2_ConnectX_6
         elif (
             str(self.get_type()) == "SmartNIC"
             and str(self.get_fim_model()) == "ConnectX-5"
