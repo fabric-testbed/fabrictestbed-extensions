@@ -81,6 +81,11 @@ class Component:
         Constants.CMP_FPGA_Xilinx_SN1022: ComponentModelType.FPGA_Xilinx_SN1022,
     }
 
+    component_configure_commands = {
+        ComponentModelType.SmartNIC_BlueField_2_ConnectX_6: ["sudo ip addr add 10.100.100.1/24 dev tmfifo_net0",
+                                                             "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0"]
+    }
+
     def __str__(self):
         """
         Creates a tabulated string describing the properties of the component.
@@ -560,6 +565,30 @@ class Component:
         :rtype: str
         """
         return self.get_fim_component().type
+
+    def configure(self, commands: List[str] = []):
+        """
+        Configure a component by executing a set of commands provided by the user or run any default commands
+        """
+        output = []
+        try:
+            if not commands or len(commands) == 0:
+                commands = Component.component_configure_commands.get(self.get_fim_model())
+
+            if not commands or len(commands) == 0:
+                return output
+
+            for cmd in commands:
+                stdout, stderr = self.node.execute(cmd)
+                if stdout != "":
+                    output.append(stdout)
+                if stderr != "":
+                    output.append(stderr)
+        except Exception:
+            logging.error(f"configure Fail: {self.get_name()}:", exc_info=True)
+            raise Exception(str(output))
+
+        return output
 
     def configure_nvme(self, mount_point=""):
         """
