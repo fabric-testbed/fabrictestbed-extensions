@@ -82,8 +82,8 @@ class Component:
     }
 
     component_configure_commands = {
-        str(ComponentModelType.SmartNIC_BlueField_2_ConnectX_6): ["sudo ip addr add 10.100.100.1/24 dev tmfifo_net0",
-                                                                  "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0"]
+        Constants.CMP_NIC_BlueField2_ConnectX_6: ["sudo ip addr add 10.100.100.1/24 dev tmfifo_net0",
+                                                  "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0"]
     }
 
     def __str__(self):
@@ -573,7 +573,7 @@ class Component:
         output = []
         try:
             if not commands or len(commands) == 0:
-                commands = Component.component_configure_commands.get(self.get_fim_model())
+                commands = Component.component_configure_commands.get(self.get_model())
 
             if not commands or len(commands) == 0:
                 return output
