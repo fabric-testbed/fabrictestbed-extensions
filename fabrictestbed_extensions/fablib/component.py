@@ -40,6 +40,7 @@ like so::
 from __future__ import annotations
 
 import json
+import time
 from typing import TYPE_CHECKING
 
 import jinja2
@@ -571,6 +572,7 @@ class Component:
         Configure a component by executing a set of commands provided by the user or run any default commands
         """
         output = []
+        start = time.time()
         try:
             if not commands or len(commands) == 0:
                 commands = Component.component_configure_commands.get(self.get_model())
@@ -588,6 +590,7 @@ class Component:
             logging.error(f"configure Fail: {self.get_name()}:", exc_info=True)
             raise Exception(str(output))
 
+        print(f"\nTime to configure {time.time() - start:.0f} seconds")
         return output
 
     def configure_nvme(self, mount_point=""):
