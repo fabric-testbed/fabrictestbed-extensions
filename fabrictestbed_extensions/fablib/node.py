@@ -1378,7 +1378,9 @@ class Node:
 
     def execute(
         self,
-        command: str | list[str] | list[tuple[str, str, int]],  # Supports single command, list of commands, or interactive tuples
+        command: (
+            str | list[str] | list[tuple[str, str, int]]
+        ),  # Supports single command, list of commands, or interactive tuples
         retry: int = 3,
         retry_interval: int = 10,
         username: str = None,
@@ -1482,9 +1484,16 @@ class Node:
         dest_addr = (management_ip, 22)
 
         # Detect interactive vs. standard execution
-        interactive_mode = all(isinstance(cmd, tuple) for cmd in command) if isinstance(command, list) else False
-        standard_mode = isinstance(command, str) or all(isinstance(cmd, str) for cmd in command) if isinstance(
-            command, list) else False
+        interactive_mode = (
+            all(isinstance(cmd, tuple) for cmd in command)
+            if isinstance(command, list)
+            else False
+        )
+        standard_mode = (
+            isinstance(command, str) or all(isinstance(cmd, str) for cmd in command)
+            if isinstance(command, list)
+            else False
+        )
 
         # If standard commands, convert list to a single shell command string
         if standard_mode and isinstance(command, list):
@@ -1527,8 +1536,13 @@ class Node:
 
                 # Handle interactive execution
                 if interactive_mode:
-                    return self._interactive_execute(client=client, commands=command, quiet=quiet,
-                                                     display=display, output_file=output_file)
+                    return self._interactive_execute(
+                        client=client,
+                        commands=command,
+                        quiet=quiet,
+                        display=display,
+                        output_file=output_file,
+                    )
 
                 if timeout:
                     command = f"sudo timeout --foreground -k 10 {timeout} {command}\n"
@@ -1602,8 +1616,14 @@ class Node:
 
         raise Exception("ssh failed: Should not get here")
 
-    def _interactive_execute(self, client: paramiko.SSHClient, commands: list[tuple[str, str, int]], quiet: bool,
-                             display: bool, output_file: str):
+    def _interactive_execute(
+        self,
+        client: paramiko.SSHClient,
+        commands: list[tuple[str, str, int]],
+        quiet: bool,
+        display: bool,
+        output_file: str,
+    ):
         """
         Executes an interactive session over SSH.
 
