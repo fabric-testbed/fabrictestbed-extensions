@@ -1378,7 +1378,7 @@ class Node:
 
     def execute(
         self,
-        command: str | list[str] | list[tuple],  # Supports single command, list of commands, or interactive tuples
+        command: str | list[str] | list[tuple[str, str, int]],  # Supports single command, list of commands, or interactive tuples
         retry: int = 3,
         retry_interval: int = 10,
         username: str = None,
@@ -1397,8 +1397,8 @@ class Node:
         :param command: Commands to execute. Can be:
                          - A string (single command)
                          - A list of strings (multiple commands executed sequentially)
-                         - A list of tuples (interactive commands with expected prompts)
-        :type command: str | list[str] | list[tuple]
+                         - A list of (command, prompt, timeout) tuples (interactive commands with expected prompts)
+        :type command: str | list[str] | list[tuple[str, str, int]]
 
         :param retry: Number of retry attempts in case of failure.
         :type retry: int
@@ -1602,7 +1602,7 @@ class Node:
 
         raise Exception("ssh failed: Should not get here")
 
-    def _interactive_execute(self, client: paramiko.SSHClient, commands: list[tuple[str, str]], quiet: bool,
+    def _interactive_execute(self, client: paramiko.SSHClient, commands: list[tuple[str, str, int]], quiet: bool,
                              display: bool, output_file: str):
         """
         Executes an interactive session over SSH.
