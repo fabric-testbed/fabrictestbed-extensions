@@ -54,6 +54,7 @@ import threading
 import time
 import traceback
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from paramiko_expect import SSHClientInteraction
 
 import jinja2
 import paramiko
@@ -1376,43 +1377,65 @@ class Node:
         )
 
     def execute(
-            self,
-            command: str,
-            retry: int = 3,
-            retry_interval: int = 10,
-            username: str = None,
-            private_key_file: str = None,
-            private_key_passphrase: str = None,
-            quiet: bool = False,
-            read_timeout: int = 10,
-            timeout=None,
-            output_file: str = None,
+        self,
+        command: str | list[str] | list[tuple],  # Supports single command, list of commands, or interactive tuples
+        retry: int = 3,
+        retry_interval: int = 10,
+        username: str = None,
+        private_key_file: str = None,
+        private_key_passphrase: str = None,
+        quiet: bool = False,
+        read_timeout: int = 10,
+        timeout=None,
+        output_file: str = None,
+        display: bool = True,  # Show interactive execution output
     ):
         """
-        Runs a command on the FABRIC node using SSH.
+        Runs one or more commands on the FABRIC node using SSH,
+        supporting both standard and interactive execution.
 
-        :param command: Command to execute on the node.
-        :type command: str
+        :param command: Commands to execute. Can be:
+                         - A string (single command)
+                         - A list of strings (multiple commands executed sequentially)
+                         - A list of tuples (interactive commands with expected prompts)
+        :type command: str | list[str] | list[tuple]
+
         :param retry: Number of retry attempts in case of failure.
         :type retry: int
+
         :param retry_interval: Time interval (seconds) between retries.
         :type retry_interval: int
+
         :param username: SSH username.
         :type username: str
+
         :param private_key_file: Path to the private key file.
         :type private_key_file: str
+
         :param private_key_passphrase: Passphrase for private key.
         :type private_key_passphrase: str
+
         :param quiet: Suppress output if True.
         :type quiet: bool
+
+        :param prompt_changes: Whether to allow changing prompts dynamically in interactive mode.
+        :type prompt_changes: bool
+
         :param read_timeout: Time to wait before reading stdout/stderr.
         :type read_timeout: int
+
         :param timeout: Command timeout in seconds.
         :type timeout: int
+
         :param output_file: File path for output logging.
         :type output_file: str
+
+        :param display: Show interactive execution output if True.
+        :type display: bool
+
         :return: A tuple (stdout, stderr).
         :rtype: Tuple[str, str]
+
         :raises Exception: If SSH connection fails.
         """
 
@@ -1428,7 +1451,8 @@ class Node:
         # Ensure the node is active
         if self.get_reservation_state() != "Active":
             raise Exception(
-                f"Node {self.get_name()} is in state {self.get_reservation_state()}, cannot execute command.")
+                f"Node {self.get_name()} is in state {self.get_reservation_state()}, cannot execute command."
+            )
 
         fablib_manager = self.get_fablib_manager()
         log_debug = fablib_manager.get_log_level() == logging.DEBUG
@@ -1442,7 +1466,9 @@ class Node:
 
         node_username = username or self.username
         node_key_file = private_key_file or self.get_private_key_file()
-        node_key_passphrase = private_key_passphrase or self.get_private_key_passphrase()
+        node_key_passphrase = (
+            private_key_passphrase or self.get_private_key_passphrase()
+        )
 
         # Determine connection settings
         ip_type = self.validIPAddress(management_ip)
@@ -1455,25 +1481,54 @@ class Node:
 
         dest_addr = (management_ip, 22)
 
+        # Detect interactive vs. standard execution
+        interactive_mode = all(isinstance(cmd, tuple) for cmd in command) if isinstance(command, list) else False
+        standard_mode = isinstance(command, str) or all(isinstance(cmd, str) for cmd in command) if isinstance(
+            command, list) else False
+
+        # If standard commands, convert list to a single shell command string
+        if standard_mode and isinstance(command, list):
+            command = " && ".join(command)
+
         attempt = 0
         while attempt < max(1, retry):
+            client = None
+            bastion = None
+            bastion_channel = None
             try:
-                key = self.get_paramiko_key(private_key_file=node_key_file,
-                                            get_private_key_passphrase=node_key_passphrase)
+                key = self.get_paramiko_key(
+                    private_key_file=node_key_file,
+                    get_private_key_passphrase=node_key_passphrase,
+                )
 
                 # Connect to bastion
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(fablib_manager.get_bastion_host(), username=bastion_username,
-                                key_filename=bastion_key_file)
+                bastion.connect(
+                    fablib_manager.get_bastion_host(),
+                    username=bastion_username,
+                    key_filename=bastion_key_file,
+                )
 
                 bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel("direct-tcpip", dest_addr, src_addr)
+                bastion_channel = bastion_transport.open_channel(
+                    "direct-tcpip", dest_addr, src_addr
+                )
 
                 # Connect to node
                 client = paramiko.SSHClient()
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(management_ip, username=node_username, pkey=key, sock=bastion_channel)
+                client.connect(
+                    management_ip,
+                    username=node_username,
+                    pkey=key,
+                    sock=bastion_channel,
+                )
+
+                # Handle interactive execution
+                if interactive_mode:
+                    return self._interactive_execute(client=client, commands=command, quiet=quiet,
+                                                     display=display, output_file=output_file)
 
                 if timeout:
                     command = f"sudo timeout --foreground -k 10 {timeout} {command}\n"
@@ -1483,7 +1538,11 @@ class Node:
 
                 # Read stdout and stderr in chunks
                 stdout_chunks, stderr_chunks = [], []
-                while not stdout.channel.closed or stdout.channel.recv_ready() or stderr.channel.recv_stderr_ready():
+                while (
+                    not stdout.channel.closed
+                    or stdout.channel.recv_ready()
+                    or stderr.channel.recv_stderr_ready()
+                ):
                     readq, _, _ = select.select([stdout.channel], [], [], read_timeout)
                     for c in readq:
                         if c.recv_ready():
@@ -1514,7 +1573,8 @@ class Node:
                 if log_debug:
                     elapsed_time = time.time() - start_time
                     logging.debug(
-                        f"Command executed in {elapsed_time:.2f}s, stdout: {rtn_stdout}, stderr: {rtn_stderr}")
+                        f"Command executed in {elapsed_time:.2f}s, stdout: {rtn_stdout}, stderr: {rtn_stderr}"
+                    )
 
                 return rtn_stdout, rtn_stderr
 
@@ -1523,7 +1583,63 @@ class Node:
                 if attempt + 1 == retry:
                     raise
                 time.sleep(retry_interval)
+            finally:
                 attempt += 1
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.debug(f"Exception in client.close(): {e}")
+
+                try:
+                    bastion_channel.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion_channel.close(): {e}")
+
+                try:
+                    bastion.close()
+                except Exception as e:
+                    logging.debug(f"Exception in bastion.close(): {e}")
+
+        raise Exception("ssh failed: Should not get here")
+
+    def _interactive_execute(self, client: paramiko.SSHClient, commands: list[tuple[str, str]], quiet: bool,
+                             display: bool, output_file: str):
+        """
+        Executes an interactive session over SSH.
+
+        :param client: Active SSH client.
+        :type client: paramiko.SSHClient
+
+        :param commands: List of (command, prompt, timeout) tuples for interactive execution.
+        :type commands: list[tuple]
+
+        :param quiet: Suppress output if True.
+        :type quiet: bool
+
+        :param display: Show interactive execution output if True.
+        :type display: bool
+
+        :param output_file: Path to a file where stdout/stderr will be written.
+        :type output_file: str
+
+        :return: A tuple (stdout, stderr).
+        :rtype: Tuple[str, str]
+        """
+        with SSHClientInteraction(client, timeout=10, display=display) as interact:
+            for cmd, new_prompt, timeout in commands:
+                interact.send(cmd)
+                interact.expect(new_prompt, timeout=timeout)
+
+                rtn_stdout = interact.current_output_clean.replace("\\n", "\n")
+                rtn_stderr = ""
+
+                if not quiet:
+                    print(rtn_stdout, rtn_stderr)
+                    if output_file:
+                        with open(output_file, "a") as file:
+                            file.write(rtn_stdout + rtn_stderr)
+
+        return rtn_stdout, rtn_stderr
 
     def upload_file_thread(
         self,

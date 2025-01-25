@@ -28,7 +28,8 @@ dependencies = [
     "ipython>=8.12.0",
     "fabric_fss_utils>=1.5.1",
     "recordclass==0.21.1",
-    "atomicwrites"
+    "atomicwrites",
+    "paramiko_expect"
     ]
 
 classifiers = [
