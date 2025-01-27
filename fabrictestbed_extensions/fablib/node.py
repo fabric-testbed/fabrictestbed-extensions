@@ -1655,9 +1655,9 @@ class Node:
 
                 if not quiet:
                     print(rtn_stdout, rtn_stderr)
-                    if output_file:
-                        with open(output_file, "a") as file:
-                            file.write(rtn_stdout + rtn_stderr)
+                if output_file:
+                    with open(output_file, "a") as file:
+                        file.write(rtn_stdout + rtn_stderr)
 
         return rtn_stdout, rtn_stderr
 
