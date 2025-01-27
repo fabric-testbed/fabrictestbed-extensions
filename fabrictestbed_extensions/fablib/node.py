@@ -510,7 +510,7 @@ class Node:
             components.append(component.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"] in set(components):
                     return True
             else:
@@ -591,11 +591,15 @@ class Node:
             ifaces.append(iface.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
-                if x["name"]["value"] in set(ifaces):
+            ifname = x["name"]
+            if isinstance(x["name"], dict):
+                ifname = x["name"]["value"]
+
+            if filter_function is None:
+                if ifname in set(ifaces):
                     return True
             else:
-                if filter_function(x) and x["name"]["value"] in set(ifaces):
+                if filter_function(x) and ifname in set(ifaces):
                     return True
 
             return False
@@ -675,7 +679,7 @@ class Node:
             networks.append(iface.get_network().get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"]["value"] in set(networks):
                     return True
             else:
