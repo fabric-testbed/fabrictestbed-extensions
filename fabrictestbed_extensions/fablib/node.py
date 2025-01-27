@@ -54,13 +54,13 @@ import threading
 import time
 import traceback
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
-from paramiko_expect import SSHClientInteraction
 
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
 from fim.user import NodeType
 from IPython.core.display_functions import display
+from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
