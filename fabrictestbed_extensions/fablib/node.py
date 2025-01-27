@@ -1481,7 +1481,7 @@ class Node:
         else:
             raise Exception(f"Invalid management IP: {management_ip}")
 
-        dest_addr = (management_ip, 22)
+        dest_addr = (str(management_ip), 22)
 
         # Detect interactive vs. standard execution
         interactive_mode = (

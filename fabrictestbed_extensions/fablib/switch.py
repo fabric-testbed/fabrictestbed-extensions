@@ -345,7 +345,7 @@ class Switch(Node):
         """
         self.get_slice().get_fim_topology().remove_switch(name=self.get_name())
 
-    def get_interfaces(self) -> List[Interface] or None:
+    def get_interfaces(self, include_subs: bool = True) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
