@@ -29,7 +29,7 @@ dependencies = [
     "fabric_fss_utils>=1.5.1",
     "recordclass==0.21.1",
     "atomicwrites",
-    "paramiko_expect"
+    "fabric_paramiko_expect"
     ]
 
 classifiers = [
