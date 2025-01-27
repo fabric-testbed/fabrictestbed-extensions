@@ -357,3 +357,21 @@ class Switch(Node):
             interfaces.append(Interface(node=self, fim_interface=ifs, model="NIC_P4"))
 
         return interfaces
+
+    @staticmethod
+    def get_node(slice: Slice = None, node=None):
+        """
+        Returns a new fablib node using existing FABRIC resources.
+
+        :note: Not intended for API call.
+
+        :param slice: the fablib slice storing the existing node
+        :type slice: Slice
+
+        :param node: the FIM node stored in this fablib node
+        :type node: Node
+
+        :return: a new fablib node storing resources
+        :rtype: Node
+        """
+        return Switch(slice, node)
