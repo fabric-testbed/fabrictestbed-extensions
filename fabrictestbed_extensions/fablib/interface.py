@@ -721,7 +721,7 @@ class Interface:
         :return: Shortened name of the interface.
         :rtype: str
         """
-        if self.parent:
+        if self.parent or not self.get_component():
             return self.get_name()
 
         # Strip off the extra parts of the name added by FIM
