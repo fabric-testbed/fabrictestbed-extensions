@@ -1612,6 +1612,8 @@ class Slice:
         try:
             if self.nodes and len(self.nodes) and name in self.nodes:
                 return self.nodes.get(name)
+            if self.get_fim_topology().nodes[name].type == NodeType.Switch:
+                return Switch.get_node(self, self.get_fim_topology().nodes[name])
             return Node.get_node(self, self.get_fim_topology().nodes[name])
         except Exception as e:
             logging.info(e, exc_info=True)
