@@ -32,6 +32,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import re
 from ipaddress import IPv4Address
 from typing import TYPE_CHECKING, Any, List, Union
 
@@ -401,6 +402,17 @@ class Interface:
         :rtype: String
         """
         try:
+            from fabrictestbed_extensions.fablib.switch import Switch
+
+            if self.node and isinstance(self.node, Switch):
+                match = re.search(
+                    r"\d+", self.fim_interface.name
+                )  # Find digits in the string
+                if match:
+                    return match.group()
+
+                return self.fim_interface.name
+
             fablib_data = self.get_fablib_data()
             if "dev" in fablib_data and fablib_data.get("dev"):
                 return fablib_data.get("dev")
@@ -721,7 +733,7 @@ class Interface:
         :return: Shortened name of the interface.
         :rtype: str
         """
-        if self.parent:
+        if self.parent or not self.get_component():
             return self.get_name()
 
         # Strip off the extra parts of the name added by FIM

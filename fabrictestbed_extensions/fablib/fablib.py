@@ -2755,7 +2755,7 @@ Host * !bastion.fabric-testbed.net
         for entry in data:
             row = []
             for field in fields:
-                row.append(entry[field])
+                row.append(entry.get(field, ""))
 
             table.append(row)
         return table

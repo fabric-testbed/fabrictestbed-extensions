@@ -60,6 +60,7 @@ import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
 from fim.user import NodeType
 from IPython.core.display_functions import display
+from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -509,7 +510,7 @@ class Node:
             components.append(component.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"] in set(components):
                     return True
             else:
@@ -590,11 +591,15 @@ class Node:
             ifaces.append(iface.get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
-                if x["name"]["value"] in set(ifaces):
+            ifname = x["name"]
+            if isinstance(x["name"], dict):
+                ifname = x["name"]["value"]
+
+            if filter_function is None:
+                if ifname in set(ifaces):
                     return True
             else:
-                if filter_function(x) and x["name"]["value"] in set(ifaces):
+                if filter_function(x) and ifname in set(ifaces):
                     return True
 
             return False
@@ -674,7 +679,7 @@ class Node:
             networks.append(iface.get_network().get_name())
 
         def combined_filter_function(x):
-            if filter_function == None:
+            if filter_function is None:
                 if x["name"]["value"] in set(networks):
                     return True
             else:
@@ -1377,7 +1382,9 @@ class Node:
 
     def execute(
         self,
-        command: str,
+        command: (
+            str | list[str] | list[tuple[str, str, int]]
+        ),  # Supports single command, list of commands, or interactive tuples
         retry: int = 3,
         retry_interval: int = 10,
         username: str = None,
@@ -1387,120 +1394,131 @@ class Node:
         read_timeout: int = 10,
         timeout=None,
         output_file: str = None,
+        display: bool = True,  # Show interactive execution output
     ):
         """
-        Runs a command on the FABRIC node.
+        Runs one or more commands on the FABRIC node using SSH,
+        supporting both standard and interactive execution.
 
-        The function uses paramiko to ssh to the FABRIC node and
-        execute an arbitrary shell command.
+        :param command: Commands to execute. Can be:
+                         - A string (single command)
+                         - A list of strings (multiple commands executed sequentially)
+                         - A list of (command, prompt, timeout) tuples (interactive commands with expected prompts)
+        :type command: str | list[str] | list[tuple[str, str, int]]
 
-        :param command: the command to run
-        :type command: str
-
-        :param retry: the number of times to retry SSH upon failure
+        :param retry: Number of retry attempts in case of failure.
         :type retry: int
 
-        :param retry_interval: the number of seconds to wait before
-            retrying SSH upon failure
+        :param retry_interval: Time interval (seconds) between retries.
         :type retry_interval: int
 
-        :param username: username
+        :param username: SSH username.
         :type username: str
 
-        :param private_key_file: path to private key file
+        :param private_key_file: Path to the private key file.
         :type private_key_file: str
 
-        :param private_key_passphrase: pass phrase
+        :param private_key_passphrase: Passphrase for private key.
         :type private_key_passphrase: str
 
-        :param output_file: path to a file where the stdout/stderr
-            will be written.  None for no file output
-        :type output_file: List[str]
+        :param quiet: Suppress output if True.
+        :type quiet: bool
 
-        :param output: print stdout and stderr to the screen
-        :type output: bool
+        :param prompt_changes: Whether to allow changing prompts dynamically in interactive mode.
+        :type prompt_changes: bool
 
-        :param read_timeout: the number of seconds to wait before
-            retrying to read from stdout and stderr
+        :param read_timeout: Time to wait before reading stdout/stderr.
         :type read_timeout: int
 
-        :param timeout: the number of seconds to wait before
-            terminating the command using the linux timeout command.
-            Specifying a timeout encapsulates the command with the
-            timeout command for you
+        :param timeout: Command timeout in seconds.
         :type timeout: int
 
-        :return: a tuple of (stdout[Sting],stderr[String])
-        :rtype: Tuple
+        :param output_file: File path for output logging.
+        :type output_file: str
 
-        :raise Exception: if management IP is invalid
+        :param display: Show interactive execution output if True.
+        :type display: bool
+
+        :return: A tuple (stdout, stderr).
+        :rtype: Tuple[str, str]
+
+        :raises Exception: If SSH connection fails.
         """
-        import logging
 
         logging.debug(
-            f"execute node: {self.get_name()}, management_ip: {self.get_management_ip()}, command: {command}",
-            stack_info=True,
+            f"Executing on node: {self.get_name()}, IP: {self.get_management_ip()}, Command: {command}"
         )
 
-        if not self.get_reservation_state() == "Active":
-            logging.debug(
-                f"Execute failed. Node {self.get_name()} in state {self.get_reservation_state()}"
+        # Validate management IP
+        management_ip = self.get_management_ip()
+        if not management_ip:
+            raise Exception(f"Node {self.get_name()} has no valid management IP.")
+
+        # Ensure the node is active
+        if self.get_reservation_state() != "Active":
+            raise Exception(
+                f"Node {self.get_name()} is in state {self.get_reservation_state()}, cannot execute command."
             )
 
-        if not self.get_management_ip():
-            logging.debug(
-                f"Execute failed. Node {self.get_name()} in management IP  {self.get_management_ip()}"
-            )
+        fablib_manager = self.get_fablib_manager()
+        log_debug = fablib_manager.get_log_level() == logging.DEBUG
 
-        # if not quiet:
-        chunking = True
+        if log_debug:
+            start_time = time.time()
 
-        if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-            start = time.time()
+        # Get bastion and node credentials
+        bastion_username = fablib_manager.get_bastion_username()
+        bastion_key_file = fablib_manager.get_bastion_key_location()
 
-        # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
-        if self.validIPAddress(management_ip) == "IPv4":
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv4_addr(), 22)
+        node_username = username or self.username
+        node_key_file = private_key_file or self.get_private_key_file()
+        node_key_passphrase = (
+            private_key_passphrase or self.get_private_key_passphrase()
+        )
+
+        # Determine connection settings
+        ip_type = self.validIPAddress(management_ip)
+        if ip_type == "IPv4":
             src_addr = ("0.0.0.0", 22)
-
-        elif self.validIPAddress(management_ip) == "IPv6":
-            # src_addr = (self.get_fablib_manager().get_bastion_private_ipv6_addr(), 22)
-            src_addr = ("0:0:0:0:0:0:0:0", 22)
+        elif ip_type == "IPv6":
+            src_addr = ("::", 22)
         else:
-            logging.error("node.execute: Management IP Invalid:", exc_info=True)
-            raise Exception(f"node.execute: Management IP Invalid: {management_ip}")
-        dest_addr = (management_ip, 22)
+            raise Exception(f"Invalid management IP: {management_ip}")
 
-        bastion_username = self.get_fablib_manager().get_bastion_username()
-        bastion_key_file = self.get_fablib_manager().get_bastion_key_location()
+        dest_addr = (str(management_ip), 22)
 
-        if username is not None:
-            node_username = username
-        else:
-            node_username = self.username
+        # Detect interactive vs. standard execution
+        interactive_mode = (
+            all(isinstance(cmd, tuple) for cmd in command)
+            if isinstance(command, list)
+            else False
+        )
+        standard_mode = (
+            isinstance(command, str) or all(isinstance(cmd, str) for cmd in command)
+            if isinstance(command, list)
+            else False
+        )
 
-        if private_key_file is not None:
-            node_key_file = private_key_file
-        else:
-            node_key_file = self.get_private_key_file()
-
-        if private_key_passphrase is not None:
-            node_key_passphrase = private_key_passphrase
-        else:
-            node_key_passphrase = self.get_private_key_passphrase()
+        # If standard commands, convert list to a single shell command string
+        if standard_mode and isinstance(command, list):
+            command = " && ".join(command)
 
         attempt = 0
-        while attempt < max(1, int(retry)):
+        while attempt < max(1, retry):
+            client = None
+            bastion = None
+            bastion_channel = None
             try:
                 key = self.get_paramiko_key(
                     private_key_file=node_key_file,
                     get_private_key_passphrase=node_key_passphrase,
                 )
+
+                # Connect to bastion
                 bastion = paramiko.SSHClient()
                 bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 bastion.connect(
-                    self.get_fablib_manager().get_bastion_host(),
+                    fablib_manager.get_bastion_host(),
                     username=bastion_username,
                     key_filename=bastion_key_file,
                 )
@@ -1510,11 +1528,9 @@ class Node:
                     "direct-tcpip", dest_addr, src_addr
                 )
 
+                # Connect to node
                 client = paramiko.SSHClient()
-                # client.load_system_host_keys()
-                # client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
                 client.connect(
                     management_ip,
                     username=node_username,
@@ -1522,143 +1538,69 @@ class Node:
                     sock=bastion_channel,
                 )
 
-                if output_file:
-                    file = open(output_file, "a")
-
-                # stdin, stdout, stderr = client.exec_command('echo \"' + command + '\" > /tmp/fabric_execute_script.sh; chmod +x /tmp/fabric_execute_script.sh; /tmp/fabric_execute_script.sh')
-
-                if timeout is not None:
-                    command = (
-                        f"sudo timeout --foreground -k 10 {timeout} " + command + "\n"
+                # Handle interactive execution
+                if interactive_mode:
+                    return self._interactive_execute(
+                        client=client,
+                        commands=command,
+                        quiet=quiet,
+                        display=display,
+                        output_file=output_file,
                     )
+
+                if timeout:
+                    command = f"sudo timeout --foreground -k 10 {timeout} {command}\n"
 
                 stdin, stdout, stderr = client.exec_command(command)
-                channel = stdout.channel
-
-                # Only writing one command, so we can shut down stdin and
-                # writing abilities
                 stdin.close()
-                channel.shutdown_write()
 
-                # Read stdout and stderr:
-                if not chunking:
-                    # The old way
-                    rtn_stdout = str(stdout.read(), "utf-8").replace("\\n", "\n")
-                    rtn_stderr = str(stderr.read(), "utf-8").replace("\\n", "\n")
-                    if quiet == False:
-                        print(rtn_stdout, rtn_stderr)
+                # Read stdout and stderr in chunks
+                stdout_chunks, stderr_chunks = [], []
+                while (
+                    not stdout.channel.closed
+                    or stdout.channel.recv_ready()
+                    or stderr.channel.recv_stderr_ready()
+                ):
+                    readq, _, _ = select.select([stdout.channel], [], [], read_timeout)
+                    for c in readq:
+                        if c.recv_ready():
+                            stdout_bytes = c.recv(len(c.in_buffer))
+                            if not quiet:
+                                print(stdout_bytes.decode(), end="")
+                            if output_file:
+                                with open(output_file, "a") as f:
+                                    f.write(stdout_bytes.decode())
+                            stdout_chunks.append(stdout_bytes)
+                        if c.recv_stderr_ready():
+                            stderr_bytes = c.recv_stderr(len(c.in_stderr_buffer))
+                            if not quiet:
+                                print(f"\x1b[31m{stderr_bytes.decode()}\x1b[0m", end="")
+                            if output_file:
+                                with open(output_file, "a") as f:
+                                    f.write(stderr_bytes.decode())
+                            stderr_chunks.append(stderr_bytes)
 
-                else:
-                    # Credit to Stack Overflow user tintin's post here: https://stackoverflow.com/a/32758464
-                    stdout_chunks = []
-                    try:
-                        stdout_chunks.append(
-                            stdout.channel.recv(len(stdout.channel.in_buffer))
-                        )
-                    except EOFError:
-                        logging.warning(
-                            "A Paramiko EOFError has occurred, "
-                            "if this is part of a reboot sequence, it can be ignored"
-                        )
-                    stderr_chunks = []
+                stdout.close()
+                stderr.close()
+                client.close()
+                bastion.close()
 
-                    while (
-                        not channel.closed
-                        or channel.recv_ready()
-                        or channel.recv_stderr_ready()
-                    ):
-                        got_chunk = False
-                        readq, _, _ = select.select(
-                            [stdout.channel], [], [], read_timeout
-                        )
-                        for c in readq:
-                            if c.recv_ready():
-                                stdoutbytes = stdout.channel.recv(len(c.in_buffer))
-                                if quiet == False:
-                                    print(
-                                        str(stdoutbytes, "utf-8").replace("\\n", "\n"),
-                                        end="",
-                                    )
-                                if output_file:
-                                    file.write(
-                                        str(stdoutbytes, "utf-8").replace("\\n", "\n")
-                                    )
-                                    file.flush()
+                rtn_stdout = b"".join(stdout_chunks).decode()
+                rtn_stderr = b"".join(stderr_chunks).decode()
 
-                                stdout_chunks.append(stdoutbytes)
-                                got_chunk = True
-                            if c.recv_stderr_ready():
-                                # make sure to read stderr to prevent stall
-                                stderrbytes = stderr.channel.recv_stderr(
-                                    len(c.in_stderr_buffer)
-                                )
-                                if not quiet:
-                                    print(
-                                        "\x1b[31m",
-                                        str(stderrbytes, "utf-8").replace("\\n", "\n"),
-                                        "\x1b[0m",
-                                        end="",
-                                    )
-                                if output_file:
-                                    file.write(
-                                        str(stderrbytes, "utf-8").replace("\\n", "\n")
-                                    )
-                                    file.flush()
-                                stderr_chunks.append(stderrbytes)
-                                got_chunk = True
-
-                        if (
-                            not got_chunk
-                            and stdout.channel.exit_status_ready()
-                            and not stderr.channel.recv_stderr_ready()
-                            and not stdout.channel.recv_ready()
-                        ):
-                            stdout.channel.shutdown_read()
-                            stdout.channel.close()
-                            break
-
-                    stdout.close()
-                    stderr.close()
-
-                    # chunks are groups of bytes, combine and convert to str
-                    rtn_stdout = b"".join(stdout_chunks).decode("utf-8")
-                    rtn_stderr = b"".join(stderr_chunks).decode("utf-8")
-
-                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-                    end = time.time()
+                if log_debug:
+                    elapsed_time = time.time() - start_time
                     logging.debug(
-                        f"Running node.execute(): command: {command}, elapsed time: {end - start} seconds"
+                        f"Command executed in {elapsed_time:.2f}s, stdout: {rtn_stdout}, stderr: {rtn_stderr}"
                     )
-
-                logging.debug(f"rtn_stdout: {rtn_stdout}")
-                logging.debug(f"rtn_stderr: {rtn_stderr}")
-
-                if output_file:
-                    file.close()
 
                 return rtn_stdout, rtn_stderr
-                # success, skip other tries
-                break
 
             except Exception as e:
-                logging.warning(
-                    f"Exception in node.execute() command: {command} (attempt #{attempt} of {retry}): {e}"
-                )
-
+                logging.warning(f"Attempt {attempt + 1} failed: {e}")
                 if attempt + 1 == retry:
-                    raise e
-
-                # Fail, try again
-                if self.get_fablib_manager().get_log_level() == logging.DEBUG:
-                    logging.debug(
-                        f"SSH execute fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again"
-                    )
-                    logging.debug(e, exc_info=True)
-
+                    raise
                 time.sleep(retry_interval)
-                pass
-
-            # Clean-up of open connections and files.
             finally:
                 attempt += 1
                 try:
@@ -1676,13 +1618,52 @@ class Node:
                 except Exception as e:
                     logging.debug(f"Exception in bastion.close(): {e}")
 
-                try:
-                    if output_file:
-                        file.close()
-                except Exception as e:
-                    logging.debug(f"Exception in output_file.close(): {e}")
-
         raise Exception("ssh failed: Should not get here")
+
+    def _interactive_execute(
+        self,
+        client: paramiko.SSHClient,
+        commands: list[tuple[str, str, int]],
+        quiet: bool,
+        display: bool,
+        output_file: str,
+    ):
+        """
+        Executes an interactive session over SSH.
+
+        :param client: Active SSH client.
+        :type client: paramiko.SSHClient
+
+        :param commands: List of (command, prompt, timeout) tuples for interactive execution.
+        :type commands: list[tuple]
+
+        :param quiet: Suppress output if True.
+        :type quiet: bool
+
+        :param display: Show interactive execution output if True.
+        :type display: bool
+
+        :param output_file: Path to a file where stdout/stderr will be written.
+        :type output_file: str
+
+        :return: A tuple (stdout, stderr).
+        :rtype: Tuple[str, str]
+        """
+        with SSHClientInteraction(client, timeout=10, display=display) as interact:
+            for cmd, new_prompt, timeout in commands:
+                interact.send(cmd)
+                interact.expect(new_prompt, timeout=timeout)
+
+                rtn_stdout = interact.current_output_clean.replace("\\n", "\n")
+                rtn_stderr = ""
+
+                if not quiet:
+                    print(rtn_stdout, rtn_stderr)
+                if output_file:
+                    with open(output_file, "a") as file:
+                        file.write(rtn_stdout + rtn_stderr)
+
+        return rtn_stdout, rtn_stderr
 
     def upload_file_thread(
         self,
