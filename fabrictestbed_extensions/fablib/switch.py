@@ -353,7 +353,15 @@ class Switch(Node):
         :rtype: List[Interface]
         """
         interfaces = []
-        for name, ifs in self.get_fim().interfaces.items():
+
+        # Extract and sort interface names numerically
+        sorted_interfaces = sorted(
+            self.get_fim().interfaces.items(),
+            key=lambda item: int(item[0][1:])  # Extract numeric part and sort
+        )
+
+        # Add them to the list in sorted order
+        for name, ifs in sorted_interfaces:
             interfaces.append(Interface(node=self, fim_interface=ifs, model="NIC_P4"))
 
         return interfaces
