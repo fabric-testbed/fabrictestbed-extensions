@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 1.8.1 
 
 ### Added
-- Support for interactive execution of commands (Issue [#388](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/393)
+- Support for interactive execution of commands (Issue [#393](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/393)
+- Show username for Switch (Issue [#395](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/395))
 
 ## 1.8.0 - 01/07/2025
 

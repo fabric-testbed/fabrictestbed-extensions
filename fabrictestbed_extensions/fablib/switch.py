@@ -193,6 +193,8 @@ class Switch(Node):
             rtn_dict["name"] = str(self.get_name())
         if "site" not in skip:
             rtn_dict["site"] = str(self.get_site())
+        if "username" not in skip:
+            rtn_dict["username"] = str(self.get_username())
         if "management_ip" not in skip:
             rtn_dict["management_ip"] = (
                 str(self.get_management_ip()).strip()
