@@ -403,8 +403,11 @@ class Interface:
         """
         try:
             from fabrictestbed_extensions.fablib.switch import Switch
+
             if self.node and isinstance(self.node, Switch):
-                match = re.search(r'\d+', self.fim_interface.name)  # Find digits in the string
+                match = re.search(
+                    r"\d+", self.fim_interface.name
+                )  # Find digits in the string
                 if match:
                     return match.group()
 

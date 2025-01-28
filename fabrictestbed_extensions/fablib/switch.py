@@ -357,7 +357,7 @@ class Switch(Node):
         # Extract and sort interface names numerically
         sorted_interfaces = sorted(
             self.get_fim().interfaces.items(),
-            key=lambda item: int(item[0][1:])  # Extract numeric part and sort
+            key=lambda item: int(item[0][1:]),  # Extract numeric part and sort
         )
 
         # Add them to the list in sorted order
