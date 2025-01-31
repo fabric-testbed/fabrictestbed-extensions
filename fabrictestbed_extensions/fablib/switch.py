@@ -193,6 +193,8 @@ class Switch(Node):
             rtn_dict["name"] = str(self.get_name())
         if "site" not in skip:
             rtn_dict["site"] = str(self.get_site())
+        if "username" not in skip:
+            rtn_dict["username"] = str(self.get_username())
         if "management_ip" not in skip:
             rtn_dict["management_ip"] = (
                 str(self.get_management_ip()).strip()
@@ -345,7 +347,7 @@ class Switch(Node):
         """
         self.get_slice().get_fim_topology().remove_switch(name=self.get_name())
 
-    def get_interfaces(self) -> List[Interface] or None:
+    def get_interfaces(self, include_subs: bool = True) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -353,7 +355,33 @@ class Switch(Node):
         :rtype: List[Interface]
         """
         interfaces = []
-        for name, ifs in self.get_fim().interfaces.items():
+
+        # Extract and sort interface names numerically
+        sorted_interfaces = sorted(
+            self.get_fim().interfaces.items(),
+            key=lambda item: int(item[0][1:]),  # Extract numeric part and sort
+        )
+
+        # Add them to the list in sorted order
+        for name, ifs in sorted_interfaces:
             interfaces.append(Interface(node=self, fim_interface=ifs, model="NIC_P4"))
 
         return interfaces
+
+    @staticmethod
+    def get_node(slice: Slice = None, node=None):
+        """
+        Returns a new fablib node using existing FABRIC resources.
+
+        :note: Not intended for API call.
+
+        :param slice: the fablib slice storing the existing node
+        :type slice: Slice
+
+        :param node: the FIM node stored in this fablib node
+        :type node: Node
+
+        :return: a new fablib node storing resources
+        :rtype: Node
+        """
+        return Switch(slice, node)
