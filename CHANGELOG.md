@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - urllib3 deprecated warning (Issue [#397](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/397))
 
+### Added
+- Add support for BlueField NICs (Issue [#399](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/399))
+
 ## 1.8.1 - 01/29/2025
 
 ### Added

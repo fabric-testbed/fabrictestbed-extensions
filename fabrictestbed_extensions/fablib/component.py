@@ -40,6 +40,7 @@ like so::
 from __future__ import annotations
 
 import json
+import time
 from typing import TYPE_CHECKING
 
 import jinja2
@@ -67,6 +68,7 @@ class Component:
 
     component_model_map = {
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
+        Constants.CMP_NIC_BlueField2_ConnectX_6: ComponentModelType.SmartNIC_BlueField_2_ConnectX_6,
         Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
         Constants.CMP_NIC_ConnectX_5: ComponentModelType.SmartNIC_ConnectX_5,
         Constants.CMP_NIC_P4: Constants.P4_DedicatedPort,
@@ -78,6 +80,13 @@ class Component:
         Constants.CMP_NIC_OpenStack: ComponentModelType.SharedNIC_OpenStack_vNIC,
         Constants.CMP_FPGA_Xilinx_U280: ComponentModelType.FPGA_Xilinx_U280,
         Constants.CMP_FPGA_Xilinx_SN1022: ComponentModelType.FPGA_Xilinx_SN1022,
+    }
+
+    component_configure_commands = {
+        Constants.CMP_NIC_BlueField2_ConnectX_6: [
+            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+        ]
     }
 
     def __str__(self):
@@ -471,6 +480,11 @@ class Component:
             and str(self.get_fim_model()) == "ConnectX-6"
         ):
             return Constants.CMP_NIC_ConnectX_6
+        if (
+            str(self.get_type()) == "SmartNIC"
+            and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
+        ):
+            return Constants.CMP_NIC_BlueField2_ConnectX_6
         elif (
             str(self.get_type()) == "SmartNIC"
             and str(self.get_fim_model()) == "ConnectX-5"
@@ -554,6 +568,32 @@ class Component:
         :rtype: str
         """
         return self.get_fim_component().type
+
+    def configure(self, commands: List[str] = []):
+        """
+        Configure a component by executing a set of commands provided by the user or run any default commands
+        """
+        output = []
+        start = time.time()
+        try:
+            if not commands or len(commands) == 0:
+                commands = Component.component_configure_commands.get(self.get_model())
+
+            if not commands or len(commands) == 0:
+                return output
+
+            for cmd in commands:
+                stdout, stderr = self.node.execute(cmd)
+                if stdout != "":
+                    output.append(stdout)
+                if stderr != "":
+                    output.append(stderr)
+        except Exception:
+            logging.error(f"configure Fail: {self.get_name()}:", exc_info=True)
+            raise Exception(str(output))
+
+        print(f"\nTime to configure {time.time() - start:.0f} seconds")
+        return output
 
     def configure_nvme(self, mount_point=""):
         """
