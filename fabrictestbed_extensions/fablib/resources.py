@@ -1047,16 +1047,8 @@ class FacilityPorts(Resources):
             "allocated_vlan_range": (
                 label_allocations.vlan if label_allocations else "N/A"
             ),
-            "local_name": (
-                local_name
-                if local_name
-                else "N/A"
-            ),
-            "device_name": (
-                device_name
-                if device_name
-                else "N/A"
-            ),
+            "local_name": (local_name if local_name else "N/A"),
+            "device_name": (device_name if device_name else "N/A"),
             "region": (
                 iface.labels.region if iface.labels and iface.labels.region else "N/A"
             ),
