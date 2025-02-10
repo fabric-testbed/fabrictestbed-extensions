@@ -1022,6 +1022,22 @@ class FacilityPorts(Resources):
         :return: collection of link properties
         :rtype: dict
         """
+        # Determine the Local Name
+        local_name = None
+        device_name = None
+
+        if iface and iface.labels:
+            local_name = iface.labels.local_name or None
+            device_name = iface.labels.device_name or None
+
+        if not local_name and iface:
+            for peer in iface.get_peers():
+                if peer.labels and peer.labels.local_name:
+                    local_name = peer.labels.local_name
+                    if not device_name:
+                        device_name = peer.labels.device_name
+                    break
+
         label_allocations = iface.get_property("label_allocations")
         return {
             "name": name,
@@ -1032,13 +1048,13 @@ class FacilityPorts(Resources):
                 label_allocations.vlan if label_allocations else "N/A"
             ),
             "local_name": (
-                iface.labels.local_name
-                if iface.labels and iface.labels.local_name
+                local_name
+                if local_name
                 else "N/A"
             ),
             "device_name": (
-                iface.labels.device_name
-                if iface.labels and iface.labels.device_name
+                device_name
+                if device_name
                 else "N/A"
             ),
             "region": (
