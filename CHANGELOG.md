@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 1.8.2 - TODO
 
 ### Fixed
+- Non cloud facility ports should report local_name just like cloud facility ports (Issue [#402](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/402))
 - urllib3 deprecated warning (Issue [#397](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/397))
 
 ### Added
