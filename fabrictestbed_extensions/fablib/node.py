@@ -1487,9 +1487,6 @@ class Node:
 
         :raises Exception: If SSH connection fails.
         """
-        if not self.is_instantiated():
-            return None, None
-
         logging.debug(
             f"Executing on node: {self.get_name()}, IP: {self.get_management_ip()}, Command: {command}"
         )

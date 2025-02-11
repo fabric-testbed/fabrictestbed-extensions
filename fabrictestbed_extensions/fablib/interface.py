@@ -895,6 +895,8 @@ class Interface:
         """
         try:
             stdout, stderr = self.get_node().execute("ip -j addr list", quiet=True)
+            if not stdout:
+                return None
 
             addrs = json.loads(stdout)
 
