@@ -724,7 +724,7 @@ class Slice:
             logging.warning(f"slice.update_slivers failed: {e}")
 
         # self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
         self.update_topology()
 
         if self.get_state() == "ModifyOK":
@@ -952,7 +952,7 @@ class Slice:
             defaulting to 'both' which receives the data
         """
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
         port_mirror_service = NetworkService.new_portmirror_service(
             slice=self,
             name=name,
@@ -1026,7 +1026,7 @@ class Slice:
         :rtype: NetworkService
         """
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         network_service = NetworkService.new_l2network(
             slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
@@ -1108,7 +1108,7 @@ class Slice:
         :rtype: NetworkService
         """
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         return NetworkService.new_l3network(
             slice=self,
@@ -1255,7 +1255,7 @@ class Slice:
             node.set_host(host)
 
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=node)
@@ -1328,7 +1328,7 @@ class Slice:
             aswitch.set_host(host)
 
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=aswitch)
@@ -1398,7 +1398,7 @@ class Slice:
         node.set_user_data(user_data_working)
 
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=node)
