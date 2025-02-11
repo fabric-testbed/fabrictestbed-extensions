@@ -218,7 +218,7 @@ class Attestable_Switch(Node):
 
         result = {}
         for port in self.get_switch_data()["portmap"].keys():
-            result[port] = self.get_slice().get_interface(
+            result[port] = self.get_interface(
                 name=self.get_switch_data()["portmap"][port]
             )
         return result
@@ -228,7 +228,7 @@ class Attestable_Switch(Node):
         Get the interface name of a switch's port name.
         """
 
-        return self.get_slice().get_interface(
+        return self.get_interface(
             name=self.get_switch_data()["portmap"][port_name]
         )
 
