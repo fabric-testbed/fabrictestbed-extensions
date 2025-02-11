@@ -93,7 +93,7 @@ class Interface:
         self.dev = None
         self.node = node
         self.model = model
-        self.interfaces = None
+        self.interfaces = {}
         self.parent = parent
 
     def get_fablib_manager(self):
@@ -1300,27 +1300,29 @@ class Interface:
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.account_id
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(self, refresh: bool = False) -> List[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: a list of the interfaces on this component.
         :rtype: List[Interface]
         """
 
-        if not self.interfaces:
-            self.interfaces = []
+        if len(self.interfaces) == 0 or refresh:
+            self.interfaces = {}
             for fim_interface in self.get_fim().interface_list:
-                self.interfaces.append(
-                    Interface(
+                ch_iface = Interface(
                         component=self.get_component(),
                         fim_interface=fim_interface,
                         model=str(InterfaceType.SubInterface),
                         parent=self,
                     )
-                )
+                self.interfaces[ch_iface.get_name()] = ch_iface
 
-        return self.interfaces
+        return list(self.interfaces.values())
 
     def add_sub_interface(self, name: str, vlan: str, bw: int = 10):
         """
@@ -1362,15 +1364,13 @@ class Interface:
                 child_if_capacities = Capacities()
             child_if_capacities.bw = int(bw)
             child_interface.set_properties(capacities=child_if_capacities)
-            if not self.interfaces:
-                self.interfaces = []
 
             ch_iface = Interface(
                 component=self.get_component(),
                 fim_interface=child_interface,
                 model=str(InterfaceType.SubInterface),
             )
-            self.interfaces.append(ch_iface)
+            self.interfaces[ch_iface.get_name()] = ch_iface
             return ch_iface
 
     def get_type(self) -> str:

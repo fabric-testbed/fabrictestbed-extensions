@@ -186,7 +186,7 @@ class Component:
         return output_string
 
     def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+            self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
         """
         Show a table containing the current component attributes.
@@ -236,7 +236,7 @@ class Component:
         return table
 
     def list_interfaces(
-        self, fields=None, output=None, quiet=False, filter_function=None
+            self, fields=None, output=None, quiet=False, filter_function=None, refresh: bool = False
     ):
         """
         Lists all the interfaces in the component with their attributes.
@@ -264,22 +264,24 @@ class Component:
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
         ifaces = []
-        for iface in self.get_interfaces():
+        for iface in self.get_interfaces(refresh=refresh):
             ifaces.append(iface.get_name())
 
         name_filter = lambda s: s["Name"] in set(ifaces)
-        if filter_function != None:
+        if filter_function is not None:
             filter_function = lambda x: filter_function(x) + name_filter(x)
         else:
             filter_function = name_filter
 
         return self.get_slice().list_interfaces(
-            fields=fields, output=output, quiet=quiet, filter_function=filter_function
+            fields=fields, output=output, quiet=quiet, filter_function=filter_function, refresh=refresh
         )
 
     @staticmethod
@@ -292,7 +294,7 @@ class Component:
 
     @staticmethod
     def new_component(
-        node: Node = None, model: str = None, name: str = None, user_data: dict = {}
+            node: Node = None, model: str = None, name: str = None, user_data: dict = {}
     ):
         """
         Not intended for API use
@@ -318,6 +320,7 @@ class Component:
             ),
         )
         component.set_user_data(user_data)
+        component.get_interfaces(refresh=True)
         return component
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
@@ -337,14 +340,17 @@ class Component:
         super().__init__()
         self.fim_component = fim_component
         self.node = node
-        self.interfaces = None
+        self.interfaces = {}
 
-    def get_interfaces(self, include_subs: bool = True) -> List[Interface]:
+    def get_interfaces(self, include_subs: bool = True, refresh: bool = False) -> List[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
         :param include_subs: Flag indicating if sub interfaces should be included
         :type include_subs: bool
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: a list of the interfaces on this component.
         :rtype: List[Interface]
@@ -352,17 +358,17 @@ class Component:
 
         from fabrictestbed_extensions.fablib.interface import Interface
 
-        if not self.interfaces:
-            self.interfaces = []
+        if len(self.interfaces) == 0 or refresh:
             for fim_interface in self.get_fim_component().interface_list:
                 iface = Interface(component=self, fim_interface=fim_interface)
-                self.interfaces.append(iface)
+                self.interfaces[iface.get_name()] = iface
                 if include_subs:
-                    child_interfaces = iface.get_interfaces()
+                    child_interfaces = iface.get_interfaces(refresh=refresh)
                     if child_interfaces and len(child_interfaces):
-                        self.interfaces.extend(child_interfaces)
+                        for c in child_interfaces:
+                            self.interfaces[c.get_name()] = c
 
-        return self.interfaces
+        return list(self.interfaces.values())
 
     def get_fim_component(self) -> FimComponent:
         """
@@ -408,7 +414,7 @@ class Component:
         Gets the short name of the component.
         """
         # strip of the extra parts of the name added by fim
-        return self.get_name()[len(f"{self.get_node().get_name()}-") :]
+        return self.get_name()[len(f"{self.get_node().get_name()}-"):]
 
     def get_name(self) -> str:
         """
@@ -476,18 +482,18 @@ class Component:
         """
         # TODO: This a hack that need a real fix
         if (
-            str(self.get_type()) == "SmartNIC"
-            and str(self.get_fim_model()) == "ConnectX-6"
+                str(self.get_type()) == "SmartNIC"
+                and str(self.get_fim_model()) == "ConnectX-6"
         ):
             return Constants.CMP_NIC_ConnectX_6
         if (
-            str(self.get_type()) == "SmartNIC"
-            and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
+                str(self.get_type()) == "SmartNIC"
+                and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
         ):
             return Constants.CMP_NIC_BlueField2_ConnectX_6
         elif (
-            str(self.get_type()) == "SmartNIC"
-            and str(self.get_fim_model()) == "ConnectX-5"
+                str(self.get_type()) == "SmartNIC"
+                and str(self.get_fim_model()) == "ConnectX-5"
         ):
             return Constants.CMP_NIC_ConnectX_5
         elif str(self.get_type()) == "NVME" and str(self.get_fim_model()) == "P4510":
@@ -497,8 +503,8 @@ class Component:
         elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "RTX6000":
             return Constants.CMP_GPU_RTX6000
         elif (
-            str(self.get_type()) == "SharedNIC"
-            and str(self.get_fim_model()) == "ConnectX-6"
+                str(self.get_type()) == "SharedNIC"
+                and str(self.get_fim_model()) == "ConnectX-6"
         ):
             return Constants.CMP_NIC_Basic
 
@@ -514,8 +520,8 @@ class Component:
             # print(f"{self.get_fim_component()}")
             return (
                 self.get_fim_component()
-                .get_property(pname="reservation_info")
-                .reservation_id
+                    .get_property(pname="reservation_info")
+                    .reservation_id
             )
         except:
             return None
@@ -530,8 +536,8 @@ class Component:
         try:
             return (
                 self.get_fim_component()
-                .get_property(pname="reservation_info")
-                .reservation_state
+                    .get_property(pname="reservation_info")
+                    .reservation_state
             )
         except:
             return None
@@ -546,8 +552,8 @@ class Component:
         try:
             return (
                 self.get_fim_component()
-                .get_property(pname="reservation_info")
-                .error_message
+                    .get_property(pname="reservation_info")
+                    .error_message
             )
         except:
             return ""
@@ -732,7 +738,7 @@ class Component:
         """
         Remove the component from the slice/node.
         """
-        if self.get_interfaces():
+        if self.get_interfaces(refresh=True):
             for interface in self.get_interfaces():
                 interface.delete()
 

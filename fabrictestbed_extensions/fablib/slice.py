@@ -260,6 +260,7 @@ class Slice:
         quiet: bool = False,
         filter_function=None,
         pretty_names=True,
+        refresh: bool = False
     ):
         """
         Lists all the components in the slice with their attributes.
@@ -289,12 +290,14 @@ class Slice:
         :type filter_function: lambda
         :param pretty_names:
         :type pretty_names: bool
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: table in format specified by output parameter
         :rtype: Object
         """
         table = []
-        for component in self.get_components():
+        for component in self.get_components(refresh=refresh):
             table.append(component.toDict())
 
         # if fields == None:
@@ -324,8 +327,9 @@ class Slice:
         output: str = None,
         fields: List[str] = None,
         quiet: bool = False,
-        filter_function=None,
-        pretty_names=True,
+        filter_function = None,
+        pretty_names: bool = True,
+        refresh: bool = False
     ):
         """
         Lists all the interfaces in the slice with their attributes.
@@ -355,6 +359,8 @@ class Slice:
         :type filter_function: lambda
         :param pretty_names:
         :type pretty_names: bool
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: table in format specified by output parameter
         :rtype: Object
@@ -365,7 +371,7 @@ class Slice:
         node_name_threads = {}
         physical_os_interface_name_threads = {}
         os_interface_threads = {}
-        for iface in self.get_interfaces():
+        for iface in self.get_interfaces(refresh=refresh):
             if iface.get_network():
                 logging.info(
                     f"Starting get network name thread for iface {iface.get_name()} "
@@ -1480,9 +1486,12 @@ class Slice:
 
         return notices
 
-    def get_components(self) -> List[Component]:
+    def get_components(self, refresh: bool = False) -> List[Component]:
         """
         Gets all components in this slice.
+
+        :param refresh: Refresh the components with latest Fim info
+        :type refresh: bool
 
         :return: List of all components in this slice
         :rtype: List[Component]
@@ -1492,7 +1501,7 @@ class Slice:
         # fails for topology that does not have nodes
         try:
             for node in self.get_nodes():
-                for component in node.get_components():
+                for component in node.get_components(refresh=refresh):
                     return_components.append(component)
 
         except Exception as e:
@@ -1619,35 +1628,41 @@ class Slice:
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(self, refresh: bool = False) -> List[Interface]:
         """
         Gets all interfaces in this slice.
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: a list of interfaces on this slice
         :rtype: List[Interface]
         """
-        if not self.interfaces:
-            self.interfaces = []
+        if len(self.interfaces) == 0 or refresh:
+
             for node in self.get_nodes():
                 logging.debug(f"Getting interfaces for node {node.get_name()}")
-                for interface in node.get_interfaces():
+                for interface in node.get_interfaces(refresh=refresh):
                     logging.debug(
                         f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
                     )
-                    self.interfaces.append(interface)
-        return self.interfaces
+                    self.interfaces[interface.get_name()] = interface
+        return list(self.interfaces.values())
 
-    def get_interface(self, name: str = None) -> Interface:
+    def get_interface(self, name: str = None, refresh: bool = False) -> Interface:
         """
         Gets a particular interface from this slice.
 
         :param name: the name of the interface to search for
         :type name: str
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
         :raises Exception: if no interfaces with name are found
         :return: an interface on this slice
         :rtype: Interface
         """
-        for interface in self.get_interfaces():
+        for interface in self.get_interfaces(refresh=refresh):
             if name.endswith(interface.get_name()):
                 return interface
 

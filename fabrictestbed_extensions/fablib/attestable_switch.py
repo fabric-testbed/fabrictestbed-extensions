@@ -232,13 +232,15 @@ class Attestable_Switch(Node):
             name=self.get_switch_data()["portmap"][port_name]
         )
 
-    def get_port_device_listing(self):
+    def get_port_device_listing(self, refresh: bool = False):
         """
         Get the name-to-interface mapping for a switch.
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
         """
 
         mapping = {}
-        for ifa in self.get_interfaces():
+        for ifa in self.get_interfaces(refresh=refresh):
             mapping[ifa.get_component().get_short_name()] = ifa.get_device_name()
         result = []
         for port in self.get_port_names():

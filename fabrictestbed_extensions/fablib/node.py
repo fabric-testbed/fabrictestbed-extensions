@@ -122,6 +122,8 @@ class Node:
         self.validate = validate
         self.raise_exception = raise_exception
         self.node_type = NodeType.VM
+        self.components = {}
+        self.interfaces = {}
 
         # Try to set the username.
         try:
@@ -462,6 +464,7 @@ class Node:
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        refresh: bool = False
     ):
         """
         Lists all the components in the node with their attributes.
@@ -492,6 +495,9 @@ class Node:
 
         :type filter_function: lambda
 
+        :param refresh: Refresh the components with latest Fim info
+        :type refresh: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
 
@@ -506,7 +512,7 @@ class Node:
         """
 
         components = []
-        for component in self.get_components():
+        for component in self.get_components(refresh=refresh):
             components.append(component.get_name())
 
         def combined_filter_function(x):
@@ -519,8 +525,8 @@ class Node:
 
             return False
 
-        if pretty_names and len(self.get_components()) > 0:
-            pretty_names_dict = self.get_components()[0].get_pretty_name_dict()
+        if pretty_names and len(self.get_components(refresh=refresh)) > 0:
+            pretty_names_dict = self.get_components(refresh=refresh)[0].get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -530,6 +536,7 @@ class Node:
             quiet=quiet,
             filter_function=combined_filter_function,
             pretty_names=pretty_names_dict,
+            refresh=refresh
         )
 
     def list_interfaces(
@@ -539,6 +546,7 @@ class Node:
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        refresh: bool = False
     ):
         """
         Lists all the interfaces in the node with their attributes.
@@ -568,6 +576,9 @@ class Node:
             field values.
         :type filter_function: lambda
 
+        :param refresh: Refresh the components with latest Fim info
+        :type refresh: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
 
@@ -587,7 +598,7 @@ class Node:
             return
 
         ifaces = []
-        for iface in self.get_interfaces():
+        for iface in self.get_interfaces(refresh=refresh):
             ifaces.append(iface.get_name())
 
         def combined_filter_function(x):
@@ -616,6 +627,7 @@ class Node:
             quiet=quiet,
             filter_function=combined_filter_function,
             pretty_names=pretty_names,
+            refresh=refresh
         )
 
     def list_networks(
@@ -625,6 +637,7 @@ class Node:
         quiet=False,
         filter_function=None,
         pretty_names=True,
+        refresh: bool = False
     ):
         """
         Lists all the networks attached to the nodes with their
@@ -659,6 +672,9 @@ class Node:
             Default is ``True``.
         :type pretty_names: bool
 
+        :param refresh: Refresh the object with latest Fim info
+        :type refresh: bool
+
         :return: table in format specified by output parameter
         :rtype: Object
 
@@ -671,8 +687,8 @@ class Node:
             filter_function=lambda s: s['Type'] == 'FABNetv4'
         """
 
-        interfaces = self.get_interfaces()
-        networks = self.get_networks()
+        interfaces = self.get_interfaces(refresh=refresh)
+        networks = self.get_networks(refresh=refresh)
 
         networks = []
         for iface in interfaces:
@@ -696,12 +712,15 @@ class Node:
             pretty_names=pretty_names,
         )
 
-    def get_networks(self):
+    def get_networks(self, refresh: bool = False):
         """
         Get a list of networks attached to the node.
+        :param refresh: Refresh the object with latest Fim info
+        :type refresh: bool
+
         """
         networks = []
-        for interface in self.get_interfaces():
+        for interface in self.get_interfaces(refresh=refresh):
             networks.append(interface.get_network())
 
         return networks
@@ -1052,25 +1071,31 @@ class Node:
         except:
             return ""
 
-    def get_interfaces(self, include_subs: bool = True) -> List[Interface] or None:
+    def get_interfaces(self, include_subs: bool = True, refresh: bool = False) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
         :param include_subs: Flag indicating if sub interfaces should be included
         :type include_subs: bool
 
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
-        interfaces = []
-        for component in self.get_components():
-            for interface in component.get_interfaces(include_subs=include_subs):
-                interfaces.append(interface)
+        if not refresh and len(self.interfaces):
+            return list(self.interfaces.values())
 
-        return interfaces
+        self.interfaces = {}
+        for component in self.get_components(refresh=refresh):
+            for interface in component.get_interfaces(include_subs=include_subs, refresh=refresh):
+                self.interfaces[interface.get_name()] = interface
+
+        return list(self.interfaces.values())
 
     def get_interface(
-        self, name: str = None, network_name: str = None
+        self, name: str = None, network_name: str = None, refresh: bool = False
     ) -> Interface or None:
         """
         Gets a particular interface associated with a FABRIC node.
@@ -1084,8 +1109,10 @@ class Node:
         :type name: str
 
         :param network_name: network name to search for
-
         :type name: str
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :raise Exception: if interface is not found
 
@@ -1093,12 +1120,12 @@ class Node:
         :rtype: Interface
         """
         if name is not None:
-            for component in self.get_components():
-                for interface in component.get_interfaces():
+            for component in self.get_components(refresh=refresh):
+                for interface in component.get_interfaces(refresh=refresh):
                     if interface.get_name() == name:
                         return interface
         elif network_name is not None:
-            for interface in self.get_interfaces():
+            for interface in self.get_interfaces(refresh=refresh):
                 if (
                     interface is not None
                     and interface.get_network() is not None
@@ -1223,26 +1250,36 @@ class Node:
                 logging.warning(error)
                 if self.raise_exception:
                     raise ValueError(error)
+        self.components[component.get_name()] = component
         return component
 
-    def get_components(self) -> List[Component]:
+    def get_components(self, refresh: bool = False) -> List[Component]:
         """
         Gets a list of components associated with this node.
+
+        :param refresh: Refresh the component object with latest Fim info
+        :type refresh: bool
 
         :return: a list of components on this node
         :rtype: List[Component]
         """
-        return_components = []
+        if not refresh and len(self.components):
+            return list(self.components.values())
+
+        self.components = {}
         for component_name, component in self.get_fim_node().components.items():
-            return_components.append(Component(self, component))
+            self.components[component_name] = Component(self, component)
 
-        return return_components
+        return list(self.components.values())
 
-    def get_component(self, name: str) -> Component:
+    def get_component(self, name: str, refresh: bool = False) -> Component:
         """
         Gets a particular component associated with this node.
 
         :param name: the name of the component to search for
+        :type refresh: bool
+
+        :param refresh: Refresh the component object with latest Fim info
         :type name: String
 
         :raise Exception: if component not found by name
@@ -1252,7 +1289,13 @@ class Node:
         """
         try:
             name = Component.calculate_name(node=self, name=name)
-            return Component(self, self.get_fim_node().components[name])
+
+            if not refresh and name in self.components:
+                return self.components.get(name)
+
+            ret_val = Component(self, self.get_fim_node().components[name])
+            self.components[name] = ret_val
+            return ret_val
         except Exception as e:
             logging.error(e, exc_info=True)
             raise Exception(f"Component not found: {name}")
@@ -2907,7 +2950,7 @@ class Node:
         Remove the node from the slice. All components and interfaces associated with
         the Node are removed from the Slice.
         """
-        for component in self.get_components():
+        for component in self.get_components(refresh=True):
             component.delete()
 
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
@@ -3199,9 +3242,12 @@ class Node:
         fablib_data["run_update_commands"] = str(run_update_commands)
         self.set_fablib_data(fablib_data)
 
-    def config(self, log_dir="."):
+    def config(self, log_dir=".", refresh: bool = False):
         """
         Run configuration tasks for this node.
+
+        :param refresh: Refresh the object with latest Fim info
+        :type refresh: bool
 
         .. note ::
 
@@ -3227,7 +3273,7 @@ class Node:
         """
         self.execute(f"sudo hostnamectl set-hostname '{self.get_name()}'", quiet=True)
 
-        for iface in self.get_interfaces():
+        for iface in self.get_interfaces(refresh=refresh):
             iface.config()
         self.config_routes()
 
