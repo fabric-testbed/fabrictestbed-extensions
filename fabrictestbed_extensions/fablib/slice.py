@@ -53,6 +53,7 @@ import ipaddress
 import json
 import logging
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -2208,11 +2209,6 @@ class Slice:
 
         start = time.time()
 
-        # if len(self.get_interfaces()) > 0:
-        #    hasNetworks = True
-        # else:
-        #    hasNetworks = False
-
         count = 0
         hasNetworks = False
         node_table = None
@@ -2297,13 +2293,6 @@ class Slice:
                         display(network_table)
 
             count += 1
-
-        # self.update()
-
-        # if len(self.get_interfaces()) > 0:
-        #    hasNetworks = True
-        # else:
-        #    hasNetworks = False
 
         slice_show_table = self.show(colors=True, quiet=True)
         node_table = self.list_nodes(colors=True, quiet=True)
