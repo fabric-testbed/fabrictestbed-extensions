@@ -186,7 +186,7 @@ class Component:
         return output_string
 
     def show(
-            self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
     ):
         """
         Show a table containing the current component attributes.
@@ -236,7 +236,12 @@ class Component:
         return table
 
     def list_interfaces(
-            self, fields=None, output=None, quiet=False, filter_function=None, refresh: bool = False
+        self,
+        fields=None,
+        output=None,
+        quiet=False,
+        filter_function=None,
+        refresh: bool = False,
     ):
         """
         Lists all the interfaces in the component with their attributes.
@@ -281,7 +286,11 @@ class Component:
             filter_function = name_filter
 
         return self.get_slice().list_interfaces(
-            fields=fields, output=output, quiet=quiet, filter_function=filter_function, refresh=refresh
+            fields=fields,
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            refresh=refresh,
         )
 
     @staticmethod
@@ -294,7 +303,7 @@ class Component:
 
     @staticmethod
     def new_component(
-            node: Node = None, model: str = None, name: str = None, user_data: dict = {}
+        node: Node = None, model: str = None, name: str = None, user_data: dict = {}
     ):
         """
         Not intended for API use
@@ -342,7 +351,9 @@ class Component:
         self.node = node
         self.interfaces = {}
 
-    def get_interfaces(self, include_subs: bool = True, refresh: bool = False) -> List[Interface]:
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False
+    ) -> List[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
@@ -414,7 +425,7 @@ class Component:
         Gets the short name of the component.
         """
         # strip of the extra parts of the name added by fim
-        return self.get_name()[len(f"{self.get_node().get_name()}-"):]
+        return self.get_name()[len(f"{self.get_node().get_name()}-") :]
 
     def get_name(self) -> str:
         """
@@ -482,18 +493,18 @@ class Component:
         """
         # TODO: This a hack that need a real fix
         if (
-                str(self.get_type()) == "SmartNIC"
-                and str(self.get_fim_model()) == "ConnectX-6"
+            str(self.get_type()) == "SmartNIC"
+            and str(self.get_fim_model()) == "ConnectX-6"
         ):
             return Constants.CMP_NIC_ConnectX_6
         if (
-                str(self.get_type()) == "SmartNIC"
-                and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
+            str(self.get_type()) == "SmartNIC"
+            and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
         ):
             return Constants.CMP_NIC_BlueField2_ConnectX_6
         elif (
-                str(self.get_type()) == "SmartNIC"
-                and str(self.get_fim_model()) == "ConnectX-5"
+            str(self.get_type()) == "SmartNIC"
+            and str(self.get_fim_model()) == "ConnectX-5"
         ):
             return Constants.CMP_NIC_ConnectX_5
         elif str(self.get_type()) == "NVME" and str(self.get_fim_model()) == "P4510":
@@ -503,8 +514,8 @@ class Component:
         elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "RTX6000":
             return Constants.CMP_GPU_RTX6000
         elif (
-                str(self.get_type()) == "SharedNIC"
-                and str(self.get_fim_model()) == "ConnectX-6"
+            str(self.get_type()) == "SharedNIC"
+            and str(self.get_fim_model()) == "ConnectX-6"
         ):
             return Constants.CMP_NIC_Basic
 
@@ -520,8 +531,8 @@ class Component:
             # print(f"{self.get_fim_component()}")
             return (
                 self.get_fim_component()
-                    .get_property(pname="reservation_info")
-                    .reservation_id
+                .get_property(pname="reservation_info")
+                .reservation_id
             )
         except:
             return None
@@ -536,8 +547,8 @@ class Component:
         try:
             return (
                 self.get_fim_component()
-                    .get_property(pname="reservation_info")
-                    .reservation_state
+                .get_property(pname="reservation_info")
+                .reservation_state
             )
         except:
             return None
@@ -552,8 +563,8 @@ class Component:
         try:
             return (
                 self.get_fim_component()
-                    .get_property(pname="reservation_info")
-                    .error_message
+                .get_property(pname="reservation_info")
+                .error_message
             )
         except:
             return ""

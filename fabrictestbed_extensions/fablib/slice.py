@@ -261,7 +261,7 @@ class Slice:
         quiet: bool = False,
         filter_function=None,
         pretty_names=True,
-        refresh: bool = False
+        refresh: bool = False,
     ):
         """
         Lists all the components in the slice with their attributes.
@@ -328,9 +328,9 @@ class Slice:
         output: str = None,
         fields: List[str] = None,
         quiet: bool = False,
-        filter_function = None,
+        filter_function=None,
         pretty_names: bool = True,
-        refresh: bool = False
+        refresh: bool = False,
     ):
         """
         Lists all the interfaces in the slice with their attributes.

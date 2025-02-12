@@ -464,7 +464,7 @@ class Node:
         quiet=False,
         filter_function=None,
         pretty_names=True,
-        refresh: bool = False
+        refresh: bool = False,
     ):
         """
         Lists all the components in the node with their attributes.
@@ -526,7 +526,9 @@ class Node:
             return False
 
         if pretty_names and len(self.get_components(refresh=refresh)) > 0:
-            pretty_names_dict = self.get_components(refresh=refresh)[0].get_pretty_name_dict()
+            pretty_names_dict = self.get_components(refresh=refresh)[
+                0
+            ].get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -536,7 +538,7 @@ class Node:
             quiet=quiet,
             filter_function=combined_filter_function,
             pretty_names=pretty_names_dict,
-            refresh=refresh
+            refresh=refresh,
         )
 
     def list_interfaces(
@@ -546,7 +548,7 @@ class Node:
         quiet=False,
         filter_function=None,
         pretty_names=True,
-        refresh: bool = False
+        refresh: bool = False,
     ):
         """
         Lists all the interfaces in the node with their attributes.
@@ -627,7 +629,7 @@ class Node:
             quiet=quiet,
             filter_function=combined_filter_function,
             pretty_names=pretty_names,
-            refresh=refresh
+            refresh=refresh,
         )
 
     def list_networks(
@@ -637,7 +639,7 @@ class Node:
         quiet=False,
         filter_function=None,
         pretty_names=True,
-        refresh: bool = False
+        refresh: bool = False,
     ):
         """
         Lists all the networks attached to the nodes with their
@@ -1071,7 +1073,9 @@ class Node:
         except:
             return ""
 
-    def get_interfaces(self, include_subs: bool = True, refresh: bool = False) -> List[Interface] or None:
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False
+    ) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -1089,7 +1093,9 @@ class Node:
 
         self.interfaces = {}
         for component in self.get_components(refresh=refresh):
-            for interface in component.get_interfaces(include_subs=include_subs, refresh=refresh):
+            for interface in component.get_interfaces(
+                include_subs=include_subs, refresh=refresh
+            ):
                 self.interfaces[interface.get_name()] = interface
 
         return list(self.interfaces.values())

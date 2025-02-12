@@ -52,9 +52,10 @@ from __future__ import annotations
 
 import logging
 import os
-from tabulate import tabulate
 import time
 from typing import TYPE_CHECKING, List
+
+from tabulate import tabulate
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -227,9 +228,7 @@ class Attestable_Switch(Node):
         Get the interface name of a switch's port name.
         """
 
-        return self.get_interface(
-            name=self.get_switch_data()["portmap"][port_name]
-        )
+        return self.get_interface(name=self.get_switch_data()["portmap"][port_name])
 
     def get_port_device_listing(self, refresh: bool = False):
         """

@@ -231,9 +231,7 @@ class Interface:
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
             "mode": str(self.get_mode()),
-            "vlan": (
-                str(self.get_vlan()) if self.get_vlan() else ""
-            ),
+            "vlan": (str(self.get_vlan()) if self.get_vlan() else ""),
             "mac": mac,
             "physical_dev": physical_dev,
             "dev": dev,
@@ -474,7 +472,9 @@ class Interface:
             if self.parent:
                 return self.parent.get_mac()
             else:
-                if self.get_fim() and self.get_fim().get_property(pname="label_allocations"):
+                if self.get_fim() and self.get_fim().get_property(
+                    pname="label_allocations"
+                ):
                     return self.get_fim().get_property(pname="label_allocations").mac
         except:
             mac = None
@@ -1318,11 +1318,11 @@ class Interface:
             self.interfaces = {}
             for fim_interface in self.get_fim().interface_list:
                 ch_iface = Interface(
-                        component=self.get_component(),
-                        fim_interface=fim_interface,
-                        model=str(InterfaceType.SubInterface),
-                        parent=self,
-                    )
+                    component=self.get_component(),
+                    fim_interface=fim_interface,
+                    model=str(InterfaceType.SubInterface),
+                    parent=self,
+                )
                 self.interfaces[ch_iface.get_name()] = ch_iface
 
         return list(self.interfaces.values())
