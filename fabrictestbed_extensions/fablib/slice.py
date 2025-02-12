@@ -1502,9 +1502,7 @@ class Slice:
         # fails for topology that does not have nodes
         try:
             for node in self.get_nodes():
-                for component in node.get_components(refresh=refresh):
-                    return_components.append(component)
-
+                return_components.extend(node.get_components(refresh=refresh))
         except Exception as e:
             logging.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
@@ -1629,25 +1627,36 @@ class Slice:
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_interfaces(self, refresh: bool = False) -> List[Interface]:
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets all interfaces in this slice.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
+
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
 
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
         :return: a list of interfaces on this slice
-        :rtype: List[Interface]
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
         if len(self.interfaces) == 0 or refresh:
-
             for node in self.get_nodes():
                 logging.debug(f"Getting interfaces for node {node.get_name()}")
-                for interface in node.get_interfaces(refresh=refresh):
-                    logging.debug(
-                        f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
-                    )
-                    self.interfaces[interface.get_name()] = interface
-        return list(self.interfaces.values())
+                n_ifaces = node.get_interfaces(
+                    include_subs=include_subs, refresh=refresh, output="dict"
+                )
+                self.interfaces.update(n_ifaces)
+
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
 
     def get_interface(self, name: str = None, refresh: bool = False) -> Interface:
         """
@@ -1663,11 +1672,10 @@ class Slice:
         :return: an interface on this slice
         :rtype: Interface
         """
-        for interface in self.get_interfaces(refresh=refresh):
-            if name.endswith(interface.get_name()):
-                return interface
-
-        raise Exception("Interface not found: {}".format(name))
+        ret_val = self.get_interfaces(refresh=refresh, output="dict").get(name)
+        if not ret_val:
+            raise Exception("Interface not found: {}".format(name))
+        return ret_val
 
     def get_l3networks(self) -> List[NetworkService]:
         """

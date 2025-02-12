@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import jinja2
 
@@ -352,8 +352,8 @@ class Component:
         self.interfaces = {}
 
     def get_interfaces(
-        self, include_subs: bool = True, refresh: bool = False
-    ) -> List[Interface]:
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
@@ -363,8 +363,11 @@ class Component:
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
 
-        :return: a list of the interfaces on this component.
-        :rtype: List[Interface]
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
+        :return: a list or dict of the interfaces on this component.
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
 
         from fabrictestbed_extensions.fablib.interface import Interface
@@ -374,12 +377,16 @@ class Component:
                 iface = Interface(component=self, fim_interface=fim_interface)
                 self.interfaces[iface.get_name()] = iface
                 if include_subs:
-                    child_interfaces = iface.get_interfaces(refresh=refresh)
+                    child_interfaces = iface.get_interfaces(
+                        refresh=refresh, output="dict"
+                    )
                     if child_interfaces and len(child_interfaces):
-                        for c in child_interfaces:
-                            self.interfaces[c.get_name()] = c
+                        self.interfaces.update(child_interfaces)
 
-        return list(self.interfaces.values())
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
 
     def get_fim_component(self) -> FimComponent:
         """

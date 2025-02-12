@@ -599,9 +599,7 @@ class Node:
             )
             return
 
-        ifaces = []
-        for iface in self.get_interfaces(refresh=refresh):
-            ifaces.append(iface.get_name())
+        ifaces = list(self.get_interfaces(refresh=refresh, output="dict").keys())
 
         def combined_filter_function(x):
             ifname = x["name"]
@@ -1074,8 +1072,8 @@ class Node:
             return ""
 
     def get_interfaces(
-        self, include_subs: bool = True, refresh: bool = False
-    ) -> List[Interface] or None:
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -1085,20 +1083,24 @@ class Node:
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
 
-        :return: a list of interfaces on the node
-        :rtype: List[Interface]
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
+        :return: a list or dict of interfaces on the node
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
-        if not refresh and len(self.interfaces):
+        if refresh or len(self.interfaces) == 0:
+            self.interfaces = {}
+            for component in self.get_components(refresh=refresh):
+                c_interfaces = component.get_interfaces(
+                    include_subs=include_subs, refresh=refresh, output="dict"
+                )
+                self.interfaces.update(c_interfaces)
+
+        if output == "dict":
+            return self.interfaces
+        else:
             return list(self.interfaces.values())
-
-        self.interfaces = {}
-        for component in self.get_components(refresh=refresh):
-            for interface in component.get_interfaces(
-                include_subs=include_subs, refresh=refresh
-            ):
-                self.interfaces[interface.get_name()] = interface
-
-        return list(self.interfaces.values())
 
     def get_interface(
         self, name: str = None, network_name: str = None, refresh: bool = False
@@ -1127,9 +1129,9 @@ class Node:
         """
         if name is not None:
             for component in self.get_components(refresh=refresh):
-                for interface in component.get_interfaces(refresh=refresh):
-                    if interface.get_name() == name:
-                        return interface
+                return component.get_interfaces(refresh=refresh, output="dict").get(
+                    name
+                )
         elif network_name is not None:
             for interface in self.get_interfaces(refresh=refresh):
                 if (

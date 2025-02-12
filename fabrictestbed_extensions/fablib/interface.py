@@ -1303,15 +1303,20 @@ class Interface:
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.account_id
 
-    def get_interfaces(self, refresh: bool = False) -> List[Interface]:
+    def get_interfaces(
+        self, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
 
-        :return: a list of the interfaces on this component.
-        :rtype: List[Interface]
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
+        :return: a list or dict of the interfaces on this component.
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
 
         if len(self.interfaces) == 0 or refresh:
@@ -1325,7 +1330,10 @@ class Interface:
                 )
                 self.interfaces[ch_iface.get_name()] = ch_iface
 
-        return list(self.interfaces.values())
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
 
     def add_sub_interface(self, name: str, vlan: str, bw: int = 10):
         """
