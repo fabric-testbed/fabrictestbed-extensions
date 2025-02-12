@@ -1128,10 +1128,7 @@ class Node:
         :rtype: Interface
         """
         if name is not None:
-            for component in self.get_components(refresh=refresh):
-                return component.get_interfaces(refresh=refresh, output="dict").get(
-                    name
-                )
+            self.get_interfaces(refresh=refresh, output="dict").get(name)
         elif network_name is not None:
             for interface in self.get_interfaces(refresh=refresh):
                 if (
