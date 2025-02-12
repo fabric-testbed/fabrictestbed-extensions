@@ -216,11 +216,13 @@ class Interface:
             physical_dev = str(self.get_physical_os_interface_name())
             dev = str(self.get_device_name())
             ip_addr = str(self.get_ip_addr())
+            numa = str(self.get_numa_node())
         else:
             mac = ""
             physical_dev = ""
             dev = ""
             ip_addr = ""
+            numa = ""
 
         return {
             "name": str(self.get_name()),
@@ -231,12 +233,12 @@ class Interface:
             "mode": str(self.get_mode()),
             "vlan": (
                 str(self.get_vlan()) if self.get_vlan() else ""
-            ),  # str(self.get_vlan()),
+            ),
             "mac": mac,
             "physical_dev": physical_dev,
             "dev": dev,
             "ip_addr": ip_addr,
-            "numa": str(self.get_numa_node()),
+            "numa": numa,
             "switch_port": str(self.get_switch_port()),
         }
 
@@ -470,13 +472,12 @@ class Interface:
         """
         try:
             if self.parent:
-                mac = self.parent.get_mac()
+                return self.parent.get_mac()
             else:
-                mac = self.get_fim().get_property(pname="label_allocations").mac
+                if self.get_fim() and self.get_fim().get_property(pname="label_allocations"):
+                    return self.get_fim().get_property(pname="label_allocations").mac
         except:
             mac = None
-
-        return mac
 
     def get_os_dev(self):
         """
@@ -510,7 +511,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return self.get_os_dev()["ifname"]
+            return self.get_os_dev().get("ifname")
         except:
             return None
 
