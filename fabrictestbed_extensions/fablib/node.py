@@ -1268,12 +1268,10 @@ class Node:
         :return: a list of components on this node
         :rtype: List[Component]
         """
-        if not refresh and len(self.components):
-            return list(self.components.values())
-
-        self.components = {}
-        for component_name, component in self.get_fim_node().components.items():
-            self.components[component_name] = Component(self, component)
+        if refresh or len(self.components) == 0:
+            self.components.clear()
+            for component_name, component in self.get_fim_node().components.items():
+                self.components[component_name] = Component(self, component)
 
         return list(self.components.values())
 
@@ -3800,3 +3798,9 @@ class Node:
             f"{operation} to the node {self.get_name()} successful!"
         )
         print(f"{operation} to the node {self.get_name()} successful!")
+
+    def update(self, fim_node: FimNode):
+        if fim_node:
+            self.fim_node = fim_node
+            self.get_components(refresh=True)
+            self.get_interfaces(refresh=True)

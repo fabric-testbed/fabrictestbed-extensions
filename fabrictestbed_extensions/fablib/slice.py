@@ -1544,7 +1544,7 @@ class Slice:
                         self.nodes[node_name] = Node.get_node(self, node)
                 else:
                     # Update existing node's fim_node reference
-                    self.nodes[node_name].fim_node = node
+                    self.nodes[node_name].update(fim_node=node)
 
             # Remove nodes that are no longer present in the current topology
             self.__remove_deleted_nodes(current_topology_nodes)
