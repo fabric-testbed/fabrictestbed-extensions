@@ -1042,12 +1042,15 @@ class NetworkService:
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
-                    try:
-                        subnet = ipaddress.ip_network(fablib_data["subnet"]["subnet"])
-                    except Exception as e:
-                        logging.warning(f"Failed to get L2 subnet: {e}")
-
-                        subnet = None
+                    if fablib_data.get("subnet") and fablib_data.get("subnet").get(
+                        "subnet"
+                    ):
+                        try:
+                            subnet = ipaddress.ip_network(
+                                fablib_data["subnet"]["subnet"]
+                            )
+                        except Exception as e:
+                            logging.warning(f"Failed to get L2 subnet: {e}")
             else:
                 subnet = f"{self.get_name()}.subnet"
 

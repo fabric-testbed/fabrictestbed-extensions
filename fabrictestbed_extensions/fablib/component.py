@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import jinja2
 
@@ -236,7 +236,12 @@ class Component:
         return table
 
     def list_interfaces(
-        self, fields=None, output=None, quiet=False, filter_function=None
+        self,
+        fields=None,
+        output=None,
+        quiet=False,
+        filter_function=None,
+        refresh: bool = False,
     ):
         """
         Lists all the interfaces in the component with their attributes.
@@ -264,22 +269,28 @@ class Component:
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
         :return: table in format specified by output parameter
         :rtype: Object
         """
 
         ifaces = []
-        for iface in self.get_interfaces():
+        for iface in self.get_interfaces(refresh=refresh):
             ifaces.append(iface.get_name())
 
         name_filter = lambda s: s["Name"] in set(ifaces)
-        if filter_function != None:
+        if filter_function is not None:
             filter_function = lambda x: filter_function(x) + name_filter(x)
         else:
             filter_function = name_filter
 
         return self.get_slice().list_interfaces(
-            fields=fields, output=output, quiet=quiet, filter_function=filter_function
+            fields=fields,
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+            refresh=refresh,
         )
 
     @staticmethod
@@ -318,6 +329,7 @@ class Component:
             ),
         )
         component.set_user_data(user_data)
+        component.get_interfaces(refresh=True)
         return component
 
     def __init__(self, node: Node = None, fim_component: FimComponent = None):
@@ -337,32 +349,44 @@ class Component:
         super().__init__()
         self.fim_component = fim_component
         self.node = node
-        self.interfaces = None
+        self.interfaces = {}
 
-    def get_interfaces(self, include_subs: bool = True) -> List[Interface]:
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
         :param include_subs: Flag indicating if sub interfaces should be included
         :type include_subs: bool
 
-        :return: a list of the interfaces on this component.
-        :rtype: List[Interface]
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
+        :return: a list or dict of the interfaces on this component.
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
 
         from fabrictestbed_extensions.fablib.interface import Interface
 
-        if not self.interfaces:
-            self.interfaces = []
+        if len(self.interfaces) == 0 or refresh:
             for fim_interface in self.get_fim_component().interface_list:
                 iface = Interface(component=self, fim_interface=fim_interface)
-                self.interfaces.append(iface)
+                self.interfaces[iface.get_name()] = iface
                 if include_subs:
-                    child_interfaces = iface.get_interfaces()
+                    child_interfaces = iface.get_interfaces(
+                        refresh=refresh, output="dict"
+                    )
                     if child_interfaces and len(child_interfaces):
-                        self.interfaces.extend(child_interfaces)
+                        self.interfaces.update(child_interfaces)
 
-        return self.interfaces
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
 
     def get_fim_component(self) -> FimComponent:
         """
@@ -732,7 +756,7 @@ class Component:
         """
         Remove the component from the slice/node.
         """
-        if self.get_interfaces():
+        if self.get_interfaces(refresh=True):
             for interface in self.get_interfaces():
                 interface.delete()
 

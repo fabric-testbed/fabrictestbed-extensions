@@ -52,9 +52,10 @@ from __future__ import annotations
 
 import logging
 import os
-import pickle
 import time
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, List
+
+from tabulate import tabulate
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -191,8 +192,7 @@ class Attestable_Switch(Node):
         """
         Support function for commit_switch_config_update().
         """
-
-        return (k, str(v))
+        return k, str(v)
 
     def commit_switch_config_update(self, cfg_update):
         """
@@ -218,7 +218,7 @@ class Attestable_Switch(Node):
 
         result = {}
         for port in self.get_switch_data()["portmap"].keys():
-            result[port] = self.get_slice().get_interface(
+            result[port] = self.get_interface(
                 name=self.get_switch_data()["portmap"][port]
             )
         return result
@@ -228,17 +228,17 @@ class Attestable_Switch(Node):
         Get the interface name of a switch's port name.
         """
 
-        return self.get_slice().get_interface(
-            name=self.get_switch_data()["portmap"][port_name]
-        )
+        return self.get_interface(name=self.get_switch_data()["portmap"][port_name])
 
-    def get_port_device_listing(self):
+    def get_port_device_listing(self, refresh: bool = False):
         """
         Get the name-to-interface mapping for a switch.
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
         """
 
         mapping = {}
-        for ifa in self.get_interfaces():
+        for ifa in self.get_interfaces(refresh=refresh):
             mapping[ifa.get_component().get_short_name()] = ifa.get_device_name()
         result = []
         for port in self.get_port_names():
@@ -330,6 +330,12 @@ class Attestable_Switch(Node):
         :param avoid: a list of node names to avoid
         :type avoid: List[str]
 
+        :param validate: Validate node can be allocated w.r.t available resources
+        :type validate: bool
+
+        :param raise_exception: Raise exception in case validation failes
+        :type raise_exception: bool
+
         :param ports: names of ports that the switch will have.
         :type ports: List[str]
 
@@ -348,7 +354,8 @@ class Attestable_Switch(Node):
         name = Attestable_Switch.name(name)
 
         logging.info(
-            f"Adding attestable switch: {name}, slice: {slice.get_name()}, site: {site}, ports: {ports}, from_raw_image: {from_raw_image}, setup_and_configure: {setup_and_configure}"
+            f"Adding attestable switch: {name}, slice: {slice.get_name()}, site: {site}, ports: "
+            f"{ports}, from_raw_image: {from_raw_image}, setup_and_configure: {setup_and_configure}"
         )
         node = Attestable_Switch(
             slice,
@@ -413,7 +420,11 @@ class Attestable_Switch(Node):
 
         if self.get_switch_data()["setup_and_configure"]:
             self.execute(
-                f"mkdir {Attestable_Switch.crease_path_prefix}; echo 'None' > {Attestable_Switch.crease_path_prefix}with_RA; echo 'None' > {Attestable_Switch.crease_path_prefix}RA_port; echo 'None' > {Attestable_Switch.crease_path_prefix}RA_et; echo 'False' > {Attestable_Switch.crease_path_prefix}Running"
+                f"mkdir {Attestable_Switch.crease_path_prefix}; echo 'None' > "
+                f"{Attestable_Switch.crease_path_prefix}with_RA; echo 'None' > "
+                f"{Attestable_Switch.crease_path_prefix}RA_port; echo 'None' > "
+                f"{Attestable_Switch.crease_path_prefix}RA_et; echo 'False' > "
+                f"{Attestable_Switch.crease_path_prefix}Running"
             )
 
             logging.info(
@@ -613,14 +624,14 @@ V1Switch(
             RA_inclusion = "--enable-ra"
             cfg_update.append(self.prep_switch_config_update("with_RA", True))
 
-        if None != RA_port:
+        if RA_port is not None:
             assert with_RA
             cfg_update.append(self.prep_switch_config_update("RA_port", RA_port))
             RA_inclusion += " --ra-port " + str(RA_port)
         else:
             cfg_update.append(self.prep_switch_config_update("RA_port", None))
 
-        if None != RA_et:
+        if RA_et is not None:
             assert with_RA
             cfg_update.append(self.prep_switch_config_update("RA_et", RA_et))
             RA_inclusion += " --ra-etype " + str(RA_et)
@@ -651,7 +662,7 @@ V1Switch(
 
         result = None
 
-        if [] == stderr:
+        if stderr and len(stderr) == 0:
             cfg_update.append(self.prep_switch_config_update("Running", True))
             result = True
         else:
@@ -690,7 +701,7 @@ V1Switch(
 
         result = None
 
-        if force or [] == stderr:
+        if force or stderr and len(stderr) == 0:
             cfg_update.append(self.prep_switch_config_update("Running", False))
             result = True
         else:
@@ -726,7 +737,7 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if [] == stderr:
+        if stderr and len(stderr) == 0:
             return True
         else:
             return False
@@ -755,7 +766,7 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if [] == stderr:
+        if stderr and len(stderr) == 0:
             return True
         else:
             return False
@@ -764,15 +775,13 @@ V1Switch(
         """
         Get feature information from the switch.
         """
-
-        result = {}
-        result["Running"] = self.get_switch_config("Running")
+        result = {"Running": self.get_switch_config("Running")}
         if self.get_switch_config("Running"):
             result["with_RA"] = self.get_switch_config("with_RA")
             if self.get_switch_config("with_RA"):
-                if None != self.get_switch_config("RA_port"):
+                if self.get_switch_config("RA_port") is not None:
                     result["RA_port"] = self.get_switch_config("RA_port")
-                if None != self.get_switch_config("RA_et"):
+                if self.get_switch_config("RA_et") is not None:
                     result["RA_et"] = self.get_switch_config("RA_et")
         return result
 
@@ -796,7 +805,7 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if [] == stderr:
+        if stderr and len(stderr) == 0:
             print(str(self.get_switch_features()))
             return True
         else:

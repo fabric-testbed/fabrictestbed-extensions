@@ -53,6 +53,7 @@ import ipaddress
 import json
 import logging
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -260,6 +261,7 @@ class Slice:
         quiet: bool = False,
         filter_function=None,
         pretty_names=True,
+        refresh: bool = False,
     ):
         """
         Lists all the components in the slice with their attributes.
@@ -289,12 +291,14 @@ class Slice:
         :type filter_function: lambda
         :param pretty_names:
         :type pretty_names: bool
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: table in format specified by output parameter
         :rtype: Object
         """
         table = []
-        for component in self.get_components():
+        for component in self.get_components(refresh=refresh):
             table.append(component.toDict())
 
         # if fields == None:
@@ -325,7 +329,8 @@ class Slice:
         fields: List[str] = None,
         quiet: bool = False,
         filter_function=None,
-        pretty_names=True,
+        pretty_names: bool = True,
+        refresh: bool = False,
     ):
         """
         Lists all the interfaces in the slice with their attributes.
@@ -355,6 +360,8 @@ class Slice:
         :type filter_function: lambda
         :param pretty_names:
         :type pretty_names: bool
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: table in format specified by output parameter
         :rtype: Object
@@ -365,7 +372,7 @@ class Slice:
         node_name_threads = {}
         physical_os_interface_name_threads = {}
         os_interface_threads = {}
-        for iface in self.get_interfaces():
+        for iface in self.get_interfaces(refresh=refresh):
             if iface.get_network():
                 logging.info(
                     f"Starting get network name thread for iface {iface.get_name()} "
@@ -718,7 +725,7 @@ class Slice:
             logging.warning(f"slice.update_slivers failed: {e}")
 
         # self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
         self.update_topology()
 
         if self.get_state() == "ModifyOK":
@@ -946,7 +953,7 @@ class Slice:
             defaulting to 'both' which receives the data
         """
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
         port_mirror_service = NetworkService.new_portmirror_service(
             slice=self,
             name=name,
@@ -1020,7 +1027,7 @@ class Slice:
         :rtype: NetworkService
         """
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         network_service = NetworkService.new_l2network(
             slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
@@ -1102,7 +1109,7 @@ class Slice:
         :rtype: NetworkService
         """
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         return NetworkService.new_l3network(
             slice=self,
@@ -1249,7 +1256,7 @@ class Slice:
             node.set_host(host)
 
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=node)
@@ -1322,7 +1329,7 @@ class Slice:
             aswitch.set_host(host)
 
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=aswitch)
@@ -1392,7 +1399,7 @@ class Slice:
         node.set_user_data(user_data_working)
 
         self.nodes = None
-        self.interfaces = None
+        self.interfaces = {}
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=node)
@@ -1480,9 +1487,12 @@ class Slice:
 
         return notices
 
-    def get_components(self) -> List[Component]:
+    def get_components(self, refresh: bool = False) -> List[Component]:
         """
         Gets all components in this slice.
+
+        :param refresh: Refresh the components with latest Fim info
+        :type refresh: bool
 
         :return: List of all components in this slice
         :rtype: List[Component]
@@ -1492,9 +1502,7 @@ class Slice:
         # fails for topology that does not have nodes
         try:
             for node in self.get_nodes():
-                for component in node.get_components():
-                    return_components.append(component)
-
+                return_components.extend(node.get_components(refresh=refresh))
         except Exception as e:
             logging.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
@@ -1536,7 +1544,7 @@ class Slice:
                         self.nodes[node_name] = Node.get_node(self, node)
                 else:
                     # Update existing node's fim_node reference
-                    self.nodes[node_name].fim_node = node
+                    self.nodes[node_name].update(fim_node=node)
 
             # Remove nodes that are no longer present in the current topology
             self.__remove_deleted_nodes(current_topology_nodes)
@@ -1619,39 +1627,55 @@ class Slice:
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets all interfaces in this slice.
 
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
         :return: a list of interfaces on this slice
-        :rtype: List[Interface]
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
-        if not self.interfaces:
-            self.interfaces = []
+        if len(self.interfaces) == 0 or refresh:
             for node in self.get_nodes():
                 logging.debug(f"Getting interfaces for node {node.get_name()}")
-                for interface in node.get_interfaces():
-                    logging.debug(
-                        f"Getting interface {interface.get_name()} for node {node.get_name()}: \n{interface}"
-                    )
-                    self.interfaces.append(interface)
-        return self.interfaces
+                n_ifaces = node.get_interfaces(
+                    include_subs=include_subs, refresh=refresh, output="dict"
+                )
+                self.interfaces.update(n_ifaces)
 
-    def get_interface(self, name: str = None) -> Interface:
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
+
+    def get_interface(self, name: str = None, refresh: bool = False) -> Interface:
         """
         Gets a particular interface from this slice.
 
         :param name: the name of the interface to search for
         :type name: str
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
         :raises Exception: if no interfaces with name are found
         :return: an interface on this slice
         :rtype: Interface
         """
-        for interface in self.get_interfaces():
-            if name.endswith(interface.get_name()):
-                return interface
-
-        raise Exception("Interface not found: {}".format(name))
+        ret_val = self.get_interfaces(refresh=refresh, output="dict").get(name)
+        if not ret_val:
+            raise Exception("Interface not found: {}".format(name))
+        return ret_val
 
     def get_l3networks(self) -> List[NetworkService]:
         """
@@ -2193,11 +2217,6 @@ class Slice:
 
         start = time.time()
 
-        # if len(self.get_interfaces()) > 0:
-        #    hasNetworks = True
-        # else:
-        #    hasNetworks = False
-
         count = 0
         hasNetworks = False
         node_table = None
@@ -2282,13 +2301,6 @@ class Slice:
                         display(network_table)
 
             count += 1
-
-        # self.update()
-
-        # if len(self.get_interfaces()) > 0:
-        #    hasNetworks = True
-        # else:
-        #    hasNetworks = False
 
         slice_show_table = self.show(colors=True, quiet=True)
         node_table = self.list_nodes(colors=True, quiet=True)

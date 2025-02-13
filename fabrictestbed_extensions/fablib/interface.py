@@ -93,7 +93,7 @@ class Interface:
         self.dev = None
         self.node = node
         self.model = model
-        self.interfaces = None
+        self.interfaces = {}
         self.parent = parent
 
     def get_fablib_manager(self):
@@ -216,11 +216,13 @@ class Interface:
             physical_dev = str(self.get_physical_os_interface_name())
             dev = str(self.get_device_name())
             ip_addr = str(self.get_ip_addr())
+            numa = str(self.get_numa_node())
         else:
             mac = ""
             physical_dev = ""
             dev = ""
             ip_addr = ""
+            numa = ""
 
         return {
             "name": str(self.get_name()),
@@ -229,14 +231,12 @@ class Interface:
             "network": str(network_name),
             "bandwidth": str(self.get_bandwidth()),
             "mode": str(self.get_mode()),
-            "vlan": (
-                str(self.get_vlan()) if self.get_vlan() else ""
-            ),  # str(self.get_vlan()),
+            "vlan": (str(self.get_vlan()) if self.get_vlan() else ""),
             "mac": mac,
             "physical_dev": physical_dev,
             "dev": dev,
             "ip_addr": ip_addr,
-            "numa": str(self.get_numa_node()),
+            "numa": numa,
             "switch_port": str(self.get_switch_port()),
         }
 
@@ -470,13 +470,14 @@ class Interface:
         """
         try:
             if self.parent:
-                mac = self.parent.get_mac()
+                return self.parent.get_mac()
             else:
-                mac = self.get_fim().get_property(pname="label_allocations").mac
+                if self.get_fim() and self.get_fim().get_property(
+                    pname="label_allocations"
+                ):
+                    return self.get_fim().get_property(pname="label_allocations").mac
         except:
             mac = None
-
-        return mac
 
     def get_os_dev(self):
         """
@@ -510,7 +511,7 @@ class Interface:
         :rtype: String
         """
         try:
-            return self.get_os_dev()["ifname"]
+            return self.get_os_dev().get("ifname")
         except:
             return None
 
@@ -895,6 +896,8 @@ class Interface:
         """
         try:
             stdout, stderr = self.get_node().execute("ip -j addr list", quiet=True)
+            if not stdout:
+                return None
 
             addrs = json.loads(stdout)
 
@@ -1300,27 +1303,37 @@ class Interface:
         if self.get_fim() and self.get_fim().peer_labels:
             return self.get_fim().peer_labels.account_id
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(
+        self, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
-        :return: a list of the interfaces on this component.
-        :rtype: List[Interface]
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
+        :return: a list or dict of the interfaces on this component.
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
 
-        if not self.interfaces:
-            self.interfaces = []
+        if len(self.interfaces) == 0 or refresh:
+            self.interfaces = {}
             for fim_interface in self.get_fim().interface_list:
-                self.interfaces.append(
-                    Interface(
-                        component=self.get_component(),
-                        fim_interface=fim_interface,
-                        model=str(InterfaceType.SubInterface),
-                        parent=self,
-                    )
+                ch_iface = Interface(
+                    component=self.get_component(),
+                    fim_interface=fim_interface,
+                    model=str(InterfaceType.SubInterface),
+                    parent=self,
                 )
+                self.interfaces[ch_iface.get_name()] = ch_iface
 
-        return self.interfaces
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
 
     def add_sub_interface(self, name: str, vlan: str, bw: int = 10):
         """
@@ -1362,15 +1375,13 @@ class Interface:
                 child_if_capacities = Capacities()
             child_if_capacities.bw = int(bw)
             child_interface.set_properties(capacities=child_if_capacities)
-            if not self.interfaces:
-                self.interfaces = []
 
             ch_iface = Interface(
                 component=self.get_component(),
                 fim_interface=child_interface,
                 model=str(InterfaceType.SubInterface),
             )
-            self.interfaces.append(ch_iface)
+            self.interfaces[ch_iface.get_name()] = ch_iface
             return ch_iface
 
     def get_type(self) -> str:

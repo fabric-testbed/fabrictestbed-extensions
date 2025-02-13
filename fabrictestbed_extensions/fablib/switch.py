@@ -347,26 +347,33 @@ class Switch(Node):
         """
         self.get_slice().get_fim_topology().remove_switch(name=self.get_name())
 
-    def get_interfaces(self, include_subs: bool = True) -> List[Interface] or None:
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False
+    ) -> List[Interface] or None:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
         :return: a list of interfaces on the node
         :rtype: List[Interface]
         """
-        interfaces = []
+        if refresh or len(self.interfaces) == 0:
+            # Add them to the list in sorted order
+            for name, ifs in self.get_fim().interfaces.items():
+                self.interfaces[name] = Interface(
+                    node=self, fim_interface=ifs, model="NIC_P4"
+                )
 
         # Extract and sort interface names numerically
-        sorted_interfaces = sorted(
-            self.get_fim().interfaces.items(),
-            key=lambda item: int(item[0][1:]),  # Extract numeric part and sort
-        )
-
-        # Add them to the list in sorted order
-        for name, ifs in sorted_interfaces:
-            interfaces.append(Interface(node=self, fim_interface=ifs, model="NIC_P4"))
-
-        return interfaces
+        sorted_interfaces = [
+            self.interfaces[key] for key in sorted(self.interfaces.keys())
+        ]
+        return sorted_interfaces
 
     @staticmethod
     def get_node(slice: Slice = None, node=None):
