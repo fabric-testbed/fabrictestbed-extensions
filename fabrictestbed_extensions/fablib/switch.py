@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Union
 
 import jinja2
 from IPython.core.display_functions import display
@@ -348,8 +348,8 @@ class Switch(Node):
         self.get_slice().get_fim_topology().remove_switch(name=self.get_name())
 
     def get_interfaces(
-        self, include_subs: bool = True, refresh: bool = False
-    ) -> List[Interface] or None:
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -368,6 +368,9 @@ class Switch(Node):
                 self.interfaces[name] = Interface(
                     node=self, fim_interface=ifs, model="NIC_P4"
                 )
+
+        if output == "dict":
+            return self.interfaces
 
         # Extract and sort interface names numerically
         sorted_interfaces = [

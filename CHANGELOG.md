@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Non cloud facility ports should report local_name just like cloud facility ports (Issue [#402](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/402))
 - urllib3 deprecated warning (Issue [#397](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/397))
 - Improvements for get_interfaces and get_components (Issue [#378](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/378))
+- TypeError: Switch.get_interfaces() got an unexpected keyword argument 'output' (Issue([#405](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/405)))
 
 ### Added
 - Add support for BlueField NICs (Issue [#399](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/399))
