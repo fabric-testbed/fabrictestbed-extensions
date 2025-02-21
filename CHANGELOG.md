@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - urllib3 deprecated warning (Issue [#397](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/397))
 - Improvements for get_interfaces and get_components (Issue [#378](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/378))
 - TypeError: Switch.get_interfaces() got an unexpected keyword argument 'output' (Issue([#405](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/405)))
+- Exception: Interface not found using Node.get_interface(name) (Issue[#407](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/407))
 
 ### Added
 - Add support for BlueField NICs (Issue [#399](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/399))
