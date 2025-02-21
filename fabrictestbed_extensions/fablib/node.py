@@ -1128,7 +1128,9 @@ class Node:
         :rtype: Interface
         """
         if name is not None:
-            self.get_interfaces(refresh=refresh, output="dict").get(name)
+            interface = self.get_interfaces(refresh=refresh, output="dict").get(name)
+            if interface is not None:
+                return interface
         elif network_name is not None:
             for interface in self.get_interfaces(refresh=refresh):
                 if (
