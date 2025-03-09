@@ -519,7 +519,7 @@ class Slice:
             "project_id": "Project ID",
             "state": "State",
             "email": "Email",
-            "user_id": "UserId"
+            "user_id": "UserId",
         }
 
     def toDict(self, skip=[]):
