@@ -518,6 +518,8 @@ class Slice:
             "lease_start": "Lease Start (UTC)",
             "project_id": "Project ID",
             "state": "State",
+            "email": "Email",
+            "user_id": "UserId",
         }
 
     def toDict(self, skip=[]):
@@ -534,6 +536,8 @@ class Slice:
             "lease_start": str(self.get_lease_start()),
             "project_id": str(self.get_project_id()),
             "state": str(self.get_state()),
+            "email": str(self.get_email()),
+            "user_id": str(self.get_user_id()),
         }
 
     def get_template_context(self, base_object=None, skip=[]):
@@ -917,6 +921,26 @@ class Slice:
             logging.warning(
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
+
+    def get_email(self) -> str:
+        """
+        Gets the owner's email of the slice.
+
+        :return: email
+        :rtype: String
+        """
+        if self.sm_slice:
+            return self.sm_slice.owner_email
+
+    def get_user_id(self) -> str:
+        """
+        Gets the owner's user id of the slice.
+
+        :return: user id
+        :rtype: String
+        """
+        if self.sm_slice:
+            return self.sm_slice.owner_user_id
 
     def get_project_id(self) -> str:
         """
