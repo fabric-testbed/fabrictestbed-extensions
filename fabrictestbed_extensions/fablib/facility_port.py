@@ -65,6 +65,7 @@ class FacilityPort:
         super().__init__()
         self.fim_interface = fim_interface
         self.slice = slice
+        self.interfaces = {}
 
     def __str__(self):
         """
@@ -245,33 +246,30 @@ class FacilityPort:
         """
         return self.slice
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(self, refresh: bool = False,
+                       output: str = "list") -> Union[dict[str, Interface], list[Interface]]:
         """
-        Gets a particular interface associated with a FABRIC node.
+        Gets a interface associated with a FABRIC Facility Port.
 
-        Accepts either the interface name or a network_name.  If a
-        network name is used this method will return the interface on
-        the node that is connected to the network specified.  If a
-        name and network_name are both used, the interface name will
-        take precedence.
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
-        :param name: interface name to search for
-        :type name: str
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
 
-        :param network_name: network name to search for
-
-        :type name: str
-
-        :raise Exception: if interface is not found
-
-        :return: an interface on the node
-        :rtype: Interface
+        :return: a list or dict of interfaces on the node
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
-        ifaces = []
-        for fim_interface in self.get_fim_interface().interface_list:
-            ifaces.append(Interface(node=self, fim_interface=fim_interface))
+        if refresh or len(self.interfaces) == 0:
+            self.interfaces = {}
+            for fim_interface in self.get_fim_interface().interface_list:
+                iface = Interface(node=self, fim_interface=fim_interface)
+                self.interfaces[iface.get_name()] = iface
 
-        return ifaces
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
 
     def update(self, fim_node: FimNode):
         if fim_node:

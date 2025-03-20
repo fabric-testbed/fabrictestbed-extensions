@@ -1690,6 +1690,9 @@ class Slice:
         ]
 
         for fac_name in facilities_to_remove:
+            for ifs in self.facilities[fac_name].get_interfaces():
+                if ifs.get_name() in self.interfaces:
+                    self.interfaces.pop(ifs.get_name())
             self.facilities.pop(fac_name)
             logging.debug(f"Removed extra facility: {fac_name}")
 
@@ -1763,6 +1766,12 @@ class Slice:
                     include_subs=include_subs, refresh=refresh, output="dict"
                 )
                 self.interfaces.update(n_ifaces)
+            for fac in self.get_facilities():
+                logging.debug(f"Getting interfaces for facility {fac.get_name()}")
+                fac_ifaces = fac.get_interfaces(
+                    refresh=refresh, output="dict"
+                )
+                self.interfaces.update(fac_ifaces)
 
         if output == "dict":
             return self.interfaces
