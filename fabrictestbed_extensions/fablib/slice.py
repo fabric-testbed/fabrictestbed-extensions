@@ -668,7 +668,7 @@ class Slice:
         self.topology = new_topo
         self.get_nodes()
         self.get_facilities()
-        self.interfaces.clear()
+        self.get_interfaces(refresh=True)
 
     def update_slivers(self):
         """
