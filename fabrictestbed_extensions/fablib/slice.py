@@ -112,6 +112,7 @@ class Slice:
         self.fablib_manager = fablib_manager
 
         self.nodes = {}
+        self.facilities = {}
         self.interfaces = {}
         self.update_topology_count = 0
         self.update_slivers_count = 0
@@ -1606,6 +1607,92 @@ class Slice:
         self.__initialize_nodes()
         return list(self.nodes.values())
 
+    def get_facility(self, name: str) -> FacilityPort:
+        """
+        Gets a facility port from the slice by name.
+
+        :param name: Name of the facility Port
+        :type name: String
+        :return: a fablib FacilityPort
+        :rtype: FacilityPort
+        """
+        try:
+            if self.facilities and len(self.facilities) and name in self.facilities:
+                return self.facilities.get(name)
+            return FacilityPort.get_facility_port(self, self.get_fim_topology().facilities[name])
+        except Exception as e:
+            logging.info(e, exc_info=True)
+            raise Exception(f"Node not found: {name}")
+
+    def get_facilities(self) -> List[FacilityPort]:
+        """
+        Gets a list of all nodes in this slice.
+
+        :return: a list of fablib nodes
+        :rtype: List[FacilityPort]
+        """
+        self.__initialize_facilities()
+        return list(self.facilities.values())
+
+    def __initialize_facilities(self):
+        """
+        Initializes the facilities objects for the current topology by populating
+        the self.facilities dictionary with node instances.
+
+        - If self.facilities is empty, it initializes it as an empty dictionary.
+        - It iterates through the nodes in the FIM topology and adds them
+          to self.facilities if they do not already exist.
+        - If a facility already exists in the dictionary, it updates its
+          fim_node reference to match the current topology.
+        - After processing, it removes any facilities from self.facilities that
+          are no longer present in the current topology.
+
+        https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380
+
+        :raises: Logs an exception if an error occurs during initialization.
+        """
+        # Initialize facilities dictionary if not already present
+        if not self.facilities:
+            self.facilities = {}
+
+        try:
+            # Get the current FIM topology nodes
+            current = self.get_fim_topology().facilities
+
+            # Update the nodes dictionary with current topology nodes
+            for fac_name, facility in current.items():
+                if fac_name not in self.facilities:
+                    self.facilities[fac_name] = FacilityPort.get_facility_port(self, facility)
+                else:
+                    # Update existing facility's fim_node reference
+                    self.facilities[fac_name].update(fim_node=facility)
+
+            # Remove nodes that are no longer present in the current topology
+            self.__remove_deleted_facilities(current)
+
+        except Exception as e:
+            logging.error(f"Error initializing facilities: {e}")
+
+    def __remove_deleted_facilities(self, current):
+        """
+        Removes nodes from self.facilities that are not present in the current topology.
+
+        :param current: A dictionary of facilities currently in the topology.
+        """
+        # Create a set of current node names for quick lookup
+        current_names = set(current.keys())
+
+        # Identify and remove nodes that are not in the current topology
+        facilities_to_remove = [
+            fac_name
+            for fac_name in self.facilities.keys()
+            if fac_name not in current_names
+        ]
+
+        for fac_name in facilities_to_remove:
+            self.facilities.pop(fac_name)
+            logging.debug(f"Removed extra facility: {fac_name}")
+
     def get_attestable_switches(self) -> List[Attestable_Switch]:
         """
         Get list of attestable switches in the fablib slice.
@@ -2933,6 +3020,117 @@ class Slice:
             table,
             fields=fields,
             title="Nodes",
+            output=output,
+            quiet=True,
+            filter_function=filter_function,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+        if table and colors:
+            if pretty_names:
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["State"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["Error"]])
+            else:
+                # table = table.map(highlight, axis=1)
+                table = table.map(state_color, subset=pd.IndexSlice[:, ["state"]])
+                table = table.map(error_color, subset=pd.IndexSlice[:, ["error"]])
+        if table and not quiet:
+            display(table)
+
+        return table
+
+    def list_facilities(
+        self,
+        output=None,
+        fields=None,
+        colors=False,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+    ):
+        """
+        Lists all the nodes in the slice.
+
+        There are several output options: "text", "pandas", and "json" that determine the format of the
+        output that is returned and (optionally) displayed/printed.
+
+        output:  'text': string formatted with tabular
+                  'pandas': pandas dataframe
+                  'json': string in json format
+
+        fields: json output will include all available fields/columns.
+
+        Example: fields=['Name','State']
+
+        filter_function:  A lambda function to filter data by field values.
+
+        Example: filter_function=lambda s: s['State'] == 'Active'
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param filter_function: lambda function
+        :type filter_function: lambda
+        :param colors: True to add colors to the table when possible
+        :type colors: bool
+        :param pretty_names:
+        :type pretty_names: bool
+
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+
+        def error_color(val):
+            # if 'Failure' in val:
+            if val != "" and not "TicketReviewPolicy" in val:
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
+            else:
+                color = ""
+            # return 'color: %s' % color
+
+            return "background-color: %s" % color
+
+        def highlight(x):
+            if x.State == "Ticketed":
+                return [f"background-color: {Constants.IN_PROGRESS_LIGHT_COLOR}"] * (
+                    len(fields)
+                )
+            elif x.State == "None":
+                return ["opacity: 50%"] * (len(fields))
+            else:
+                return ["background-color: "] * (len(fields))
+
+        def state_color(val):
+            if val == "Active":
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
+            elif val == "Ticketed":
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
+            else:
+                color = ""
+            # return 'color: %s' % color
+            return "background-color: %s" % color
+
+        table = []
+        for node in self.get_nodes():
+            table.append(node.toDict())
+
+        table = sorted(table, key=lambda x: (x["name"]))
+
+        if pretty_names:
+            pretty_names_dict = FacilityPort.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
+        logging.debug(f"pretty_names_dict = {pretty_names_dict}")
+
+        table = self.get_fablib_manager().list_table(
+            table,
+            fields=fields,
+            title="Facilities",
             output=output,
             quiet=True,
             filter_function=filter_function,

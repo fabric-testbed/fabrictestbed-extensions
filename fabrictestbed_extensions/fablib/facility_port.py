@@ -60,7 +60,7 @@ class FacilityPort:
         :type slice: Slice
 
         :param fim_interface:
-        :type fim_interface: FimInterface
+        :type fim_interface: FimNode
         """
         super().__init__()
         self.fim_interface = fim_interface
@@ -84,7 +84,8 @@ class FacilityPort:
         """
         return json.dumps(self.toDict(), indent=4)
 
-    def get_pretty_name_dict(self):
+    @staticmethod
+    def get_pretty_name_dict():
         """
         Return a mapping used when rendering table headers.
         """
@@ -271,3 +272,17 @@ class FacilityPort:
             ifaces.append(Interface(node=self, fim_interface=fim_interface))
 
         return ifaces
+
+    def update(self, fim_node: FimNode):
+        if fim_node:
+            self.fim_interface = fim_node
+
+    def delete(self):
+        """
+        Remove the facility from the slice. All interfaces associated with
+        the Facility Port are removed from the Slice.
+        """
+        for iface in self.get_interfaces():
+            iface.delete()
+
+        self.get_slice().get_fim_topology().remove_facility(name=self.get_name())
