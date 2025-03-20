@@ -60,11 +60,12 @@ class FacilityPort:
         :type slice: Slice
 
         :param fim_interface:
-        :type fim_interface: FimInterface
+        :type fim_interface: FimNode
         """
         super().__init__()
         self.fim_interface = fim_interface
         self.slice = slice
+        self.interfaces = {}
 
     def __str__(self):
         """
@@ -84,7 +85,8 @@ class FacilityPort:
         """
         return json.dumps(self.toDict(), indent=4)
 
-    def get_pretty_name_dict(self):
+    @staticmethod
+    def get_pretty_name_dict():
         """
         Return a mapping used when rendering table headers.
         """
@@ -135,6 +137,12 @@ class FacilityPort:
 
         return table
 
+    def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
+        return self.slice.get_fablib_manager()
+
     def get_fim_interface(self) -> FimNode:
         """
         .. warning::
@@ -144,6 +152,15 @@ class FacilityPort:
         method is used to access data at a lower level than FABlib.
         """
         return self.fim_interface
+
+    def get_fim(self):
+        """
+        Gets the Facility Ports's FABRIC Information Model (fim) object.
+
+        This method is used to access data at a lower level than
+        FABlib.
+        """
+        return self.get_fim_interface()
 
     def get_model(self) -> str:
         """
@@ -244,30 +261,42 @@ class FacilityPort:
         """
         return self.slice
 
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(
+        self, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
-        Gets a particular interface associated with a FABRIC node.
+        Gets a interface associated with a FABRIC Facility Port.
 
-        Accepts either the interface name or a network_name.  If a
-        network name is used this method will return the interface on
-        the node that is connected to the network specified.  If a
-        name and network_name are both used, the interface name will
-        take precedence.
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
 
-        :param name: interface name to search for
-        :type name: str
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
 
-        :param network_name: network name to search for
-
-        :type name: str
-
-        :raise Exception: if interface is not found
-
-        :return: an interface on the node
-        :rtype: Interface
+        :return: a list or dict of interfaces on the node
+        :rtype: Union[dict[str, Interface], list[Interface]]
         """
-        ifaces = []
-        for fim_interface in self.get_fim_interface().interface_list:
-            ifaces.append(Interface(node=self, fim_interface=fim_interface))
+        if refresh or len(self.interfaces) == 0:
+            self.interfaces = {}
+            for fim_interface in self.get_fim_interface().interface_list:
+                iface = Interface(node=self, fim_interface=fim_interface)
+                self.interfaces[iface.get_name()] = iface
 
-        return ifaces
+        if output == "dict":
+            return self.interfaces
+        else:
+            return list(self.interfaces.values())
+
+    def update(self, fim_node: FimNode):
+        if fim_node:
+            self.fim_interface = fim_node
+
+    def delete(self):
+        """
+        Remove the facility from the slice. All interfaces associated with
+        the Facility Port are removed from the Slice.
+        """
+        for iface in self.get_interfaces():
+            iface.delete()
+
+        self.get_slice().get_fim_topology().remove_facility(name=self.get_name())
