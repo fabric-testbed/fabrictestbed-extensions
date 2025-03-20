@@ -3120,8 +3120,8 @@ class Slice:
             return "background-color: %s" % color
 
         table = []
-        for node in self.get_nodes():
-            table.append(node.toDict())
+        for fac in self.get_facilities():
+            table.append(fac.toDict())
 
         table = sorted(table, key=lambda x: (x["name"]))
 
