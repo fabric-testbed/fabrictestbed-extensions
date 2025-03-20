@@ -647,12 +647,6 @@ class Slice:
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
         )
 
-        # Update topology
-        # if self.sm_slice.model is not None and self.sm_slice.model != "":
-        #    self.topology = ExperimentTopology()
-        #    self.topology.load(graph_string=self.sm_slice.model)
-        #    return
-
         (
             return_status,
             new_topo,
@@ -666,6 +660,8 @@ class Slice:
 
         # Set slice attributes
         self.topology = new_topo
+        self.nodes.clear()
+        self.interfaces.clear()
 
     def update_slivers(self):
         """
