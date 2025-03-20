@@ -591,6 +591,12 @@ class Slice:
         """
         return self.topology
 
+    def get_fim(self) -> ExperimentTopology:
+        """
+        Get FABRIC Information Model (fim) object for the slice.
+        """
+        return self.get_fim_topology()
+
     def update_slice(self):
         """
         Not recommended for most users.  See Slice.update() method.

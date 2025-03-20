@@ -137,6 +137,12 @@ class FacilityPort:
 
         return table
 
+    def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
+        return self.slice.get_fablib_manager()
+
     def get_fim_interface(self) -> FimNode:
         """
         .. warning::
@@ -146,6 +152,15 @@ class FacilityPort:
         method is used to access data at a lower level than FABlib.
         """
         return self.fim_interface
+
+    def get_fim(self):
+        """
+        Gets the Facility Ports's FABRIC Information Model (fim) object.
+
+        This method is used to access data at a lower level than
+        FABlib.
+        """
+        return self.get_fim_interface()
 
     def get_model(self) -> str:
         """
