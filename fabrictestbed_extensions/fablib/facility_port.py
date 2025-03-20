@@ -261,8 +261,9 @@ class FacilityPort:
         """
         return self.slice
 
-    def get_interfaces(self, refresh: bool = False,
-                       output: str = "list") -> Union[dict[str, Interface], list[Interface]]:
+    def get_interfaces(
+        self, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets a interface associated with a FABRIC Facility Port.
 

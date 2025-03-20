@@ -1620,7 +1620,9 @@ class Slice:
         try:
             if self.facilities and len(self.facilities) and name in self.facilities:
                 return self.facilities.get(name)
-            return FacilityPort.get_facility_port(self, self.get_fim_topology().facilities[name])
+            return FacilityPort.get_facility_port(
+                self, self.get_fim_topology().facilities[name]
+            )
         except Exception as e:
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
@@ -1663,7 +1665,9 @@ class Slice:
             # Update the nodes dictionary with current topology nodes
             for fac_name, facility in current.items():
                 if fac_name not in self.facilities:
-                    self.facilities[fac_name] = FacilityPort.get_facility_port(self, facility)
+                    self.facilities[fac_name] = FacilityPort.get_facility_port(
+                        self, facility
+                    )
                 else:
                     # Update existing facility's fim_node reference
                     self.facilities[fac_name].update(fim_node=facility)
@@ -1769,9 +1773,7 @@ class Slice:
                 self.interfaces.update(n_ifaces)
             for fac in self.get_facilities():
                 logging.debug(f"Getting interfaces for facility {fac.get_name()}")
-                fac_ifaces = fac.get_interfaces(
-                    refresh=refresh, output="dict"
-                )
+                fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
                 self.interfaces.update(fac_ifaces)
 
         if output == "dict":
