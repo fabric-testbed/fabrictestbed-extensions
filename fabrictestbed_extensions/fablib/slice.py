@@ -1597,6 +1597,9 @@ class Slice:
         ]
 
         for node_name in nodes_to_remove:
+            for ifs in self.nodes[node_name].get_interfaces():
+                if ifs.get_name() in self.interfaces:
+                    self.interfaces.pop(ifs.get_name())
             self.nodes.pop(node_name)
             logging.debug(f"Removed extra node: {node_name}")
 

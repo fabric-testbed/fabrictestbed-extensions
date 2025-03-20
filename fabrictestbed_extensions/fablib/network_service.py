@@ -1279,6 +1279,9 @@ class NetworkService:
         """
         Delete the network service.
         """
+        for ifs in self.get_interfaces():
+            ifs.network = None
+
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
 
     def get_fablib_data(self):
