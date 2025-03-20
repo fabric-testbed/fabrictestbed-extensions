@@ -211,6 +211,7 @@ class Interface:
         else:
             node_name = None
 
+        from fabrictestbed_extensions.fablib.node import Node
         if self.get_node() and isinstance(self.get_node(), Node) and \
                 str(self.get_node().get_reservation_state()) == "Active":
             mac = str(self.get_mac())
