@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeError: Switch.get_interfaces() got an unexpected keyword argument 'output' (Issue([#405](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/405)))
 - Exception: Interface not found using Node.get_interface(name) (Issue[#407](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/407))
 - Delete Facility port from a slice (Issue [#411](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/411))
+- Disable Config VLAN interfaces for SharedPort (Issue [#413](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/413))
 
 ### Added
 - Add support for BlueField NICs (Issue [#399](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/399))
