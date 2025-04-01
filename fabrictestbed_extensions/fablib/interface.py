@@ -429,7 +429,7 @@ class Interface:
 
                 fablib_data["base_dev"] = os_iface
 
-                if os_iface and vlan:
+                if os_iface and vlan and not self.__is_shared_nic():
                     os_iface = f"{os_iface}.{vlan}"
 
                 fablib_data["dev"] = os_iface
@@ -527,7 +527,7 @@ class Interface:
 
         NOTE: Not intended for API use
         """
-        if self.get_vlan() is not None and str(self.get_fim().type) != "SharedPort":
+        if self.get_vlan() is not None and not self.___is_shared_nic():
             self.get_node().add_vlan_os_interface(
                 os_iface=self.get_physical_os_interface_name(),
                 vlan=self.get_vlan(),
@@ -1398,3 +1398,8 @@ class Interface:
         """
         if self.get_fim():
             return self.get_fim().type
+
+    def __is_shared_nic(self) -> bool:
+        if self.get_fim() and str(self.get_fim().type) == "SharedPort":
+            return True
+        return False
