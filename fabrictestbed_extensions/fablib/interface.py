@@ -527,7 +527,7 @@ class Interface:
 
         NOTE: Not intended for API use
         """
-        if self.get_vlan() is not None:
+        if self.get_vlan() is not None and str(self.get_fim().type) != "SharedPort":
             self.get_node().add_vlan_os_interface(
                 os_iface=self.get_physical_os_interface_name(),
                 vlan=self.get_vlan(),
