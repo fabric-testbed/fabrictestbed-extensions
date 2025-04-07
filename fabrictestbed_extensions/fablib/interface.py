@@ -648,6 +648,15 @@ class Interface:
         if_capacities.bw = int(bw)
         self.get_fim().set_properties(capacities=if_capacities)
 
+        if (
+            self.get_fim().get_peers()
+            and self.get_fim().get_peers()[0]
+            and self.get_fim().get_peers()[0].capacities
+        ):
+            existing = self.get_fim().get_peers()[0].capacities
+            existing.bw = int(bw)
+            self.get_fim().get_peers()[0].set_properties(capacities=existing)
+
         return self
 
     def get_fim_interface(self) -> FimInterface:
@@ -673,10 +682,29 @@ class Interface:
         :return: bandwith
         :rtype: String
         """
-        if self.get_component() and self.get_component().get_model() == "NIC_Basic":
-            return 100
-        elif self.get_fim() and self.get_fim().capacities:
-            return self.get_fim().capacities.bw
+        bw = 0
+        if (
+            self.get_fim()
+            and self.get_fim().capacities
+            and self.get_fim().capacities.bw
+        ):
+            bw = self.get_fim().capacities.bw
+        if (
+            not bw
+            and self.get_fim()
+            and self.get_fim().get_peers()
+            and self.get_fim().get_peers()[0]
+            and self.get_fim().get_peers()[0].capacities
+            and self.get_fim().get_peers()[0].capacities.bw
+        ):
+            bw = self.get_fim().get_peers()[0].capacities.bw
+        if (
+            not bw
+            and self.get_component()
+            and self.get_component().get_model() == "NIC_Basic"
+        ):
+            bw = 100
+        return bw
 
     def get_vlan(self) -> str:
         """
