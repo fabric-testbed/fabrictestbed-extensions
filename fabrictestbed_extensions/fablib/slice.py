@@ -1047,8 +1047,7 @@ class Slice:
         :param gateway:
         :type gateway: ipaddress
 
-        :param user_data
-
+        :param user_data:
         :type user_data: dict
 
         :return: a new L2 network service
@@ -1223,11 +1222,11 @@ class Slice:
             GB
         :type ram: int
 
-        :param disk: (Optional) Amount of disk space n the node.
+        :param disk: (Optional) Amount of disk space in the node.
             Default: 10 GB
         :type disk: int
 
-        :param image: (Optional) The image to uese for the node.
+        :param image: (Optional) The image to use for the node.
             Default: default_rocky_8
         :type image: String
 
@@ -1240,7 +1239,7 @@ class Slice:
             number 1: "star-w1.fabric-testbed.net".  Default: unset
         :type host: String
 
-        :param user_data
+        :param user_data:
         :type user_data: dict
 
         :param avoid: (Optional) A list of sites to avoid is allowing
@@ -1389,7 +1388,7 @@ class Slice:
             on.  Default to a random site.
         :type site: String
 
-        :param user_data
+        :param user_data:
         :type user_data: dict
 
         :param avoid: (Optional) A list of sites to avoid is allowing
