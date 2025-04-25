@@ -3579,6 +3579,45 @@ class Node:
             logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
             raise e
 
+    import logging
+    import traceback
+
+    def rescan_pci(self, component_name: str = None):
+        """
+        Rescan the PCI devices for the specified component or for all components.
+
+        :param component_name: Name of the component to rescan. If None, rescans all components.
+        :raises Exception: If no PCI devices are found or if the rescan operation fails.
+        """
+        logger = logging.getLogger()
+
+        try:
+            bdfs = []
+            # Collect BDFs to rescan
+            if component_name:
+                component = self.get_component(component_name)
+                if not component:
+                    raise ValueError(f"Component '{component_name}' not found.")
+                bdfs.extend(component.get_pci_addr())
+            else:
+                for comp in self.get_components():
+                    bdfs.extend(comp.get_pci_addr())
+
+            if not bdfs:
+                raise RuntimeError("No PCI devices available to rescan on the node.")
+
+            # Perform the PCI rescan operation
+            status = self.poa(operation="rescan", bdf=bdfs)
+            if status.lower() == "failed":
+                raise RuntimeError("PCI rescan operation (POA) failed.")
+
+            logger.info(f"PCI rescan completed successfully for node: {self.get_name()}")
+
+        except Exception as e:
+            logger.error(f"Failed to complete PCI rescan for node: {self.get_name()} - {e}")
+            logger.debug(traceback.format_exc())
+            raise
+
     def os_reboot(self):
         """
         Request Openstack to reboot the VM.
