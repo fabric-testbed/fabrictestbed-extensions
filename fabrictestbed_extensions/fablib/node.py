@@ -3601,18 +3601,10 @@ class Node:
                 if pci_addr:
                     pci_list = pci_addr if isinstance(pci_addr, list) else [pci_addr]
 
-                    # If component is FPGA, add ".1" sibling addresses
-                    if comp.get_type() == str(ComponentType.FPGA):
-                        extended_pci_list = []
-                        for addr in pci_list:
-                            extended_pci_list.append(addr)
-                            if addr.endswith('.0'):
-                                # Create corresponding .1 address
-                                sibling_addr = addr[:-1] + '1'
-                                extended_pci_list.append(sibling_addr)
-                        bdfs.extend(extended_pci_list)
-                    else:
-                        bdfs.extend(pci_list)
+                    # Skip Shared NICs
+                    if comp.get_type() == str(ComponentType.SharedNIC):
+                        continue
+                    bdfs.extend(pci_list)
 
             if not bdfs:
                 raise RuntimeError("No PCI devices available to rescan on the node.")
