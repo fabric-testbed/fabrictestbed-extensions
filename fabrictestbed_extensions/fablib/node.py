@@ -58,7 +58,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
-from fim.user import NodeType
+from fim.user import NodeType, ComponentType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
@@ -3579,42 +3579,53 @@ class Node:
             logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
             raise e
 
-    import logging
-    import traceback
-
     def rescan_pci(self, component_name: str = None):
         """
-        Rescan the PCI devices for the specified component or for all components.
+        Rescan PCI devices for a specific component or all components.
 
         :param component_name: Name of the component to rescan. If None, rescans all components.
-        :raises Exception: If no PCI devices are found or if the rescan operation fails.
+        :raises RuntimeError: If no PCI devices are found or if the rescan operation fails.
         """
         logger = logging.getLogger()
 
         try:
+            # Retrieve list of PCI addresses to rescan
+            components = [self.get_component(component_name)] if component_name else self.get_components()
+            if not components or any(c is None for c in components):
+                raise ValueError(f"Component '{component_name}' not found.") if component_name else RuntimeError(
+                    "No components found.")
+
             bdfs = []
-            # Collect BDFs to rescan
-            if component_name:
-                component = self.get_component(component_name)
-                if not component:
-                    raise ValueError(f"Component '{component_name}' not found.")
-                bdfs.extend(component.get_pci_addr())
-            else:
-                for comp in self.get_components():
-                    bdfs.extend(comp.get_pci_addr())
+            for comp in components:
+                pci_addr = comp.get_pci_addr()
+                if pci_addr:
+                    pci_list = pci_addr if isinstance(pci_addr, list) else [pci_addr]
+
+                    # If component is FPGA, add ".1" sibling addresses
+                    if comp.get_type() == str(ComponentType.FPGA):
+                        extended_pci_list = []
+                        for addr in pci_list:
+                            extended_pci_list.append(addr)
+                            if addr.endswith('.0'):
+                                # Create corresponding .1 address
+                                sibling_addr = addr[:-1] + '1'
+                                extended_pci_list.append(sibling_addr)
+                        bdfs.extend(extended_pci_list)
+                    else:
+                        bdfs.extend(pci_list)
 
             if not bdfs:
                 raise RuntimeError("No PCI devices available to rescan on the node.")
 
-            # Perform the PCI rescan operation
+            # Perform the PCI rescan
             status = self.poa(operation="rescan", bdf=bdfs)
-            if status.lower() == "failed":
+            if not status or status.lower() == "failed":
                 raise RuntimeError("PCI rescan operation (POA) failed.")
 
             logger.info(f"PCI rescan completed successfully for node: {self.get_name()}")
 
         except Exception as e:
-            logger.error(f"Failed to complete PCI rescan for node: {self.get_name()} - {e}")
+            logger.error(f"Failed PCI rescan for node {self.get_name()}: {e}")
             logger.debug(traceback.format_exc())
             raise
 
