@@ -58,7 +58,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
-from fim.user import NodeType, ComponentType
+from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
@@ -3362,7 +3362,7 @@ class Node:
                 vcpu_cpu_map=vcpu_cpu_map,
                 node_set=node_set,
                 keys=keys,
-                bdf=bdf
+                bdf=bdf,
             )
         )
         logger = logging.getLogger()
@@ -3590,10 +3590,17 @@ class Node:
 
         try:
             # Retrieve list of PCI addresses to rescan
-            components = [self.get_component(component_name)] if component_name else self.get_components()
+            components = (
+                [self.get_component(component_name)]
+                if component_name
+                else self.get_components()
+            )
             if not components or any(c is None for c in components):
-                raise ValueError(f"Component '{component_name}' not found.") if component_name else RuntimeError(
-                    "No components found.")
+                raise (
+                    ValueError(f"Component '{component_name}' not found.")
+                    if component_name
+                    else RuntimeError("No components found.")
+                )
 
             bdfs = []
             for comp in components:
@@ -3614,7 +3621,9 @@ class Node:
             if not status or status.lower() == "failed":
                 raise RuntimeError("PCI rescan operation (POA) failed.")
 
-            logger.info(f"PCI rescan completed successfully for node: {self.get_name()}")
+            logger.info(
+                f"PCI rescan completed successfully for node: {self.get_name()}"
+            )
 
         except Exception as e:
             logger.error(f"Failed PCI rescan for node {self.get_name()}: {e}")
