@@ -58,7 +58,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
-from fim.user import NodeType
+from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
@@ -3335,6 +3335,7 @@ class Node:
         vcpu_cpu_map: List[Dict[str, str]] = None,
         node_set: List[str] = None,
         keys: List[Dict[str, str]] = None,
+        bdf: List[str] = None,
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
@@ -3343,6 +3344,7 @@ class Node:
         :param vcpu_cpu_map: map virtual cpu to host cpu map
         :param node_set: list of numa nodes
         :param keys: list of ssh keys
+        :param bdf: list of PCI Ids
 
         :raise Exception: in case of failure
 
@@ -3360,6 +3362,7 @@ class Node:
                 vcpu_cpu_map=vcpu_cpu_map,
                 node_set=node_set,
                 keys=keys,
+                bdf=bdf,
             )
         )
         logger = logging.getLogger()
@@ -3575,6 +3578,57 @@ class Node:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
             raise e
+
+    def rescan_pci(self, component_name: str = None):
+        """
+        Rescan PCI devices for a specific component or all components.
+
+        :param component_name: Name of the component to rescan. If None, rescans all components.
+        :raises RuntimeError: If no PCI devices are found or if the rescan operation fails.
+        """
+        logger = logging.getLogger()
+
+        try:
+            # Retrieve list of PCI addresses to rescan
+            components = (
+                [self.get_component(component_name)]
+                if component_name
+                else self.get_components()
+            )
+            if not components or any(c is None for c in components):
+                raise (
+                    ValueError(f"Component '{component_name}' not found.")
+                    if component_name
+                    else RuntimeError("No components found.")
+                )
+
+            bdfs = []
+            for comp in components:
+                pci_addr = comp.get_pci_addr()
+                if pci_addr:
+                    pci_list = pci_addr if isinstance(pci_addr, list) else [pci_addr]
+
+                    # Skip Shared NICs
+                    if comp.get_type() == str(ComponentType.SharedNIC):
+                        continue
+                    bdfs.extend(pci_list)
+
+            if not bdfs:
+                raise RuntimeError("No PCI devices available to rescan on the node.")
+
+            # Perform the PCI rescan
+            status = self.poa(operation="rescan", bdf=bdfs)
+            if not status or status.lower() == "failed":
+                raise RuntimeError("PCI rescan operation (POA) failed.")
+
+            logger.info(
+                f"PCI rescan completed successfully for node: {self.get_name()}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed PCI rescan for node {self.get_name()}: {e}")
+            logger.debug(traceback.format_exc())
+            raise
 
     def os_reboot(self):
         """
