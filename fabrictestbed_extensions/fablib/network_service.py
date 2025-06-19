@@ -1504,40 +1504,62 @@ class NetworkService:
 
     def set_l2_route_hops(self, hops: List[str]):
         """
-        Explicitly define the sequence of sites or hops to be used for a layer 2 connection.
+        Define the sequence of sites or hops to be used for a layer 2 connection.
 
-        Users provide a list of site names, which are then mapped by the ControlFramework to the corresponding
-        layer 2 loopback IP addresses utilized by the Explicit Route Options in the Network Service configuration
-        on the switch.
+        Maps site names to corresponding layer 2 loopback IPs used in Explicit Route Options (ERO)
+        in the Network Service configuration.
 
         :param hops: A list of site names to be used as hops.
         :type hops: List[str]
         """
-        # Do nothing if hops is None or empty list
-        if not hops or not len(hops):
-            return
+        if not hops:
+            return  # Skip if no hops provided
 
         interfaces = self.get_interfaces()
+        if len(interfaces) != 2 or self.get_type() not in {ServiceType.L2STS, ServiceType.L2PTP}:
+            raise Exception("ERO can only be set for a Point-to-Point Layer2 connection.")
 
-        if len(interfaces) != 2 or self.get_type() not in [
-            ServiceType.L2STS,
-            ServiceType.L2PTP,
-        ]:
-            raise Exception(
-                "Network path can only be specified for a Point to Point Layer2 connection!"
-            )
-
-        ifs_sites = []
-        for ifs in interfaces:
-            ifs_sites.append(ifs.get_site())
-
+        src_site, dst_site = (ifs.get_site() for ifs in interfaces)
         resources = self.get_fablib_manager().get_resources()
-        resources.validate_requested_ero_path(
-            source=ifs_sites[0], end=ifs_sites[1], hops=hops
-        )
-        p = Path()
-        p.set_symmetric(hops)
-        e = ERO()
-        e.set(payload=p)
+        resources.validate_requested_ero_path(source=src_site, end=dst_site, hops=hops)
+
+        full_path = [src_site, *hops, dst_site]
+        path = Path()
+        path.set_symmetric(full_path)
+        ero = ERO()
+        ero.set(payload=path)
+
         ns_type = self.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=True)
-        self.get_fim().set_properties(type=ns_type, ero=e)
+        self.get_fim().set_properties(type=ns_type, ero=ero)
+
+    def set_bandwidth(self, bw: int):
+        """
+        Set the bandwidth for an L2PTP Network Service.
+
+        This sets the bandwidth uniformly for the service and both connected interfaces.
+
+        :param bw: Bandwidth in Gbps
+        :type bw: int
+        """
+        if not bw:
+            return self  # Return early if bw is 0 or None
+
+        fim = self.get_fim()
+        capacities = fim.get_property(pname="capacities")
+        capacities.bw = int(bw)
+        fim.set_properties(capacities=capacities)
+
+        for interface in self.get_interfaces():
+            interface.set_bandwidth(bw=bw)
+
+        return self
+
+    def get_bandwidth(self) -> int:
+        """
+        Get the bandwidth of the network service (L2PTP only).
+
+        :return: Bandwidth in Gbps
+        :rtype: int
+        """
+        fim = self.get_fim()
+        return getattr(fim.capacities, "bw", 0) if fim and fim.capacities else None
