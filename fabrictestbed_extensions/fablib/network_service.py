@@ -1545,9 +1545,7 @@ class NetworkService:
             return self  # Return early if bw is 0 or None
 
         fim = self.get_fim()
-        capacities = Capacities()
-        capacities.bw = bw
-        fim.capacities(value=capacities)
+        fim.capacities = Capacities(bw=bw)
 
         for interface in self.get_interfaces():
             interface.set_bandwidth(bw=bw)
