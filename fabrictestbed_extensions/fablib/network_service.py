@@ -1562,4 +1562,4 @@ class NetworkService:
         :rtype: int
         """
         fim = self.get_fim()
-        return getattr(fim.capacities, "bw", 0) if fim and fim.capacities else None
+        return getattr(fim.capacities, "bw", 1) if fim and fim.capacities else 1
