@@ -1523,9 +1523,8 @@ class NetworkService:
         resources = self.get_fablib_manager().get_resources()
         resources.validate_requested_ero_path(source=src_site, end=dst_site, hops=hops)
 
-        full_path = [src_site, *hops, dst_site]
         path = Path()
-        path.set_symmetric(full_path)
+        path.set_symmetric(hops)
         ero = ERO()
         ero.set(payload=path)
 
