@@ -1158,7 +1158,7 @@ class NetworkService:
 
         return False
 
-    def get_fim(self):
+    def get_fim(self) -> FimNetworkService:
         """
         Gets the FABRIC information model (FIM) object.
         """
@@ -1545,9 +1545,9 @@ class NetworkService:
             return self  # Return early if bw is 0 or None
 
         fim = self.get_fim()
-        capacities = fim.get_property(pname="capacities")
-        capacities.bw = int(bw)
-        fim.set_properties(capacities=capacities)
+        capacities = Capacities()
+        capacities.bw = bw
+        fim.capacities(value=capacities)
 
         for interface in self.get_interfaces():
             interface.set_bandwidth(bw=bw)
