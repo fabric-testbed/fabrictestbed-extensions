@@ -911,7 +911,9 @@ class FablibManager(Config):
 
         bastion_key_file = self.get_bastion_key_location()
         if bastion_key_file is None or not os.path.exists(bastion_key_file):
-            raise ConfigException("Bastion SSH Key File location not specified or the file does not exist")
+            raise ConfigException(
+                "Bastion SSH Key File location not specified or the file does not exist"
+            )
 
         dir_path = os.path.dirname(bastion_ssh_config_file)
         file_name = os.path.basename(bastion_ssh_config_file)
@@ -919,7 +921,9 @@ class FablibManager(Config):
         bastion_key_file_name = os.path.basename(bastion_key_file)
 
         if os.path.exists(dir_path) and not overwrite:
-            logging.info(f"{dir_path} already exists and overwrite=False. Skipping creation.")
+            logging.info(
+                f"{dir_path} already exists and overwrite=False. Skipping creation."
+            )
             return
 
         if not os.path.exists(dir_path):
@@ -937,12 +941,17 @@ class FablibManager(Config):
         # Copy public key if it exists
         public_key_file = f"{bastion_key_file}.pub"
         if os.path.exists(public_key_file):
-            shutil.copy2(public_key_file, os.path.join(dir_path, os.path.basename(public_key_file)))
+            shutil.copy2(
+                public_key_file,
+                os.path.join(dir_path, os.path.basename(public_key_file)),
+            )
 
         # Get slice public key path
         slice_pub_key_file = self.get_default_slice_public_key_file()
         if slice_pub_key_file is None or not os.path.exists(slice_pub_key_file):
-            raise ConfigException("Slice public key file is not specified or does not exist")
+            raise ConfigException(
+                "Slice public key file is not specified or does not exist"
+            )
 
         # Derive slice private key path by removing ".pub"
         slice_key_file = slice_pub_key_file[:-4]  # removes ".pub"
@@ -950,8 +959,13 @@ class FablibManager(Config):
             raise ConfigException("Slice private key file does not exist")
 
         # Copy slice public and private keys
-        shutil.copy2(slice_key_file, os.path.join(dir_path, os.path.basename(slice_key_file)))
-        shutil.copy2(slice_pub_key_file, os.path.join(dir_path, os.path.basename(slice_pub_key_file)))
+        shutil.copy2(
+            slice_key_file, os.path.join(dir_path, os.path.basename(slice_key_file))
+        )
+        shutil.copy2(
+            slice_pub_key_file,
+            os.path.join(dir_path, os.path.basename(slice_pub_key_file)),
+        )
 
         # Write SSH config
         ssh_config_path = os.path.join(dir_path, file_name)
@@ -970,11 +984,12 @@ Host bastion.fabric-testbed.net
 
 Host * !bastion.fabric-testbed.net
      ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
-    """)
+    """
+            )
 
         # Zip the directory
         zip_path = f"{dir_path}.zip"
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for root, _, files in os.walk(dir_path):
                 for file in files:
                     full_path = os.path.join(root, file)

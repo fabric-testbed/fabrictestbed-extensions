@@ -1516,8 +1516,13 @@ class NetworkService:
             return  # Skip if no hops provided
 
         interfaces = self.get_interfaces()
-        if len(interfaces) != 2 or self.get_type() not in {ServiceType.L2STS, ServiceType.L2PTP}:
-            raise Exception("ERO can only be set for a Point-to-Point Layer2 connection.")
+        if len(interfaces) != 2 or self.get_type() not in {
+            ServiceType.L2STS,
+            ServiceType.L2PTP,
+        }:
+            raise Exception(
+                "ERO can only be set for a Point-to-Point Layer2 connection."
+            )
 
         src_site, dst_site = (ifs.get_site() for ifs in interfaces)
         resources = self.get_fablib_manager().get_resources()

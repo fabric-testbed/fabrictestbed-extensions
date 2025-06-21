@@ -659,7 +659,7 @@ class Resources:
 
         rtn_links = []
         for link_name, link in self.topology.links.items():
-            rtn_links.append(link.get('node_id'))
+            rtn_links.append(link.get("node_id"))
 
         return rtn_links
 
@@ -874,7 +874,11 @@ class Links(Resources):
                         tuple(site_names),
                         link.node_id,
                         link.capacities.bw if link.capacities else "N/A",
-                        link.capacity_allocations.bw if link.capacity_allocations else "N/A",
+                        (
+                            link.capacity_allocations.bw
+                            if link.capacity_allocations
+                            else "N/A"
+                        ),
                         link.layer,
                     ]
                 )
@@ -902,7 +906,9 @@ class Links(Resources):
             "site_names": tuple(iface.name.split("_")),
             "node_id": link.node_id,
             "link_capacity_Gbps": link.capacities.bw if link.capacities else "N/A",
-            "allowed_link_capacity_Gbps": link.capacity_allocations.bw if link.capacity_allocations else "N/A",
+            "allowed_link_capacity_Gbps": (
+                link.capacity_allocations.bw if link.capacity_allocations else "N/A"
+            ),
             "link_layer": link.layer,
         }
 
