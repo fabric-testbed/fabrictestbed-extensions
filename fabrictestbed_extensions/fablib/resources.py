@@ -900,6 +900,7 @@ class Links(Resources):
             "site_names": tuple(iface.name.split("_")),
             "node_id": link.node_id,
             "link_capacity_Gbps": iface.capacities.bw if iface.capacities else "N/A",
+            "allocated_link_capacity_Gbps": iface.capacity_allocations.bw if iface.capacity_allocations else "N/A",
             "link_layer": link.layer,
         }
 
