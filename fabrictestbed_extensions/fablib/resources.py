@@ -844,6 +844,7 @@ class Links(Resources):
         "site_names": "Sites",
         "node_id": "Link Name",
         "link_capacity_Gbps": "Capacity (Gbps)",
+        "allocated_link_capacity_Gbps": "Allocated Capacity (Gbps)",
         "link_layer": "Link Layer",
     }
 
