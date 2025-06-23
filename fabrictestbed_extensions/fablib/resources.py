@@ -844,7 +844,7 @@ class Links(Resources):
         "site_names": "Sites",
         "node_id": "Link Name",
         "link_capacity_Gbps": "Capacity (Gbps)",
-        "allowed_link_capacity_Gbps": "Allowed Capacity (Gbps)",
+        "allocated_link_capacity_Gbps": "Allocated Capacity (Gbps)",
         "link_layer": "Link Layer",
     }
 
@@ -906,7 +906,7 @@ class Links(Resources):
             "site_names": tuple(iface.name.split("_")),
             "node_id": link.node_id,
             "link_capacity_Gbps": link.capacities.bw if link.capacities else "N/A",
-            "allowed_link_capacity_Gbps": (
+            "allocated_link_capacity_Gbps": (
                 link.capacity_allocations.bw if link.capacity_allocations else "N/A"
             ),
             "link_layer": link.layer,
