@@ -1047,12 +1047,19 @@ class FacilityPorts(Resources):
                         device_name = peer.labels.device_name
                     break
 
+        if iface.labels and iface.labels.vlan_range:
+            vlan_range = iface.labels.vlan_range
+        elif iface.labels and iface.labels.vlan:
+            vlan_range = [iface.labels.vlan]
+        else:
+            vlan_range = "N/A"
+
         label_allocations = iface.get_property("label_allocations")
         return {
             "name": name,
             "site_name": site,
             "node_id": iface.node_id,
-            "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
+            "vlan_range": vlan_range,
             "allocated_vlan_range": (
                 label_allocations.vlan if label_allocations else "N/A"
             ),
