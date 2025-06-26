@@ -868,7 +868,7 @@ class Config:
             response = requests.get(remote_url, timeout=5)
             response.raise_for_status()
             data = response.json()
-            with open(local_file, "w") as f:
+            with atomic_write(local_file, overwrite=True) as f:
                 json.dump(data, f, indent=2)
             return data
         except Exception:
