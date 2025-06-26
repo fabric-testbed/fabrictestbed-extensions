@@ -963,6 +963,7 @@ class FacilityPorts(Resources):
         "local_name": "Local Name",
         "device_name": "Device Name",
         "region": "Region",
+        "description": "Description"
     }
 
     def __init__(self, fablib_manager):
@@ -1019,6 +1020,7 @@ class FacilityPorts(Resources):
                 "local_name",
                 "device_name",
                 "region",
+                "description"
             ],
         )
 
@@ -1055,6 +1057,7 @@ class FacilityPorts(Resources):
             vlan_range = "N/A"
 
         label_allocations = iface.get_property("label_allocations")
+        fp_details = self.get_fablib_manager().get_facility_port_details()
         return {
             "name": name,
             "site_name": site,
@@ -1068,6 +1071,7 @@ class FacilityPorts(Resources):
             "region": (
                 iface.labels.region if iface.labels and iface.labels.region else "N/A"
             ),
+            "description": fp_details.get(name, {}).get("description", "N/A")
         }
 
     def list_facility_ports(
