@@ -527,7 +527,7 @@ class Interface:
 
         NOTE: Not intended for API use
         """
-        if self.get_vlan() is not None and not self.___is_shared_nic():
+        if self.get_vlan() is not None and not self.__is_shared_nic():
             self.get_node().add_vlan_os_interface(
                 os_iface=self.get_physical_os_interface_name(),
                 vlan=self.get_vlan(),

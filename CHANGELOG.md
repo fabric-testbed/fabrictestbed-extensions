@@ -6,7 +6,12 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.8.2 - TODO
+## 1.9.0 - TODO
+- Simplifying FPGA Flash workflow - PCI Rescan (Issue [#421](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/421))
+- Support Explicit Route Objects (ERO) with Guaranteed QoS in FABlib (Issue [#422](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/422))
+- Store policies, images, PTP availability and other transient bits in a pullable file. (Issue [#425](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/425))
+
+## 1.8.2
 
 ### Fixed
 - Display Slice owner information (Issue [#409](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/409))
