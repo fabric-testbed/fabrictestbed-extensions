@@ -135,88 +135,73 @@ class Constants:
     IMAGE_NAMES = {
         "default_centos8_stream": {
             "description": "CentOS 8 Stream (non-stream)",
-            "default_user": "centos"
+            "default_user": "centos",
         },
         "default_centos9_stream": {
             "description": "CentOS 9 Stream (default install)",
-            "default_user": "cloud-user"
+            "default_user": "cloud-user",
         },
         "default_centos10_stream": {
             "description": "CentOS 10 Stream (default install)",
-            "default_user": "cloud-user"
+            "default_user": "cloud-user",
         },
         "default_debian_11": {
             "description": "Debian 11 Bullseye",
-            "default_user": "debian"
+            "default_user": "debian",
         },
         "default_debian_12": {
             "description": "Debian 12 Bookworm",
-            "default_user": "debian"
+            "default_user": "debian",
         },
-        "default_fedora_39": {
-            "description": "Fedora 39",
-            "default_user": "fedora"
-        },
-        "default_fedora_40": {
-            "description": "Fedora 40",
-            "default_user": "fedora"
-        },
+        "default_fedora_39": {"description": "Fedora 39", "default_user": "fedora"},
+        "default_fedora_40": {"description": "Fedora 40", "default_user": "fedora"},
         "default_freebsd_13_zfs": {
             "description": "FreeBSD 13 with ZFS",
-            "default_user": "freebsd"
+            "default_user": "freebsd",
         },
         "default_freebsd_14_zfs": {
             "description": "FreeBSD 14 with ZFS",
-            "default_user": "freebsd"
+            "default_user": "freebsd",
         },
         "default_kali": {
             "description": "Kali Linux (for penetration testing)",
-            "default_user": "kali"
+            "default_user": "kali",
         },
-        "default_openbsd_7": {
-            "description": "OpenBSD 7",
-            "default_user": "openbsd"
-        },
-        "default_rocky_8": {
-            "description": "Rocky Linux 8",
-            "default_user": "rocky"
-        },
-        "default_rocky_9": {
-            "description": "Rocky Linux 9",
-            "default_user": "rocky"
-        },
+        "default_openbsd_7": {"description": "OpenBSD 7", "default_user": "openbsd"},
+        "default_rocky_8": {"description": "Rocky Linux 8", "default_user": "rocky"},
+        "default_rocky_9": {"description": "Rocky Linux 9", "default_user": "rocky"},
         "default_ubuntu_20": {
             "description": "Ubuntu 20.04 LTS Focal Fossa",
-            "default_user": "ubuntu"
+            "default_user": "ubuntu",
         },
         "default_ubuntu_22": {
             "description": "Ubuntu 22.04 LTS Jammy Jellyfish",
-            "default_user": "ubuntu"
+            "default_user": "ubuntu",
         },
         "default_ubuntu_24": {
             "description": "Ubuntu 24.04 LTS Noble Numbat",
-            "default_user": "ubuntu"
+            "default_user": "ubuntu",
         },
         "docker_rocky_8": {
             "description": "Rocky Linux 8 Docker image",
-            "default_user": "rocky"
+            "default_user": "rocky",
         },
         "docker_rocky_9": {
             "description": "Rocky Linux 9 Docker image",
-            "default_user": "rocky"
+            "default_user": "rocky",
         },
         "docker_ubuntu_20": {
             "description": "Ubuntu 20.04 LTS Docker image",
-            "default_user": "ubuntu"
+            "default_user": "ubuntu",
         },
         "docker_ubuntu_22": {
             "description": "Ubuntu 22.04 LTS Docker image",
-            "default_user": "ubuntu"
+            "default_user": "ubuntu",
         },
         "attestable_bmv2_v1_ubuntu_20": {
             "description": "Ubuntu 20.04 LTS Focal Fossa with BMv2 essentials",
-            "default_user": "ubuntu"
-        }
+            "default_user": "ubuntu",
+        },
     }
 
     ENV_VAR = "env_var"

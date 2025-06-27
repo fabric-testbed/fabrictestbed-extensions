@@ -128,8 +128,8 @@ class Config:
         },
         Constants.FABRIC_METADATA_TAG: {
             Constants.ENV_VAR: Constants.FABRIC_METADATA_TAG,
-            Constants.DEFAULT: Constants.DEFAULT_FABRIC_METADATA_TAG
-        }
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_METADATA_TAG,
+        },
     }
 
     REQUIRED_ATTRS_PRETTY_NAMES = {
@@ -831,10 +831,14 @@ class Config:
         :return: Metadata tag string.
         :rtype: str
         """
-        return os.environ.get(Constants.FABRIC_METADATA_TAG, Constants.DEFAULT_FABRIC_METADATA_TAG)
+        return os.environ.get(
+            Constants.FABRIC_METADATA_TAG, Constants.DEFAULT_FABRIC_METADATA_TAG
+        )
 
     @staticmethod
-    def _fetch_or_load_json(name: str, ttl: int = 86400, fallback_default: dict | None = None) -> dict:
+    def _fetch_or_load_json(
+        name: str, ttl: int = 86400, fallback_default: dict | None = None
+    ) -> dict:
         """
         Fetch a JSON file from a remote URL, using local caching with time-based invalidation,
         and fall back to a default if the fetch or cache read fails.
@@ -892,7 +896,9 @@ class Config:
         :return: Dictionary of image metadata.
         :rtype: dict
         """
-        return Config._fetch_or_load_json("os_images", fallback_default=Constants.IMAGE_NAMES)
+        return Config._fetch_or_load_json(
+            "os_images", fallback_default=Constants.IMAGE_NAMES
+        )
 
     @staticmethod
     @lru_cache(maxsize=1)
