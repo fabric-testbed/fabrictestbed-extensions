@@ -842,7 +842,7 @@ class Links(Resources):
 
     link_pretty_names = {
         "site_names": "Sites",
-        "node_id": "Link Name",
+        "name": "Link Name",
         "link_capacity_Gbps": "Capacity (Gbps)",
         "allocated_link_capacity_Gbps": "Allocated Capacity (Gbps)",
         "link_layer": "Link Layer",
@@ -887,7 +887,7 @@ class Links(Resources):
             table,
             headers=[
                 "site_names",
-                "node_id",
+                "name",
                 "link_capacity_Gbps",
                 "link_layer",
             ],
@@ -904,12 +904,12 @@ class Links(Resources):
         """
         return {
             "site_names": tuple(iface.name.split("_")),
-            "node_id": link.node_id,
+            "name": link.node_id,
             "link_capacity_Gbps": link.capacities.bw if link.capacities else "N/A",
             "allocated_link_capacity_Gbps": (
                 link.capacity_allocations.bw if link.capacity_allocations else "N/A"
             ),
-            "link_layer": link.layer,
+            "link_layer": str(link.layer) if link.layer else None,
         }
 
     def list_links(
@@ -956,6 +956,7 @@ class FacilityPorts(Resources):
 
     link_pretty_names = {
         "name": "Name",
+        "description": "Description",
         "site_name": "Site",
         "node_id": "Interface Name",
         "vlan_range": "VLAN Range",
@@ -963,7 +964,6 @@ class FacilityPorts(Resources):
         "local_name": "Local Name",
         "device_name": "Device Name",
         "region": "Region",
-        "description": "Description",
     }
 
     def __init__(self, fablib_manager):
@@ -1013,6 +1013,7 @@ class FacilityPorts(Resources):
             table,
             headers=[
                 "name",
+                "description",
                 "site_name",
                 "node_id",
                 "vlan_range",
@@ -1020,7 +1021,6 @@ class FacilityPorts(Resources):
                 "local_name",
                 "device_name",
                 "region",
-                "description",
             ],
         )
 
@@ -1060,6 +1060,7 @@ class FacilityPorts(Resources):
         fp_details = self.get_fablib_manager().get_facility_port_details()
         return {
             "name": name,
+            "description": fp_details.get(name, {}).get("description", "N/A"),
             "site_name": site,
             "node_id": iface.node_id,
             "vlan_range": vlan_range,
@@ -1071,7 +1072,6 @@ class FacilityPorts(Resources):
             "region": (
                 iface.labels.region if iface.labels and iface.labels.region else "N/A"
             ),
-            "description": fp_details.get(name, {}).get("description", "N/A"),
         }
 
     def list_facility_ports(
