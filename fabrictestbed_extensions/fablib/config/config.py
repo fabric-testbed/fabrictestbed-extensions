@@ -837,7 +837,7 @@ class Config:
 
     @staticmethod
     def _fetch_or_load_json(
-        name: str, ttl: int = 86400, fallback_default: dict | None = None
+        name: str, ttl: int = 86400, fallback_default: dict = {}
     ) -> dict:
         """
         Fetch a JSON file from a remote URL, using local caching with time-based invalidation,
