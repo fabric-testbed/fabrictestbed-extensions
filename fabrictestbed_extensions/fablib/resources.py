@@ -842,7 +842,7 @@ class Links(Resources):
 
     link_pretty_names = {
         "site_names": "Sites",
-        "node_id": "Link Name",
+        "name": "Link Name",
         "link_capacity_Gbps": "Capacity (Gbps)",
         "allocated_link_capacity_Gbps": "Allocated Capacity (Gbps)",
         "link_layer": "Link Layer",
@@ -887,7 +887,7 @@ class Links(Resources):
             table,
             headers=[
                 "site_names",
-                "node_id",
+                "name",
                 "link_capacity_Gbps",
                 "link_layer",
             ],
@@ -904,7 +904,7 @@ class Links(Resources):
         """
         return {
             "site_names": tuple(iface.name.split("_")),
-            "node_id": link.node_id,
+            "name": link.node_id,
             "link_capacity_Gbps": link.capacities.bw if link.capacities else "N/A",
             "allocated_link_capacity_Gbps": (
                 link.capacity_allocations.bw if link.capacity_allocations else "N/A"
