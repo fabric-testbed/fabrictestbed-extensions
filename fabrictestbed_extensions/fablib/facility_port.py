@@ -189,7 +189,7 @@ class FacilityPort:
         name: str = None,
         site: str = None,
         vlan: Union[List, str] = None,
-        bandwidth: int = 10,
+        bandwidth: int = None,
         mtu: int = None,
         labels: Labels = None,
         peer_labels: Labels = None,
@@ -210,9 +210,9 @@ class FacilityPort:
         :param peer_labels: Peer labels associated with the facility port.
         :return: A FacilityPort object representing the created facility port.
         """
-        if not bandwidth:
-            bandwidth = 10
-        capacities = Capacities(bw=bandwidth)
+        capacities = Capacities()
+        if bandwidth:
+            capacities.bw = int(bandwidth)
         if mtu:
             capacities.mtu = mtu
 
