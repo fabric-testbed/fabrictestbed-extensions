@@ -622,6 +622,7 @@ class FablibManager(Config):
         execute_thread_pool_size: int = 64,
         offline: bool = False,
         auto_token_refresh: bool = True,
+        validate_config: bool = True,
         **kwargs,
     ):
         """
@@ -674,6 +675,7 @@ class FablibManager(Config):
             This is ``False`` by default, and set to ``True`` only in
             some unit tests.
         :param auto_token_refresh: Auto refresh tokens
+        :param validate_config: Whether to verify and persist configuration during initialization.
         """
         super().__init__(
             fabric_rc=fabric_rc,
@@ -712,6 +714,9 @@ class FablibManager(Config):
         if not offline:
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.__build_manager()
+            if validate_config:
+                self.verify_and_configure()
+                self.save_config()
         self.required_check()
         self.lock = threading.Lock()
         # These dictionaries are maintained to keep cache of the slice objects created
