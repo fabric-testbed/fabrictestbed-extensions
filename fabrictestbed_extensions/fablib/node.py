@@ -780,7 +780,12 @@ class Node:
         if self.get_fim_node().type == NodeType.Switch and not username:
             self.username = Constants.FABRIC_USER
             return
-        username = self.get_fablib_manager().get_os_images().get(self.get_image(), {}).get("default_user")
+        username = (
+            self.get_fablib_manager()
+            .get_os_images()
+            .get(self.get_image(), {})
+            .get("default_user")
+        )
         if username is not None:
             self.username = username
         elif "default_centos10_stream" == self.get_image():
