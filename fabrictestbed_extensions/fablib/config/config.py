@@ -755,7 +755,7 @@ class Config:
 
         This is statically defined for now. Eventually, images will be managed dynamically.
 
-        :return: list of image names as strings
+        :return: Dictionary of images with default user and description
         :rtype: dict[str, dict]
         """
         return Constants.IMAGE_NAMES
