@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate and update configuration as part of object initialization (Issue [#428](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/428))
 - fablib.list_links(output='json') results in an exception (Issue [#427](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/427))
 - slice.add_facility_port set a default bandwidth 10G (Issue [#419](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/419))
+- Blue Field3 support (Issue [#430](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/430))
 
 ## 1.8.2
 

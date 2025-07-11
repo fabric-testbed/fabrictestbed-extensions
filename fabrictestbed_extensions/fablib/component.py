@@ -97,7 +97,7 @@ class Component:
         Constants.CMP_NIC_BlueField2_ConnectX_6: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
             "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
-        ]
+        ],
     }
 
     def __str__(self):
