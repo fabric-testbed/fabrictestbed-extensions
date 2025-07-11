@@ -231,6 +231,9 @@ class Constants:
     NIC_SHARED_CONNECTX_6 = "SharedNIC-ConnectX-6"
     SMART_NIC_CONNECTX_6 = "SmartNIC-ConnectX-6"
     SMART_NIC_CONNECTX_5 = "SmartNIC-ConnectX-5"
+    SMART_NIC_CONNECTX_7_100 = "SmartNIC-ConnectX-7-100"
+    SMART_NIC_CONNECTX_7_400 = "SmartNIC-ConnectX-7-400"
+    SMART_NIC_BlueField2_CONNECTX_6 = "SmartNIC-BlueField2-ConnectX-6"
     NVME_P4510 = "NVME-P4510"
     GPU_TESLA_T4 = "GPU-Tesla T4"
     GPU_RTX6000 = "GPU-RTX6000"
@@ -247,6 +250,8 @@ class Constants:
 
     CMP_NIC_Basic = "NIC_Basic"
     CMP_NIC_BlueField2_ConnectX_6 = "NIC_BlueField2_ConnectX_6"
+    CMP_NIC_ConnectX_7_400 = "NIC_ConnectX_7_400"
+    CMP_NIC_ConnectX_7_100 = "NIC_ConnectX_7_100"
     CMP_NIC_ConnectX_6 = "NIC_ConnectX_6"
     CMP_NIC_ConnectX_5 = "NIC_ConnectX_5"
     CMP_NIC_P4 = "NIC_P4"

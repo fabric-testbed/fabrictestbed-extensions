@@ -70,10 +70,10 @@ import os
 import random
 import shutil
 import sys
+import tarfile
 import threading
 import traceback
 import warnings
-import tarfile
 
 from fabrictestbed.external_api.artifact_manager import Visibility
 from fabrictestbed.fabric_manager import FabricManager
@@ -469,8 +469,8 @@ class fablib:
 
     @staticmethod
     def get_fim_slice(
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-            user_only: bool = True,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        user_only: bool = True,
     ) -> List[OrchestratorSlice]:
         """
         Not intended for API use.
@@ -495,8 +495,8 @@ class fablib:
 
     @staticmethod
     def get_slices(
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-            user_only: bool = True,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        user_only: bool = True,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -519,7 +519,7 @@ class fablib:
 
     @staticmethod
     def get_slice(
-            name: str = None, slice_id: str = None, user_only: bool = True
+        name: str = None, slice_id: str = None, user_only: bool = True
     ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
@@ -605,25 +605,25 @@ class FablibManager(Config):
     ssh_thread_pool_executor = None
 
     def __init__(
-            self,
-            fabric_rc: str = None,
-            credmgr_host: str = None,
-            orchestrator_host: str = None,
-            core_api_host: str = None,
-            am_host: str = None,
-            token_location: str = None,
-            project_id: str = None,
-            bastion_username: str = None,
-            bastion_key_location: str = None,
-            log_level: str = Constants.DEFAULT_LOG_LEVEL,
-            log_file: str = Constants.DEFAULT_LOG_FILE,
-            data_dir: str = Constants.DEFAULT_DATA_DIR,
-            output: str = None,
-            execute_thread_pool_size: int = 64,
-            offline: bool = False,
-            auto_token_refresh: bool = True,
-            validate_config: bool = True,
-            **kwargs,
+        self,
+        fabric_rc: str = None,
+        credmgr_host: str = None,
+        orchestrator_host: str = None,
+        core_api_host: str = None,
+        am_host: str = None,
+        token_location: str = None,
+        project_id: str = None,
+        bastion_username: str = None,
+        bastion_key_location: str = None,
+        log_level: str = Constants.DEFAULT_LOG_LEVEL,
+        log_file: str = Constants.DEFAULT_LOG_FILE,
+        data_dir: str = Constants.DEFAULT_DATA_DIR,
+        output: str = None,
+        execute_thread_pool_size: int = 64,
+        offline: bool = False,
+        auto_token_refresh: bool = True,
+        validate_config: bool = True,
+        **kwargs,
     ):
         """
         ``FablibManager`` is the main interface to FABRIC services.
@@ -752,18 +752,18 @@ class FablibManager(Config):
         """
         with self.lock:
             if (
-                    slice_object.get_slice_id()
-                    and slice_object.get_slice_id() in self.__slices_by_id
+                slice_object.get_slice_id()
+                and slice_object.get_slice_id() in self.__slices_by_id
             ):
                 self.__slices_by_id.pop(slice_object.get_slice_id())
             if (
-                    slice_object.get_name()
-                    and slice_object.get_name() in self.__slices_by_name
+                slice_object.get_name()
+                and slice_object.get_name() in self.__slices_by_name
             ):
                 self.__slices_by_name.pop(slice_object.get_name())
 
     def _get_slice_from_cache(
-            self, slice_id: str = None, slice_name: str = None
+        self, slice_id: str = None, slice_name: str = None
     ) -> Slice:
         """
         Retrieves a Slice object from the cache by its ID or name.
@@ -845,10 +845,10 @@ class FablibManager(Config):
         Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
 
         if (
-                self.get_default_slice_private_key_file() is not None
-                and self.get_bastion_key_location() is not None
-                and self.get_default_slice_private_key_file()
-                == self.get_bastion_key_location()
+            self.get_default_slice_private_key_file() is not None
+            and self.get_bastion_key_location() is not None
+            and self.get_default_slice_private_key_file()
+            == self.get_bastion_key_location()
         ):
             logging.error(
                 "Sliver Key and Bastion key can not be same! Please use different key names!"
@@ -860,8 +860,8 @@ class FablibManager(Config):
         self.validate_and_update_bastion_keys()
 
         if (
-                self.get_default_slice_public_key() is None
-                or self.get_default_slice_private_key() is None
+            self.get_default_slice_public_key() is None
+            or self.get_default_slice_private_key() is None
         ):
             logging.info("Sliver keys do not exist! Please create sliver keys")
             self.create_sliver_keys()
@@ -1110,11 +1110,11 @@ Host * !bastion.fabric-testbed.net
         self.create_bastion_keys(overwrite=True)
 
     def create_bastion_keys(
-            self,
-            *,
-            bastion_key_location: str = None,
-            store_pubkey: bool = True,
-            overwrite: bool = False,
+        self,
+        *,
+        bastion_key_location: str = None,
+        store_pubkey: bool = True,
+        overwrite: bool = False,
     ):
         """
         Create Bastion Keys
@@ -1149,11 +1149,11 @@ Host * !bastion.fabric-testbed.net
         print(f"Bastion Key saved at location: {bastion_key_location}")
 
     def create_sliver_keys(
-            self,
-            *,
-            sliver_priv_key_location: str = None,
-            store_pubkey: bool = True,
-            overwrite: bool = False,
+        self,
+        *,
+        sliver_priv_key_location: str = None,
+        store_pubkey: bool = True,
+        overwrite: bool = False,
     ):
         """
         Create Sliver Keys
@@ -1190,12 +1190,12 @@ Host * !bastion.fabric-testbed.net
         print(f"Sliver Keys saved at location: {sliver_priv_key_location}")
 
     def __create_and_save_key(
-            self,
-            private_file_path: str,
-            description: str,
-            key_type: str,
-            public_file_path: str = None,
-            store_pubkey: bool = False,
+        self,
+        private_file_path: str,
+        description: str,
+        key_type: str,
+        public_file_path: str = None,
+        store_pubkey: bool = False,
     ):
         """
         Create Key and save key
@@ -1314,19 +1314,19 @@ Host * !bastion.fabric-testbed.net
         return self.get_resources().get_site_names()
 
     def list_sites(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = False,
-            pretty_names: bool = True,
-            force_refresh: bool = False,
-            latlon: bool = True,
-            start: datetime = None,
-            end: datetime = None,
-            avoid: List[str] = None,
-            includes: List[str] = None,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = False,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
+        latlon: bool = True,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1390,18 +1390,18 @@ Host * !bastion.fabric-testbed.net
         )
 
     def list_hosts(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = True,
-            pretty_names: bool = True,
-            force_refresh: bool = False,
-            start: datetime = None,
-            end: datetime = None,
-            avoid: List[str] = None,
-            includes: List[str] = None,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names: bool = True,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> object:
         """
         Lists all the hosts and their attributes.
@@ -1462,13 +1462,13 @@ Host * !bastion.fabric-testbed.net
         )
 
     def list_links(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = True,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = True,
+        pretty_names=True,
     ) -> object:
         """
         Lists all the links and their attributes.
@@ -1512,15 +1512,15 @@ Host * !bastion.fabric-testbed.net
         )
 
     def list_facility_ports(
-            self,
-            output: str = None,
-            fields: str = None,
-            quiet: bool = False,
-            filter_function=None,
-            update: bool = False,
-            pretty_names=True,
-            start: datetime = None,
-            end: datetime = None,
+        self,
+        output: str = None,
+        fields: str = None,
+        quiet: bool = False,
+        filter_function=None,
+        update: bool = False,
+        pretty_names=True,
+        start: datetime = None,
+        end: datetime = None,
     ) -> object:
         """
         Lists all the facility ports and their attributes.
@@ -1578,11 +1578,11 @@ Host * !bastion.fabric-testbed.net
         )
 
     def show_config(
-            self,
-            output: str = None,
-            fields: list[str] = None,
-            quiet: bool = False,
-            pretty_names=True,
+        self,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
     ):
         """
         Show a table containing the current FABlib configuration parameters.
@@ -1625,13 +1625,13 @@ Host * !bastion.fabric-testbed.net
         )
 
     def show_site(
-            self,
-            site_name: str,
-            output: str = None,
-            fields: list[str] = None,
-            quiet: bool = False,
-            pretty_names=True,
-            latlon=True,
+        self,
+        site_name: str,
+        output: str = None,
+        fields: list[str] = None,
+        quiet: bool = False,
+        pretty_names=True,
+        latlon=True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1692,10 +1692,10 @@ Host * !bastion.fabric-testbed.net
         return self.links
 
     def get_facility_ports(
-            self,
-            update: bool = False,
-            start: datetime = None,
-            end: datetime = None,
+        self,
+        update: bool = False,
+        start: datetime = None,
+        end: datetime = None,
     ) -> FacilityPorts:
         """
         Get the facility ports.
@@ -1729,13 +1729,13 @@ Host * !bastion.fabric-testbed.net
         return self.facility_ports
 
     def get_resources(
-            self,
-            update: bool = False,
-            force_refresh: bool = False,
-            start: datetime = None,
-            end: datetime = None,
-            avoid: List[str] = None,
-            includes: List[str] = None,
+        self,
+        update: bool = False,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> Resources:
         """
         Get a reference to the resources object. The resources object
@@ -1780,7 +1780,7 @@ Host * !bastion.fabric-testbed.net
         )
 
     def get_random_site(
-            self, avoid: List[str] = [], filter_function=None, update: bool = True
+        self, avoid: List[str] = [], filter_function=None, update: bool = True
     ) -> str:
         """
         Get a random site.
@@ -1799,12 +1799,12 @@ Host * !bastion.fabric-testbed.net
         )[0]
 
     def get_random_sites(
-            self,
-            count: int = 1,
-            avoid: List[str] = [],
-            filter_function=None,
-            update: bool = True,
-            unique: bool = True,
+        self,
+        count: int = 1,
+        avoid: List[str] = [],
+        filter_function=None,
+        update: bool = True,
+        unique: bool = True,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
@@ -1835,9 +1835,9 @@ Host * !bastion.fabric-testbed.net
                     return True
             else:
                 if (
-                        filter_function(site)
-                        and site["state"] == "Active"
-                        and site["hosts"] > 0
+                    filter_function(site)
+                    and site["state"] == "Active"
+                    and site["hosts"] > 0
                 ):
                     return True
 
@@ -2028,13 +2028,13 @@ Host * !bastion.fabric-testbed.net
         return topology.sites[site]
 
     def get_available_resources(
-            self,
-            update: bool = False,
-            force_refresh: bool = False,
-            start: datetime = None,
-            end: datetime = None,
-            avoid: List[str] = None,
-            includes: List[str] = None,
+        self,
+        update: bool = False,
+        force_refresh: bool = False,
+        start: datetime = None,
+        end: datetime = None,
+        avoid: List[str] = None,
+        includes: List[str] = None,
     ) -> Resources:
         """
         Get the available resources.
@@ -2089,9 +2089,9 @@ Host * !bastion.fabric-testbed.net
         return self.resources
 
     def get_fim_slices(
-            self,
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-            user_only: bool = True,
+        self,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        user_only: bool = True,
     ) -> List[OrchestratorSlice]:
         """
         Gets a list of fim slices from the slice manager.
@@ -2123,15 +2123,15 @@ Host * !bastion.fabric-testbed.net
         return return_slices
 
     def list_slices(
-            self,
-            excludes=[SliceState.Dead, SliceState.Closing],
-            output=None,
-            fields=None,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
-            user_only: bool = True,
-            show_un_submitted: bool = False,
+        self,
+        excludes=[SliceState.Dead, SliceState.Closing],
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
+        user_only: bool = True,
+        show_un_submitted: bool = False,
     ):
         """
         Lists all the slices created by a user.
@@ -2172,7 +2172,7 @@ Host * !bastion.fabric-testbed.net
         """
         table = []
         for slice in self.get_slices(
-                excludes=excludes, user_only=user_only, show_un_submitted=show_un_submitted
+            excludes=excludes, user_only=user_only, show_un_submitted=show_un_submitted
         ):
             table.append(slice.toDict())
 
@@ -2192,15 +2192,15 @@ Host * !bastion.fabric-testbed.net
         )
 
     def show_slice(
-            self,
-            name: str = None,
-            id: str = None,
-            output=None,
-            fields=None,
-            quiet=False,
-            pretty_names=True,
-            user_only: bool = True,
-            show_un_submitted: bool = False,
+        self,
+        name: str = None,
+        id: str = None,
+        output=None,
+        fields=None,
+        quiet=False,
+        pretty_names=True,
+        user_only: bool = True,
+        show_un_submitted: bool = False,
     ):
         """
         Show a table with all the properties of a specific site
@@ -2248,12 +2248,12 @@ Host * !bastion.fabric-testbed.net
         )
 
     def get_slices(
-            self,
-            excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-            slice_name: str = None,
-            slice_id: str = None,
-            user_only: bool = True,
-            show_un_submitted: bool = False,
+        self,
+        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        slice_name: str = None,
+        slice_id: str = None,
+        user_only: bool = True,
+        show_un_submitted: bool = False,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -2313,11 +2313,11 @@ Host * !bastion.fabric-testbed.net
         return return_slices
 
     def get_slice(
-            self,
-            name: str = None,
-            slice_id: str = None,
-            user_only: bool = True,
-            show_un_submitted: bool = False,
+        self,
+        name: str = None,
+        slice_id: str = None,
+        user_only: bool = True,
+        show_un_submitted: bool = False,
     ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
@@ -2446,7 +2446,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def show_table_jupyter(
-            table, headers=None, title="", title_font_size="1.25em", quiet=False
+        table, headers=None, title="", title_font_size="1.25em", quiet=False
     ):
         """
         Make a table in text form suitable for Jupyter notebooks.
@@ -2558,14 +2558,14 @@ Host * !bastion.fabric-testbed.net
         return data
 
     def show_table(
-            self,
-            data: Dict[str, Any],
-            fields: Union[List[str], None] = None,
-            title: str = "",
-            title_font_size: str = "1.25em",
-            output: Union[str, None] = None,
-            quiet: bool = False,
-            pretty_names_dict: Dict[str, str] = {},
+        self,
+        data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output: Union[str, None] = None,
+        quiet: bool = False,
+        pretty_names_dict: Dict[str, str] = {},
     ):
         """
         Format and optionally display a table.
@@ -2618,9 +2618,9 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def list_table_text(
-            table: List[List[Any]],
-            headers: Union[List[str], None] = None,
-            quiet: bool = False,
+        table: List[List[Any]],
+        headers: Union[List[str], None] = None,
+        quiet: bool = False,
     ):
         """
         Format a table as text.
@@ -2646,12 +2646,12 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def list_table_jupyter(
-            table: List[List[Any]],
-            headers: Union[List[str], None] = None,
-            title: str = "",
-            title_font_size: str = "1.25em",
-            output=None,
-            quiet: bool = False,
+        table: List[List[Any]],
+        headers: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output=None,
+        quiet: bool = False,
     ):
         """
         Format a table as a Pandas DataFrame.
@@ -2780,15 +2780,15 @@ Host * !bastion.fabric-testbed.net
         return data
 
     def list_table(
-            self,
-            data: List[Dict[str, str]],
-            fields: Union[List[str], None] = None,
-            title: str = "",
-            title_font_size: str = "1.25em",
-            output: Union[str, None] = None,
-            quiet: bool = False,
-            filter_function: Union[Callable[[Iterable], bool], None] = None,
-            pretty_names_dict: Dict[str, str] = {},
+        self,
+        data: List[Dict[str, str]],
+        fields: Union[List[str], None] = None,
+        title: str = "",
+        title_font_size: str = "1.25em",
+        output: Union[str, None] = None,
+        quiet: bool = False,
+        filter_function: Union[Callable[[Iterable], bool], None] = None,
+        pretty_names_dict: Dict[str, str] = {},
     ):
         """
         Format a list into a table that we can display.
@@ -2855,7 +2855,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def create_list_table(
-            data: List[Dict[str, str]], fields: Union[List[str], None] = None
+        data: List[Dict[str, str]], fields: Union[List[str], None] = None
     ):
         """
         Format a list as a table.
@@ -2879,9 +2879,9 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def create_show_table(
-            data: Dict[str, Any],
-            fields: Union[List[str], None] = None,
-            pretty_names_dict: dict[str, str] = {},
+        data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
+        pretty_names_dict: dict[str, str] = {},
     ) -> List[List[str]]:
         """
         Form a table that we can display.
@@ -2915,7 +2915,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def __can_allocate_node_in_host(
-            host: Host, node: Node, allocated: dict, site: Site
+        host: Host, node: Node, allocated: dict, site: Site
     ) -> Tuple[bool, str]:
         """
         Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
@@ -2943,9 +2943,9 @@ Host * !bastion.fabric-testbed.net
         available_disk = host.get_disk_available()
 
         if (
-                node.get_requested_cores() > available_cores
-                or node.get_requested_disk() > available_disk
-                or node.get_requested_ram() > available_ram
+            node.get_requested_cores() > available_cores
+            or node.get_requested_disk() > available_disk
+            or node.get_requested_ram() > available_ram
         ):
             msg = f"Insufficient Resources: Host: {host.get_name()} does not meet core/ram/disk requirements."
             return False, msg
@@ -2960,13 +2960,13 @@ Host * !bastion.fabric-testbed.net
 
             allocated_comp_count = allocated.setdefault(comp_model_type, 0)
             available_comps = (
-                    substrate_component.capacities.unit
-                    - (
-                        substrate_component.capacity_allocations.unit
-                        if substrate_component.capacity_allocations
-                        else 0
-                    )
-                    - allocated_comp_count
+                substrate_component.capacities.unit
+                - (
+                    substrate_component.capacity_allocations.unit
+                    if substrate_component.capacity_allocations
+                    else 0
+                )
+                - allocated_comp_count
             )
             if available_comps <= 0:
                 msg = f"Insufficient Resources: Host: {host.get_name()} has reached the limit for component: {comp_model_type}."
@@ -3049,14 +3049,14 @@ Host * !bastion.fabric-testbed.net
             return False, str(e)
 
     def create_artifact(
-            self,
-            artifact_title: str,
-            description_short: str,
-            description_long: str,
-            authors: List[str],
-            tags: List[str],
-            visibility: Visibility = Visibility.Author,
-            update_existing: bool = True,
+        self,
+        artifact_title: str,
+        description_short: str,
+        description_long: str,
+        authors: List[str],
+        tags: List[str],
+        visibility: Visibility = Visibility.Author,
+        update_existing: bool = True,
     ) -> Artifact:
         """
         Create a new artifact or update an existing one.
@@ -3083,10 +3083,10 @@ Host * !bastion.fabric-testbed.net
         return Artifact(artifact_info=artifact_info, fablib_manager=self)
 
     def get_artifacts(
-            self,
-            artifact_title: str = None,
-            artifact_id: str = None,
-            tag: str = None,
+        self,
+        artifact_title: str = None,
+        artifact_id: str = None,
+        tag: str = None,
     ) -> List[Artifact]:
         """
         Gets a list of artifacts either based on artifact id, artifact title or tag.
@@ -3123,12 +3123,12 @@ Host * !bastion.fabric-testbed.net
         return return_artifacts
 
     def list_artifacts(
-            self,
-            output=None,
-            fields=None,
-            quiet=False,
-            filter_function=None,
-            pretty_names=True,
+        self,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+        pretty_names=True,
     ) -> object:
         """
         List artifacts based on a search query.
@@ -3188,7 +3188,7 @@ Host * !bastion.fabric-testbed.net
         return self.get_manager().get_tags()
 
     def upload_file_to_artifact(
-            self, file_to_upload: str, artifact_id: str = None, artifact_title: str = None
+        self, file_to_upload: str, artifact_id: str = None, artifact_title: str = None
     ) -> dict:
         """
         Upload a file to an existing artifact.
@@ -3211,12 +3211,12 @@ Host * !bastion.fabric-testbed.net
         )
 
     def download_artifact(
-            self,
-            download_dir: str,
-            artifact_id: str = None,
-            artifact_title: str = None,
-            version: str = None,
-            version_urn: str = None,
+        self,
+        download_dir: str,
+        artifact_id: str = None,
+        artifact_title: str = None,
+        version: str = None,
+        version_urn: str = None,
     ) -> str:
         """
         Download an artifact to a specified directory.
