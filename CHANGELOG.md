@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Delete Facility port from a slice (Issue [#411](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/411))
 - Disable Config VLAN interfaces for SharedPort (Issue [#413](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/413))
 - Modify interface bw does not pass bw to network service (Issue [#415](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/415))
+- Support for create_ssh_tunnel_config (Issue [#432](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/432))
 
 ### Added
 - Add support for BlueField NICs (Issue [#399](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/399))
