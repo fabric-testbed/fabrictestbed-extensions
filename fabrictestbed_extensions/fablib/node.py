@@ -1285,30 +1285,36 @@ class Node:
 
     def get_component(self, name: str, refresh: bool = False) -> Component:
         """
-        Gets a particular component associated with this node.
+        Retrieve a component associated with this node.
 
-        :param name: the name of the component to search for
-        :type refresh: bool
-
-        :param refresh: Refresh the component object with latest Fim info
-        :type name: String
-
-        :raise Exception: if component not found by name
-
-        :return: the component on the FABRIC node
-        :rtype: Component
+        :param name: Name of the component to retrieve.
+        :param refresh: Whether to refresh the component from the latest FIM data.
+        :return: The requested component.
+        :raises Exception: If the component is not found.
         """
         try:
-            name = Component.calculate_name(node=self, name=name)
+            calculated_name = Component.calculate_name(node=self, name=name)
 
-            if not refresh and name in self.components:
-                return self.components.get(name)
+            if not refresh:
+                # Check both calculated and raw names
+                for key in (calculated_name, name):
+                    if key in self.components:
+                        return self.components[key]
 
-            ret_val = Component(self, self.get_fim_node().components[name])
-            self.components[name] = ret_val
-            return ret_val
+            # Attempt to retrieve from FIM node
+            fim_node = self.get_fim_node()
+            fim_comp = fim_node.components.get(calculated_name) or fim_node.components.get(name)
+            if not fim_comp:
+                raise Exception(f"Component not found in FIM: {name}")
+
+            # Create and cache new component
+            key = calculated_name if fim_comp.name == calculated_name else name
+            component = Component(self, fim_comp)
+            self.components[key] = component
+            return component
+
         except Exception as e:
-            logging.error(e, exc_info=True)
+            logging.error(f"Error retrieving component '{name}': {e}", exc_info=True)
             raise Exception(f"Component not found: {name}")
 
     def get_ssh_command(self) -> str:
