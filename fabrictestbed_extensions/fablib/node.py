@@ -3295,7 +3295,8 @@ class Node:
         return "Done"
 
     def add_fabnet(
-        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
+        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None,
+        subnet: ipaddress.ip_network = None
     ):
         """
         Add a simple layer 3 network to this node.
@@ -3304,6 +3305,10 @@ class Node:
         :param net_type: Network type, ``"IPv4"`` or ``"IPv6"``.
         :param nic_type: a NIC type.  Default is ``"NIC_Basic"``.
         :param routes: a list of routes to add.  Default is ``None``.
+        :param subnet: Request a specific subnet for FabNetv4,
+            FabNetv6 or FabNetv6Ext services.  It's ignored for any
+            other services.
+        :type subnet: ipaddress.ip_network
         """
         site = self.get_site()
 
@@ -3311,7 +3316,8 @@ class Node:
 
         net = self.get_slice().get_network(net_name)
         if not net:
-            net = self.get_slice().add_l3network(name=net_name, type=net_type)
+            net = self.get_slice().add_l3network(name=net_name, type=net_type,
+                                                 subnet=subnet)
 
         # Add ccontrol plane network to node1
         iface = self.add_component(
