@@ -715,8 +715,7 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
             self.__build_manager()
             if validate_config:
-                self.verify_and_configure()
-                self.save_config()
+                self.verify_and_configure(validate_only=True)
         self.required_check()
         self.lock = threading.Lock()
         # These dictionaries are maintained to keep cache of the slice objects created
@@ -816,7 +815,7 @@ class FablibManager(Config):
         )
         self.verify_and_configure()
 
-    def verify_and_configure(self):
+    def verify_and_configure(self, validate_only: bool = False):
         """
         Validate and create Fablib config - checks if all the required configuration exists for slice
         provisioning to work successfully
@@ -837,7 +836,10 @@ class FablibManager(Config):
 
         - Check Project Id is configured
 
-        @raises Exception if the configuration is invalid
+        :param validate_only: flag to specify to only do config validation
+        :type validate_only: bool
+
+        :raises Exception if the configuration is invalid
         """
         Utils.is_reachable(hostname=self.get_credmgr_host(), port=443)
         Utils.is_reachable(hostname=self.get_orchestrator_host(), port=443)
@@ -857,7 +859,7 @@ class FablibManager(Config):
                 "Sliver Key and Bastion key can not be same! Please use different key names!"
             )
 
-        self.validate_and_update_bastion_keys()
+        self.validate_and_update_bastion_keys(validate_only=validate_only)
 
         if (
             self.get_default_slice_public_key() is None
@@ -874,9 +876,10 @@ class FablibManager(Config):
             logging.info("Project is not specified")
             raise Exception("Bastion User name is not specified")
 
-        self.create_ssh_config(overwrite=True)
-
-        print("Configuration is valid and please save the config!")
+        print("Configuration is valid")
+        if not validate_only:
+            self.create_ssh_config(overwrite=True)
+            print("Please save the config!")
 
     def get_user_info(self) -> dict:
         """
@@ -1059,9 +1062,13 @@ Host * !bastion.fabric-testbed.net
     """
             )
 
-    def validate_and_update_bastion_keys(self):
+    def validate_and_update_bastion_keys(self, validate_only: bool = False):
         """
         Validate Bastion Key; if key does not exist or is expired, it create bastion keys
+
+        :param validate_only: flag to specify to only do config validation
+        :type validate_only: bool
+
         """
         logging.info("Fetching User's information")
         user_info = self.get_user_info()
@@ -1107,7 +1114,8 @@ Host * !bastion.fabric-testbed.net
         print(
             f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired"
         )
-        self.create_bastion_keys(overwrite=True)
+        if not validate_only:
+            self.create_bastion_keys(overwrite=True)
 
     def create_bastion_keys(
         self,
