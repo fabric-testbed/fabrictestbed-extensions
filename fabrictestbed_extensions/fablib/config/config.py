@@ -154,7 +154,7 @@ class Config:
         Constants.DATA_DIR: "Data directory",
         Constants.SSH_COMMAND_LINE: "SSH Command Line",
         Constants.BASTION_SSH_CONFIG_FILE: "Bastion SSH Config File",
-        Constants.METADATA_TAG: "Fabric Meta Data Release Tag"
+        Constants.METADATA_TAG: "Fabric Meta Data Release Tag",
     }
 
     os.makedirs(Constants.LOCAL_CACHE_DIR, exist_ok=True)
