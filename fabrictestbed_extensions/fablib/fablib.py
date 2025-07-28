@@ -1108,14 +1108,13 @@ Host * !bastion.fabric-testbed.net
             print(f"User: {user_info.get(Constants.EMAIL)} bastion key is valid!")
             return
 
-        logging.info(
-            f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired"
-        )
-        print(
-            f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired"
-        )
+        msg = f"User: {user_info.get(Constants.EMAIL)} bastion keys do not exist or are expired."
+        logging.info(msg)
+        print(msg)
         if not validate_only:
             self.create_bastion_keys(overwrite=True)
+        else:
+            print("Please call `verify_and_configure` to renew your bastion keys!")
 
     def create_bastion_keys(
         self,
