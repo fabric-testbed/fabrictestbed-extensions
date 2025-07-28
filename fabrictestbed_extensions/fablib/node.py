@@ -1303,7 +1303,9 @@ class Node:
 
             # Attempt to retrieve from FIM node
             fim_node = self.get_fim_node()
-            fim_comp = fim_node.components.get(calculated_name) or fim_node.components.get(name)
+            fim_comp = fim_node.components.get(
+                calculated_name
+            ) or fim_node.components.get(name)
             if not fim_comp:
                 raise Exception(f"Component not found in FIM: {name}")
 
@@ -3301,8 +3303,12 @@ class Node:
         return "Done"
 
     def add_fabnet(
-        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None,
-        subnet: ipaddress.ip_network = None
+        self,
+        name="FABNET",
+        net_type="IPv4",
+        nic_type="NIC_Basic",
+        routes=None,
+        subnet: ipaddress.ip_network = None,
     ):
         """
         Add a simple layer 3 network to this node.
@@ -3322,8 +3328,9 @@ class Node:
 
         net = self.get_slice().get_network(net_name)
         if not net:
-            net = self.get_slice().add_l3network(name=net_name, type=net_type,
-                                                 subnet=subnet)
+            net = self.get_slice().add_l3network(
+                name=net_name, type=net_type, subnet=subnet
+            )
 
         # Add ccontrol plane network to node1
         iface = self.add_component(
