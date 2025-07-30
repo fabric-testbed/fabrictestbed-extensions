@@ -75,6 +75,21 @@ class ResourceConstants:
             Constants.PRETTY_NAME: "ConnectX-5",
             Constants.HEADER_NAME: "ConnectX-5 (25 Gbps x2 NIC)",
         },
+        Constants.SMART_NIC_CONNECTX_7_100: {
+            Constants.NON_PRETTY_NAME: "nic_connectx_7_100",
+            Constants.PRETTY_NAME: "ConnectX-7-100",
+            Constants.HEADER_NAME: "ConnectX-7 (100 Gbps x2 NIC)",
+        },
+        Constants.SMART_NIC_CONNECTX_7_400: {
+            Constants.NON_PRETTY_NAME: "nic_connectx_7_400",
+            Constants.PRETTY_NAME: "ConnectX-7-400",
+            Constants.HEADER_NAME: "ConnectX-7 (400 Gbps x2 NIC)",
+        },
+        Constants.SMART_NIC_BlueField2_CONNECTX_6: {
+            Constants.NON_PRETTY_NAME: "nic_bluefield2_connectx_5",
+            Constants.PRETTY_NAME: "BlueField2-ConnectX-6",
+            Constants.HEADER_NAME: "BlueField2-ConnectX-6 (100 Gbps x2 NIC)",
+        },
         Constants.NVME_P4510: {
             Constants.NON_PRETTY_NAME: "nvme",
             Constants.PRETTY_NAME: "NVMe",

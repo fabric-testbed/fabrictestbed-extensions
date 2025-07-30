@@ -44,6 +44,7 @@ import time
 from typing import TYPE_CHECKING, Union
 
 import jinja2
+from fim.user import ComponentType
 
 from fabrictestbed_extensions.fablib.constants import Constants
 
@@ -71,6 +72,8 @@ class Component:
         Constants.CMP_NIC_BlueField2_ConnectX_6: ComponentModelType.SmartNIC_BlueField_2_ConnectX_6,
         Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
         Constants.CMP_NIC_ConnectX_5: ComponentModelType.SmartNIC_ConnectX_5,
+        Constants.CMP_NIC_ConnectX_7_100: ComponentModelType.SmartNIC_ConnectX_7_100,
+        Constants.CMP_NIC_ConnectX_7_400: ComponentModelType.SmartNIC_ConnectX_7_400,
         Constants.CMP_NIC_P4: Constants.P4_DedicatedPort,
         Constants.CMP_NVME_P4510: ComponentModelType.NVME_P4510,
         Constants.CMP_GPU_TeslaT4: ComponentModelType.GPU_Tesla_T4,
@@ -83,10 +86,18 @@ class Component:
     }
 
     component_configure_commands = {
+        Constants.CMP_NIC_ConnectX_7_100: [
+            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+        ],
+        Constants.CMP_NIC_ConnectX_7_400: [
+            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+        ],
         Constants.CMP_NIC_BlueField2_ConnectX_6: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
             "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
-        ]
+        ],
     }
 
     def __str__(self):
@@ -498,33 +509,25 @@ class Component:
         :return: FABlib model name
         :rtype: String
         """
-        # TODO: This a hack that need a real fix
-        if (
-            str(self.get_type()) == "SmartNIC"
-            and str(self.get_fim_model()) == "ConnectX-6"
-        ):
-            return Constants.CMP_NIC_ConnectX_6
-        if (
-            str(self.get_type()) == "SmartNIC"
-            and str(self.get_fim_model()) == "BlueField-2-ConnectX-6"
-        ):
-            return Constants.CMP_NIC_BlueField2_ConnectX_6
-        elif (
-            str(self.get_type()) == "SmartNIC"
-            and str(self.get_fim_model()) == "ConnectX-5"
-        ):
-            return Constants.CMP_NIC_ConnectX_5
-        elif str(self.get_type()) == "NVME" and str(self.get_fim_model()) == "P4510":
-            return Constants.CMP_NVME_P4510
-        elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "Tesla T4":
-            return Constants.CMP_GPU_TeslaT4
-        elif str(self.get_type()) == "GPU" and str(self.get_fim_model()) == "RTX6000":
-            return Constants.CMP_GPU_RTX6000
-        elif (
-            str(self.get_type()) == "SharedNIC"
-            and str(self.get_fim_model()) == "ConnectX-6"
-        ):
+        fim_model = str(self.get_fim_model()).replace("-", "_").replace(" ", "")
+        component_type = str(self.get_type())
+
+        prefix_map = {
+            str(ComponentType.SmartNIC): "NIC_",
+            str(ComponentType.NVME): "NVME_",
+            str(ComponentType.GPU): "GPU_",
+            str(ComponentType.FPGA): "FPGA_",
+            str(ComponentType.Storage): "Storage_",
+        }
+
+        if component_type == str(ComponentType.SharedNIC):
             return Constants.CMP_NIC_Basic
+
+        prefix = prefix_map.get(component_type)
+        if prefix:
+            return f"{prefix}{fim_model}"
+        else:
+            raise ValueError(f"Unsupported component type: {component_type}")
 
     def get_reservation_id(self) -> str or None:
         """

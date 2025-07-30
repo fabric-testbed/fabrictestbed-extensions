@@ -1155,7 +1155,7 @@ class Slice:
         vlan: Union[str, list] = None,
         labels: Labels = None,
         peer_labels: Labels = None,
-        bandwidth: int = 10,
+        bandwidth: int = None,
         mtu: int = None,
     ) -> FacilityPort:
         """

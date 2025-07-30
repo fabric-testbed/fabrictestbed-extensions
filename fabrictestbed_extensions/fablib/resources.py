@@ -659,7 +659,7 @@ class Resources:
 
         rtn_links = []
         for link_name, link in self.topology.links.items():
-            rtn_links.append(link_name)
+            rtn_links.append(link.get("node_id"))
 
         return rtn_links
 
@@ -842,8 +842,9 @@ class Links(Resources):
 
     link_pretty_names = {
         "site_names": "Sites",
-        "node_id": "Link Name",
+        "name": "Link Name",
         "link_capacity_Gbps": "Capacity (Gbps)",
+        "allocated_link_capacity_Gbps": "Allocated Capacity (Gbps)",
         "link_layer": "Link Layer",
     }
 
@@ -872,7 +873,12 @@ class Links(Resources):
                     [
                         tuple(site_names),
                         link.node_id,
-                        iface.capacities.bw if iface.capacities else "N/A",
+                        link.capacities.bw if link.capacities else "N/A",
+                        (
+                            link.capacity_allocations.bw
+                            if link.capacity_allocations
+                            else "N/A"
+                        ),
                         link.layer,
                     ]
                 )
@@ -881,7 +887,7 @@ class Links(Resources):
             table,
             headers=[
                 "site_names",
-                "node_id",
+                "name",
                 "link_capacity_Gbps",
                 "link_layer",
             ],
@@ -898,9 +904,12 @@ class Links(Resources):
         """
         return {
             "site_names": tuple(iface.name.split("_")),
-            "node_id": link.node_id,
-            "link_capacity_Gbps": iface.capacities.bw if iface.capacities else "N/A",
-            "link_layer": link.layer,
+            "name": link.node_id,
+            "link_capacity_Gbps": link.capacities.bw if link.capacities else "N/A",
+            "allocated_link_capacity_Gbps": (
+                link.capacity_allocations.bw if link.capacity_allocations else "N/A"
+            ),
+            "link_layer": str(link.layer) if link.layer else None,
         }
 
     def list_links(
@@ -947,6 +956,7 @@ class FacilityPorts(Resources):
 
     link_pretty_names = {
         "name": "Name",
+        "description": "Description",
         "site_name": "Site",
         "node_id": "Interface Name",
         "vlan_range": "VLAN Range",
@@ -1003,6 +1013,7 @@ class FacilityPorts(Resources):
             table,
             headers=[
                 "name",
+                "description",
                 "site_name",
                 "node_id",
                 "vlan_range",
@@ -1038,12 +1049,21 @@ class FacilityPorts(Resources):
                         device_name = peer.labels.device_name
                     break
 
+        if iface.labels and iface.labels.vlan_range:
+            vlan_range = iface.labels.vlan_range
+        elif iface.labels and iface.labels.vlan:
+            vlan_range = [iface.labels.vlan]
+        else:
+            vlan_range = "N/A"
+
         label_allocations = iface.get_property("label_allocations")
+        fp_details = self.get_fablib_manager().get_facility_port_details()
         return {
             "name": name,
+            "description": fp_details.get(name, {}).get("description", "N/A"),
             "site_name": site,
             "node_id": iface.node_id,
-            "vlan_range": iface.labels.vlan_range if iface.labels else "N/A",
+            "vlan_range": vlan_range,
             "allocated_vlan_range": (
                 label_allocations.vlan if label_allocations else "N/A"
             ),

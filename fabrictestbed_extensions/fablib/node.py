@@ -58,7 +58,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
-from fim.user import NodeType
+from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
@@ -780,6 +780,12 @@ class Node:
         if self.get_fim_node().type == NodeType.Switch and not username:
             self.username = Constants.FABRIC_USER
             return
+        username = (
+            self.get_fablib_manager()
+            .get_os_images()
+            .get(self.get_image(), {})
+            .get("default_user")
+        )
         if username is not None:
             self.username = username
         elif "default_centos10_stream" == self.get_image():
@@ -1279,30 +1285,38 @@ class Node:
 
     def get_component(self, name: str, refresh: bool = False) -> Component:
         """
-        Gets a particular component associated with this node.
+        Retrieve a component associated with this node.
 
-        :param name: the name of the component to search for
-        :type refresh: bool
-
-        :param refresh: Refresh the component object with latest Fim info
-        :type name: String
-
-        :raise Exception: if component not found by name
-
-        :return: the component on the FABRIC node
-        :rtype: Component
+        :param name: Name of the component to retrieve.
+        :param refresh: Whether to refresh the component from the latest FIM data.
+        :return: The requested component.
+        :raises Exception: If the component is not found.
         """
         try:
-            name = Component.calculate_name(node=self, name=name)
+            calculated_name = Component.calculate_name(node=self, name=name)
 
-            if not refresh and name in self.components:
-                return self.components.get(name)
+            if not refresh:
+                # Check both calculated and raw names
+                for key in (calculated_name, name):
+                    if key in self.components:
+                        return self.components[key]
 
-            ret_val = Component(self, self.get_fim_node().components[name])
-            self.components[name] = ret_val
-            return ret_val
+            # Attempt to retrieve from FIM node
+            fim_node = self.get_fim_node()
+            fim_comp = fim_node.components.get(
+                calculated_name
+            ) or fim_node.components.get(name)
+            if not fim_comp:
+                raise Exception(f"Component not found in FIM: {name}")
+
+            # Create and cache new component
+            key = calculated_name if fim_comp.name == calculated_name else name
+            component = Component(self, fim_comp)
+            self.components[key] = component
+            return component
+
         except Exception as e:
-            logging.error(e, exc_info=True)
+            logging.error(f"Error retrieving component '{name}': {e}", exc_info=True)
             raise Exception(f"Component not found: {name}")
 
     def get_ssh_command(self) -> str:
@@ -3289,7 +3303,12 @@ class Node:
         return "Done"
 
     def add_fabnet(
-        self, name="FABNET", net_type="IPv4", nic_type="NIC_Basic", routes=None
+        self,
+        name="FABNET",
+        net_type="IPv4",
+        nic_type="NIC_Basic",
+        routes=None,
+        subnet: ipaddress.ip_network = None,
     ):
         """
         Add a simple layer 3 network to this node.
@@ -3298,6 +3317,10 @@ class Node:
         :param net_type: Network type, ``"IPv4"`` or ``"IPv6"``.
         :param nic_type: a NIC type.  Default is ``"NIC_Basic"``.
         :param routes: a list of routes to add.  Default is ``None``.
+        :param subnet: Request a specific subnet for FabNetv4,
+            FabNetv6 or FabNetv6Ext services.  It's ignored for any
+            other services.
+        :type subnet: ipaddress.ip_network
         """
         site = self.get_site()
 
@@ -3305,7 +3328,9 @@ class Node:
 
         net = self.get_slice().get_network(net_name)
         if not net:
-            net = self.get_slice().add_l3network(name=net_name, type=net_type)
+            net = self.get_slice().add_l3network(
+                name=net_name, type=net_type, subnet=subnet
+            )
 
         # Add ccontrol plane network to node1
         iface = self.add_component(
@@ -3335,6 +3360,7 @@ class Node:
         vcpu_cpu_map: List[Dict[str, str]] = None,
         node_set: List[str] = None,
         keys: List[Dict[str, str]] = None,
+        bdf: List[str] = None,
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
@@ -3343,6 +3369,7 @@ class Node:
         :param vcpu_cpu_map: map virtual cpu to host cpu map
         :param node_set: list of numa nodes
         :param keys: list of ssh keys
+        :param bdf: list of PCI Ids
 
         :raise Exception: in case of failure
 
@@ -3360,6 +3387,7 @@ class Node:
                 vcpu_cpu_map=vcpu_cpu_map,
                 node_set=node_set,
                 keys=keys,
+                bdf=bdf,
             )
         )
         logger = logging.getLogger()
@@ -3575,6 +3603,57 @@ class Node:
             logging.getLogger().error(traceback.format_exc())
             logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
             raise e
+
+    def rescan_pci(self, component_name: str = None):
+        """
+        Rescan PCI devices for a specific component or all components.
+
+        :param component_name: Name of the component to rescan. If None, rescans all components.
+        :raises RuntimeError: If no PCI devices are found or if the rescan operation fails.
+        """
+        logger = logging.getLogger()
+
+        try:
+            # Retrieve list of PCI addresses to rescan
+            components = (
+                [self.get_component(component_name)]
+                if component_name
+                else self.get_components()
+            )
+            if not components or any(c is None for c in components):
+                raise (
+                    ValueError(f"Component '{component_name}' not found.")
+                    if component_name
+                    else RuntimeError("No components found.")
+                )
+
+            bdfs = []
+            for comp in components:
+                pci_addr = comp.get_pci_addr()
+                if pci_addr:
+                    pci_list = pci_addr if isinstance(pci_addr, list) else [pci_addr]
+
+                    # Skip Shared NICs
+                    if comp.get_type() == str(ComponentType.SharedNIC):
+                        continue
+                    bdfs.extend(pci_list)
+
+            if not bdfs:
+                raise RuntimeError("No PCI devices available to rescan on the node.")
+
+            # Perform the PCI rescan
+            status = self.poa(operation="rescan", bdf=bdfs)
+            if not status or status.lower() == "failed":
+                raise RuntimeError("PCI rescan operation (POA) failed.")
+
+            logger.info(
+                f"PCI rescan completed successfully for node: {self.get_name()}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed PCI rescan for node {self.get_name()}: {e}")
+            logger.debug(traceback.format_exc())
+            raise
 
     def os_reboot(self):
         """
