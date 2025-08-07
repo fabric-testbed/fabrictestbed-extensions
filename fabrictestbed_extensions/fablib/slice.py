@@ -1799,11 +1799,11 @@ class Slice:
         :return: an interface on this slice
         :rtype: Interface
         """
-        ret_val = self.get_interfaces(refresh=refresh, output="dict").get(name)
-        if not ret_val:
-            raise Exception("Interface not found: {}".format(name))
-        return ret_val
-
+        for interface in self.get_interfaces():
+            if name.endswith(interface.get_name()):
+                return interface
+        raise Exception("Interface not found: {}".format(name))
+        
     def get_l3networks(self) -> List[NetworkService]:
         """
         Gets all L3 networks services in this slice
