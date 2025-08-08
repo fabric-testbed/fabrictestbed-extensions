@@ -1570,8 +1570,6 @@ class Slice:
                         # Add new node to the dictionary if it doesn't exist
                         node = Node.get_node(self, node)
                     self.nodes[node_name] = node
-                    node.get_components(refresh=True)
-                    node.get_interfaces(refresh=True)
                 else:
                     # Update existing node's fim_node reference
                     self.nodes[node_name].update(fim_node=node)
@@ -1744,9 +1742,8 @@ class Slice:
         :rtype: Node
         """
         try:
-            for node in self.get_nodes():
-                if name.endswith(node.get_name()):
-                    return node
+            if self.nodes and len(self.nodes) and name in self.nodes:
+                return self.nodes.get(name)
             if self.get_fim_topology().nodes[name].type == NodeType.Switch:
                 return Switch.get_node(self, self.get_fim_topology().nodes[name])
             return Node.get_node(self, self.get_fim_topology().nodes[name])

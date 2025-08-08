@@ -259,7 +259,9 @@ class Node:
         :return: a new fablib node storing resources
         :rtype: Node
         """
-        return Node(slice, node)
+        ret_val = Node(slice, node)
+        ret_val.get_interfaces()
+        return ret_val
 
     def toJson(self):
         """
