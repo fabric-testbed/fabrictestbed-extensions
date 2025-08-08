@@ -1565,10 +1565,13 @@ class Slice:
             for node_name, node in current_topology_nodes.items():
                 if node_name not in self.nodes:
                     if node.type == NodeType.Switch:
-                        self.nodes[node_name] = Switch.get_node(self, node)
+                        node = Switch.get_node(self, node)
                     else:
                         # Add new node to the dictionary if it doesn't exist
-                        self.nodes[node_name] = Node.get_node(self, node)
+                        node = Node.get_node(self, node)
+                    self.nodes[node_name] = node
+                    node.get_components(refresh=True)
+                    node.get_interfaces(refresh=True)
                 else:
                     # Update existing node's fim_node reference
                     self.nodes[node_name].update(fim_node=node)
