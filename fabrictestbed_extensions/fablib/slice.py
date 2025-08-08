@@ -1803,7 +1803,7 @@ class Slice:
             if name.endswith(interface.get_name()):
                 return interface
         raise Exception("Interface not found: {}".format(name))
-        
+
     def get_l3networks(self) -> List[NetworkService]:
         """
         Gets all L3 networks services in this slice

@@ -1263,7 +1263,10 @@ class Node:
                 logging.warning(error)
                 if self.raise_exception:
                     raise ValueError(error)
-        self.components[component.get_name()] = component
+        if component:
+            print(f"Added component: {component.get_name()}")
+            self.components[component.get_name()] = component
+            self.interfaces.update(component.get_interfaces(output="dict"))
         return component
 
     def get_components(self, refresh: bool = False) -> List[Component]:
