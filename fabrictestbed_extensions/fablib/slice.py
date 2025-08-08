@@ -1741,8 +1741,9 @@ class Slice:
         :rtype: Node
         """
         try:
-            if self.nodes and len(self.nodes) and name in self.nodes:
-                return self.nodes.get(name)
+            for node in self.get_nodes():
+                if name.endswith(node.get_name()):
+                    return node
             if self.get_fim_topology().nodes[name].type == NodeType.Switch:
                 return Switch.get_node(self, self.get_fim_topology().nodes[name])
             return Node.get_node(self, self.get_fim_topology().nodes[name])

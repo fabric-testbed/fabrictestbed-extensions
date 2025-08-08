@@ -1264,7 +1264,6 @@ class Node:
                 if self.raise_exception:
                     raise ValueError(error)
         if component:
-            print(f"Added component: {component.get_name()}")
             self.components[component.get_name()] = component
             self.interfaces.update(component.get_interfaces(output="dict"))
         return component
