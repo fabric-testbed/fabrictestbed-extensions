@@ -259,7 +259,9 @@ class Node:
         :return: a new fablib node storing resources
         :rtype: Node
         """
-        return Node(slice, node)
+        ret_val = Node(slice, node)
+        ret_val.get_interfaces()
+        return ret_val
 
     def toJson(self):
         """
@@ -1263,7 +1265,9 @@ class Node:
                 logging.warning(error)
                 if self.raise_exception:
                     raise ValueError(error)
-        self.components[component.get_name()] = component
+        if component:
+            self.components[component.get_name()] = component
+            self.interfaces.update(component.get_interfaces(output="dict"))
         return component
 
     def get_components(self, refresh: bool = False) -> List[Component]:

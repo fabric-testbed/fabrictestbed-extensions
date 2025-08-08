@@ -1108,7 +1108,7 @@ class NetworkService:
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-        if not self.interfaces:
+        if not self.interfaces or len(self.interfaces) == 0:
             self.interfaces = []
             for interface in self.get_fim_network_service().interface_list:
                 logging.debug(f"interface: {interface}")
