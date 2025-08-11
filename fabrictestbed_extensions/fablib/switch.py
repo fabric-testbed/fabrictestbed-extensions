@@ -394,4 +394,6 @@ class Switch(Node):
         :return: a new fablib node storing resources
         :rtype: Node
         """
-        return Switch(slice, node)
+        ret_val = Switch(slice, node)
+        ret_val.get_interface()
+        return ret_val

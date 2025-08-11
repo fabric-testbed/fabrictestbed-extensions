@@ -1565,10 +1565,11 @@ class Slice:
             for node_name, node in current_topology_nodes.items():
                 if node_name not in self.nodes:
                     if node.type == NodeType.Switch:
-                        self.nodes[node_name] = Switch.get_node(self, node)
+                        node = Switch.get_node(self, node)
                     else:
                         # Add new node to the dictionary if it doesn't exist
-                        self.nodes[node_name] = Node.get_node(self, node)
+                        node = Node.get_node(self, node)
+                    self.nodes[node_name] = node
                 else:
                     # Update existing node's fim_node reference
                     self.nodes[node_name].update(fim_node=node)
@@ -1799,10 +1800,10 @@ class Slice:
         :return: an interface on this slice
         :rtype: Interface
         """
-        ret_val = self.get_interfaces(refresh=refresh, output="dict").get(name)
-        if not ret_val:
-            raise Exception("Interface not found: {}".format(name))
-        return ret_val
+        for interface in self.get_interfaces():
+            if name.endswith(interface.get_name()):
+                return interface
+        raise Exception("Interface not found: {}".format(name))
 
     def get_l3networks(self) -> List[NetworkService]:
         """
