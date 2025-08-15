@@ -395,5 +395,5 @@ class Switch(Node):
         :rtype: Node
         """
         ret_val = Switch(slice, node)
-        ret_val.get_interface()
+        ret_val.get_interfaces()
         return ret_val
