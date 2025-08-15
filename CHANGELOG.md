@@ -6,6 +6,9 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## TODO
+- List Nodes fails to list P4 switches (Issue [#436](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/436))
+
 ## 1.9.1
 - `get_interfaces()` and `get_interface()` behavior for `NetworkService` and `Node` (Issue [#434](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/434))
 
