@@ -87,4 +87,3 @@ omit-covered-files = true
 verbose = 0
 fail-under = 92.6
 exclude = ["tests", "fabrictestbed_extensions/editors"]
-
