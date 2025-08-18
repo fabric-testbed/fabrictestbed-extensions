@@ -554,6 +554,19 @@ class Config:
             return None
         return Utils.read_file_contents(file_path=self.get_bastion_key_location())
 
+    def get_bastion_public_key(self) -> Union[str, None]:
+        """
+        Reads the FABRIC Bastion public key file and returns the key.
+
+        :return: FABRIC Bastion key string
+        :rtype: String
+        """
+        if self.get_bastion_key_location() is None or not os.path.exists(
+            self.get_bastion_key_location()
+        ):
+            return None
+        return Utils.read_file_contents(file_path=f"{self.get_bastion_key_location()}.pub")
+
     def get_bastion_host(self) -> str:
         """
         Gets the FABRIC Bastion host address.

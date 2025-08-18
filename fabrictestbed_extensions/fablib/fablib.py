@@ -1076,7 +1076,7 @@ Host * !bastion.fabric-testbed.net
         logging.debug("Updating Bastion User Name")
         ssh_keys = user_info.get(Constants.SSH_KEYS)
 
-        current_bastion_key = self.get_bastion_key()
+        current_bastion_key = self.get_bastion_public_key()
 
         keys_to_remove = []
         for key in ssh_keys:
