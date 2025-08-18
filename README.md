@@ -41,6 +41,7 @@ virtual environment. Your favorite tool for managing virtual
 environments ([venv], [virtualenv], or [virtualenvwrapper]) should
 work. FABRIC team tends to favor virtualenvwrapper.
 
+**NOTE:** This package has been tested and verified to work with Python versions 3.9 through 3.13.
 
 ## Using FABlib
 

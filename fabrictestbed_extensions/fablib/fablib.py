@@ -77,6 +77,7 @@ import warnings
 
 from fabrictestbed.external_api.artifact_manager import Visibility
 from fabrictestbed.fabric_manager import FabricManager
+from fss_utils.sshkey import FABRICSSHKey
 
 from fabrictestbed_extensions.fablib.artifact import Artifact
 from fabrictestbed_extensions.fablib.site import Host, Site
@@ -1064,7 +1065,7 @@ Host * !bastion.fabric-testbed.net
 
     def validate_and_update_bastion_keys(self, validate_only: bool = False):
         """
-        Validate Bastion Key; if key does not exist or is expired, it create bastion keys
+        Validate Bastion Key; if key does not exist or is expired, it creates bastion keys
 
         :param validate_only: flag to specify to only do config validation
         :type validate_only: bool
@@ -1075,8 +1076,7 @@ Host * !bastion.fabric-testbed.net
         logging.debug("Updating Bastion User Name")
         ssh_keys = user_info.get(Constants.SSH_KEYS)
 
-        current_bastion_key = self.get_bastion_key()
-        current_bastion_key_file = self.get_bastion_key_location()
+        current_bastion_key = self.get_bastion_public_key()
 
         keys_to_remove = []
         for key in ssh_keys:
@@ -1094,12 +1094,10 @@ Host * !bastion.fabric-testbed.net
         for key in keys_to_remove:
             ssh_keys.remove(key)
 
-        found = False
-        if current_bastion_key_file is not None:
-            current_bastion_key_name = os.path.basename(current_bastion_key_file)
-            found = any(
-                item["comment"] == current_bastion_key_name for item in ssh_keys
-            )
+        fabric_ssh_key = FABRICSSHKey(current_bastion_key)
+        found = any(
+            item["fingerprint"] == fabric_ssh_key.get_fingerprint() for item in ssh_keys
+        )
 
         if current_bastion_key is not None and found:
             logging.info(
