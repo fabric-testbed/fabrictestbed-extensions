@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## TODO
 - List Nodes fails to list P4 switches (Issue [#436](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/436))
+- pip install not working (Issue [#418](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/418))
 
 ## 1.9.1
 - `get_interfaces()` and `get_interface()` behavior for `NetworkService` and `Node` (Issue [#434](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/434))
