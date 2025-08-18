@@ -565,7 +565,9 @@ class Config:
             self.get_bastion_key_location()
         ):
             return None
-        return Utils.read_file_contents(file_path=f"{self.get_bastion_key_location()}.pub")
+        return Utils.read_file_contents(
+            file_path=f"{self.get_bastion_key_location()}.pub"
+        )
 
     def get_bastion_host(self) -> str:
         """
