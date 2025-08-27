@@ -712,7 +712,7 @@ V1Switch(
 
         result = None
 
-        if stderr and len(stderr) > 0:
+        if stderr:
             result = False
         else:
             cfg_update.append(self.prep_switch_config_update("Running", True))
@@ -787,10 +787,10 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if stderr and len(stderr) == 0:
-            return True
-        else:
+        if stderr:
             return False
+        else:
+            return True
 
     def run_command(self, cmd, dry=False, quiet=False):
         """
@@ -816,10 +816,10 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if stderr and len(stderr) == 0:
-            return True
-        else:
+        if stderr:
             return False
+        else:
+            return True
 
     def get_switch_features(self):
         """
@@ -854,8 +854,8 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if stderr and len(stderr) == 0:
+        if stderr:
+            return False
+        else:
             print(str(self.get_switch_features()))
             return True
-        else:
-            return False
