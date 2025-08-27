@@ -695,12 +695,12 @@ V1Switch(
             for command in commands:
                 print(command)
         else:
-            (out, err) = self.execute(commands[0])
+            (out, err) = self.execute(commands[0], quiet=quiet)
             stdout.append(out)
             stderr.append(err)
-            job = self.execute_thread(commands[1], quiet=quiet)
+            job = self.execute_thread(commands[1])
             time.sleep(2)
-            if not job.running():
+            if not job.running() and not quiet:
                 (out, err) = job.result()
                 stdout.append(out)
                 stderr.append(err)
