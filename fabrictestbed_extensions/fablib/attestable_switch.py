@@ -833,6 +833,19 @@ V1Switch(
                     result["RA_port"] = self.get_switch_config("RA_port")
                 if self.get_switch_config("RA_et") is not None:
                     result["RA_et"] = self.get_switch_config("RA_et")
+                if self.get_switch_config("disable_RA_broadcast"):
+                    result["disable_RA_broadcast"] = self.get_switch_config("disable_RA_broadcast")
+            result["with_SPADE"] = self.get_switch_config("with_SPADE")
+            if self.get_switch_config("with_SPADE"):
+                if self.get_switch_config("SPADE_file") is not None:
+                    result["SPADE_file"] = self.get_switch_config("SPADE_file")
+                if self.get_switch_config("SPADE_switch_id") is not None:
+                    result["SPADE_switch_id"] = self.get_switch_config("SPADE_switch_id")
+                if self.get_switch_config("SPADE_verbosity") is not None:
+                    result["SPADE_verbosity"] = self.get_switch_config("SPADE_verbosity")
+                if self.get_switch_config("SPADE_period") is not None:
+                    result["SPADE_period"] = self.get_switch_config("SPADE_period")
+
         return result
 
     def get_version(self):
