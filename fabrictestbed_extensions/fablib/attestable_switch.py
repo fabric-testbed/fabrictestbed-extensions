@@ -404,7 +404,7 @@ class Attestable_Switch(Node):
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        rtn_dict = super().toDict(self, skip)
+        rtn_dict = super().toDict(skip)
         if "ports" not in skip:
             rtn_dict["ports"] = str(self.get_port_names())
 
