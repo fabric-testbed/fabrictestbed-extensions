@@ -599,6 +599,12 @@ V1Switch(
         with_RA=False,
         RA_port=None,
         RA_et=None,
+        with_SPADE=False,
+        SPADE_file=None,
+        SPADE_switch_id=None,
+        SPADE_verbosity=None,
+        SPADE_period=None,
+        disable_RA_broadcast=False
     ):
         """
         Start the switch executing, and have it run a P4 program.
@@ -636,6 +642,47 @@ V1Switch(
             RA_inclusion += " --ra-etype " + str(RA_et)
         else:
             cfg_update.append(self.prep_switch_config_update("RA_et", None))
+
+        if disable_RA_broadcast:
+            assert with_RA
+            cfg_update.append(self.prep_switch_config_update("disable_RA_broadcast", disable_RA_broadcast))
+            RA_inclusion += " --disable-ra-broadcast"
+        else:
+            cfg_update.append(self.prep_switch_config_update("disable_RA_broadcast", False))
+
+        if with_SPADE:
+            RA_inclusion += " --enable-spade"
+            cfg_update.append(self.prep_switch_config_update("with_SPADE", True))
+        else:
+            cfg_update.append(self.prep_switch_config_update("with_SPADE", False))
+        
+        if SPADE_file is not None:
+            assert with_SPADE
+            cfg_update.append(self.prep_switch_config_update("SPADE_file", SPADE_file))
+            RA_inclusion += " --spade-file " + str(SPADE_file)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_file", None))
+
+        if SPADE_switch_id is not None:
+            assert with_SPADE
+            cfg_update.append(self.prep_switch_config_update("SPADE_switch_id", SPADE_switch_id))
+            RA_inclusion += " --spade-switch-id " + str(SPADE_switch_id)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_switch_id", None))
+
+        if SPADE_verbosity is not None:
+            assert with_SPADE
+            cfg_update.append(self.prep_switch_config_update("SPADE_verbosity", SPADE_verbosity))
+            RA_inclusion += " --spade-verbosity " + str(SPADE_verbosity)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_verbosity", None))
+
+        if SPADE_period is not None:
+            assert with_SPADE
+            cfg_update.append(self.prep_switch_config_update("SPADE_period", SPADE_period))
+            RA_inclusion += " --spade-period " + str(SPADE_period)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_period", None))
 
         commands = [
             f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
