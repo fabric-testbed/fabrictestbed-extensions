@@ -76,11 +76,10 @@ class Attestable_Switch(Node):
     default_image = "crease_ubuntu_22"
     default_username = "ubuntu"
     raw_image = "default_ubuntu_22"
-    bmv_prefix = "~/bmv2-remote-attestation/targets/simple_switch/"
-    crease_path_prefix = "/home/ubuntu/crease_cfg/"
+    crease_path_prefix = "/home/ubuntu/.crease/crease_cfg/"
 
-    __version__ = "beta 2"
-    __version_short__ = "b2"
+    __version__ = "beta 3"
+    __version_short__ = "b3"
 
     def __init__(
         self,
@@ -468,11 +467,11 @@ class Attestable_Switch(Node):
                     f"Attestable Switch {self.get_name()}: starting compilation..."
                 )
                 self.execute(
-                    'bash -c "cd ~/bmv2-remote-attestation/ && ./install_deps.sh && ./autogen.sh && ./configure && make -j 4"',
+                    'bash -c "cd ~/bmv2-remote-attestation/ && ./install_deps.sh && ./autogen.sh && ./configure && make -j 4 && sudo make install"',
                     quiet=True,
                 )
                 self.execute(
-                    'bash -c "sudo mv ~/bmv2-remote-attestation /usr/local/"',
+                    'bash -c "sudo rm /usr/bin/simple_switch /usr/bin/simple_switch_CLI && sudo rm -rf /home/ubuntu/bmv2-remote-attestation && sudo ldconfig"',
                     quiet=True,
                 )
                 logging.info(
@@ -639,9 +638,8 @@ V1Switch(
             cfg_update.append(self.prep_switch_config_update("RA_et", None))
 
         commands = [
-            "[ ! -d ~/bmv2-remote-attestation ] && cd ~ && sudo ln -s /usr/local/bmv2-remote-attestation",
             f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
-            f'nohup bash -c "sudo {Attestable_Switch.bmv_prefix}simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}" &',
+            f'nohup bash -c "sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}" &',
         ]
 
         stdout = []
@@ -719,8 +717,8 @@ V1Switch(
         output_file = os.path.splitext(os.path.basename(filename))[0] + ".json"
         commands = [
             f"p4c --target bmv2 --arch v1model ~/{os.path.basename(filename)}",
-            f'echo "load_new_config_file {output_file}" | {Attestable_Switch.bmv_prefix}simple_switch_CLI',
-            f'echo "swap_configs" | {Attestable_Switch.bmv_prefix}simple_switch_CLI',
+            f'echo "load_new_config_file {output_file}" | simple_switch_CLI',
+            f'echo "swap_configs" | simple_switch_CLI',
         ]
 
         stdout = []
@@ -747,7 +745,7 @@ V1Switch(
         Run a CLI command on the switch.
         """
 
-        command = f"echo '{cmd}' | {Attestable_Switch.bmv_prefix}simple_switch_CLI"
+        command = f"echo '{cmd}' | simple_switch_CLI"
 
         stdout = []
         stderr = []
@@ -791,8 +789,7 @@ V1Switch(
         """
 
         commands = [
-            "[ ! -d ~/bmv2-remote-attestation ] && cd ~ && sudo ln -s /usr/local/bmv2-remote-attestation",
-            f"{Attestable_Switch.bmv_prefix}simple_switch -v",
+            f"simple_switch -v",
         ]
 
         stdout = []
