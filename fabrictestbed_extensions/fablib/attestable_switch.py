@@ -704,6 +704,7 @@ V1Switch(
                 stdout.append(out)
                 stderr.append(err)
 
+        stdout = list(filter(lambda line: line != "", stdout))
         stderr = list(filter(lambda line: line != "", stderr))
 
         if not quiet:
@@ -744,6 +745,7 @@ V1Switch(
             stdout.append(out)
             stderr.append(err)
 
+        stdout = list(filter(lambda line: line != "", stdout))
         stderr = list(filter(lambda line: line != "", stderr))
 
         if not quiet:
@@ -752,11 +754,11 @@ V1Switch(
 
         result = None
 
-        if force or stderr and len(stderr) == 0:
+        if stderr and not force:
+            result = False
+        else:
             cfg_update.append(self.prep_switch_config_update("Running", False))
             result = True
-        else:
-            result = False
 
         self.commit_switch_config_update(cfg_update)
 
