@@ -50,10 +50,10 @@ You would add a switch and operate on it like so::
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
-import json
 from typing import TYPE_CHECKING, List
 
 from tabulate import tabulate
