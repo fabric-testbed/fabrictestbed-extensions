@@ -182,7 +182,14 @@ class Attestable_Switch(Node):
         """
         if not self.runtime_cfg:
             self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}")[0])
-        return self.runtime_cfg.get(k, None)
+        val = self.runtime_cfg.get(k, None)
+        if val == "False":
+            return False
+        elif val == "True":
+            return True
+        elif val == "None":
+            return None
+        return val
 
     def prep_switch_config_update(self, k, v):
         """
@@ -199,7 +206,7 @@ class Attestable_Switch(Node):
         for k, v in cfg_update:
             self.runtime_cfg[k] = v
         s = f"echo '{json.dumps(self.runtime_cfg)}' > {Attestable_Switch.cfg_file}"
-        self.execute(s)
+        self.execute(s, quiet=True)
 
     def get_port_names(self):
         """
@@ -691,7 +698,7 @@ V1Switch(
             stdout.append(out)
             stderr.append(err)
             job = self.execute_thread(commands[1])
-            time.sleep(2)
+            time.sleep(5)
             if not job.running() and not quiet:
                 (out, err) = job.result()
                 stdout.append(out)
