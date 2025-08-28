@@ -181,7 +181,9 @@ class Attestable_Switch(Node):
         Get run-time configurable, switch-specific configuration data.
         """
         if not self.runtime_cfg:
-            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=quiet)[0])
+            self.runtime_cfg = json.loads(
+                self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=quiet)[0]
+            )
         val = self.runtime_cfg.get(k, None)
         if val == "False":
             return False
@@ -202,7 +204,9 @@ class Attestable_Switch(Node):
         Set run-time configurable, switch-specific configuration data.
         """
         if not self.runtime_cfg:
-            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=True)[0])
+            self.runtime_cfg = json.loads(
+                self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=True)[0]
+            )
         for k, v in cfg_update:
             self.runtime_cfg[k] = v
         s = f"echo '{json.dumps(self.runtime_cfg)}' > {Attestable_Switch.cfg_file}"
@@ -603,7 +607,7 @@ V1Switch(
         SPADE_switch_id=None,
         SPADE_verbosity=None,
         SPADE_period=None,
-        disable_RA_broadcast=False
+        disable_RA_broadcast=False,
     ):
         """
         Start the switch executing, and have it run a P4 program.
@@ -644,17 +648,23 @@ V1Switch(
 
         if disable_RA_broadcast:
             assert with_RA
-            cfg_update.append(self.prep_switch_config_update("disable_RA_broadcast", disable_RA_broadcast))
+            cfg_update.append(
+                self.prep_switch_config_update(
+                    "disable_RA_broadcast", disable_RA_broadcast
+                )
+            )
             RA_inclusion += " --disable-ra-broadcast"
         else:
-            cfg_update.append(self.prep_switch_config_update("disable_RA_broadcast", False))
+            cfg_update.append(
+                self.prep_switch_config_update("disable_RA_broadcast", False)
+            )
 
         if with_SPADE:
             RA_inclusion += " --enable-spade"
             cfg_update.append(self.prep_switch_config_update("with_SPADE", True))
         else:
             cfg_update.append(self.prep_switch_config_update("with_SPADE", False))
-        
+
         if SPADE_file is not None:
             assert with_SPADE
             cfg_update.append(self.prep_switch_config_update("SPADE_file", SPADE_file))
@@ -664,28 +674,34 @@ V1Switch(
 
         if SPADE_switch_id is not None:
             assert with_SPADE
-            cfg_update.append(self.prep_switch_config_update("SPADE_switch_id", SPADE_switch_id))
+            cfg_update.append(
+                self.prep_switch_config_update("SPADE_switch_id", SPADE_switch_id)
+            )
             RA_inclusion += " --spade-switch-id " + str(SPADE_switch_id)
         else:
             cfg_update.append(self.prep_switch_config_update("SPADE_switch_id", None))
 
         if SPADE_verbosity is not None:
             assert with_SPADE
-            cfg_update.append(self.prep_switch_config_update("SPADE_verbosity", SPADE_verbosity))
+            cfg_update.append(
+                self.prep_switch_config_update("SPADE_verbosity", SPADE_verbosity)
+            )
             RA_inclusion += " --spade-verbosity " + str(SPADE_verbosity)
         else:
             cfg_update.append(self.prep_switch_config_update("SPADE_verbosity", None))
 
         if SPADE_period is not None:
             assert with_SPADE
-            cfg_update.append(self.prep_switch_config_update("SPADE_period", SPADE_period))
+            cfg_update.append(
+                self.prep_switch_config_update("SPADE_period", SPADE_period)
+            )
             RA_inclusion += " --spade-period " + str(SPADE_period)
         else:
             cfg_update.append(self.prep_switch_config_update("SPADE_period", None))
 
         commands = [
             f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
-            f'sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}',
+            f"sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}",
         ]
 
         stdout = []
@@ -837,15 +853,21 @@ V1Switch(
                 if self.get_switch_config("RA_et") is not None:
                     result["RA_et"] = self.get_switch_config("RA_et")
                 if self.get_switch_config("disable_RA_broadcast"):
-                    result["disable_RA_broadcast"] = self.get_switch_config("disable_RA_broadcast")
+                    result["disable_RA_broadcast"] = self.get_switch_config(
+                        "disable_RA_broadcast"
+                    )
             result["with_SPADE"] = self.get_switch_config("with_SPADE")
             if self.get_switch_config("with_SPADE"):
                 if self.get_switch_config("SPADE_file") is not None:
                     result["SPADE_file"] = self.get_switch_config("SPADE_file")
                 if self.get_switch_config("SPADE_switch_id") is not None:
-                    result["SPADE_switch_id"] = self.get_switch_config("SPADE_switch_id")
+                    result["SPADE_switch_id"] = self.get_switch_config(
+                        "SPADE_switch_id"
+                    )
                 if self.get_switch_config("SPADE_verbosity") is not None:
-                    result["SPADE_verbosity"] = self.get_switch_config("SPADE_verbosity")
+                    result["SPADE_verbosity"] = self.get_switch_config(
+                        "SPADE_verbosity"
+                    )
                 if self.get_switch_config("SPADE_period") is not None:
                     result["SPADE_period"] = self.get_switch_config("SPADE_period")
 
