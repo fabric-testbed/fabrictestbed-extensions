@@ -608,6 +608,7 @@ V1Switch(
         SPADE_verbosity=None,
         SPADE_period=None,
         disable_RA_broadcast=False,
+        timeout=2,
     ):
         """
         Start the switch executing, and have it run a P4 program.
@@ -714,7 +715,7 @@ V1Switch(
             stdout.append(out)
             stderr.append(err)
             job = self.execute_thread(commands[1])
-            time.sleep(5)
+            time.sleep(timeout)
             if not job.running() and not quiet:
                 (out, err) = job.result()
                 stdout.append(out)
