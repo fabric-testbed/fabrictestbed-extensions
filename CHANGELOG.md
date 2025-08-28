@@ -6,6 +6,9 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+- Fix Attestable Switch failing to start and improve its functioning (Issue [#444](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/444))
+
 ## 1.9.2
 - List Nodes fails to list P4 switches (Issue [#436](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/436))
 - pip install not working (Issue [#418](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/418))
