@@ -427,7 +427,7 @@ class Attestable_Switch(Node):
         from_raw_image = self.get_switch_data()["from_raw_image"]
 
         if self.get_switch_data()["setup_and_configure"]:
-            self.execute(f"touch {Attestable_Switch.cfg_file}")
+            self.execute(f"echo \"{'{}'}\" > {Attestable_Switch.cfg_file}")
 
             logging.info(
                 f"Attestable Switch {self.get_name()}: starting config. from_raw_image={from_raw_image}"
