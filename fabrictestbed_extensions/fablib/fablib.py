@@ -1094,10 +1094,12 @@ Host * !bastion.fabric-testbed.net
         for key in keys_to_remove:
             ssh_keys.remove(key)
 
-        fabric_ssh_key = FABRICSSHKey(current_bastion_key)
-        found = any(
-            item["fingerprint"] == fabric_ssh_key.get_fingerprint() for item in ssh_keys
-        )
+        found = False
+        if current_bastion_key:
+            fabric_ssh_key = FABRICSSHKey(current_bastion_key)
+            found = any(
+                item["fingerprint"] == fabric_ssh_key.get_fingerprint() for item in ssh_keys
+            )
 
         if current_bastion_key is not None and found:
             logging.info(
