@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 - Fix Attestable Switch failing to start and improve its functioning (Issue [#444](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/444))
+- Fix Attestable Switch config initialization causing some functions to fail (Issue [#445](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/445))
 
 ## 1.9.2
 - List Nodes fails to list P4 switches (Issue [#436](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/436))
