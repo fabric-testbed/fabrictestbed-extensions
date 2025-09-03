@@ -50,6 +50,7 @@ You would add a switch and operate on it like so::
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -73,14 +74,14 @@ class Attestable_Switch(Node):
     default_cores = 4
     default_ram = 8
     default_disk = 50
-    default_image = "attestable_bmv2_v2_ubuntu_20"
+    default_image = "crease_ubuntu_22"
     default_username = "ubuntu"
-    raw_image = "default_ubuntu_20"
-    bmv_prefix = "~/bmv2-remote-attestation/targets/simple_switch/"
-    crease_path_prefix = "/home/ubuntu/crease_cfg/"
+    raw_image = "default_ubuntu_22"
+    crease_path_prefix = "/home/ubuntu/.crease/"
+    cfg_file = crease_path_prefix + "crease_switch_cfg.json"
 
-    __version__ = "beta 2"
-    __version_short__ = "b2"
+    __version__ = "beta 3"
+    __version_short__ = "b3"
 
     def __init__(
         self,
@@ -120,6 +121,8 @@ class Attestable_Switch(Node):
         super().__init__(slice, node, validate, raise_exception)
 
         logging.info(f"Creating Attestable Switch {self.get_name()}.")
+
+        self.runtime_cfg = {}
 
         if None == self.get_switch_data(soft=False):
             logging.info(
@@ -177,16 +180,18 @@ class Attestable_Switch(Node):
         """
         Get run-time configurable, switch-specific configuration data.
         """
-
-        (out, _) = self.execute(
-            f"cat {Attestable_Switch.crease_path_prefix + k}", quiet=quiet
-        )
-        if out == "None\n":
-            return None
-        elif out == "True\n":
-            return True
-        elif out == "False\n":
+        if not self.runtime_cfg:
+            self.runtime_cfg = json.loads(
+                self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=quiet)[0]
+            )
+        val = self.runtime_cfg.get(k, None)
+        if val == "False":
             return False
+        elif val == "True":
+            return True
+        elif val == "None":
+            return None
+        return val
 
     def prep_switch_config_update(self, k, v):
         """
@@ -198,11 +203,14 @@ class Attestable_Switch(Node):
         """
         Set run-time configurable, switch-specific configuration data.
         """
-
-        s = ""
+        if not self.runtime_cfg:
+            self.runtime_cfg = json.loads(
+                self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=True)[0]
+            )
         for k, v in cfg_update:
-            s += f"echo '{v}' > {Attestable_Switch.crease_path_prefix + k}; "
-        self.execute(s)
+            self.runtime_cfg[k] = v
+        s = f"echo '{json.dumps(self.runtime_cfg)}' > {Attestable_Switch.cfg_file}"
+        self.execute(s, quiet=True)
 
     def get_port_names(self):
         """
@@ -405,7 +413,7 @@ class Attestable_Switch(Node):
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        rtn_dict = super().toDict(self, skip)
+        rtn_dict = super().toDict(skip)
         if "ports" not in skip:
             rtn_dict["ports"] = str(self.get_port_names())
 
@@ -419,13 +427,7 @@ class Attestable_Switch(Node):
         from_raw_image = self.get_switch_data()["from_raw_image"]
 
         if self.get_switch_data()["setup_and_configure"]:
-            self.execute(
-                f"mkdir {Attestable_Switch.crease_path_prefix}; echo 'None' > "
-                f"{Attestable_Switch.crease_path_prefix}with_RA; echo 'None' > "
-                f"{Attestable_Switch.crease_path_prefix}RA_port; echo 'None' > "
-                f"{Attestable_Switch.crease_path_prefix}RA_et; echo 'False' > "
-                f"{Attestable_Switch.crease_path_prefix}Running"
-            )
+            self.execute(f"echo \"{'{}'}\" > {Attestable_Switch.cfg_file}")
 
             logging.info(
                 f"Attestable Switch {self.get_name()}: starting config. from_raw_image={from_raw_image}"
@@ -468,11 +470,11 @@ class Attestable_Switch(Node):
                     f"Attestable Switch {self.get_name()}: starting compilation..."
                 )
                 self.execute(
-                    'bash -c "cd ~/bmv2-remote-attestation/ && ./install_deps.sh && ./autogen.sh && ./configure && make -j 4"',
+                    'bash -c "cd ~/bmv2-remote-attestation/ && ./install_deps.sh && ./autogen.sh && ./configure && make -j 4 && sudo make install"',
                     quiet=True,
                 )
                 self.execute(
-                    'bash -c "sudo mv ~/bmv2-remote-attestation /usr/local/"',
+                    'bash -c "sudo rm /usr/bin/simple_switch /usr/bin/simple_switch_CLI && sudo rm -rf /home/ubuntu/bmv2-remote-attestation && sudo ldconfig"',
                     quiet=True,
                 )
                 logging.info(
@@ -593,13 +595,20 @@ V1Switch(
 
     def start_switch(
         self,
-        program="/home/ubuntu/crease_cfg/nothing.json",
+        program="/home/ubuntu/.crease/nothing.json",
         dry=False,
         quiet=True,
         force=False,
         with_RA=False,
         RA_port=None,
         RA_et=None,
+        with_SPADE=False,
+        SPADE_file=None,
+        SPADE_switch_id=None,
+        SPADE_verbosity=None,
+        SPADE_period=None,
+        disable_RA_broadcast=False,
+        timeout=2,
     ):
         """
         Start the switch executing, and have it run a P4 program.
@@ -638,10 +647,62 @@ V1Switch(
         else:
             cfg_update.append(self.prep_switch_config_update("RA_et", None))
 
+        if disable_RA_broadcast:
+            assert with_RA
+            cfg_update.append(
+                self.prep_switch_config_update(
+                    "disable_RA_broadcast", disable_RA_broadcast
+                )
+            )
+            RA_inclusion += " --disable-ra-broadcast"
+        else:
+            cfg_update.append(
+                self.prep_switch_config_update("disable_RA_broadcast", False)
+            )
+
+        if with_SPADE:
+            RA_inclusion += " --enable-spade"
+            cfg_update.append(self.prep_switch_config_update("with_SPADE", True))
+        else:
+            cfg_update.append(self.prep_switch_config_update("with_SPADE", False))
+
+        if SPADE_file is not None:
+            assert with_SPADE
+            cfg_update.append(self.prep_switch_config_update("SPADE_file", SPADE_file))
+            RA_inclusion += " --spade-file " + str(SPADE_file)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_file", None))
+
+        if SPADE_switch_id is not None:
+            assert with_SPADE
+            cfg_update.append(
+                self.prep_switch_config_update("SPADE_switch_id", SPADE_switch_id)
+            )
+            RA_inclusion += " --spade-switch-id " + str(SPADE_switch_id)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_switch_id", None))
+
+        if SPADE_verbosity is not None:
+            assert with_SPADE
+            cfg_update.append(
+                self.prep_switch_config_update("SPADE_verbosity", SPADE_verbosity)
+            )
+            RA_inclusion += " --spade-verbosity " + str(SPADE_verbosity)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_verbosity", None))
+
+        if SPADE_period is not None:
+            assert with_SPADE
+            cfg_update.append(
+                self.prep_switch_config_update("SPADE_period", SPADE_period)
+            )
+            RA_inclusion += " --spade-period " + str(SPADE_period)
+        else:
+            cfg_update.append(self.prep_switch_config_update("SPADE_period", None))
+
         commands = [
-            "[ ! -d ~/bmv2-remote-attestation ] && cd ~ && sudo ln -s /usr/local/bmv2-remote-attestation",
             f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
-            f'nohup bash -c "sudo {Attestable_Switch.bmv_prefix}simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}" &',
+            f"sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}",
         ]
 
         stdout = []
@@ -650,23 +711,30 @@ V1Switch(
             for command in commands:
                 print(command)
         else:
-            for command in commands:
-                (out, err) = self.execute(command, quiet=quiet)
+            (out, err) = self.execute(commands[0], quiet=quiet)
+            stdout.append(out)
+            stderr.append(err)
+            job = self.execute_thread(commands[1])
+            time.sleep(timeout)
+            if not job.running() and not quiet:
+                (out, err) = job.result()
                 stdout.append(out)
                 stderr.append(err)
 
+        stdout = list(filter(lambda line: line != "", stdout))
         stderr = list(filter(lambda line: line != "", stderr))
 
         if not quiet:
+            print("stdout: " + str(stdout))
             print("stderr: " + str(stderr))
 
         result = None
 
-        if stderr and len(stderr) == 0:
+        if stderr:
+            result = False
+        else:
             cfg_update.append(self.prep_switch_config_update("Running", True))
             result = True
-        else:
-            result = False
 
         self.commit_switch_config_update(cfg_update)
 
@@ -694,18 +762,20 @@ V1Switch(
             stdout.append(out)
             stderr.append(err)
 
+        stdout = list(filter(lambda line: line != "", stdout))
         stderr = list(filter(lambda line: line != "", stderr))
 
         if not quiet:
+            print("stdout: " + str(stdout))
             print("stderr: " + str(stderr))
 
         result = None
 
-        if force or stderr and len(stderr) == 0:
+        if stderr and not force:
+            result = False
+        else:
             cfg_update.append(self.prep_switch_config_update("Running", False))
             result = True
-        else:
-            result = False
 
         self.commit_switch_config_update(cfg_update)
 
@@ -719,8 +789,8 @@ V1Switch(
         output_file = os.path.splitext(os.path.basename(filename))[0] + ".json"
         commands = [
             f"p4c --target bmv2 --arch v1model ~/{os.path.basename(filename)}",
-            f'echo "load_new_config_file {output_file}" | {Attestable_Switch.bmv_prefix}simple_switch_CLI',
-            f'echo "swap_configs" | {Attestable_Switch.bmv_prefix}simple_switch_CLI',
+            f'echo "load_new_config_file {output_file}" | simple_switch_CLI',
+            f'echo "swap_configs" | simple_switch_CLI',
         ]
 
         stdout = []
@@ -737,17 +807,17 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if stderr and len(stderr) == 0:
-            return True
-        else:
+        if stderr:
             return False
+        else:
+            return True
 
     def run_command(self, cmd, dry=False, quiet=False):
         """
         Run a CLI command on the switch.
         """
 
-        command = f"echo '{cmd}' | {Attestable_Switch.bmv_prefix}simple_switch_CLI"
+        command = f"echo '{cmd}' | simple_switch_CLI"
 
         stdout = []
         stderr = []
@@ -766,10 +836,10 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if stderr and len(stderr) == 0:
-            return True
-        else:
+        if stderr:
             return False
+        else:
+            return True
 
     def get_switch_features(self):
         """
@@ -783,6 +853,25 @@ V1Switch(
                     result["RA_port"] = self.get_switch_config("RA_port")
                 if self.get_switch_config("RA_et") is not None:
                     result["RA_et"] = self.get_switch_config("RA_et")
+                if self.get_switch_config("disable_RA_broadcast"):
+                    result["disable_RA_broadcast"] = self.get_switch_config(
+                        "disable_RA_broadcast"
+                    )
+            result["with_SPADE"] = self.get_switch_config("with_SPADE")
+            if self.get_switch_config("with_SPADE"):
+                if self.get_switch_config("SPADE_file") is not None:
+                    result["SPADE_file"] = self.get_switch_config("SPADE_file")
+                if self.get_switch_config("SPADE_switch_id") is not None:
+                    result["SPADE_switch_id"] = self.get_switch_config(
+                        "SPADE_switch_id"
+                    )
+                if self.get_switch_config("SPADE_verbosity") is not None:
+                    result["SPADE_verbosity"] = self.get_switch_config(
+                        "SPADE_verbosity"
+                    )
+                if self.get_switch_config("SPADE_period") is not None:
+                    result["SPADE_period"] = self.get_switch_config("SPADE_period")
+
         return result
 
     def get_version(self):
@@ -791,8 +880,7 @@ V1Switch(
         """
 
         commands = [
-            "[ ! -d ~/bmv2-remote-attestation ] && cd ~ && sudo ln -s /usr/local/bmv2-remote-attestation",
-            f"{Attestable_Switch.bmv_prefix}simple_switch -v",
+            f"simple_switch -v",
         ]
 
         stdout = []
@@ -805,8 +893,8 @@ V1Switch(
 
         stderr = list(filter(lambda line: line != "", stderr))
 
-        if stderr and len(stderr) == 0:
+        if stderr:
+            return False
+        else:
             print(str(self.get_switch_features()))
             return True
-        else:
-            return False
