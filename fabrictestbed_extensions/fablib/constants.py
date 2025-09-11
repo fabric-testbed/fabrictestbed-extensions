@@ -249,7 +249,7 @@ class Constants:
     P4_SWITCH = "P4-Switch"
 
     CMP_NIC_Basic = "NIC_Basic"
-    CMP_NIC_BlueField2_ConnectX_6 = "NIC_BlueField2_ConnectX_6"
+    CMP_NIC_BlueField2_ConnectX_6 = "NIC_BlueField_2_ConnectX_6"
     CMP_NIC_ConnectX_7_400 = "NIC_ConnectX_7_400"
     CMP_NIC_ConnectX_7_100 = "NIC_ConnectX_7_100"
     CMP_NIC_ConnectX_6 = "NIC_ConnectX_6"
