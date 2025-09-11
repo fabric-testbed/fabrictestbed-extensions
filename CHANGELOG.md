@@ -6,9 +6,10 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 1.9.3
 - Fix Attestable Switch failing to start and improve its functioning (Issue [#444](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/444))
 - Fix Attestable Switch config initialization causing some functions to fail (Issue [#445](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/445))
+- SSH config file generation fails (Issue [#447](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/447))
 
 ## 1.9.2
 - List Nodes fails to list P4 switches (Issue [#436](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/436))
