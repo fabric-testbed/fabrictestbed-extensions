@@ -309,26 +309,3 @@ class CephFsUtils:
         slug = re.sub(r"[^A-Za-z0-9._-]+", "_", p)
         return slug or "root"
 
-
-if __name__ == '__main__':
-    clusters = CephFsUtils.list_clusters_from_api(
-        base_url="https://23.134.232.211",
-        token_file="/Users/kthare10/work/id_token_prod.json",  # or token="…"
-        verify=False,
-    )
-    cluster_list = list(clusters.keys())
-
-    selected_cluster = cluster_list[0]
-
-    result = CephFsUtils.build_for_user_from_api(
-        base_url="https://23.134.232.211",
-        user_entity="client.kthare10_0000001692",
-        cluster=selected_cluster,  # omit to use the first cluster
-        token_file="/Users/kthare10/work/id_token_prod.json",  # or token="…"
-        verify=False,
-        out_base="./ceph-artifacts",  # output root folder
-        mount_root_default="/mnt/cephfs"  # where the script will mount
-    )
-    print(json.dumps(result, indent=2))
-    # Run the script:  bash ./ceph-artifacts/europe/mount_kthare10_0011904101.sh
-

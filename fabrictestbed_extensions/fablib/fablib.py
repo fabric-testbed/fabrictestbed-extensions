@@ -75,12 +75,14 @@ import threading
 import traceback
 import warnings
 
+from fabric_ceph_client.fabric_ceph_client import CephManagerClient
 from fabrictestbed.external_api.artifact_manager import Visibility
 from fabrictestbed.fabric_manager import FabricManager
 from fss_utils.sshkey import FABRICSSHKey
 
 from fabrictestbed_extensions.fablib.artifact import Artifact
 from fabrictestbed_extensions.fablib.site import Host, Site
+from fabrictestbed_extensions.utils.ceph_fs_utils import CephFsUtils
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
@@ -612,6 +614,7 @@ class FablibManager(Config):
         orchestrator_host: str = None,
         core_api_host: str = None,
         am_host: str = None,
+        ceph_mgr_host: str = None,
         token_location: str = None,
         project_id: str = None,
         bastion_username: str = None,
@@ -652,6 +655,7 @@ class FablibManager(Config):
         :param orchestrator_host: Name of FABRIC orchestrator host.
         :param core_api_host: Name of Core API host.
         :param am_host: Name of Aggregate Manager host.
+        :param ceph_mgr_host: Name of ceph manager host.
         :param token_location: Path to the file that contains your
             FABRIC auth token.
         :param project_id: Your FABRIC project ID, obtained from
@@ -684,6 +688,7 @@ class FablibManager(Config):
             orchestrator_host=orchestrator_host,
             core_api_host=core_api_host,
             am_host=am_host,
+            ceph_mgr_host=ceph_mgr_host,
             token_location=token_location,
             project_id=project_id,
             bastion_username=bastion_username,
@@ -3248,4 +3253,101 @@ Host * !bastion.fabric-testbed.net
             artifact_title=artifact_title,
             version=version,
             version_urn=version_urn,
+        )
+
+    def discover_ceph_regions(self, verify: bool = False) -> dict:
+        """
+        Discover Ceph regions via the Ceph Manager API.
+
+        Calls :py:meth:`CephFsUtils.list_clusters_from_api` using this object's
+        Ceph Manager base URL and token file.
+
+        :param bool verify: Verify TLS certificates when calling the API.
+                            Defaults to ``False`` (set to ``True`` in production).
+        :return: Mapping of cluster name to metadata, e.g.::
+
+            {
+              "europe": {
+                "ceph_conf_minimal": "[global]\\n  fsid = ...\\n  mon_host = ...\\n",
+                "fsid": "1337-....",
+                "mon_host": "[v2:10.1.2.3:3300/0,...]"
+              },
+              "asia": { ... }
+            }
+        :rtype: dict
+        :raises RuntimeError: If the API call fails.
+        """
+        return CephFsUtils.list_clusters_from_api(
+            base_url=self.get_ceph_mgr_host(),
+            token_file=self.get_token_location(),  # or token=...
+            verify=verify,
+        )
+
+    def generate_ceph_bundle(
+            self,
+            region: str,
+            out_base: str = "./ceph-artifacts",
+            mount_root: str = "/mnt/cephfs",
+            verify: bool = False,
+    ) -> dict:
+        """
+        Generate a local bundle for mounting CephFS paths for the current user
+        on a specific cluster.
+
+        This:
+          1. Fetches the minimal ``ceph.conf`` for ``region``.
+          2. Exports the user's keyring from that cluster.
+          3. Writes files under ``out_base/<region>/``:
+             ``ceph.conf``, ``ceph.client.<user>.secret``,
+             ``ceph.client.<user>.keyring``, and a mount script
+             ``mount_<user>.sh`` that mounts every path found in the MDS caps.
+
+        :param str region: Target cluster name (e.g., ``"europe"``).
+        :param str out_base: Output root directory for artifacts
+                             (default: ``"./ceph-artifacts"``).
+        :param str mount_root: Mount prefix used by the generated script
+                               (default: ``"/mnt/cephfs"``).
+        :param bool verify: Verify TLS certificates when calling the API.
+                            Defaults to ``False`` (set to ``True`` in production).
+        :return: Details of the generated bundle, for example::
+
+            {
+              "cluster_dir": "./ceph-artifacts/europe",
+              "ceph_conf": "./ceph-artifacts/europe/ceph.conf",
+              "secret_file": "./ceph-artifacts/europe/ceph.client.alice.secret",
+              "keyring_file": "./ceph-artifacts/europe/ceph.client.alice.keyring",
+              "mount_script": "./ceph-artifacts/europe/mount_alice.sh",
+              "entity": "client.alice",
+              "user": "alice",
+              "mounts": [
+                {
+                  "fsname": "CEPH-FS-01",
+                  "path": "/volumes/_nogroup/alice/....",
+                  "mount_point": "/mnt/cephfs/europe/alice/volumes__nogroup_alice____"
+                },
+                ...
+              ]
+            }
+        :rtype: dict
+        :raises ValueError: If ``region`` is unknown or the user name is empty.
+        :raises RuntimeError: If no clusters are discovered or keyring is unavailable.
+        """
+        # Accept either "alice" or "client.alice" from your accessor
+        user_entity = self.get_bastion_username()
+        if not user_entity:
+            self.determine_bastion_username()
+            user_entity = self.get_bastion_username()
+        if not user_entity:
+            raise ValueError("User/bastion login is empty.")
+        if not user_entity.startswith("client."):
+            user_entity = f"client.{user_entity}"
+
+        return CephFsUtils.build_for_user_from_api(
+            base_url=self.get_ceph_mgr_host(),
+            user_entity=user_entity,
+            cluster=region,
+            token_file=self.get_token_location(),  # or token=...
+            verify=verify,
+            out_base=out_base,
+            mount_root_default=mount_root,
         )

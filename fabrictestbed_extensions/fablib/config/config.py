@@ -79,6 +79,10 @@ class Config:
             Constants.ENV_VAR: Constants.FABRIC_AM_HOST,
             Constants.DEFAULT: Constants.DEFAULT_FABRIC_AM_HOST,
         },
+        Constants.CEPH_MGR_HOST: {
+            Constants.ENV_VAR: Constants.FABRIC_CEPH_MGR_HOST,
+            Constants.DEFAULT: Constants.DEFAULT_FABRIC_CEPH_MGR_HOST,
+        },
         Constants.TOKEN_LOCATION: {
             Constants.ENV_VAR: Constants.FABRIC_TOKEN_LOCATION,
             Constants.DEFAULT: Constants.DEFAULT_TOKEN_LOCATION,
@@ -137,6 +141,7 @@ class Config:
         Constants.ORCHESTRATOR_HOST: "Orchestrator",
         Constants.CORE_API_HOST: "Core API",
         Constants.AM_HOST: "Artifact Manager",
+        Constants.CEPH_MGR_HOST: "CEPH Manager",
         Constants.TOKEN_LOCATION: "Token File",
         Constants.PROJECT_ID: "Project ID",
         Constants.PROJECT_NAME: "Project Name",
@@ -166,6 +171,7 @@ class Config:
         orchestrator_host: str = None,
         core_api_host: str = None,
         am_host: str = None,
+        ceph_mgr_host: str = None,
         token_location: str = None,
         project_id: str = None,
         bastion_username: str = None,
@@ -208,6 +214,9 @@ class Config:
 
         if core_api_host is not None:
             self.set_core_api_host(core_api_host=core_api_host)
+
+        if ceph_mgr_host is not None:
+            self.set_ceph_mgr_host(ceph_mgr_host=ceph_mgr_host)
 
         if am_host is not None:
             self.set_am_host(am_host=am_host)
@@ -460,6 +469,23 @@ class Config:
         :type core_api_host: String
         """
         self.runtime_config[Constants.CORE_API_HOST] = core_api_host
+
+    def set_ceph_mgr_host(self, ceph_mgr_host: str):
+        """
+        Sets the ceph_mgr host value.
+        :param ceph_mgr_host: ceph_mgr host
+        :type ceph_mgr_host: String
+        """
+        self.runtime_config[Constants.CEPH_MGR_HOST] = ceph_mgr_host
+
+    def get_ceph_mgr_host(self) -> str:
+        """
+        Gets the ceph_mgr host value.
+
+        :return: the ceph_mgr host site
+        :rtype: String
+        """
+        return self.runtime_config.get(Constants.CEPH_MGR_HOST)
 
     def get_am_host(self) -> str:
         """
