@@ -3255,7 +3255,7 @@ Host * !bastion.fabric-testbed.net
             version_urn=version_urn,
         )
 
-    def discover_ceph_regions(self, verify: bool = False) -> dict:
+    def discover_ceph_regions(self, verify: bool = False) -> list:
         """
         Discover Ceph regions via the Ceph Manager API.
 

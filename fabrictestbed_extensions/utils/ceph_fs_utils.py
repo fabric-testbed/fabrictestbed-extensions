@@ -1,33 +1,41 @@
+# CephFsUtils.py
 from __future__ import annotations
-from pathlib import Path
+
+import json
 import os
 import re
-import json
-from typing import List, Tuple, Dict, Any, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-# ---- dynamic import for the client (works with either layout) ----
-def _import_ceph_client():
-    try:
-        from fabric_ceph_client import CephManagerClient  # local fallback
-        return CephManagerClient
-    except Exception:
-        from fabric_ceph_client.fabric_ceph_client import CephManagerClient  # packaged
-        return CephManagerClient
+try:
+    from fabric_ceph_client import CephManagerClient
+except Exception:
+    from fabric_ceph_client.fabric_ceph_client import CephManagerClient
 
 
 class CephFsUtils:
     """
-    Prepare a local folder with ceph.conf, client key/secret, and a mount script
-    that mounts EVERY CephFS path found in the exported keyring's MDS caps.
+    Build CephFS client artifacts (conf, keyring, secret, mount script) for a cluster/user.
 
-    Mount points are created under: /mnt/cephfs/<cluster>/<user>/<slug-of-path>
-    so multiple clusters are clearly separated.
+    Key behaviors
+    -------------
+    - Files under output bundle: <out_base>/<cluster>/
+      * ceph.conf
+      * ceph.client.<user>.keyring
+      * ceph.client.<user>.secret
+      * mount_<user>.sh
+    - The mount script idempotently copies to /etc/ceph **with cluster prefixes**:
+      * /etc/ceph/<cluster>.conf
+      * /etc/ceph/<cluster>.client.<user>.keyring
+      * /etc/ceph/<cluster>.client.<user>.secret
+    - Kernel mount uses: secretfile=…, conf=…, name=<user>, fs=<fsname>
+      and falls back to mds_namespace=<fsname> if fs= is rejected (EINVAL).
 
-    You can either:
-      1) Construct with `cluster`, `ceph_conf_text`, and `keyring_blob`, then call build()
-      2) Use the convenience classmethods that talk to the Ceph Manager API:
-           - list_clusters_from_api(...)
-           - build_for_user_from_api(...)
+    High-level helpers
+    ------------------
+    - list_clusters_from_api()
+    - build_for_user_from_api()
+    - build_for_login_from_api()
     """
 
     def __init__(
@@ -42,24 +50,22 @@ class CephFsUtils:
         self.cluster = str(cluster).strip()
         if not self.cluster:
             raise ValueError("cluster must be a non-empty string")
-
         self.ceph_conf_text = ceph_conf_text
         self.keyring_blob = keyring_blob
         self.out_base = Path(out_base).resolve()
         self.mount_root_default = mount_root_default
 
         # Filled by parse()
-        self.entity: Optional[str] = None          # e.g. client.alice_123
-        self.user_only: Optional[str] = None       # e.g. alice_123
-        self.secret: Optional[str] = None          # base64 secret
-        self.fs_paths: List[Tuple[str, str]] = []  # list of (fsname, path)
+        self.entity: Optional[str] = None          # client.foo
+        self.user_only: Optional[str] = None       # foo
+        self.secret: Optional[str] = None          # base64
+        self.fs_paths: List[Tuple[str, str]] = []  # (fsname, path)
 
-    # ---------- public API ----------
+    # ---------------- Public API ----------------
 
     def build(self) -> Dict[str, Any]:
         """
-        Parse inputs and write files under ./<cluster>/.
-        Returns a dict with file paths and the list of mounts that the script will attempt.
+        Parse, write bundle, return summary.
         """
         text = self._unescape_if_json(self.keyring_blob)
         self._parse_keyring(text)
@@ -89,101 +95,88 @@ class CephFsUtils:
             ],
         }
 
-    # ---------- high-level helpers (Ceph Manager API) ----------
+    # ---------------- API helpers ----------------
 
-    @classmethod
+    @staticmethod
     def list_clusters_from_api(
-        cls,
         *,
         base_url: str,
-        token: Optional[str] = None,
         token_file: Optional[str] = None,
+        token: Optional[str] = None,
         verify: bool = True,
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        Returns a dict: { cluster_name: {"ceph_conf_minimal": "...", "fsid": "...", "mon_host": "..."} }
-        """
-        CephManagerClient = _import_ceph_client()
-        client = CephManagerClient(base_url=base_url, token=token, token_file=token_file, verify=verify)
-        info = client.list_cluster_info()
+    ) -> List[str]:
+        c = CephManagerClient(base_url=base_url, token=token, token_file=token_file, verify=verify)
+        info = c.list_cluster_info()
         items = (info or {}).get("data", []) if isinstance(info, dict) else []
-        out: Dict[str, Dict[str, Any]] = {}
-        for it in items:
-            if not isinstance(it, dict):  continue
-            name = it.get("cluster")
-            if not name: continue
-            out[name] = {
-                "ceph_conf_minimal": it.get("ceph_conf_minimal") or cls._compose_minimal_conf(it),
-                "fsid": it.get("fsid"),
-                "mon_host": it.get("mon_host"),
-            }
-        return out
+        return [i.get("cluster") for i in items if isinstance(i, dict) and i.get("cluster")]
 
-    @classmethod
+    @staticmethod
     def build_for_user_from_api(
-        cls,
         *,
-        base_url: str,
         user_entity: str,
-        cluster: Optional[str] = None,
-        token: Optional[str] = None,
+        base_url: str,
+        cluster: str,
         token_file: Optional[str] = None,
+        token: Optional[str] = None,
         verify: bool = True,
-        out_base: Path | str = ".",
+        out_base: Path | str = "./ceph-artifacts",
         mount_root_default: str = "/mnt/cephfs",
     ) -> Dict[str, Any]:
-        """
-        Discover clusters, pick one (explicit 'cluster' or first returned), fetch ceph.conf and keyring,
-        and generate files + mount script. Returns the same dict as build().
-        """
-        CephManagerClient = _import_ceph_client()
-        cmc = CephManagerClient(base_url=base_url, token=token, token_file=token_file, verify=verify)
+        c = CephManagerClient(base_url=base_url, token=token, token_file=token_file, verify=verify)
 
-        # Choose cluster
-        clusters = cls.list_clusters_from_api(base_url=base_url, token=token, token_file=token_file, verify=verify)
-        if not clusters:
-            raise RuntimeError("No clusters returned by /cluster/info")
-        if cluster and cluster not in clusters:
-            raise ValueError(f"Cluster '{cluster}' not found. Available: {', '.join(clusters.keys())}")
-        chosen = cluster or next(iter(clusters.keys()))
-        ceph_conf_text = clusters[chosen]["ceph_conf_minimal"]
-        if not (isinstance(ceph_conf_text, str) and ceph_conf_text.strip()):
-            raise RuntimeError(f"Cluster '{chosen}' did not provide ceph_conf_minimal")
+        # ceph.conf (minimal) for the cluster
+        info = c.list_cluster_info()
+        items = (info or {}).get("data", []) if isinstance(info, dict) else []
+        entry = next((x for x in items if isinstance(x, dict) and x.get("cluster") == cluster), None)
+        if not entry:
+            raise ValueError(f"Cluster '{cluster}' not found")
+        ceph_conf_text = entry.get("ceph_conf_minimal")
+        if not isinstance(ceph_conf_text, str) or not ceph_conf_text.strip():
+            raise ValueError(f"Cluster '{cluster}' is missing ceph_conf_minimal")
 
-        # Fetch keyring for the user
-        resp = cmc.export_users(cluster=chosen, entities=[user_entity])
-        blob = ((resp or {}).get("clusters", {}) or {}).get(chosen, {}).get(user_entity)
-        if not blob:
-            raise RuntimeError(f"Keyring for {user_entity} not found on cluster '{chosen}'")
-        keyring_blob = blob if isinstance(blob, str) else str(blob)
+        # Keyring for user on that cluster
+        export = c.export_users(cluster=cluster, entities=[user_entity])
+        key_blob = ((export or {}).get("clusters", {}) or {}).get(cluster, {}).get(user_entity)
+        if not key_blob:
+            raise ValueError(f"No keyring for {user_entity} on cluster '{cluster}'")
 
-        inst = cls(
-            chosen,
-            ceph_conf_text,
-            keyring_blob,
+        return CephFsUtils(
+            cluster=cluster,
+            ceph_conf_text=ceph_conf_text,
+            keyring_blob=key_blob,
+            out_base=out_base,
+            mount_root_default=mount_root_default,
+        ).build()
+
+    @staticmethod
+    def build_for_login_from_api(
+        *,
+        login: str,
+        base_url: str,
+        cluster: str,
+        token_file: Optional[str] = None,
+        token: Optional[str] = None,
+        verify: bool = True,
+        out_base: Path | str = "./ceph-artifacts",
+        mount_root_default: str = "/mnt/cephfs",
+        prefix: str = "client.",
+    ) -> Dict[str, Any]:
+        entity = f"{prefix}{login}" if prefix else login
+        return CephFsUtils.build_for_user_from_api(
+            user_entity=entity,
+            base_url=base_url,
+            cluster=cluster,
+            token_file=token_file,
+            token=token,
+            verify=verify,
             out_base=out_base,
             mount_root_default=mount_root_default,
         )
-        return inst.build()
 
-    # ---------- helpers / parsing ----------
-
-    @staticmethod
-    def _compose_minimal_conf(item: Dict[str, Any]) -> str:
-        """
-        Compose a minimal ceph.conf if server didn't return one.
-        """
-        fsid = item.get("fsid") or ""
-        mon_host = item.get("mon_host") or ""
-        return (
-            "[global]\n"
-            f"  fsid = {fsid}\n"
-            f"  mon_host = {mon_host}\n"
-        ).strip() + "\n"
+    # ---------------- Parsing ----------------
 
     @staticmethod
     def _unescape_if_json(s: str) -> str:
-        # If the blob is JSON-escaped (e.g. starts/ends with quotes), decode it.
         try:
             return json.loads(s)
         except Exception:
@@ -206,44 +199,62 @@ class CephFsUtils:
         m_key = self._require_regex(r"^\s*key\s*=\s*([A-Za-z0-9+/=]+)\s*$", text, "'key =' line", flags=re.M)
         self.secret = m_key.group(1)
 
-        # caps mds = "allow rw fsname=FS path=/foo, allow rw fsname=FS path=/bar, ..."
+        # caps mds = "allow rw fsname=FS path=/foo, allow rw fsname=FS path=/bar"
         m_caps = re.search(r'caps\s+mds\s*=\s*"([^"]+)"', text)
         paths: List[Tuple[str, str]] = []
         if m_caps:
             body = m_caps.group(1)
-            # Prefer explicit fsname/path pairs
-            pairs = re.findall(r"fsname=([^,\s]+)\s+path=([^,\s]+)", body)
-            if pairs:
-                # de-dup, preserve order
-                seen = set()
-                for fp in pairs:
-                    if fp not in seen:
-                        seen.add(fp)
-                        paths.append(fp)
-            else:
-                # Fallback: extract path=...; assume single-FS if not given
-                for p in re.findall(r"path=([^,\s]+)", body):
-                    paths.append(("cephfs", p))  # generic fallback FS name
+            clauses = [c.strip() for c in re.split(r"\s*,\s*", body) if c.strip()]
+            seen_fs: List[str] = []
+            for cl in clauses:
+                mfs = re.search(r"fsname=([^,\s]+)", cl)
+                if mfs:
+                    fsn = mfs.group(1)
+                    if fsn not in seen_fs:
+                        seen_fs.append(fsn)
+
+            def default_fs() -> Optional[str]:
+                return seen_fs[0] if len(seen_fs) == 1 else None
+
+            for cl in clauses:
+                mfs = re.search(r"fsname=([^,\s]+)", cl)
+                mp = re.search(r"path=([^,\s]+)", cl)
+                if not mp:
+                    continue
+                fsn = mfs.group(1) if mfs else default_fs()
+                if not fsn:
+                    raise ValueError("Found MDS cap without fsname=... and cannot infer default FS.")
+                pth = mp.group(1)
+                paths.append((fsn, pth))
+
+            # de-dup preserve order
+            uniq: List[Tuple[str, str]] = []
+            seen: set[Tuple[str, str]] = set()
+            for fp in paths:
+                if fp not in seen:
+                    seen.add(fp)
+                    uniq.append(fp)
+            paths = uniq
 
         if not paths:
             raise ValueError("No fsname/path entries found in MDS caps")
 
         self.fs_paths = paths
 
-    # ---------- writers ----------
+    # ---------------- Writers ----------------
 
     def _write_conf(self, cluster_dir: Path) -> Path:
         conf_path = cluster_dir / "ceph.conf"
         conf_path.write_text(self.ceph_conf_text, encoding="utf-8")
         return conf_path
 
-    def _write_secrets(self, cluster_dir: Path, keyring_text: str) -> tuple[Path, Path]:
-        # secret file
+    def _write_secrets(self, cluster_dir: Path, keyring_text: str) -> Tuple[Path, Path]:
+        # secret file (use by kernel mount via secretfile=)
         secret_path = cluster_dir / f"ceph.client.{self.user_only}.secret"
         secret_path.write_text(self.secret + "\n", encoding="utf-8")
         os.chmod(secret_path, 0o600)
 
-        # full keyring (as-is)
+        # full keyring (for reference / admin tools)
         keyring_path = cluster_dir / f"ceph.client.{self.user_only}.keyring"
         keyring_path.write_text(keyring_text, encoding="utf-8")
         os.chmod(keyring_path, 0o600)
@@ -254,107 +265,110 @@ class CephFsUtils:
         script_name = f"mount_{self.user_only}.sh"
         script_path = cluster_dir / script_name
 
-        # Build one mount stanza per (fsname, path)
-        mount_blocks: List[str] = []
+        # Build mount blocks with fs= and fallback to mds_namespace=
+        blocks: List[str] = []
         for fsname, path in self.fs_paths:
             slug = self._slug_from_path(path)
             mnt = f'$MNT_BASE/$CLUSTER/$USER_NAME/{slug}'
-            block = "\n".join([
-                f'# --- {fsname}:{path} ---',
-                f'echo "Preparing mountpoint: {mnt}"',
-                f'sudo mkdir -p {mnt}',
-                'if ! mountpoint -q {mnt}; then',
-                '  sudo chown "${owner_uid}:${owner_gid}" {mnt} || true',
-                '  sudo chmod 755 {mnt} || true',
-                'fi',
-                '',
-                'if mountpoint -q {mnt}; then',
-                '  current_src="$(findmnt -n -o SOURCE --target {mnt} 2>/dev/null || true)"',
-                '  if [[ -n "$current_src" ]]; then',
-                '    echo "Already mounted ($current_src) at {mnt}. Skipping."',
-                '    continue',
-                '  fi',
-                'fi',
-                '',
-                f'echo "Mounting fs={fsname} path={path} -> {mnt}"',
-                # Use cluster-namespaced conf/keyring to avoid collisions across clusters
-                'sudo mount -t ceph ":' + path + f'" {mnt} '
-                                                 '-o name="$USER_NAME",conf="$CONF_TGT",keyring="$KEYRING_TGT",'
-                                                 f'mds_namespace="{fsname}",fs="{fsname}",_netdev,noatime',
-                'sudo chown -R "${owner_uid}:${owner_gid}" {mnt} || true',
-                ''
-            ])
-            mount_blocks.append(block.replace("{mnt}", mnt))
+
+            blk = f"""
+# --- {fsname}:{path} ---
+echo "Preparing mountpoint: {mnt}"
+sudo mkdir -p {mnt}
+if ! mountpoint -q {mnt}; then
+  sudo chown "${{owner_uid}}:${{owner_gid}}" {mnt} || true
+  sudo chmod 755 {mnt} || true
+fi
+
+if mountpoint -q {mnt}; then
+  current_src="$(findmnt -n -o SOURCE --target {mnt} 2>/dev/null || true)"
+  if [[ -n "$current_src" ]]; then
+    echo "Already mounted ($current_src) at {mnt}. Skipping."
+    continue
+  fi
+fi
+
+echo "Mounting (fs=) fs={fsname} path={path} -> {mnt}"
+set +e
+sudo mount -t ceph ":{path}" {mnt} -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",fs="{fsname}",_netdev,noatime
+rc=$?
+set -e
+if [[ $rc -eq 22 ]]; then
+  echo "fs= not accepted (EINVAL). Retrying with mds_namespace={fsname} ..."
+  sudo mount -t ceph ":{path}" {mnt} -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",mds_namespace="{fsname}",_netdev,noatime
+fi
+
+sudo chown -R "${{owner_uid}}:${{owner_gid}}" {mnt} || true
+"""
+            blocks.append(blk)
 
         script = f"""#!/usr/bin/env bash
-    set -euo pipefail
+set -euo pipefail
 
-    # This script:
-    #  - copies ceph.conf and ceph.client.$USER_NAME.keyring to /etc/ceph (cluster-namespaced, idempotent)
-    #  - ensures mount directories exist with correct ownership/perms
-    #  - mounts each path discovered in your keyring's MDS caps
+# Installs /etc/ceph/<cluster>.conf, /etc/ceph/<cluster>.client.<user>.keyring and .secret,
+# fixes mount dir permissions, and mounts all paths discovered in your MDS caps.
 
-    here="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
-    CLUSTER="{self.cluster}"
-    ENTITY="{self.entity}"
-    USER_NAME="{self.user_only}"
+here="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+CLUSTER="{self.cluster}"
+ENTITY="{self.entity}"
+USER_NAME="{self.user_only}"
+MNT_BASE="${{MNT_BASE:-{self.mount_root_default}}}"
 
-    # Allow caller to override mount root:
-    MNT_BASE="${{MNT_BASE:-{self.mount_root_default}}}"
+echo "Using cluster: $CLUSTER"
+echo "Bundle dir:   $here"
+echo "Mount base:   $MNT_BASE"
 
-    # Idempotent copy helper: copy if file missing or different
-    copy_if_changed() {{
-      local src="$1" dst="$2" mode="$3"
-      if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
-        sudo install -m "$mode" -D "$src" "$dst"
-      fi
-    }}
+# Cluster-scoped targets in /etc/ceph
+if [[ "$CLUSTER" == "ceph" || -z "$CLUSTER" ]]; then
+  CONF_TGT="/etc/ceph/ceph.conf"
+  KEYRING_TGT="/etc/ceph/ceph.client.$USER_NAME.keyring"
+  SECRET_TGT="/etc/ceph/ceph.client.$USER_NAME.secret"
+else
+  CONF_TGT="/etc/ceph/${{CLUSTER}}.conf"
+  KEYRING_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.keyring"
+  SECRET_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.secret"
+fi
 
-    echo "Using cluster: $CLUSTER"
-    echo "Bundle dir:   $here"
-    echo "Mount base:   $MNT_BASE"
+# Helper: copy if missing or changed
+copy_if_changed() {{
+  local src="$1" dst="$2" mode="$3"
+  if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
+    sudo install -m "$mode" -D "$src" "$dst"
+  fi
+}}
 
-    # Decide cluster-scoped targets in /etc/ceph
-    if [[ "$CLUSTER" == "ceph" || -z "$CLUSTER" ]]; then
-      CONF_TGT="/etc/ceph/ceph.conf"
-      KEYRING_TGT="/etc/ceph/ceph.client.$USER_NAME.keyring"
-    else
-      CONF_TGT="/etc/ceph/${{CLUSTER}}.conf"
-      KEYRING_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.keyring"
-    fi
+# Ensure /etc/ceph has the right files (idempotent)
+sudo mkdir -p /etc/ceph
+copy_if_changed "$here/ceph.conf" "$CONF_TGT" 644
+copy_if_changed "$here/ceph.client.$USER_NAME.keyring" "$KEYRING_TGT" 600
+copy_if_changed "$here/ceph.client.$USER_NAME.secret" "$SECRET_TGT" 600
 
-    # Ensure /etc/ceph exists and place conf + keyring there (idempotent)
-    sudo mkdir -p /etc/ceph
-    copy_if_changed "$here/ceph.conf" "$CONF_TGT" 644
-    copy_if_changed "$here/ceph.client.$USER_NAME.keyring" "$KEYRING_TGT" 600
+# Determine non-root owner for mount dirs
+owner_uid="${{SUDO_UID:-}}"
+owner_gid="${{SUDO_GID:-}}"
+if [[ -z "$owner_uid" || -z "$owner_gid" ]]; then
+  owner_uid="$(stat -c %u "$here")"
+  owner_gid="$(stat -c %g "$here")"
+fi
 
-    # Determine a non-root owner to own the mount directories:
-    owner_uid="${{SUDO_UID:-}}"
-    owner_gid="${{SUDO_GID:-}}"
-    if [[ -z "$owner_uid" || -z "$owner_gid" ]]; then
-      owner_uid="$(stat -c %u "$here")"
-      owner_gid="$(stat -c %g "$here")"
-    fi
+# User base
+sudo mkdir -p "$MNT_BASE/$CLUSTER/$USER_NAME"
+if ! mountpoint -q "$MNT_BASE/$CLUSTER/$USER_NAME"; then
+  sudo chown "${{owner_uid}}:${{owner_gid}}" "$MNT_BASE/$CLUSTER/$USER_NAME" || true
+  sudo chmod 755 "$MNT_BASE/$CLUSTER/$USER_NAME" || true
+fi
 
-    # Create the user-level base directory
-    sudo mkdir -p "$MNT_BASE/$CLUSTER/$USER_NAME"
-    if ! mountpoint -q "$MNT_BASE/$CLUSTER/$USER_NAME"; then
-      sudo chown "${{owner_uid}}:${{owner_gid}}" "$MNT_BASE/$CLUSTER/$USER_NAME" || true
-      sudo chmod 755 "$MNT_BASE/$CLUSTER/$USER_NAME" || true
-    fi
+{"".join(blocks)}
 
-    # --- mounts discovered in keyring ---
-    {os.linesep.join(mount_blocks)}
-
-    echo "All mounts attempted."
-    echo "To unmount:"
-    echo "  sudo umount -l $MNT_BASE/$CLUSTER/$USER_NAME/*"
-    """
+echo "All mounts attempted."
+echo "To unmount:"
+echo "  sudo umount -l $MNT_BASE/$CLUSTER/$USER_NAME/*"
+"""
         script_path.write_text(script, encoding="utf-8")
         os.chmod(script_path, 0o750)
         return script_path
 
-    # ---------- utils ----------
+    # ---------------- Utils ----------------
 
     @staticmethod
     def _slug_from_path(p: str) -> str:
@@ -362,3 +376,57 @@ class CephFsUtils:
         slug = re.sub(r"[^A-Za-z0-9._-]+", "_", p)
         return slug or "root"
 
+
+# ------------ Sphinx-friendly helpers ------------
+
+def list_ceph_clusters(*, base_url: str, token_file: Optional[str] = None, token: Optional[str] = None, verify: bool = True) -> List[str]:
+    """Return cluster names from the Ceph Manager API."""
+    return CephFsUtils.list_clusters_from_api(base_url=base_url, token_file=token_file, token=token, verify=verify)
+
+
+def build_ceph_bundle_for_user(
+    *,
+    user_entity: str,
+    base_url: str,
+    cluster: str,
+    token_file: Optional[str] = None,
+    token: Optional[str] = None,
+    verify: bool = True,
+    out_base: Path | str = "./ceph-artifacts",
+    mount_root_default: str = "/mnt/cephfs",
+) -> Dict[str, Any]:
+    """Build artifacts for a specific CephX user (entity like ``client.foo``) on a cluster."""
+    return CephFsUtils.build_for_user_from_api(
+        user_entity=user_entity,
+        base_url=base_url,
+        cluster=cluster,
+        token_file=token_file,
+        token=token,
+        verify=verify,
+        out_base=out_base,
+        mount_root_default=mount_root_default,
+    )
+
+
+def build_ceph_bundle_for_login(
+    *,
+    login: str,
+    base_url: str,
+    cluster: str,
+    token_file: Optional[str] = None,
+    token: Optional[str] = None,
+    verify: bool = True,
+    out_base: Path | str = "./ceph-artifacts",
+    mount_root_default: str = "/mnt/cephfs",
+) -> Dict[str, Any]:
+    """Build artifacts for a bastion login (entity assumed as ``client.<login>``)."""
+    return CephFsUtils.build_for_login_from_api(
+        login=login,
+        base_url=base_url,
+        cluster=cluster,
+        token_file=token_file,
+        token=token,
+        verify=verify,
+        out_base=out_base,
+        mount_root_default=mount_root_default,
+    )
