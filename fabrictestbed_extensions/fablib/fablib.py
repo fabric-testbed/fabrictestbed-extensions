@@ -3255,26 +3255,17 @@ Host * !bastion.fabric-testbed.net
             version_urn=version_urn,
         )
 
-    def discover_ceph_regions(self, verify: bool = False) -> list:
+    def discover_ceph_clusters(self, verify: bool = False) -> list:
         """
-        Discover Ceph regions via the Ceph Manager API.
+        Discover Ceph clusters via the Ceph Manager API.
 
         Calls :py:meth:`CephFsUtils.list_clusters_from_api` using this object's
         Ceph Manager base URL and token file.
 
         :param bool verify: Verify TLS certificates when calling the API.
                             Defaults to ``False`` (set to ``True`` in production).
-        :return: Mapping of cluster name to metadata, e.g.::
-
-            {
-              "europe": {
-                "ceph_conf_minimal": "[global]\\n  fsid = ...\\n  mon_host = ...\\n",
-                "fsid": "1337-....",
-                "mon_host": "[v2:10.1.2.3:3300/0,...]"
-              },
-              "asia": { ... }
-            }
-        :rtype: dict
+        :return: List of cluster name
+        :rtype: list
         :raises RuntimeError: If the API call fails.
         """
         return CephFsUtils.list_clusters_from_api(
@@ -3285,7 +3276,7 @@ Host * !bastion.fabric-testbed.net
 
     def generate_ceph_bundle(
             self,
-            region: str,
+            cluster: str,
             out_base: str = "./ceph-artifacts",
             mount_root: str = "/mnt/cephfs",
             verify: bool = False,
@@ -3345,7 +3336,7 @@ Host * !bastion.fabric-testbed.net
         return CephFsUtils.build_for_user_from_api(
             base_url=self.get_ceph_mgr_host(),
             user_entity=user_entity,
-            cluster=region,
+            cluster=cluster,
             token_file=self.get_token_location(),  # or token=...
             verify=verify,
             out_base=out_base,
