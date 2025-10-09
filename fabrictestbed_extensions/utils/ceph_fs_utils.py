@@ -17,25 +17,34 @@ class CephFsUtils:
     """
     Build CephFS client artifacts (conf, keyring, secret, mount script) for a cluster/user.
 
-    Key behaviors
-    -------------
-    - Files under output bundle: <out_base>/<cluster>/
-      * ceph.conf
-      * ceph.client.<user>.keyring
-      * ceph.client.<user>.secret
-      * mount_<user>.sh
-    - The mount script idempotently copies to /etc/ceph **with cluster prefixes**:
-      * /etc/ceph/<cluster>.conf
-      * /etc/ceph/<cluster>.client.<user>.keyring
-      * /etc/ceph/<cluster>.client.<user>.secret
-    - Kernel mount uses: secretfile=…, conf=…, name=<user>, fs=<fsname>
-      and falls back to mds_namespace=<fsname> if fs= is rejected (EINVAL).
+    The utility parses a CephX keyring, extracts the base64 secret and MDS caps,
+    writes a minimal client bundle on disk, and generates an idempotent mount script.
+    The script installs files under ``/etc/ceph`` using **cluster-prefixed** names and
+    mounts all paths discovered in the MDS capabilities. It first attempts a kernel
+    mount with ``fs=<fsname>`` and falls back to ``mds_namespace=<fsname>`` on ``EINVAL``.
 
-    High-level helpers
-    ------------------
-    - list_clusters_from_api()
-    - build_for_user_from_api()
-    - build_for_login_from_api()
+    Bundle layout (under ``<out_base>/<cluster>/``):
+      * ``ceph.conf``
+      * ``ceph.client.<user>.keyring``
+      * ``ceph.client.<user>.secret``
+      * ``mount_<user>.sh``
+
+    Mount points:
+      * For each ``(fsname, path)`` pair in the user's MDS caps, the script mounts:
+        ``<mount_root_default>/<cluster>/<user>/<slug(path)>``.
+
+    :param cluster: Logical cluster name (e.g., ``"asia"``). Must be non-empty.
+    :type cluster: str
+    :param ceph_conf_text: Minimal Ceph configuration text for the cluster.
+    :type ceph_conf_text: str
+    :param keyring_blob: Keyring content as plain text, or a JSON-encoded string of that text.
+    :type keyring_blob: str
+    :param out_base: Output directory for artifacts. Defaults to current directory.
+    :type out_base: pathlib.Path | str, optional
+    :param mount_root_default: Root under which per-user mountpoints are created.
+    :type mount_root_default: str, optional
+
+    :raises ValueError: If ``cluster`` is empty.
     """
 
     def __init__(
@@ -65,7 +74,14 @@ class CephFsUtils:
 
     def build(self) -> Dict[str, Any]:
         """
-        Parse, write bundle, return summary.
+        Parse inputs, write artifacts, and return a summary.
+
+        :return: Summary dictionary with keys:
+                 ``cluster_dir``, ``ceph_conf``, ``secret_file``, ``keyring_file``,
+                 ``mount_script``, ``entity``, ``user``, and ``mounts`` (a list of
+                 objects having ``fsname``, ``path``, and ``mount_point``).
+        :rtype: Dict[str, Any]
+        :raises ValueError: If the keyring cannot be parsed or contains no MDS cap paths.
         """
         text = self._unescape_if_json(self.keyring_blob)
         self._parse_keyring(text)
@@ -105,6 +121,20 @@ class CephFsUtils:
         token: Optional[str] = None,
         verify: bool = True,
     ) -> List[str]:
+        """
+        List cluster names available from the Ceph Manager API.
+
+        :param base_url: Ceph Manager API base URL.
+        :type base_url: str
+        :param token_file: Path to a token file (mutually exclusive with ``token``).
+        :type token_file: str | None, optional
+        :param token: Raw token string (mutually exclusive with ``token_file``).
+        :type token: str | None, optional
+        :param verify: Whether to verify TLS certificates.
+        :type verify: bool, optional
+        :return: List of cluster names.
+        :rtype: List[str]
+        """
         c = CephManagerClient(
             base_url=base_url, token=token, token_file=token_file, verify=verify
         )
@@ -126,6 +156,33 @@ class CephFsUtils:
         out_base: Path | str = "./ceph-artifacts",
         mount_root_default: str = "/mnt/cephfs",
     ) -> Dict[str, Any]:
+        """
+        Build artifacts for a specific CephX entity using the Manager API.
+
+        This fetches a minimal ``ceph.conf`` for ``cluster`` and exports the keyring
+        for ``user_entity`` (e.g., ``client.alice``). It then constructs a
+        :class:`CephFsUtils` and returns the result of :meth:`build`.
+
+        :param user_entity: CephX entity, e.g., ``client.alice``.
+        :type user_entity: str
+        :param base_url: Ceph Manager API base URL.
+        :type base_url: str
+        :param cluster: Cluster name to target.
+        :type cluster: str
+        :param token_file: Path to a token file (mutually exclusive with ``token``).
+        :type token_file: str | None, optional
+        :param token: Raw token string (mutually exclusive with ``token_file``).
+        :type token: str | None, optional
+        :param verify: Whether to verify TLS certificates.
+        :type verify: bool, optional
+        :param out_base: Output directory root.
+        :type out_base: pathlib.Path | str, optional
+        :param mount_root_default: Mount root used by the generated script.
+        :type mount_root_default: str, optional
+        :return: Summary dictionary from :meth:`build`.
+        :rtype: Dict[str, Any]
+        :raises ValueError: If the target cluster is not found or the user keyring is missing.
+        """
         c = CephManagerClient(
             base_url=base_url, token=token, token_file=token_file, verify=verify
         )
@@ -172,6 +229,30 @@ class CephFsUtils:
         mount_root_default: str = "/mnt/cephfs",
         prefix: str = "client.",
     ) -> Dict[str, Any]:
+        """
+        Build artifacts for a bastion login, assuming ``client.<login>`` entity.
+
+        :param login: Bastion login name (e.g., ``kthare10_0011904101``).
+        :type login: str
+        :param base_url: Ceph Manager API base URL.
+        :type base_url: str
+        :param cluster: Cluster name to target.
+        :type cluster: str
+        :param token_file: Path to a token file (mutually exclusive with ``token``).
+        :type token_file: str | None, optional
+        :param token: Raw token string (mutually exclusive with ``token_file``).
+        :type token: str | None, optional
+        :param verify: Whether to verify TLS certificates.
+        :type verify: bool, optional
+        :param out_base: Output directory root.
+        :type out_base: pathlib.Path | str, optional
+        :param mount_root_default: Mount root used by the generated script.
+        :type mount_root_default: str, optional
+        :param prefix: Entity prefix to prepend to ``login`` (defaults to ``"client."``).
+        :type prefix: str, optional
+        :return: Summary dictionary from :meth:`build`.
+        :rtype: Dict[str, Any]
+        """
         entity = f"{prefix}{login}" if prefix else login
         return CephFsUtils.build_for_user_from_api(
             user_entity=entity,
@@ -188,6 +269,14 @@ class CephFsUtils:
 
     @staticmethod
     def _unescape_if_json(s: str) -> str:
+        """
+        Return the string unchanged unless it's a JSON string literal.
+
+        :param s: Possibly JSON-encoded string.
+        :type s: str
+        :return: Decoded string if JSON; otherwise the original string.
+        :rtype: str
+        """
         try:
             return json.loads(s)
         except Exception:
@@ -195,12 +284,44 @@ class CephFsUtils:
 
     @staticmethod
     def _require_regex(regex: str, text: str, desc: str, flags=0) -> re.Match:
+        """
+        Search with regex and raise if not found.
+
+        :param regex: Pattern to search.
+        :type regex: str
+        :param text: Input text.
+        :type text: str
+        :param desc: Human-friendly description used in error messages.
+        :type desc: str
+        :param flags: Optional regex flags.
+        :type flags: int
+        :return: The first regex match.
+        :rtype: re.Match
+        :raises ValueError: If the pattern is not found.
+        """
         m = re.search(regex, text, flags)
         if not m:
             raise ValueError(f"Could not find {desc} in keyring")
         return m
 
     def _parse_keyring(self, text: str) -> None:
+        """
+        Parse entity, secret, and MDS caps out of keyring text.
+
+        Expected features:
+
+          * ``[client.<name>]`` stanza
+          * ``key = <base64>`` line
+          * ``caps mds = "allow rw fsname=FS path=/foo, ..."`` (one or more)
+
+        If exactly one ``fsname`` appears among clauses, it is used as the default
+        for clauses missing an explicit ``fsname=...``. Duplicate ``(fsname, path)``
+        pairs are de-duplicated in order of appearance.
+
+        :param text: Keyring text.
+        :type text: str
+        :raises ValueError: If required pieces cannot be parsed, or no MDS cap paths exist.
+        """
         # [client.USER]
         m_ent = self._require_regex(
             r"\[(client\.[^\]]+)\]", text, "[client.<name>] stanza"
@@ -261,11 +382,29 @@ class CephFsUtils:
     # ---------------- Writers ----------------
 
     def _write_conf(self, cluster_dir: Path) -> Path:
+        """
+        Write ``ceph.conf`` into the cluster output directory.
+
+        :param cluster_dir: Output cluster directory.
+        :type cluster_dir: pathlib.Path
+        :return: Path to the written ``ceph.conf`` file.
+        :rtype: pathlib.Path
+        """
         conf_path = cluster_dir / "ceph.conf"
         conf_path.write_text(self.ceph_conf_text, encoding="utf-8")
         return conf_path
 
     def _write_secrets(self, cluster_dir: Path, keyring_text: str) -> Tuple[Path, Path]:
+        """
+        Write secret and keyring files (mode 600) to the output directory.
+
+        :param cluster_dir: Output cluster directory.
+        :type cluster_dir: pathlib.Path
+        :param keyring_text: Original keyring text (for reference).
+        :type keyring_text: str
+        :return: Tuple ``(secret_path, keyring_path)``.
+        :rtype: Tuple[pathlib.Path, pathlib.Path]
+        """
         # secret file (use by kernel mount via secretfile=)
         secret_path = cluster_dir / f"ceph.client.{self.user_only}.secret"
         secret_path.write_text(self.secret + "\n", encoding="utf-8")
@@ -279,6 +418,20 @@ class CephFsUtils:
         return secret_path, keyring_path
 
     def _write_script(self, cluster_dir: Path) -> Path:
+        """
+        Generate an idempotent mount script for all discovered MDS cap paths.
+
+        The script:
+          * Installs cluster-scoped files under ``/etc/ceph`` with cluster prefixes.
+          * Creates per-user mount directories.
+          * Tries kernel mount with ``fs=`` first, falls back to ``mds_namespace=``.
+          * Skips a path if it is already mounted.
+
+        :param cluster_dir: Output cluster directory.
+        :type cluster_dir: pathlib.Path
+        :return: Path to the generated shell script (mode 0750).
+        :rtype: pathlib.Path
+        """
         script_name = f"mount_{self.user_only}.sh"
         script_path = cluster_dir / script_name
 
@@ -394,6 +547,14 @@ class CephFsUtils:
 
     @staticmethod
     def _slug_from_path(p: str) -> str:
+        """
+        Convert a CephFS path into a safe slug for directory naming.
+
+        :param p: Path like ``/volumes/_nogroup/user/subvol-uuid``.
+        :type p: str
+        :return: A filesystem-safe slug (alphanumerics and ``._-``), or ``"root"`` for ``"/"``.
+        :rtype: str
+        """
         p = p.strip().lstrip("/")
         slug = re.sub(r"[^A-Za-z0-9._-]+", "_", p)
         return slug or "root"
@@ -409,7 +570,22 @@ def list_ceph_clusters(
     token: Optional[str] = None,
     verify: bool = True,
 ) -> List[str]:
-    """Return cluster names from the Ceph Manager API."""
+    """
+    Return cluster names from the Ceph Manager API.
+
+    Thin wrapper around :meth:`CephFsUtils.list_clusters_from_api`.
+
+    :param base_url: Ceph Manager API base URL.
+    :type base_url: str
+    :param token_file: Path to token file.
+    :type token_file: str | None, optional
+    :param token: Raw token string.
+    :type token: str | None, optional
+    :param verify: Whether to verify TLS certificates.
+    :type verify: bool, optional
+    :return: List of cluster names.
+    :rtype: List[str]
+    """
     return CephFsUtils.list_clusters_from_api(
         base_url=base_url, token_file=token_file, token=token, verify=verify
     )
@@ -426,7 +602,28 @@ def build_ceph_bundle_for_user(
     out_base: Path | str = "./ceph-artifacts",
     mount_root_default: str = "/mnt/cephfs",
 ) -> Dict[str, Any]:
-    """Build artifacts for a specific CephX user (entity like ``client.foo``) on a cluster."""
+    """
+    Build artifacts for a specific CephX user (entity like ``client.foo``).
+
+    :param user_entity: CephX entity such as ``client.alice``.
+    :type user_entity: str
+    :param base_url: Ceph Manager API base URL.
+    :type base_url: str
+    :param cluster: Target cluster name.
+    :type cluster: str
+    :param token_file: Path to token file.
+    :type token_file: str | None, optional
+    :param token: Raw token string.
+    :type token: str | None, optional
+    :param verify: Whether to verify TLS certificates.
+    :type verify: bool, optional
+    :param out_base: Output directory root.
+    :type out_base: pathlib.Path | str, optional
+    :param mount_root_default: Mount root used by the script.
+    :type mount_root_default: str, optional
+    :return: Summary dictionary from :meth:`CephFsUtils.build_for_user_from_api`.
+    :rtype: Dict[str, Any]
+    """
     return CephFsUtils.build_for_user_from_api(
         user_entity=user_entity,
         base_url=base_url,
@@ -450,7 +647,28 @@ def build_ceph_bundle_for_login(
     out_base: Path | str = "./ceph-artifacts",
     mount_root_default: str = "/mnt/cephfs",
 ) -> Dict[str, Any]:
-    """Build artifacts for a bastion login (entity assumed as ``client.<login>``)."""
+    """
+    Build artifacts for a bastion login (entity assumed as ``client.<login>``).
+
+    :param login: Bastion login name.
+    :type login: str
+    :param base_url: Ceph Manager API base URL.
+    :type base_url: str
+    :param cluster: Target cluster name.
+    :type cluster: str
+    :param token_file: Path to token file.
+    :type token_file: str | None, optional
+    :param token: Raw token string.
+    :type token: str | None, optional
+    :param verify: Whether to verify TLS certificates.
+    :type verify: bool, optional
+    :param out_base: Output directory root.
+    :type out_base: pathlib.Path | str, optional
+    :param mount_root_default: Mount root used by the script.
+    :type mount_root_default: str, optional
+    :return: Summary dictionary from :meth:`CephFsUtils.build_for_login_from_api`.
+    :rtype: Dict[str, Any]
+    """
     return CephFsUtils.build_for_login_from_api(
         login=login,
         base_url=base_url,
