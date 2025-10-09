@@ -272,98 +272,103 @@ class CephFsUtils:
             mnt = f'$MNT_BASE/$CLUSTER/$USER_NAME/{slug}'
 
             blk = f"""
-# --- {fsname}:{path} ---
-echo "Preparing mountpoint: {mnt}"
-sudo mkdir -p {mnt}
-if ! mountpoint -q {mnt}; then
-  sudo chown "${{owner_uid}}:${{owner_gid}}" {mnt} || true
-  sudo chmod 755 {mnt} || true
-fi
+    # --- {fsname}:{path} ---
+    echo "Preparing mountpoint: {mnt}"
+    sudo mkdir -p "{mnt}"
 
-if mountpoint -q {mnt}; then
-  current_src="$(findmnt -n -o SOURCE --target {mnt} 2>/dev/null || true)"
-  if [[ -n "$current_src" ]]; then
-    echo "Already mounted ($current_src) at {mnt}. Skipping."
-    continue
-  fi
-fi
+    # If already mounted, skip
+    if mountpoint -q "{mnt}"; then
+      current_src="$(findmnt -n -o SOURCE --target "{mnt}" 2>/dev/null || true)"
+      echo "Already mounted at {mnt} (SOURCE=${{current_src:-unknown}}). Skipping."
+    else
+      # Set perms on empty dir
+      sudo chown "${{owner_uid}}:${{owner_gid}}" "{mnt}" || true
+      sudo chmod 755 "{mnt}" || true
 
-echo "Mounting (fs=) fs={fsname} path={path} -> {mnt}"
-set +e
-sudo mount -t ceph ":{path}" {mnt} -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",fs="{fsname}",_netdev,noatime
-rc=$?
-set -e
-if [[ $rc -eq 22 ]]; then
-  echo "fs= not accepted (EINVAL). Retrying with mds_namespace={fsname} ..."
-  sudo mount -t ceph ":{path}" {mnt} -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",mds_namespace="{fsname}",_netdev,noatime
-fi
+      echo "Mounting (fs=) fs={fsname} path={path} -> {mnt}"
+      set +e
+      sudo mount -t ceph ":{path}" "{mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",fs="{fsname}",_netdev,noatime
+      rc=$?
+      set -e
+      if [[ $rc -eq 22 ]]; then
+        echo "fs= not accepted (EINVAL). Retrying with mds_namespace={fsname} ..."
+        sudo mount -t ceph ":{path}" "{mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",mds_namespace="{fsname}",_netdev,noatime
+        rc=$?
+      fi
 
-sudo chown -R "${{owner_uid}}:${{owner_gid}}" {mnt} || true
-"""
+      if [[ $rc -ne 0 ]]; then
+        echo "ERROR: mount failed with rc=$rc for {mnt}"
+        exit $rc
+      fi
+
+      # Fix ownership of the mountpoint root (best-effort)
+      sudo chown -R "${{owner_uid}}:${{owner_gid}}" "{mnt}" || true
+    fi
+    """
             blocks.append(blk)
 
         script = f"""#!/usr/bin/env bash
-set -euo pipefail
+    set -euo pipefail
 
-# Installs /etc/ceph/<cluster>.conf, /etc/ceph/<cluster>.client.<user>.keyring and .secret,
-# fixes mount dir permissions, and mounts all paths discovered in your MDS caps.
+    # Installs /etc/ceph/<cluster>.conf, /etc/ceph/<cluster>.client.<user>.keyring and .secret,
+    # fixes mount dir permissions, and mounts all paths discovered in your MDS caps.
 
-here="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
-CLUSTER="{self.cluster}"
-ENTITY="{self.entity}"
-USER_NAME="{self.user_only}"
-MNT_BASE="${{MNT_BASE:-{self.mount_root_default}}}"
+    here="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+    CLUSTER="{self.cluster}"
+    ENTITY="{self.entity}"
+    USER_NAME="{self.user_only}"
+    MNT_BASE="${{MNT_BASE:-{self.mount_root_default}}}"
 
-echo "Using cluster: $CLUSTER"
-echo "Bundle dir:   $here"
-echo "Mount base:   $MNT_BASE"
+    echo "Using cluster: $CLUSTER"
+    echo "Bundle dir:   $here"
+    echo "Mount base:   $MNT_BASE"
 
-# Cluster-scoped targets in /etc/ceph
-if [[ "$CLUSTER" == "ceph" || -z "$CLUSTER" ]]; then
-  CONF_TGT="/etc/ceph/ceph.conf"
-  KEYRING_TGT="/etc/ceph/ceph.client.$USER_NAME.keyring"
-  SECRET_TGT="/etc/ceph/ceph.client.$USER_NAME.secret"
-else
-  CONF_TGT="/etc/ceph/${{CLUSTER}}.conf"
-  KEYRING_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.keyring"
-  SECRET_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.secret"
-fi
+    # Cluster-scoped targets in /etc/ceph
+    if [[ "$CLUSTER" == "ceph" || -z "$CLUSTER" ]]; then
+      CONF_TGT="/etc/ceph/ceph.conf"
+      KEYRING_TGT="/etc/ceph/ceph.client.$USER_NAME.keyring"
+      SECRET_TGT="/etc/ceph/ceph.client.$USER_NAME.secret"
+    else
+      CONF_TGT="/etc/ceph/${{CLUSTER}}.conf"
+      KEYRING_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.keyring"
+      SECRET_TGT="/etc/ceph/${{CLUSTER}}.client.$USER_NAME.secret"
+    fi
 
-# Helper: copy if missing or changed
-copy_if_changed() {{
-  local src="$1" dst="$2" mode="$3"
-  if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
-    sudo install -m "$mode" -D "$src" "$dst"
-  fi
-}}
+    # Helper: copy if missing or changed
+    copy_if_changed() {{
+      local src="$1" dst="$2" mode="$3"
+      if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
+        sudo install -m "$mode" -D "$src" "$dst"
+      fi
+    }}
 
-# Ensure /etc/ceph has the right files (idempotent)
-sudo mkdir -p /etc/ceph
-copy_if_changed "$here/ceph.conf" "$CONF_TGT" 644
-copy_if_changed "$here/ceph.client.$USER_NAME.keyring" "$KEYRING_TGT" 600
-copy_if_changed "$here/ceph.client.$USER_NAME.secret" "$SECRET_TGT" 600
+    # Ensure /etc/ceph has the right files (idempotent)
+    sudo mkdir -p /etc/ceph
+    copy_if_changed "$here/ceph.conf" "$CONF_TGT" 644
+    copy_if_changed "$here/ceph.client.$USER_NAME.keyring" "$KEYRING_TGT" 600
+    copy_if_changed "$here/ceph.client.$USER_NAME.secret" "$SECRET_TGT" 600
 
-# Determine non-root owner for mount dirs
-owner_uid="${{SUDO_UID:-}}"
-owner_gid="${{SUDO_GID:-}}"
-if [[ -z "$owner_uid" || -z "$owner_gid" ]]; then
-  owner_uid="$(stat -c %u "$here")"
-  owner_gid="$(stat -c %g "$here")"
-fi
+    # Determine non-root owner for mount dirs
+    owner_uid="${{SUDO_UID:-}}"
+    owner_gid="${{SUDO_GID:-}}"
+    if [[ -z "$owner_uid" || -z "$owner_gid" ]]; then
+      owner_uid="$(stat -c %u "$here")"
+      owner_gid="$(stat -c %g "$here")"
+    fi
 
-# User base
-sudo mkdir -p "$MNT_BASE/$CLUSTER/$USER_NAME"
-if ! mountpoint -q "$MNT_BASE/$CLUSTER/$USER_NAME"; then
-  sudo chown "${{owner_uid}}:${{owner_gid}}" "$MNT_BASE/$CLUSTER/$USER_NAME" || true
-  sudo chmod 755 "$MNT_BASE/$CLUSTER/$USER_NAME" || true
-fi
+    # User base
+    sudo mkdir -p "$MNT_BASE/$CLUSTER/$USER_NAME"
+    if ! mountpoint -q "$MNT_BASE/$CLUSTER/$USER_NAME"; then
+      sudo chown "${{owner_uid}}:${{owner_gid}}" "$MNT_BASE/$CLUSTER/$USER_NAME" || true
+      sudo chmod 755 "$MNT_BASE/$CLUSTER/$USER_NAME" || true
+    fi
 
-{"".join(blocks)}
+    {"".join(blocks)}
 
-echo "All mounts attempted."
-echo "To unmount:"
-echo "  sudo umount -l $MNT_BASE/$CLUSTER/$USER_NAME/*"
-"""
+    echo "All mounts attempted."
+    echo "To unmount:"
+    echo "  sudo umount -l $MNT_BASE/$CLUSTER/$USER_NAME/*"
+    """
         script_path.write_text(script, encoding="utf-8")
         os.chmod(script_path, 0o750)
         return script_path
