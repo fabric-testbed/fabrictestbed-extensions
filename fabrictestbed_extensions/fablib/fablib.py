@@ -3275,11 +3275,11 @@ Host * !bastion.fabric-testbed.net
         )
 
     def generate_ceph_bundle(
-            self,
-            cluster: str,
-            out_base: str = "./ceph-artifacts",
-            mount_root: str = "/mnt/cephfs",
-            verify: bool = False,
+        self,
+        cluster: str,
+        out_base: str = "./ceph-artifacts",
+        mount_root: str = "/mnt/cephfs",
+        verify: bool = False,
     ) -> dict:
         """
         Generate a local bundle for mounting CephFS paths for the current user

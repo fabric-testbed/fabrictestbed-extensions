@@ -56,9 +56,9 @@ class CephFsUtils:
         self.mount_root_default = mount_root_default
 
         # Filled by parse()
-        self.entity: Optional[str] = None          # client.foo
-        self.user_only: Optional[str] = None       # foo
-        self.secret: Optional[str] = None          # base64
+        self.entity: Optional[str] = None  # client.foo
+        self.user_only: Optional[str] = None  # foo
+        self.secret: Optional[str] = None  # base64
         self.fs_paths: List[Tuple[str, str]] = []  # (fsname, path)
 
     # ---------------- Public API ----------------
@@ -105,10 +105,14 @@ class CephFsUtils:
         token: Optional[str] = None,
         verify: bool = True,
     ) -> List[str]:
-        c = CephManagerClient(base_url=base_url, token=token, token_file=token_file, verify=verify)
+        c = CephManagerClient(
+            base_url=base_url, token=token, token_file=token_file, verify=verify
+        )
         info = c.list_cluster_info()
         items = (info or {}).get("data", []) if isinstance(info, dict) else []
-        return [i.get("cluster") for i in items if isinstance(i, dict) and i.get("cluster")]
+        return [
+            i.get("cluster") for i in items if isinstance(i, dict) and i.get("cluster")
+        ]
 
     @staticmethod
     def build_for_user_from_api(
@@ -122,12 +126,17 @@ class CephFsUtils:
         out_base: Path | str = "./ceph-artifacts",
         mount_root_default: str = "/mnt/cephfs",
     ) -> Dict[str, Any]:
-        c = CephManagerClient(base_url=base_url, token=token, token_file=token_file, verify=verify)
+        c = CephManagerClient(
+            base_url=base_url, token=token, token_file=token_file, verify=verify
+        )
 
         # ceph.conf (minimal) for the cluster
         info = c.list_cluster_info()
         items = (info or {}).get("data", []) if isinstance(info, dict) else []
-        entry = next((x for x in items if isinstance(x, dict) and x.get("cluster") == cluster), None)
+        entry = next(
+            (x for x in items if isinstance(x, dict) and x.get("cluster") == cluster),
+            None,
+        )
         if not entry:
             raise ValueError(f"Cluster '{cluster}' not found")
         ceph_conf_text = entry.get("ceph_conf_minimal")
@@ -136,7 +145,9 @@ class CephFsUtils:
 
         # Keyring for user on that cluster
         export = c.export_users(cluster=cluster, entities=[user_entity])
-        key_blob = ((export or {}).get("clusters", {}) or {}).get(cluster, {}).get(user_entity)
+        key_blob = (
+            ((export or {}).get("clusters", {}) or {}).get(cluster, {}).get(user_entity)
+        )
         if not key_blob:
             raise ValueError(f"No keyring for {user_entity} on cluster '{cluster}'")
 
@@ -191,12 +202,16 @@ class CephFsUtils:
 
     def _parse_keyring(self, text: str) -> None:
         # [client.USER]
-        m_ent = self._require_regex(r"\[(client\.[^\]]+)\]", text, "[client.<name>] stanza")
+        m_ent = self._require_regex(
+            r"\[(client\.[^\]]+)\]", text, "[client.<name>] stanza"
+        )
         self.entity = m_ent.group(1)
         self.user_only = self.entity.split(".", 1)[1]
 
         # key = <secret>
-        m_key = self._require_regex(r"^\s*key\s*=\s*([A-Za-z0-9+/=]+)\s*$", text, "'key =' line", flags=re.M)
+        m_key = self._require_regex(
+            r"^\s*key\s*=\s*([A-Za-z0-9+/=]+)\s*$", text, "'key =' line", flags=re.M
+        )
         self.secret = m_key.group(1)
 
         # caps mds = "allow rw fsname=FS path=/foo, allow rw fsname=FS path=/bar"
@@ -223,7 +238,9 @@ class CephFsUtils:
                     continue
                 fsn = mfs.group(1) if mfs else default_fs()
                 if not fsn:
-                    raise ValueError("Found MDS cap without fsname=... and cannot infer default FS.")
+                    raise ValueError(
+                        "Found MDS cap without fsname=... and cannot infer default FS."
+                    )
                 pth = mp.group(1)
                 paths.append((fsn, pth))
 
@@ -269,7 +286,7 @@ class CephFsUtils:
         blocks: List[str] = []
         for fsname, path in self.fs_paths:
             slug = self._slug_from_path(path)
-            mnt = f'$MNT_BASE/$CLUSTER/$USER_NAME/{slug}'
+            mnt = f"$MNT_BASE/$CLUSTER/$USER_NAME/{slug}"
 
             blk = f"""
     # --- {fsname}:{path} ---
@@ -384,9 +401,18 @@ class CephFsUtils:
 
 # ------------ Sphinx-friendly helpers ------------
 
-def list_ceph_clusters(*, base_url: str, token_file: Optional[str] = None, token: Optional[str] = None, verify: bool = True) -> List[str]:
+
+def list_ceph_clusters(
+    *,
+    base_url: str,
+    token_file: Optional[str] = None,
+    token: Optional[str] = None,
+    verify: bool = True,
+) -> List[str]:
     """Return cluster names from the Ceph Manager API."""
-    return CephFsUtils.list_clusters_from_api(base_url=base_url, token_file=token_file, token=token, verify=verify)
+    return CephFsUtils.list_clusters_from_api(
+        base_url=base_url, token_file=token_file, token=token, verify=verify
+    )
 
 
 def build_ceph_bundle_for_user(
