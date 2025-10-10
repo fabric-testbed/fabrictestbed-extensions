@@ -3255,7 +3255,7 @@ Host * !bastion.fabric-testbed.net
             version_urn=version_urn,
         )
 
-    def discover_ceph_clusters(self, verify: bool = False) -> list:
+    def discover_ceph_clusters(self, verify: bool = True) -> list:
         """
         Discover Ceph clusters via the Ceph Manager API.
 
@@ -3279,7 +3279,7 @@ Host * !bastion.fabric-testbed.net
         cluster: str,
         out_base: str = "./ceph-artifacts",
         mount_root: str = "/mnt/cephfs",
-        verify: bool = False,
+        verify: bool = True,
     ) -> dict:
         """
         Generate a local bundle for mounting CephFS paths for the current user
