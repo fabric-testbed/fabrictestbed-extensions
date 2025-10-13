@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed_extensions"
-version = "1.9.3"
+version = "1.9.4"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
   { name = "Paul Ruth", email = "pruth@renci.org" },
@@ -30,7 +30,7 @@ dependencies = [
     "recordclass>=0.23.1",
     "atomicwrites",
     "fabric_paramiko_expect",
-    "fabric_ceph_client==1.0.1"
+    "fabric_ceph_client==1.0.2"
     ]
 
 classifiers = [
