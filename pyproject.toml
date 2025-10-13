@@ -30,7 +30,7 @@ dependencies = [
     "recordclass>=0.23.1",
     "atomicwrites",
     "fabric_paramiko_expect",
-    "fabric_ceph_client==1.0.1"
+    "fabric_ceph_client==1.0.2"
     ]
 
 classifiers = [
