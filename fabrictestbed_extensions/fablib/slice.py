@@ -554,11 +554,8 @@ class Slice:
         context["slice"] = self.toDict()
         nodes = None
 
-        if (
-            "nodes" not in skip
-            or "components" not in skip
-        ):
-            nodes = self.get_nodes()   
+        if "nodes" not in skip or "components" not in skip:
+            nodes = self.get_nodes()
 
         context["nodes"] = {}
         if "nodes" not in skip:
@@ -1545,7 +1542,7 @@ class Slice:
             pass
         return return_components
 
-    def __initialize_nodes(self, refresh: bool=False):
+    def __initialize_nodes(self, refresh: bool = False):
         """
         Initializes the node objects for the current topology by populating
         the self.nodes dictionary with node instances.
@@ -1612,7 +1609,7 @@ class Slice:
             self.nodes.pop(node_name)
             logging.debug(f"Removed extra node: {node_name}")
 
-    def get_nodes(self, refresh: bool=False) -> List[Node]:
+    def get_nodes(self, refresh: bool = False) -> List[Node]:
         """
         Gets a list of all nodes in this slice.
 
@@ -1643,7 +1640,7 @@ class Slice:
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_facilities(self, refresh: bool=False) -> List[FacilityPort]:
+    def get_facilities(self, refresh: bool = False) -> List[FacilityPort]:
         """
         Gets a list of all nodes in this slice.
 
@@ -1655,7 +1652,7 @@ class Slice:
         self.__initialize_facilities(refresh=refresh)
         return list(self.facilities.values())
 
-    def __initialize_facilities(self, refresh: bool=False):
+    def __initialize_facilities(self, refresh: bool = False):
         """
         Initializes the facilities objects for the current topology by populating
         the self.facilities dictionary with node instances.
@@ -1901,7 +1898,9 @@ class Slice:
             pass
         return return_networks
 
-    def get_networks(self, refresh: bool = True, output: str = "list") -> List[NetworkService]:
+    def get_networks(
+        self, refresh: bool = True, output: str = "list"
+    ) -> List[NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice
 
@@ -1910,7 +1909,9 @@ class Slice:
         """
         if len(self.network_services) == 0 or refresh:
             try:
-                self.network_services = NetworkService.get_network_services(self, output="dict")
+                self.network_services = NetworkService.get_network_services(
+                    self, output="dict"
+                )
             except Exception as e:
                 logging.info(e, exc_info=True)
 

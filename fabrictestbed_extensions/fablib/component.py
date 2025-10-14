@@ -365,7 +365,6 @@ class Component:
             "numa": "",
         }
 
-
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
     ) -> Union[dict[str, Interface], list[Interface]]:
@@ -448,7 +447,9 @@ class Component:
         """
         # strip of the extra parts of the name added by fim
         if not self.dict["short_name"]:
-            self.dict["short_name"] = self.get_name()[len(f"{self.get_node().get_name()}-") :]
+            self.dict["short_name"] = self.get_name()[
+                len(f"{self.get_node().get_name()}-") :
+            ]
         return self.dict["short_name"]
 
     def get_name(self) -> str:
@@ -476,7 +477,11 @@ class Component:
         """
         if not self.dict["numa"]:
             try:
-                numa = self.get_fim_component().get_property(pname="label_allocations").numa
+                numa = (
+                    self.get_fim_component()
+                    .get_property(pname="label_allocations")
+                    .numa
+                )
                 if numa is not None:
                     if isinstance(numa, str):
                         return numa
@@ -496,7 +501,9 @@ class Component:
         :rtype: int
         """
         if not self.dict["disk"]:
-            self.dict["disk"] = self.get_fim_component().get_property(pname="capacity_allocations").disk
+            self.dict["disk"] = (
+                self.get_fim_component().get_property(pname="capacity_allocations").disk
+            )
         return self.dict["disk"]
 
     def get_unit(self) -> int:
@@ -507,7 +514,9 @@ class Component:
         :rtype: int
         """
         if not self.dict["units"]:
-            self.dict["units"] = self.get_fim_component().get_property(pname="capacity_allocations").unit
+            self.dict["units"] = (
+                self.get_fim_component().get_property(pname="capacity_allocations").unit
+            )
         return self.dict["units"]
 
     def get_pci_addr(self) -> str:
@@ -518,7 +527,9 @@ class Component:
         :rtype: String
         """
         if not self.dict["pci_address"]:
-            self.dict["pci_address"] = self.get_fim_component().get_property(pname="label_allocations").bdf
+            self.dict["pci_address"] = (
+                self.get_fim_component().get_property(pname="label_allocations").bdf
+            )
         return self.dict["pci_address"]
 
     def get_model(self) -> str:
@@ -715,7 +726,11 @@ class Component:
         Not for API use
         """
         if not self.dict["dev"]:
-            self.dict["dev"] = self.get_fim_component().get_property(pname="label_allocations").device_name
+            self.dict["dev"] = (
+                self.get_fim_component()
+                .get_property(pname="label_allocations")
+                .device_name
+            )
         return self.dict["dev"]
 
     @staticmethod

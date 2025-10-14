@@ -687,12 +687,8 @@ class Interface:
         peers = None
         if fim:
             peers = fim.get_peers()
-        
-        if (
-            fim
-            and fim.capacities
-            and fim.capacities.bw
-        ):
+
+        if fim and fim.capacities and fim.capacities.bw:
             bw = fim.capacities.bw
         if (
             not bw

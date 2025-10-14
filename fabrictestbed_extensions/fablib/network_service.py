@@ -640,7 +640,9 @@ class NetworkService:
         raise Exception(f"Network not found. Slice {slice.slice_name}, network {name}")
 
     @staticmethod
-    def get_network_services(slice: Slice = None, output: str = "list") -> dict[str, NetworkService]:
+    def get_network_services(
+        slice: Slice = None, output: str = "list"
+    ) -> dict[str, NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice
 
@@ -657,7 +659,9 @@ class NetworkService:
                 str(net.get_property("type"))
                 in NetworkService.get_fim_network_service_types()
             ):
-                rtn_network_services[net_name] = NetworkService(slice=slice, fim_network_service=net)
+                rtn_network_services[net_name] = NetworkService(
+                    slice=slice, fim_network_service=net
+                )
 
         if output == "dict":
             return rtn_network_services

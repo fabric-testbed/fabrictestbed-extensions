@@ -909,7 +909,9 @@ class Node:
         """
         if not self.cores:
             try:
-                self.cores = self.get_fim_node().get_property(pname="capacity_allocations").core
+                self.cores = (
+                    self.get_fim_node().get_property(pname="capacity_allocations").core
+                )
             except:
                 return None
         return self.cores
@@ -935,7 +937,9 @@ class Node:
         """
         if not self.ram:
             try:
-                self.ram = self.get_fim_node().get_property(pname="capacity_allocations").ram
+                self.ram = (
+                    self.get_fim_node().get_property(pname="capacity_allocations").ram
+                )
             except:
                 return None
         return self.ram
@@ -961,7 +965,9 @@ class Node:
         """
         if not self.disk:
             try:
-                self.disk = self.get_fim_node().get_property(pname="capacity_allocations").disk
+                self.disk = (
+                    self.get_fim_node().get_property(pname="capacity_allocations").disk
+                )
             except:
                 return None
         return self.disk
@@ -1357,12 +1363,14 @@ class Node:
         try:
             return self.render_template(
                 self.get_fablib_manager().get_ssh_command_line(),
-                skip=["ssh_command",
-                      "interfaces",
-                      "state",
-                      "error",
-                      "components",
-                      "networks"]
+                skip=[
+                    "ssh_command",
+                    "interfaces",
+                    "state",
+                    "error",
+                    "components",
+                    "networks",
+                ],
             )
         except:
             return self.get_fablib_manager().get_ssh_command_line()
