@@ -61,6 +61,8 @@ from fabrictestbed.slice_editor import Component as FimComponent
 from fabrictestbed.slice_editor import ComponentModelType, Flags, Labels, UserData
 from tabulate import tabulate
 
+log = logging.getLogger("fablib")
+
 
 class Component:
     """
@@ -472,7 +474,7 @@ class Component:
                 if isinstance(numa, list):
                     return numa[0]
         except Exception as e:
-            logging.error(f"get_numa_node failed: {e}")
+            log.error(f"get_numa_node failed: {e}")
             return None
 
     def get_disk(self) -> int:
@@ -616,7 +618,7 @@ class Component:
                 if stderr != "":
                     output.append(stderr)
         except Exception:
-            logging.error(f"configure Fail: {self.get_name()}:", exc_info=True)
+            log.error(f"configure Fail: {self.get_name()}:", exc_info=True)
             raise Exception(str(output))
 
         print(f"\nTime to configure {time.time() - start:.0f} seconds")
@@ -682,7 +684,7 @@ class Component:
             )
             output.append(self.node.execute(f"df -h {mount_point}"))
         except Exception as e:
-            logging.error(f"config_nvme Fail: {self.get_name()}:", exc_info=True)
+            log.error(f"config_nvme Fail: {self.get_name()}:", exc_info=True)
             raise Exception(str(output))
 
         return output

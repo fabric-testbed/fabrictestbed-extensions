@@ -1,4 +1,4 @@
-# Change Log 
+# Change Log
 
 This is the changelog file for FABRIC testbed extensions.  All notable
 changes to this project will be documented in this file.
@@ -6,7 +6,17 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.9.4 
+## [Unreleased]
+
+### Fixed
+
+- Prevent setup_logging from removing all pre-existing logging handlers [#458](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/458)
+
+### Changed
+
+- Change `setup_logging` to not use the root logger as it alters the logging of the the application consuming the FABRIC API. Use logging.getLogger("fablib") instead.
+
+## 1.9.4
 - Fix TLS verify and documentation for Ceph utils (Issue [#451](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/451))
 - Ceph Service support (Issue [#450](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/450))
 
@@ -63,9 +73,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Ensure slice key and bastion key names are not identical (Issue [#389](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/389))
 
-## [1.7.4] - 11/05/2024 
+## [1.7.4] - 11/05/2024
 
-### Added 
+### Added
 - Missing docstrings in network_service module (Issue [#313](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/314))
 - Artifact Manager Support (Issue [#358](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/358))
 - FabNet user specified subnets (Issue [#361](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/361))
@@ -248,7 +258,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for CPU Pinning and Numa tuning (Issue [#221](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/221))
 
 ### Removed
-  
+
 - Remove unused `AbcFabLIB` class (Issue
   [#117](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/117))
 
@@ -268,7 +278,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured. 
+- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured.
 
 ## [1.4.2] - 2023-04-21
 
