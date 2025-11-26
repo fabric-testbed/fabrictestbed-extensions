@@ -507,6 +507,7 @@ class Host:
     def get_core_available(self) -> int:
         """
         Gets the number of currently available cores at the site
+
         :return: core count
         :rtype: int
         """
@@ -866,6 +867,7 @@ class Site:
     def get_ptp_capable(self) -> bool:
         """
         Gets the PTP flag of the site - if it has a native PTP capability
+
         :param site: site name or object
         :type site: String or Node or NodeSliver
         :return: boolean flag
@@ -1135,6 +1137,7 @@ class Site:
     def get_core_available(self) -> int:
         """
         Gets the number of currently available cores at the site
+
         :return: core count
         :rtype: int
         """

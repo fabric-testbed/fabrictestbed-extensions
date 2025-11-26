@@ -543,6 +543,7 @@ class Resources:
     def get_ptp_capable(self, site: str or node.Node) -> bool:
         """
         Gets the PTP flag of the site - if it has a native PTP capability
+
         :param site: site name or object
         :type site: String or Node or NodeSliver
         :return: boolean flag
