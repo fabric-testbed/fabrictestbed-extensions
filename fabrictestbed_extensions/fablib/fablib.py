@@ -350,7 +350,9 @@ class fablib:
         :return: the passphrase to the slice private key on this fablib object
         :rtype: String
         """
-        return fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
+        return (
+            fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
+        )
 
     @staticmethod
     def get_credmgr_host() -> str:
