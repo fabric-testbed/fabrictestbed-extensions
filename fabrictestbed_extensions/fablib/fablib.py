@@ -891,7 +891,7 @@ class FablibManager(Config):
         """
         Get User information
 
-        :return returns a dictionary containing User's Information
+        :return: returns a dictionary containing User's Information
         :rtype: dict
         """
         return self.get_manager().get_user_info()
@@ -1011,7 +1011,7 @@ Host * !bastion.fabric-testbed.net
 SSH tunnel config created and zipped at: {tgz_path}
 
 Download Instructions:
-Download your custom `fabric_ssh_tunnel_tools.tgz` file from the `fabric_config` folder. 
+Download your custom `fabric_ssh_tunnel_tools.tgz` file from the `fabric_config` folder.
 
 Usage Instructions:
 1. Unzip the archive and place the resulting `fabric_ssh_tunnel_tools/` folder somewhere accessible from your terminal.
@@ -1054,7 +1054,7 @@ Usage Instructions:
             f.write(
                 f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
-ServerAliveInterval 120 
+ServerAliveInterval 120
 
 Host bastion.fabric-testbed.net
      User {self.get_bastion_username()}

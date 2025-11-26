@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix typos in docstrings that prevent proper parsing. Some docstrings were missing `:` or new lines. 
+- Fix type annotations where `str or node.Node` was used instead of `Union[str, node.Node]` or `str | node.Node`.
 - Fix a typo in the docstring of the `get_fim_component` method.
 
 ## 1.9.4 

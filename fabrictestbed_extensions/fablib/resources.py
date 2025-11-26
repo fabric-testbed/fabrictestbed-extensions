@@ -34,7 +34,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
@@ -189,7 +189,7 @@ class Resources:
         except Exception as e:
             logging.warning(f"Failed to get site {site_name}")
 
-    def get_state(self, site: str or node.Node) -> str:
+    def get_state(self, site: Union[str, node.Node]) -> str:
         """
         Gets the maintenance state of the node
 
@@ -209,7 +209,7 @@ class Resources:
 
     def get_component_capacity(
         self,
-        site: str or node.Node,
+        site: Union[str, node.Node],
         component_model_name: str,
     ) -> int:
         """
@@ -238,7 +238,7 @@ class Resources:
 
     def get_component_allocated(
         self,
-        site: str or node.Node,
+        site: Union[str, node.Node],
         component_model_name: str,
     ) -> int:
         """
@@ -267,7 +267,7 @@ class Resources:
 
     def get_component_available(
         self,
-        site: str or node.Node,
+        site: Union[str, node.Node],
         component_model_name: str,
     ) -> int:
         """
@@ -293,7 +293,7 @@ class Resources:
             # logging.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(site, component_model_name)
 
-    def get_location_lat_long(self, site: str or node.Node) -> Tuple[float, float]:
+    def get_location_lat_long(self, site: Union[str, node.Node]) -> Tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -312,7 +312,7 @@ class Resources:
             # logging.warning(f"Failed to get location postal {site}")
             return 0, 0
 
-    def get_location_postal(self, site: str or node.Node) -> str:
+    def get_location_postal(self, site: Union[str, node.Node]) -> str:
         """
         Gets the location of a site by postal address
 
@@ -331,7 +331,7 @@ class Resources:
             # logging.debug(f"Failed to get location postal {site}")
             return ""
 
-    def get_host_capacity(self, site: str or node.Node) -> int:
+    def get_host_capacity(self, site: Union[str, node.Node]) -> int:
         """
         Gets the number of hosts at the site
 
@@ -350,7 +350,7 @@ class Resources:
             # logging.debug(f"Failed to get host count {site}")
             return 0
 
-    def get_cpu_capacity(self, site: str or node.Node) -> int:
+    def get_cpu_capacity(self, site: Union[str, node.Node]) -> int:
         """
         Gets the total number of cpus at the site
 
@@ -369,7 +369,7 @@ class Resources:
             # logging.debug(f"Failed to get cpu capacity {site}")
             return 0
 
-    def get_core_capacity(self, site: str or node.Node) -> int:
+    def get_core_capacity(self, site: Union[str, node.Node]) -> int:
         """
         Gets the total number of cores at the site
 
@@ -388,7 +388,7 @@ class Resources:
             # logging.debug(f"Failed to get core capacity {site}")
             return 0
 
-    def get_core_allocated(self, site: str or node.Node) -> int:
+    def get_core_allocated(self, site: Union[str, node.Node]) -> int:
         """
         Gets the number of currently allocated cores at the site
 
@@ -407,7 +407,7 @@ class Resources:
             # logging.debug(f"Failed to get cores allocated {site}")
             return 0
 
-    def get_core_available(self, site: str or node.Node) -> int:
+    def get_core_available(self, site: Union[str, node.Node]) -> int:
         """
         Gets the number of currently available cores at the site
 
@@ -426,7 +426,7 @@ class Resources:
             # logging.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity(site)
 
-    def get_ram_capacity(self, site: str or node.Node) -> int:
+    def get_ram_capacity(self, site: Union[str, node.Node]) -> int:
         """
         Gets the total amount of memory at the site in GB
 
@@ -445,7 +445,7 @@ class Resources:
             # logging.debug(f"Failed to get ram capacity {site}")
             return 0
 
-    def get_ram_allocated(self, site: str or node.Node) -> int:
+    def get_ram_allocated(self, site: Union[str, node.Node]) -> int:
         """
         Gets the amount of memory currently  allocated the site in GB
 
@@ -464,7 +464,7 @@ class Resources:
             # logging.debug(f"Failed to get ram allocated {site}")
             return 0
 
-    def get_ram_available(self, site: str or node.Node) -> int:
+    def get_ram_available(self, site: Union[str, node.Node]) -> int:
         """
         Gets the amount of memory currently  available the site in GB
 
@@ -483,7 +483,7 @@ class Resources:
             # logging.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity(site)
 
-    def get_disk_capacity(self, site: str or node.Node) -> int:
+    def get_disk_capacity(self, site: Union[str, node.Node]) -> int:
         """
         Gets the total amount of disk available the site in GB
 
@@ -502,7 +502,7 @@ class Resources:
             # logging.debug(f"Failed to get disk capacity {site}")
             return 0
 
-    def get_disk_allocated(self, site: str or node.Node) -> int:
+    def get_disk_allocated(self, site: Union[str, node.Node]) -> int:
         """
         Gets the amount of disk allocated the site in GB
 
@@ -521,7 +521,7 @@ class Resources:
             # logging.debug(f"Failed to get disk allocated {site}")
             return 0
 
-    def get_disk_available(self, site: str or node.Node) -> int:
+    def get_disk_available(self, site: Union[str, node.Node]) -> int:
         """
         Gets the amount of disk available the site in GB
 
@@ -540,9 +540,10 @@ class Resources:
             # logging.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity(site)
 
-    def get_ptp_capable(self, site: str or node.Node) -> bool:
+    def get_ptp_capable(self, site: Union[str, node.Node]) -> bool:
         """
         Gets the PTP flag of the site - if it has a native PTP capability
+
         :param site: site name or object
         :type site: String or Node or NodeSliver
         :return: boolean flag
@@ -668,7 +669,7 @@ class Resources:
         Convert site information into a JSON string.
 
         :param site: Name of the site or site object.
-        :type site: str or node.Node
+        :type site: Union[str, node.Node]
 
         :param latlon: Flag indicating whether to convert address to latitude and longitude.
         :type latlon: bool
@@ -678,12 +679,12 @@ class Resources:
         """
         return json.dumps(self.site_to_dict(site, latlon=latlon), indent=4)
 
-    def site_to_dict(self, site: str or node.Node, latlon=True):
+    def site_to_dict(self, site: Union[str, node.Node], latlon=True):
         """
         Convert site information into a dictionary.
 
         :param site: Name of the site or site object.
-        :type site: str or node.Node
+        :type site: Union[str, node.Node]
 
         :param latlon: Flag indicating whether to convert address to latitude and longitude.
         :type latlon: bool
