@@ -350,9 +350,7 @@ class fablib:
         :return: the passphrase to the slice private key on this fablib object
         :rtype: String
         """
-        return (
-            fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
-        )
+        return fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
 
     @staticmethod
     def get_credmgr_host() -> str:
@@ -604,6 +602,8 @@ class FablibManager(Config):
 
     FABNETV4_SUBNET = IPv4Network("10.128.0.0/10")
     FABNETV6_SUBNET = IPv6Network("2602:FCFB:00::/40")
+    FABNETV4EXT_SUBNET = IPv4Network("23.134.232.0/22")
+    FABNETV6EXT_SUBNET = IPv6Network("2602:FCFB:00::/40")
 
     ssh_thread_pool_executor = None
 
@@ -891,7 +891,7 @@ class FablibManager(Config):
         """
         Get User information
 
-        :return returns a dictionary containing User's Information
+        :return: returns a dictionary containing User's Information
         :rtype: dict
         """
         return self.get_manager().get_user_info()
@@ -1011,7 +1011,7 @@ Host * !bastion.fabric-testbed.net
 SSH tunnel config created and zipped at: {tgz_path}
 
 Download Instructions:
-Download your custom `fabric_ssh_tunnel_tools.tgz` file from the `fabric_config` folder. 
+Download your custom `fabric_ssh_tunnel_tools.tgz` file from the `fabric_config` folder.
 
 Usage Instructions:
 1. Unzip the archive and place the resulting `fabric_ssh_tunnel_tools/` folder somewhere accessible from your terminal.
@@ -1054,7 +1054,7 @@ Usage Instructions:
             f.write(
                 f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
-ServerAliveInterval 120 
+ServerAliveInterval 120
 
 Host bastion.fabric-testbed.net
      User {self.get_bastion_username()}
