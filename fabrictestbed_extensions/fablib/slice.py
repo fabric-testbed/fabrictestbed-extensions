@@ -116,6 +116,7 @@ class Slice:
         self.nodes = {}
         self.facilities = {}
         self.interfaces = {}
+        self.network_services = {}
         self.update_topology_count = 0
         self.update_slivers_count = 0
         self.update_slice_count = 0
@@ -551,19 +552,24 @@ class Slice:
 
         context["config"] = self.get_fablib_manager().get_config()
         context["slice"] = self.toDict()
+        nodes = None
+
+        if "nodes" not in skip or "components" not in skip:
+            nodes = self.get_nodes()
 
         context["nodes"] = {}
         if "nodes" not in skip:
-            for node in self.get_nodes():
-                node_context = node.generate_template_context()
+            for node in nodes:
+                node_context = node.generate_template_context(skip=skip)
                 context["nodes"][node.get_name()] = node_context
 
         context["components"] = {}
         if "components" not in skip:
-            for component in self.get_components():
-                context["components"][
-                    component.get_name()
-                ] = component.generate_template_context()
+            for node in nodes:
+                for component in node.get_components():
+                    context["components"][
+                        component.get_name()
+                    ] = component.generate_template_context()
 
         context["interfaces"] = {}
         if "interfaces" not in skip:
@@ -664,8 +670,7 @@ class Slice:
 
         # Set slice attributes
         self.topology = new_topo
-        self.get_nodes()
-        self.get_facilities()
+        # Also refreshes nodes and facilities
         self.get_interfaces(refresh=True)
 
     def update_slivers(self):
@@ -1526,15 +1531,16 @@ class Slice:
 
         # fails for topology that does not have nodes
         try:
-            for node in self.get_nodes():
-                return_components.extend(node.get_components(refresh=refresh))
+            for node in self.get_nodes(refresh=refresh):
+                # get_nodes will refresh components
+                return_components.extend(node.get_components())
         except Exception as e:
             log.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
             pass
         return return_components
 
-    def __initialize_nodes(self):
+    def __initialize_nodes(self, refresh: bool = False):
         """
         Initializes the node objects for the current topology by populating
         the self.nodes dictionary with node instances.
@@ -1568,7 +1574,7 @@ class Slice:
                         # Add new node to the dictionary if it doesn't exist
                         node = Node.get_node(self, node)
                     self.nodes[node_name] = node
-                else:
+                elif refresh:
                     # Update existing node's fim_node reference
                     self.nodes[node_name].update(fim_node=node)
 
@@ -1601,14 +1607,16 @@ class Slice:
             self.nodes.pop(node_name)
             log.debug(f"Removed extra node: {node_name}")
 
-    def get_nodes(self) -> List[Node]:
+    def get_nodes(self, refresh: bool = False) -> List[Node]:
         """
         Gets a list of all nodes in this slice.
 
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
-        self.__initialize_nodes()
+        if not self.nodes or not len(self.nodes):
+            refresh = True
+        self.__initialize_nodes(refresh=refresh)
         return list(self.nodes.values())
 
     def get_facility(self, name: str) -> FacilityPort:
@@ -1630,17 +1638,19 @@ class Slice:
             log.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
-    def get_facilities(self) -> List[FacilityPort]:
+    def get_facilities(self, refresh: bool = False) -> List[FacilityPort]:
         """
         Gets a list of all nodes in this slice.
 
         :return: a list of fablib nodes
         :rtype: List[FacilityPort]
         """
-        self.__initialize_facilities()
+        if not self.facilities or not len(self.facilities):
+            refresh = True
+        self.__initialize_facilities(refresh=refresh)
         return list(self.facilities.values())
 
-    def __initialize_facilities(self):
+    def __initialize_facilities(self, refresh: bool = False):
         """
         Initializes the facilities objects for the current topology by populating
         the self.facilities dictionary with node instances.
@@ -1671,7 +1681,7 @@ class Slice:
                     self.facilities[fac_name] = FacilityPort.get_facility_port(
                         self, facility
                     )
-                else:
+                elif refresh:
                     # Update existing facility's fim_node reference
                     self.facilities[fac_name].update(fim_node=facility)
 
@@ -1768,14 +1778,13 @@ class Slice:
         :rtype: Union[dict[str, Interface], list[Interface]]
         """
         if len(self.interfaces) == 0 or refresh:
-            for node in self.get_nodes():
-                log.debug(f"Getting interfaces for node {node.get_name()}")
-                n_ifaces = node.get_interfaces(
-                    include_subs=include_subs, refresh=refresh, output="dict"
-                )
+            for node in self.get_nodes(refresh=refresh):
+                logging.debug(f"Getting interfaces for node {node.get_name()}")
+                # get_nodes will already refresh interfaces if needed
+                n_ifaces = node.get_interfaces(include_subs=include_subs, output="dict")
                 self.interfaces.update(n_ifaces)
-            for fac in self.get_facilities():
-                log.debug(f"Getting interfaces for facility {fac.get_name()}")
+            for fac in self.get_facilities(refresh=refresh):
+                logging.debug(f"Getting interfaces for facility {fac.get_name()}")
                 fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
                 self.interfaces.update(fac_ifaces)
 
@@ -1887,19 +1896,27 @@ class Slice:
             pass
         return return_networks
 
-    def get_networks(self) -> List[NetworkService]:
+    def get_networks(
+        self, refresh: bool = True, output: str = "list"
+    ) -> List[NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice
 
         :return: List of all network services in this slice
         :rtype: List[NetworkService]
         """
-        try:
-            return NetworkService.get_network_services(self)
-        except Exception as e:
-            log.info(e, exc_info=True)
+        if len(self.network_services) == 0 or refresh:
+            try:
+                self.network_services = NetworkService.get_network_services(
+                    self, output="dict"
+                )
+            except Exception as e:
+                logging.info(e, exc_info=True)
 
-        return []
+        if output == "dict":
+            return self.network_services
+        else:
+            return list(self.network_services.values())
 
     def get_network(self, name: str = None) -> NetworkService or None:
         """

@@ -119,13 +119,21 @@ class Node:
         super().__init__()
         self.fim_node = node
         self.slice = slice
-        self.host = None
         self.ip_addr_list_json = None
         self.validate = validate
         self.raise_exception = raise_exception
         self.node_type = NodeType.VM
         self.components = {}
         self.interfaces = {}
+        self.reservation_id = None
+        self.cores = None
+        self.ram = None
+        self.disk = None
+        self.image = None
+        self.image_type = None
+        self.host = None
+        self.site = None
+        self.management_ip = None
 
         # Try to set the username.
         try:
@@ -352,8 +360,8 @@ class Node:
 
         return rtn_dict
 
-    def generate_template_context(self):
-        context = self.toDict(skip=["ssh_command"])
+    def generate_template_context(self, skip: List[str] = ["ssh_command"]):
+        context = self.toDict(skip=skip)
         context["components"] = []
         # for component in self.get_components():
         #    context["components"].append(component.get_name())
@@ -901,10 +909,14 @@ class Node:
         :return: the number of cores on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacity_allocations").core
-        except:
-            return None
+        if not self.cores:
+            try:
+                self.cores = (
+                    self.get_fim_node().get_property(pname="capacity_allocations").core
+                )
+            except:
+                return None
+        return self.cores
 
     def get_requested_cores(self) -> int or None:
         """
@@ -925,10 +937,14 @@ class Node:
         :return: the amount of RAM on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacity_allocations").ram
-        except:
-            return None
+        if not self.ram:
+            try:
+                self.ram = (
+                    self.get_fim_node().get_property(pname="capacity_allocations").ram
+                )
+            except:
+                return None
+        return self.ram
 
     def get_requested_ram(self) -> int or None:
         """
@@ -949,10 +965,14 @@ class Node:
         :return: the amount of disk space on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacity_allocations").disk
-        except:
-            return None
+        if not self.disk:
+            try:
+                self.disk = (
+                    self.get_fim_node().get_property(pname="capacity_allocations").disk
+                )
+            except:
+                return None
+        return self.disk
 
     def get_requested_disk(self) -> int or None:
         """
@@ -973,10 +993,12 @@ class Node:
         :return: the image reference on the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().image_ref
-        except:
-            return None
+        if not self.image:
+            try:
+                self.image = self.get_fim_node().image_ref
+            except:
+                return None
+        return self.image
 
     def get_image_type(self) -> str or None:
         """
@@ -997,19 +1019,20 @@ class Node:
         :return: the hostname on the node
         :rtype: String
         """
-        try:
-            if self.host is not None:
-                return self.host
-            label_allocations = self.get_fim_node().get_property(
-                pname="label_allocations"
-            )
-            labels = self.get_fim_node().get_property(pname="labels")
-            if label_allocations:
-                return label_allocations.instance_parent
-            if labels:
-                return labels.instance_parent
-        except:
-            return None
+        if not self.host:
+            try:
+                label_allocations = self.get_fim_node().get_property(
+                    pname="label_allocations"
+                )
+                if label_allocations:
+                    self.host = label_allocations.instance_parent
+                else:
+                    labels = self.get_fim_node().get_property(pname="labels")
+                    if labels:
+                        self.host = labels.instance_parent
+            except:
+                return None
+        return self.host
 
     def get_site(self) -> str or None:
         """
@@ -1018,10 +1041,12 @@ class Node:
         :return: the sitename on the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().site
-        except:
-            return None
+        if not self.site:
+            try:
+                self.site = self.get_fim_node().site
+            except:
+                return None
+        return self.site
 
     def get_management_ip(self) -> str or None:
         """
@@ -1030,10 +1055,12 @@ class Node:
         :return: management IP
         :rtype: String
         """
-        try:
-            return self.get_fim_node().management_ip
-        except:
-            return None
+        if not self.management_ip:
+            try:
+                self.management_ip = self.get_fim_node().management_ip
+            except:
+                return None
+        return self.management_ip
 
     def get_reservation_id(self) -> str or None:
         """
@@ -1042,14 +1069,16 @@ class Node:
         :return: reservation ID on the node
         :rtype: String
         """
-        try:
-            return (
-                self.get_fim_node()
-                .get_property(pname="reservation_info")
-                .reservation_id
-            )
-        except:
-            return None
+        if not self.reservation_id:
+            try:
+                self.reservation_id = (
+                    self.get_fim_node()
+                    .get_property(pname="reservation_info")
+                    .reservation_id
+                )
+            except:
+                return None
+        return self.reservation_id
 
     def get_reservation_state(self) -> str or None:
         """
@@ -1336,7 +1365,14 @@ class Node:
         try:
             return self.render_template(
                 self.get_fablib_manager().get_ssh_command_line(),
-                skip=["ssh_command", "interfaces"],
+                skip=[
+                    "ssh_command",
+                    "interfaces",
+                    "state",
+                    "error",
+                    "components",
+                    "networks",
+                ],
             )
         except:
             return self.get_fablib_manager().get_ssh_command_line()
@@ -3887,5 +3923,5 @@ class Node:
     def update(self, fim_node: FimNode):
         if fim_node:
             self.fim_node = fim_node
-            self.get_components(refresh=True)
+            # get_interfaces will also refresh components
             self.get_interfaces(refresh=True)

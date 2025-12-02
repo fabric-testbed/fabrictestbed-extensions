@@ -685,21 +685,22 @@ class Interface:
         :rtype: String
         """
         bw = 0
-        if (
-            self.get_fim()
-            and self.get_fim().capacities
-            and self.get_fim().capacities.bw
-        ):
-            bw = self.get_fim().capacities.bw
+        fim = self.get_fim()
+        peers = None
+        if fim:
+            peers = fim.get_peers()
+
+        if fim and fim.capacities and fim.capacities.bw:
+            bw = fim.capacities.bw
         if (
             not bw
-            and self.get_fim()
-            and self.get_fim().get_peers()
-            and self.get_fim().get_peers()[0]
-            and self.get_fim().get_peers()[0].capacities
-            and self.get_fim().get_peers()[0].capacities.bw
+            and fim
+            and peers
+            and peers[0]
+            and peers[0].capacities
+            and peers[0].capacities.bw
         ):
-            bw = self.get_fim().get_peers()[0].capacities.bw
+            bw = peers[0].capacities.bw
         if (
             not bw
             and self.get_component()
