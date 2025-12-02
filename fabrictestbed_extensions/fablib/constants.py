@@ -35,6 +35,7 @@ class Constants:
     DEFAULT_FABRIC_BASTION_HOST = "bastion.fabric-testbed.net"
     DEFAULT_LOG_LEVEL = "INFO"
     DEFAULT_LOG_FILE = "/tmp/fablib/fablib.log"
+    DEFAULT_LOG_PROPAGATE = False
     DEFAULT_DATA_DIR = "/tmp/fablib"
     DEFAULT_WORK_DIR = f"{os.environ['HOME']}/work"
     DEFAULT_FABRIC_CONFIG_DIR = f"{DEFAULT_WORK_DIR}/fabric_config"
@@ -67,6 +68,7 @@ class Constants:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = "FABRIC_LOG_FILE"
     FABRIC_LOG_LEVEL = "FABRIC_LOG_LEVEL"
+    FABRIC_LOG_PROPAGATE = "FABRIC_LOG_PROPAGATE"
     FABRIC_AVOID = "FABRIC_AVOID"
     FABRIC_SSH_COMMAND_LINE = "FABRIC_SSH_COMMAND_LINE"
     FABLIB_VERSION = "fablib_version"
@@ -124,6 +126,7 @@ class Constants:
     BASTION_KEY_PASSPHRASE = "bastion_key_passphrase"
     LOG_FILE = "log_file"
     LOG_LEVEL = "log_level"
+    LOG_PROPAGATE = "log_propagate"
     DATA_DIR = "data_dir"
     SSH_COMMAND_LINE = "ssh_command_line"
     AVOID = "avoid"
