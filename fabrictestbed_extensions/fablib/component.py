@@ -405,7 +405,7 @@ class Component:
         """
         Not recommended for most users.
 
-        GGets the FABRIC component this fablib component represents. This method
+        Gets the FABRIC component this fablib component represents. This method
         is used to access data at a lower level than FABlib.
 
         :return: the FABRIC component on this component

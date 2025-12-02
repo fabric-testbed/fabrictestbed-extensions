@@ -875,7 +875,7 @@ class Interface:
         """
         Gets the ip link info for this interface.
 
-        :return ip link info
+        :return: ip link info
         :rtype: str
         """
         try:
@@ -927,7 +927,7 @@ class Interface:
         """
         Gets the ip addr info for this interface.
 
-        :return ip addr info
+        :return: ip addr info
         :rtype: str
         """
         try:
@@ -957,7 +957,7 @@ class Interface:
         """
         Gets a list of ips assigned to this interface.
 
-        :return list of ips
+        :return: list of ips
         :rtype: list[str]
         """
         return_ips = []
@@ -1424,6 +1424,7 @@ class Interface:
     def get_type(self) -> str:
         """
         Get Interface type
+
         :return: get interface type
         :rtype: String
         """

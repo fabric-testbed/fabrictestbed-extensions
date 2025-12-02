@@ -8,15 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- Prevent setup_logging from removing all pre-existing logging handlers [#458](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/458)
+### Added
+- Add the Fabnet external networks subnet as constants to the FablibManager.
 
 ### Changed
-
 - Change `setup_logging` to not use the root logger as it alters the logging of the the application consuming the FABRIC API. Use logging.getLogger("fablib") instead.
 
-## 1.9.4
+### Fixed
+- Fix typos in docstrings that prevent proper parsing. Some docstrings were missing `:` or new lines. 
+- Fix type annotations where `str or node.Node` was used instead of `Union[str, node.Node]` or `str | node.Node`.
+- Fix a typo in the docstring of the `get_fim_component` method.
+- Prevent setup_logging from removing all pre-existing logging handlers [#458](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/458)
+
+## 1.9.4 
 - Fix TLS verify and documentation for Ceph utils (Issue [#451](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/451))
 - Ceph Service support (Issue [#450](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/450))
 

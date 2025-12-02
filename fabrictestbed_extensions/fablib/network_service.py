@@ -1011,6 +1011,7 @@ class NetworkService:
     def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
         """
         Get list of public IPs assigned to the FabNetv*Ext service
+
         :return: List of Public IPs
         :rtype: List[IPv4Address] or List[IPv6Address] or None
         """

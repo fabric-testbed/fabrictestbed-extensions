@@ -606,6 +606,8 @@ class FablibManager(Config):
 
     FABNETV4_SUBNET = IPv4Network("10.128.0.0/10")
     FABNETV6_SUBNET = IPv6Network("2602:FCFB:00::/40")
+    FABNETV4EXT_SUBNET = IPv4Network("23.134.232.0/22")
+    FABNETV6EXT_SUBNET = IPv6Network("2602:FCFB:00::/40")
 
     ssh_thread_pool_executor = None
 
@@ -897,7 +899,7 @@ class FablibManager(Config):
         """
         Get User information
 
-        :return returns a dictionary containing User's Information
+        :return: returns a dictionary containing User's Information
         :rtype: dict
         """
         return self.get_manager().get_user_info()
