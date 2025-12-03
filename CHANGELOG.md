@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Replace remaining instances of the use of root logger with logging.getLogger("fablib").
+
 ## 1.9.5
 
 ### Added
