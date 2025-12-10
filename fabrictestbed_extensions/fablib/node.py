@@ -3394,11 +3394,11 @@ class Node:
                 bdf=bdf,
             )
         )
-        logger = logging.getLogger()
+
         if status != Status.OK:
             raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
 
-        logger.info(
+        log.info(
             f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}"
         )
 
@@ -3418,7 +3418,7 @@ class Node:
                     f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}"
                 )
             poa_state = poa_info_status[0].state
-            logger.info(
+            log.info(
                 f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
                 f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}"
             )
@@ -3476,10 +3476,8 @@ class Node:
         """
         # Get CPU Info for the VM and Host on which VM resides
         cpu_info = self.poa(operation="cpuinfo")
-        logging.getLogger().info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
-        logging.getLogger().info(
-            f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}"
-        )
+        log.info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
+        log.info(f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}")
         if cpu_info == "Failed":
             raise Exception("POA Failed to get CPU INFO")
         return cpu_info
@@ -3515,10 +3513,8 @@ class Node:
         """
         # Get Numa Info for the VM and Host on which VM resides
         numa_info = self.poa(operation="numainfo")
-        logging.getLogger().info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
-        logging.getLogger().info(
-            f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}"
-        )
+        log.info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
+        log.info(f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}")
         if numa_info == "Failed":
             raise Exception("POA Failed to get Numa INFO")
         return numa_info
@@ -3578,7 +3574,7 @@ class Node:
                     f"Available CPUs: {number_of_available_cpus}"
                 )
 
-                logging.getLogger().warning(msg)
+                log.warning(msg)
                 number_of_cpus_to_pin = number_of_available_cpus
                 if not number_of_cpus_to_pin:
                     raise Exception(msg)
@@ -3593,19 +3589,17 @@ class Node:
                 f"Pinning Node: {self.get_name()} CPUs for component: {component_name} to "
                 f"Numa Node: {numa_node}"
             )
-            logging.getLogger().info(f"{msg}  CPU Map: {vcpu_cpu_map}")
+            log.info(f"{msg}  CPU Map: {vcpu_cpu_map}")
             print(msg)
 
             # Issue POA
             status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
             if status == "Failed":
                 raise Exception("POA Failed")
-            logging.getLogger().info(
-                f"CPU Pinning complete for node: {self.get_name()}"
-            )
+            log.info(f"CPU Pinning complete for node: {self.get_name()}")
         except Exception as e:
-            logging.getLogger().error(traceback.format_exc())
-            logging.getLogger(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
+            log.error(traceback.format_exc())
+            log.error(f"Failed to Pin CPU for node: {self.get_name()} e: {e}")
             raise e
 
     def rescan_pci(self, component_name: str = None):
@@ -3615,8 +3609,6 @@ class Node:
         :param component_name: Name of the component to rescan. If None, rescans all components.
         :raises RuntimeError: If no PCI devices are found or if the rescan operation fails.
         """
-        logger = logging.getLogger()
-
         try:
             # Retrieve list of PCI addresses to rescan
             components = (
@@ -3650,13 +3642,11 @@ class Node:
             if not status or status.lower() == "failed":
                 raise RuntimeError("PCI rescan operation (POA) failed.")
 
-            logger.info(
-                f"PCI rescan completed successfully for node: {self.get_name()}"
-            )
+            log.info(f"PCI rescan completed successfully for node: {self.get_name()}")
 
         except Exception as e:
-            logger.error(f"Failed PCI rescan for node {self.get_name()}: {e}")
-            logger.debug(traceback.format_exc())
+            log.error(f"Failed PCI rescan for node {self.get_name()}: {e}")
+            log.debug(traceback.format_exc())
             raise
 
     def os_reboot(self):
@@ -3668,7 +3658,7 @@ class Node:
         status = self.poa(operation="reboot")
         if status == "Failed":
             raise Exception("Failed to reboot the server")
-        logging.getLogger().info(f"Node: {self.get_name()} rebooted!")
+        log.info(f"Node: {self.get_name()} rebooted!")
 
     def numa_tune(self):
         """
@@ -3690,27 +3680,19 @@ class Node:
                 if numa_node in numa_nodes:
                     continue
 
-                logging.getLogger().info(
-                    f"Numa Node {numa_node} for component: {c.get_name()}"
-                )
+                log.info(f"Numa Node {numa_node} for component: {c.get_name()}")
 
                 # Free Memory for the Numa Node
                 numa_memory_free_str = (
                     numa_info.get(self.get_host()).get(f"node {numa_node}").get("free")
                 )
-                logging.getLogger().info(
-                    f"Numa Node {numa_node} free memory: {numa_memory_free_str}"
-                )
+                log.info(f"Numa Node {numa_node} free memory: {numa_memory_free_str}")
                 numa_memory_free = int(re.search(r"\d+", numa_memory_free_str).group())
-                logging.getLogger().info(
-                    f"Numa Node {numa_node} free memory: {numa_memory_free}"
-                )
+                log.info(f"Numa Node {numa_node} free memory: {numa_memory_free}")
 
                 # Memory allocated to VM on the Numa Node
-                logging.getLogger().info(
-                    f"VM memory: {numa_info.get(self.get_instance_name())}"
-                )
-                logging.getLogger().info(
+                log.info(f"VM memory: {numa_info.get(self.get_instance_name())}")
+                log.info(
                     f"VM memory: {numa_info.get(self.get_instance_name()).get(f'Node {numa_node}')}"
                 )
                 vm_mem = (
@@ -3718,13 +3700,11 @@ class Node:
                     .get(f"Node {numa_node}")
                     .get("Total")
                 )
-                logging.getLogger().info(f"VM memory: {vm_mem}")
+                log.info(f"VM memory: {vm_mem}")
 
                 # Exclude VM memory
                 available_memory_on_node = int(numa_memory_free) + int(vm_mem)
-                logging.getLogger().info(
-                    f"Available memory: {available_memory_on_node}"
-                )
+                log.info(f"Available memory: {available_memory_on_node}")
 
                 if available_memory_on_node <= 0:
                     continue
@@ -3745,22 +3725,18 @@ class Node:
             msg = (
                 f"Numa tune Node: {self.get_name()} Memory to Numa  Nodes: {numa_nodes}"
             )
-            logging.getLogger().info(msg)
+            log.info(msg)
             print(msg)
 
             # Issue POA
             status = self.poa(operation="numatune", node_set=numa_nodes)
             if status == "Failed":
-                logging.getLogger().error(
-                    f"Numa tune failed for node: {self.get_name()}"
-                )
+                log.error(f"Numa tune failed for node: {self.get_name()}")
             else:
-                logging.getLogger().info(
-                    f"Numa tune complete for node: {self.get_name()}"
-                )
+                log.info(f"Numa tune complete for node: {self.get_name()}")
         except Exception as e:
-            logging.getLogger().error(traceback.format_exc())
-            logging.getLogger(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
+            log.error(traceback.format_exc())
+            logging.error(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
 
     def add_public_key(
@@ -3879,9 +3855,7 @@ class Node:
         status = self.poa(operation=operation, keys=[key_dict])
         if status == "Failed":
             raise Exception(f"Failed to {operation} the node")
-        logging.getLogger().info(
-            f"{operation} to the node {self.get_name()} successful!"
-        )
+        log.info(f"{operation} to the node {self.get_name()} successful!")
         print(f"{operation} to the node {self.get_name()} successful!")
 
     def update(self, fim_node: FimNode):
