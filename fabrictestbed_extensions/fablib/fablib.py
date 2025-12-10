@@ -3255,6 +3255,79 @@ Host * !bastion.fabric-testbed.net
             version_urn=version_urn,
         )
 
+    def list_storage(
+        self,
+        offset: int = 0,
+        limit: int = 200,
+        fetch_all: bool = False,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+    ) -> object:
+        """
+        List storage volumes available for the project.
+
+        :param offset: Pagination offset (default: 0).
+        :type offset: int
+        :param limit: Maximum number of records to fetch per page (default: 200).
+        :type limit: int
+        :param fetch_all: If True, automatically fetch all storage volumes across all pages (default: False).
+        :type fetch_all: bool
+        :param output: Output format - 'text', 'pandas', 'json'
+        :param fields: List of fields (table columns) to show
+        :param quiet: True to suppress printing/display
+        :param filter_function: Lambda function to filter data by field values
+        :return: Table in format specified by output parameter
+        :raises FabricManagerException: If there is an error in listing storage volumes.
+        """
+        if fetch_all:
+            # Fetch all storage volumes across all pages
+            storage_list = []
+            current_offset = offset
+            current_limit = limit
+
+            while True:
+                page_data = self.get_manager().list_storage(offset=current_offset, limit=current_limit)
+
+                if not page_data:
+                    break
+
+                storage_list.extend(page_data)
+
+                # Check if we got fewer items than requested, meaning we've reached the end
+                if len(page_data) < current_limit:
+                    break
+
+                current_offset += len(page_data)
+        else:
+            # Fetch single page
+            storage_list = self.get_manager().list_storage(offset=offset, limit=limit)
+
+        # Use the existing list_table function for output formatting
+        table = self.list_table(
+            storage_list,
+            fields=fields,
+            title="Storage Volumes",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+        )
+
+        return table
+
+    def get_storage(self, uuid: str) -> list:
+        """
+        Get a specific storage volume by UUID.
+
+        :param uuid: Storage volume UUID.
+        :type uuid: str
+        :return: Storage volume details.
+        :rtype: list
+        :raises FabricManagerException: If there is an error retrieving the storage volume.
+        """
+        return self.get_manager().get_storage(uuid=uuid)
+
     def discover_ceph_clusters(self, verify: bool = True) -> list:
         """
         Discover Ceph clusters via the Ceph Manager API.
