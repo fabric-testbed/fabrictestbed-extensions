@@ -90,6 +90,8 @@ from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
 
+log = logging.getLogger("fablib")
+
 
 class Slice:
     def __init__(
@@ -375,7 +377,7 @@ class Slice:
         os_interface_threads = {}
         for iface in self.get_interfaces(refresh=refresh):
             if iface.get_network():
-                logging.info(
+                log.info(
                     f"Starting get network name thread for iface {iface.get_name()} "
                 )
                 net_name_threads[iface.get_name()] = executor.submit(
@@ -383,21 +385,19 @@ class Slice:
                 )
 
             if iface.get_node():
-                logging.info(
-                    f"Starting get node name thread for iface {iface.get_name()} "
-                )
+                log.info(f"Starting get node name thread for iface {iface.get_name()} ")
                 node_name_threads[iface.get_name()] = executor.submit(
                     iface.get_node().get_name
                 )
 
-            logging.info(
+            log.info(
                 f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} "
             )
             physical_os_interface_name_threads[iface.get_name()] = executor.submit(
                 iface.get_physical_os_interface_name
             )
 
-            logging.info(
+            log.info(
                 f"Starting get get_os_interface_threads for iface {iface.get_name()} "
             )
             os_interface_threads[iface.get_name()] = executor.submit(
@@ -408,7 +408,7 @@ class Slice:
         for iface in self.get_interfaces():
             if iface.get_network():
                 # network_name = iface.get_network().get_name()
-                logging.info(
+                log.info(
                     f"Getting results from get network name thread for iface {iface.get_name()} "
                 )
                 network_name = net_name_threads[iface.get_name()].result()
@@ -417,7 +417,7 @@ class Slice:
 
             if iface.get_node():
                 # node_name = iface.get_node().get_name()
-                logging.info(
+                log.info(
                     f"Getting results from get node name thread for iface {iface.get_name()} "
                 )
                 node_name = node_name_threads[iface.get_name()].result()
@@ -473,7 +473,7 @@ class Slice:
         :type user_only: bool
         :return: Slice
         """
-        logging.info("slice.get_slice()")
+        log.info("slice.get_slice()")
 
         slice = Slice(fablib_manager=fablib_manager, name=sm_slice.name)
         slice.sm_slice = sm_slice
@@ -486,18 +486,18 @@ class Slice:
         try:
             slice.update_topology()
         except Exception as e:
-            logging.error(
+            log.error(
                 f"Slice {slice.slice_name} could not update topology: slice.get_slice"
             )
-            logging.error(e, exc_info=True)
+            log.error(e, exc_info=True)
 
         try:
             slice.update_slivers()
         except Exception as e:
-            logging.error(
+            log.error(
                 f"Slice {slice.slice_name} could not update slivers: slice.get_slice"
             )
-            logging.error(e, exc_info=True)
+            log.error(e, exc_info=True)
 
         return slice
 
@@ -607,9 +607,7 @@ class Slice:
         :raises Exception: if slice manager slice no longer exists
         """
         self.update_slice_count += 1
-        logging.info(
-            f"update_slice: {self.get_name()}, count: {self.update_slice_count}"
-        )
+        log.info(f"update_slice: {self.get_name()}, count: {self.update_slice_count}")
 
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
@@ -623,7 +621,7 @@ class Slice:
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
-            logging.debug(
+            log.debug(
                 f"Running slice.update_slice() : fablib.get_slice_manager().slices(): "
                 f"elapsed time: {end - start} seconds"
             )
@@ -649,7 +647,7 @@ class Slice:
             return
 
         self.update_topology_count += 1
-        logging.info(
+        log.info(
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
         )
 
@@ -682,7 +680,7 @@ class Slice:
             return
 
         self.update_slivers_count += 1
-        logging.debug(
+        log.debug(
             f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}"
         )
 
@@ -708,7 +706,7 @@ class Slice:
         Returns slivers associated with the slice.
         """
         if not self.slivers:
-            logging.debug(f"get_slivers", stack_info=False)
+            log.debug(f"get_slivers", stack_info=False)
             self.update_slivers()
 
         return self.slivers
@@ -720,17 +718,17 @@ class Slice:
         :raises Exception: if updating topology fails
         """
         self.update_count += 1
-        logging.info(f"update : {self.get_name()}, count: {self.update_count}")
+        log.info(f"update : {self.get_name()}, count: {self.update_count}")
 
         try:
             self.update_slice()
         except Exception as e:
-            logging.warning(f"slice.update_slice failed: {e}")
+            log.warning(f"slice.update_slice failed: {e}")
 
         try:
             self.update_slivers()
         except Exception as e:
-            logging.warning(f"slice.update_slivers failed: {e}")
+            log.warning(f"slice.update_slivers failed: {e}")
 
         # self.nodes = None
         self.interfaces = {}
@@ -873,7 +871,7 @@ class Slice:
             if self.sm_slice is not None:
                 return self.sm_slice.state
         except Exception as e:
-            logging.warning(
+            log.warning(
                 f"Exception in get_state from non-None sm_slice. Returning None state: {e}"
             )
 
@@ -907,7 +905,7 @@ class Slice:
             if self.sm_slice is not None:
                 return self.sm_slice.lease_end_time
         except Exception as e:
-            logging.warning(
+            log.warning(
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
 
@@ -922,7 +920,7 @@ class Slice:
             if self.sm_slice is not None:
                 return self.sm_slice.lease_start_time
         except Exception as e:
-            logging.warning(
+            log.warning(
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
 
@@ -1290,7 +1288,7 @@ class Slice:
             if not status:
                 node.delete()
                 node = None
-                logging.warning(error)
+                log.warning(error)
                 if raise_exception:
                     raise ValueError(error)
         return node
@@ -1363,7 +1361,7 @@ class Slice:
             if not status:
                 aswitch.delete()
                 aswitch = None
-                logging.warning(error)
+                log.warning(error)
                 if raise_exception:
                     raise ValueError(error)
 
@@ -1433,7 +1431,7 @@ class Slice:
             if not status:
                 node.delete()
                 node = None
-                logging.warning(error)
+                log.warning(error)
                 if raise_exception:
                     raise ValueError(error)
         return node
@@ -1531,7 +1529,7 @@ class Slice:
             for node in self.get_nodes():
                 return_components.extend(node.get_components(refresh=refresh))
         except Exception as e:
-            logging.error(f"get_components: error {e}", exc_info=True)
+            log.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
             pass
         return return_components
@@ -1578,7 +1576,7 @@ class Slice:
             self.__remove_deleted_nodes(current_topology_nodes)
 
         except Exception as e:
-            logging.error(f"Error initializing nodes: {e}")
+            log.error(f"Error initializing nodes: {e}")
 
     def __remove_deleted_nodes(self, current_topology_nodes):
         """
@@ -1601,7 +1599,7 @@ class Slice:
                 if ifs.get_name() in self.interfaces:
                     self.interfaces.pop(ifs.get_name())
             self.nodes.pop(node_name)
-            logging.debug(f"Removed extra node: {node_name}")
+            log.debug(f"Removed extra node: {node_name}")
 
     def get_nodes(self) -> List[Node]:
         """
@@ -1629,7 +1627,7 @@ class Slice:
                 self, self.get_fim_topology().facilities[name]
             )
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
     def get_facilities(self) -> List[FacilityPort]:
@@ -1681,7 +1679,7 @@ class Slice:
             self.__remove_deleted_facilities(current)
 
         except Exception as e:
-            logging.error(f"Error initializing facilities: {e}")
+            log.error(f"Error initializing facilities: {e}")
 
     def __remove_deleted_facilities(self, current):
         """
@@ -1704,7 +1702,7 @@ class Slice:
                 if ifs.get_name() in self.interfaces:
                     self.interfaces.pop(ifs.get_name())
             self.facilities.pop(fac_name)
-            logging.debug(f"Removed extra facility: {fac_name}")
+            log.debug(f"Removed extra facility: {fac_name}")
 
     def get_attestable_switches(self) -> List[Attestable_Switch]:
         """
@@ -1729,7 +1727,7 @@ class Slice:
                 self, self.get_fim_topology().nodes[name]
             )
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
             raise Exception(f"Attestable Switch not found: {name}")
 
     def get_node(self, name: str) -> Node:
@@ -1748,7 +1746,7 @@ class Slice:
                 return Switch.get_node(self, self.get_fim_topology().nodes[name])
             return Node.get_node(self, self.get_fim_topology().nodes[name])
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
     def get_interfaces(
@@ -1771,13 +1769,13 @@ class Slice:
         """
         if len(self.interfaces) == 0 or refresh:
             for node in self.get_nodes():
-                logging.debug(f"Getting interfaces for node {node.get_name()}")
+                log.debug(f"Getting interfaces for node {node.get_name()}")
                 n_ifaces = node.get_interfaces(
                     include_subs=include_subs, refresh=refresh, output="dict"
                 )
                 self.interfaces.update(n_ifaces)
             for fac in self.get_facilities():
-                logging.debug(f"Getting interfaces for facility {fac.get_name()}")
+                log.debug(f"Getting interfaces for facility {fac.get_name()}")
                 fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
                 self.interfaces.update(fac_ifaces)
 
@@ -1815,7 +1813,7 @@ class Slice:
         try:
             return NetworkService.get_l3network_services(self)
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
 
         return []
 
@@ -1832,7 +1830,7 @@ class Slice:
         try:
             return NetworkService.get_l3network_service(self, name)
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
 
     def get_l2networks(self) -> List[NetworkService]:
         """
@@ -1844,7 +1842,7 @@ class Slice:
         try:
             return NetworkService.get_l2network_services(self)
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
 
         return []
 
@@ -1860,7 +1858,7 @@ class Slice:
         try:
             return NetworkService.get_l2network_service(self, name)
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
 
     def get_network_services(self) -> List[NetworkService]:
         """
@@ -1885,7 +1883,7 @@ class Slice:
                     )
 
         except Exception as e:
-            logging.error(e, exc_info=True)
+            log.error(e, exc_info=True)
             pass
         return return_networks
 
@@ -1899,7 +1897,7 @@ class Slice:
         try:
             return NetworkService.get_network_services(self)
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
 
         return []
 
@@ -1915,7 +1913,7 @@ class Slice:
         try:
             return NetworkService.get_network_service(self, name)
         except Exception as e:
-            logging.info(e, exc_info=True)
+            log.info(e, exc_info=True)
 
     def delete(self):
         """
@@ -2128,7 +2126,7 @@ class Slice:
             except Exception as e:
                 if not time.time() < timeout_start + timeout:
                     raise e
-                logging.warning(f"wait ssh retrying: {e}")
+                log.warning(f"wait ssh retrying: {e}")
 
             time.sleep(interval)
             self.update()
@@ -2142,7 +2140,7 @@ class Slice:
         """
         for node in self.get_nodes():
             if not node.test_ssh():
-                logging.debug(
+                log.debug(
                     f"test_ssh fail: {node.get_name()}: {node.get_management_ip()}"
                 )
                 return False
@@ -2162,7 +2160,7 @@ class Slice:
             )
             return
 
-        logging.info(
+        log.info(
             f"post_boot_config: slice_name: {self.get_name()}, slice_id {self.get_slice_id()}"
         )
 
@@ -2176,8 +2174,8 @@ class Slice:
             try:
                 interface.config_vlan_iface()
             except Exception as e:
-                logging.error(f"Interface: {interface.get_name()} failed to config")
-                logging.error(e, exc_info=True)
+                log.error(f"Interface: {interface.get_name()} failed to config")
+                log.error(e, exc_info=True)
 
         for interface in self.get_interfaces():
             try:
@@ -2186,10 +2184,10 @@ class Slice:
                     quiet=True,
                 )
             except Exception as e:
-                logging.error(
+                log.error(
                     f"Interface: {interface.get_name()} failed to become unmanaged"
                 )
-                logging.error(e, exc_info=True)
+                log.error(e, exc_info=True)
 
         import time
 
@@ -2201,7 +2199,7 @@ class Slice:
 
         for node in self.get_nodes():
             # Run configuration on newly created nodes and on modify.
-            logging.info(
+            log.info(
                 f"Configuring {node.get_name()} "
                 f"(instantiated: {node.is_instantiated()}, "
                 f"modify: {self._is_modify()})"
@@ -2226,7 +2224,7 @@ class Slice:
                 print(
                     f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
                 )
-                logging.error(
+                log.error(
                     f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
                 )
 
@@ -2239,7 +2237,7 @@ class Slice:
 
         for node in self.get_nodes():
             if "attestable_switch_config" in node.get_user_data():
-                logging.info(
+                log.info(
                     f"switch config: {str(node.get_user_data()['attestable_switch_config'])}"
                 )
                 aswitch = self.get_attestable_switch(name=node.get_name())
@@ -2263,7 +2261,7 @@ class Slice:
         """
 
         if not self.isStable():
-            logging.debug(
+            log.debug(
                 f"isReady: {self.get_name()} not stable ({self.get_state()}), returning false"
             )
             return False
@@ -2277,7 +2275,7 @@ class Slice:
                 or not node.get_reservation_state()
                 or node.get_reservation_state() == "None"
             ):
-                logging.warning(
+                log.warning(
                     f"slice not ready: node {node.get_name()} status: {node.get_reservation_state()}"
                 )
                 return False
@@ -2286,7 +2284,7 @@ class Slice:
                 node.get_reservation_state() == "Active"
                 and node.get_management_ip() is None
             ):
-                logging.warning(
+                log.warning(
                     f"slice not ready: node {node.get_name()} management ip: {node.get_management_ip()}"
                 )
                 return False
@@ -2301,13 +2299,13 @@ class Slice:
                         in [ipaddress.IPv4Address, ipaddress.IPv6Address]
                         or net.get_available_ips() is None
                     ):
-                        logging.warning(
+                        log.warning(
                             f"slice not ready: net {net.get_name()}, subnet: {net.get_subnet()}, available_ips: {net.get_available_ips()}"
                         )
 
                         return False
                 except Exception as e:
-                    logging.warning(f"slice not ready: net {net.get_name()}, {e}")
+                    log.warning(f"slice not ready: net {net.get_name()}, {e}")
                     return False
 
         return True
@@ -2341,7 +2339,7 @@ class Slice:
 
         from IPython.display import clear_output
 
-        logging.debug(f"wait_jupyter: slice {self.get_name()}")
+        log.debug(f"wait_jupyter: slice {self.get_name()}")
 
         start = time.time()
 
@@ -2392,7 +2390,7 @@ class Slice:
             slice_show_table = self.show(colors=True, quiet=True)
             sliver_table = self.list_slivers(colors=True, quiet=True)
 
-            logging.debug(f"sliver_table: {sliver_table}")
+            log.debug(f"sliver_table: {sliver_table}")
             if stable or verbose:
                 node_table = self.list_nodes(colors=True, quiet=True)
                 if hasNetworks:
@@ -2404,7 +2402,7 @@ class Slice:
             clear_output(wait=True)
 
             print(f"\nRetry: {count}, Time: {time_string}")
-            logging.debug(
+            log.debug(
                 f"{self.get_name()}, update_count: {self.update_count}, update_topology_count: "
                 f"{self.update_topology_count}, update_slivers_count: {self.update_slivers_count},  "
                 f"update_slice_count: {self.update_slice_count}"
@@ -2592,9 +2590,7 @@ class Slice:
                 if isinstance(extra_ssh_keys, list):
                     ssh_keys.extend(extra_ssh_keys)
                 else:
-                    logging.error(
-                        "Extra SSH keys must be provided as a list of strings."
-                    )
+                    log.error("Extra SSH keys must be provided as a list of strings.")
                     raise Exception(
                         "Extra SSH keys must be provided as a list of strings."
                     )
@@ -2615,14 +2611,14 @@ class Slice:
                 lifetime=lease_in_hours,
             )
             if return_status == Status.OK:
-                logging.info(
+                log.info(
                     f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}"
                 )
-                logging.debug(f"slice_reservations: {slice_reservations}")
-                logging.debug(f"slice_id: {slice_reservations[0].slice_id}")
+                log.debug(f"slice_reservations: {slice_reservations}")
+                log.debug(f"slice_id: {slice_reservations[0].slice_id}")
                 self.slice_id = slice_reservations[0].slice_id
             else:
-                logging.error(
+                log.error(
                     f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
                 )
                 raise Exception(
@@ -2768,7 +2764,7 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        logging.debug(f"network service: pretty_names_dict = {pretty_names_dict}")
+        log.debug(f"network service: pretty_names_dict = {pretty_names_dict}")
 
         table = self.get_fablib_manager().list_table(
             table,
@@ -2902,10 +2898,10 @@ class Slice:
                 }
             )
 
-            logging.debug(sliver)
+            log.debug(sliver)
         table = sorted(table, key=lambda x: ([-ord(c) for c in x["type"]], x["name"]))
 
-        logging.debug(f"table: {table}")
+        log.debug(f"table: {table}")
 
         if pretty_names:
             pretty_names_dict = {
@@ -2919,7 +2915,7 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        logging.debug(f"pretty_names_dict = {pretty_names_dict}")
+        log.debug(f"pretty_names_dict = {pretty_names_dict}")
 
         table = self.get_fablib_manager().list_table(
             table,
@@ -3031,7 +3027,7 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        logging.debug(f"pretty_names_dict = {pretty_names_dict}")
+        log.debug(f"pretty_names_dict = {pretty_names_dict}")
 
         table = self.get_fablib_manager().list_table(
             table,
@@ -3142,7 +3138,7 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        logging.debug(f"pretty_names_dict = {pretty_names_dict}")
+        log.debug(f"pretty_names_dict = {pretty_names_dict}")
 
         table = self.get_fablib_manager().list_table(
             table,
@@ -3215,7 +3211,7 @@ class Slice:
                 )
             )
 
-        logging.debug(f"slice_reservations: {slice_reservations}")
+        log.debug(f"slice_reservations: {slice_reservations}")
 
         if (
             progress
@@ -3264,7 +3260,7 @@ class Slice:
         else:
             self.topology = topology
 
-        logging.debug(f"modified topology: {topology}")
+        log.debug(f"modified topology: {topology}")
 
         self.update_slice()
 
@@ -3317,7 +3313,7 @@ class Slice:
             if not status:
                 nodes_to_remove.append(n)
                 errors[n.get_name()] = error
-                logging.warning(f"{n.get_name()} - {error}")
+                log.warning(f"{n.get_name()} - {error}")
         for n in nodes_to_remove:
             n.delete()
         if raise_exception and len(errors):

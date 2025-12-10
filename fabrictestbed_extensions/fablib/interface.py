@@ -54,6 +54,8 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
 
+log = logging.getLogger("fablib")
+
 
 class Interface:
     CONFIGURED = "configured"
@@ -196,7 +198,7 @@ class Interface:
         :rtype: dict
         """
         if self.get_network():
-            logging.info(
+            log.info(
                 f"Getting results from get network name thread for iface {self.get_name()} "
             )
             network_name = self.get_network().get_name()
@@ -204,7 +206,7 @@ class Interface:
             network_name = None
 
         if self.get_node():
-            logging.info(
+            log.info(
                 f"Getting results from get node name thread for iface {self.get_name()} "
             )
             node_name = self.get_node().get_name()
@@ -423,7 +425,7 @@ class Interface:
             if "dev" in fablib_data and fablib_data.get("dev"):
                 return fablib_data.get("dev")
             else:
-                # logging.debug(f"iface: {self}")
+                # log.debug(f"iface: {self}")
                 os_iface = self.get_physical_os_interface_name()
                 vlan = self.get_vlan()
 
@@ -439,7 +441,7 @@ class Interface:
             return os_iface
 
         except Exception as e:
-            logging.error(f"get_device_name: error occurred - e: {e}")
+            log.error(f"get_device_name: error occurred - e: {e}")
 
     def get_os_interface(self) -> str:
         """
@@ -456,7 +458,7 @@ class Interface:
            Use `get_device_name()` instead.
         """
         try:
-            # logging.debug(f"iface: {self}")
+            # log.debug(f"iface: {self}")
             os_iface = self.get_physical_os_interface_name()
             vlan = self.get_vlan()
 
@@ -851,19 +853,19 @@ class Interface:
         """
 
         if self.network is not None:
-            logging.debug(
+            log.debug(
                 f"Interface known network. Returning known network for interface {self.get_name()}"
             )
             return self.network
         else:
-            logging.debug(
+            log.debug(
                 f"Interface does not known network. Finding network for interface {self.get_name()}"
             )
 
             for net in self.get_slice().get_networks():
                 if net.has_interface(self):
                     self.network = net
-                    logging.debug(
+                    log.debug(
                         f"Interface network found. interface {self.get_name()}, network {self.network.get_name()}"
                     )
                     return self.network
@@ -873,7 +875,7 @@ class Interface:
         """
         Gets the ip link info for this interface.
 
-        :return ip link info
+        :return: ip link info
         :rtype: str
         """
         try:
@@ -890,7 +892,7 @@ class Interface:
                     return link
             return None
         except Exception as e:
-            logging.warning(f"{e}")
+            log.warning(f"{e}")
 
     def get_ip_addr_show(self, dev=None):
         """
@@ -916,7 +918,7 @@ class Interface:
             )
             return stdout
         except Exception as e:
-            logging.error(
+            log.error(
                 f"Failed to get IP address show info for interface {self.get_name()}. Exception: {e}"
             )
 
@@ -925,7 +927,7 @@ class Interface:
         """
         Gets the ip addr info for this interface.
 
-        :return ip addr info
+        :return: ip addr info
         :rtype: str
         """
         try:
@@ -948,14 +950,14 @@ class Interface:
 
             return None
         except Exception as e:
-            logging.warning(f"{e}")
+            log.warning(f"{e}")
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):
         """
         Gets a list of ips assigned to this interface.
 
-        :return list of ips
+        :return: list of ips
         :rtype: list[str]
         """
         return_ips = []
@@ -971,7 +973,7 @@ class Interface:
                     if addr_info["family"] == family:
                         return_ips.append(addr_info["local"])
         except Exception as e:
-            logging.warning(f"{e}")
+            log.warning(f"{e}")
 
         return return_ips
 
@@ -1193,7 +1195,7 @@ class Interface:
         self.config_vlan_iface()
         network = self.get_network()
         if not network:
-            logging.info(
+            log.info(
                 f"Interface {self.get_name()} not connected to a network, skipping configuration."
             )
             return
@@ -1279,7 +1281,7 @@ class Interface:
 
             self.get_fim().set_property("labels", labels)
         except Exception as e:
-            logging.error(f"Failed to set the ip subnet e: {e}")
+            log.error(f"Failed to set the ip subnet e: {e}")
             raise e
 
     def get_subnet(self):
@@ -1422,6 +1424,7 @@ class Interface:
     def get_type(self) -> str:
         """
         Get Interface type
+
         :return: get interface type
         :rtype: String
         """

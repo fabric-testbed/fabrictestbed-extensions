@@ -55,6 +55,8 @@ from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer, ServiceType
 from fim.user.network_service import MirrorDirection
 
+log = logging.getLogger("fablib")
+
 
 class NetworkService:
     """
@@ -221,7 +223,7 @@ class NetworkService:
                 nics.add(interface.get_model())
                 nodes.add(interface.get_node())
             except Exception as e:
-                logging.info(
+                log.info(
                     f"validate_nstype: skipping interface {interface.get_name()}, likely its a facility port"
                 )
 
@@ -342,7 +344,7 @@ class NetworkService:
                 f'Unknown direction specifier "{mirror_direction}" when creating PortMirror'
                 f"service {name}"
             )
-        logging.info(
+        log.info(
             f"Create PortMirror Service: Slice: {slice.get_name()}, Network Name: {name} listening on "
             f"{mirror_interface_name} with direction {direction}"
         )
@@ -514,7 +516,7 @@ class NetworkService:
         for interface in interfaces:
             fim_interfaces.append(interface.get_fim_interface())
 
-        logging.info(
+        log.info(
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
@@ -557,17 +559,17 @@ class NetworkService:
 
         rtn_network_services = []
         fim_network_service = None
-        logging.debug(
+        log.debug(
             f"NetworkService.get_fim_l3network_service_types(): {NetworkService.__get_fim_l3network_service_types()}"
         )
 
         for net_name, net in topology.network_services.items():
-            logging.debug(f"scanning network: {net_name}, net: {net}")
+            log.debug(f"scanning network: {net_name}, net: {net}")
             if (
                 str(net.get_property("type"))
                 in NetworkService.__get_fim_l3network_service_types()
             ):
-                logging.debug(f"returning network: {net_name}, net: {net}")
+                log.debug(f"returning network: {net_name}, net: {net}")
                 rtn_network_services.append(
                     NetworkService(slice=slice, fim_network_service=net)
                 )
@@ -879,7 +881,7 @@ class NetworkService:
         try:
             return self.get_sliver().fim_sliver.site
         except Exception as e:
-            logging.warning(f"Failed to get site: {e}")
+            log.warning(f"Failed to get site: {e}")
 
             return None
 
@@ -894,7 +896,7 @@ class NetworkService:
             return self.get_fim().get_property(pname="layer")
             # return self.get_sliver().fim_sliver.layer
         except Exception as e:
-            logging.warning(f"Failed to get layer: {e}")
+            log.warning(f"Failed to get layer: {e}")
             return None
 
     def get_type(self):
@@ -908,7 +910,7 @@ class NetworkService:
             return self.get_fim().type
             # return self.get_sliver().fim_sliver.resource_type
         except Exception as e:
-            logging.warning(f"Failed to get type: {e}")
+            log.warning(f"Failed to get type: {e}")
             return None
 
     def get_sliver(self) -> OrchestratorSliver:
@@ -979,7 +981,7 @@ class NetworkService:
 
             return gateway
         except Exception as e:
-            logging.warning(f"Failed to get gateway: {e}")
+            log.warning(f"Failed to get gateway: {e}")
 
     def get_available_ips(
         self, count: int = 256
@@ -1000,15 +1002,16 @@ class NetworkService:
             ip_list = []
             gateway = self.get_gateway()
             for i in range(count):
-                logging.debug(f"adding IP {i}")
+                log.debug(f"adding IP {i}")
                 ip_list.append(gateway + i + 1)
             return ip_list
         except Exception as e:
-            logging.warning(f"Failed to get_available_ips: {e}")
+            log.warning(f"Failed to get_available_ips: {e}")
 
     def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
         """
         Get list of public IPs assigned to the FabNetv*Ext service
+
         :return: List of Public IPs
         :rtype: List[IPv4Address] or List[IPv6Address] or None
         """
@@ -1050,13 +1053,13 @@ class NetworkService:
                                 fablib_data["subnet"]["subnet"]
                             )
                         except Exception as e:
-                            logging.warning(f"Failed to get L2 subnet: {e}")
+                            log.warning(f"Failed to get L2 subnet: {e}")
             else:
                 subnet = f"{self.get_name()}.subnet"
 
             return subnet
         except Exception as e:
-            logging.warning(f"Failed to get subnet: {e}")
+            log.warning(f"Failed to get subnet: {e}")
 
     def get_reservation_id(self) -> str or None:
         """
@@ -1072,7 +1075,7 @@ class NetworkService:
                 .reservation_id
             )
         except Exception as e:
-            logging.debug(f"Failed to get reservation_id: {e}")
+            log.debug(f"Failed to get reservation_id: {e}")
             return None
 
     def get_reservation_state(self) -> str or None:
@@ -1089,7 +1092,7 @@ class NetworkService:
                 .reservation_state
             )
         except Exception as e:
-            logging.warning(f"Failed to get reservation_state: {e}")
+            log.warning(f"Failed to get reservation_state: {e}")
             return None
 
     def get_name(self) -> str:
@@ -1111,14 +1114,14 @@ class NetworkService:
         if not self.interfaces or len(self.interfaces) == 0:
             self.interfaces = []
             for interface in self.get_fim_network_service().interface_list:
-                logging.debug(f"interface: {interface}")
+                log.debug(f"interface: {interface}")
 
                 try:
                     self.interfaces.append(
                         self.get_slice().get_interface(name=interface.name)
                     )
                 except:
-                    logging.warning(f"interface not found: {interface.name}")
+                    log.warning(f"interface not found: {interface.name}")
                     """ Commenting this code as not sure why this was added for now.
                     from fabrictestbed_extensions.fablib.interface import Interface
 

@@ -42,6 +42,8 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_editor import Capacities
 from fabrictestbed.slice_editor import Node as FimNode
 
+log = logging.getLogger("fablib")
+
 
 class Switch(Node):
     def __init__(
@@ -138,7 +140,7 @@ class Switch(Node):
                 avoid=avoid,
             )
 
-        logging.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
+        log.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
         node = Switch(
             slice,
             slice.topology.add_switch(name=name, site=site),
