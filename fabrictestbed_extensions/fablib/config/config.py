@@ -179,6 +179,7 @@ class Config:
         am_host: str = None,
         ceph_mgr_host: str = None,
         token_location: str = None,
+        id_token: str = None,
         project_id: str = None,
         bastion_username: str = None,
         bastion_key_location: str = None,
@@ -192,24 +193,29 @@ class Config:
         """
         Constructor. Tries to get configuration from:
 
-         - constructor parameters (high priority)
-         - fabric_rc file (middle priority)
+         - constructor parameters (highest priority)
+         - fabric_rc file (medium priority)
          - environment variables (low priority)
-         - defaults (if needed and possible)
+         - defaults (lowest priority, if needed and possible)
+
+        The config file is optional. If not provided or doesn't exist,
+        configuration will be loaded from constructor parameters,
+        environment variables, and defaults.
+
+        :param id_token: ID token string to use directly (optional).
+            If provided, token_location file check is skipped.
 
         """
+        # Set config file path (may or may not exist)
         if fabric_rc is None:
             fabric_rc = Constants.DEFAULT_FABRIC_RC
-            if os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
-                Path(fabric_rc).touch()
 
-        if fabric_rc and os.path.exists(fabric_rc):
-            self.config_file_path = fabric_rc
+        self.config_file_path = fabric_rc if fabric_rc else None
         self.is_yaml = False
         self.runtime_config = {}
         self.offline = offline
 
-        # Load from config file
+        # Load from config file (if it exists)
         self.__load_configuration(file_path=fabric_rc, **kwargs)
 
         # Apply any parameters explicitly passed
@@ -230,6 +236,9 @@ class Config:
 
         if token_location is not None:
             self.set_token_location(token_location=token_location)
+
+        if id_token is not None:
+            self.set_id_token(id_token=id_token)
 
         if project_id is not None:
             self.set_project_id(project_id=project_id)
@@ -252,19 +261,18 @@ class Config:
         if data_dir is not None:
             self.set_data_dir(data_dir=data_dir)
 
-        #        if self.get_ssh_command_line() is None:
-        #            self.set_ssh_command_line(
-        #                ssh_command_line=Constants.DEFAULT_FABRIC_SSH_COMMAND_LINE
-        #            )
-
         self.required_check(partial=True)
 
         # Verify that Token file exists; any other checks cannot be done without this.
-        token_location = self.get_token_location()
-        if not os.path.exists(token_location):
-            raise ConfigException(
-                f"Token file does not exist, please provide the token at location: {token_location}!"
-            )
+        # Skip this check if:
+        # - offline mode (token may not be needed)
+        # - id_token is provided directly (no file needed)
+        if not offline and not self.get_id_token():
+            token_location = self.get_token_location()
+            if not os.path.exists(token_location):
+                raise ConfigException(
+                    f"Token file does not exist, please provide the token at location: {token_location}!"
+                )
 
         self.log = logging.getLogger("fablib")
 
@@ -533,6 +541,24 @@ class Config:
         :type token_location: String
         """
         self.runtime_config[Constants.TOKEN_LOCATION] = token_location
+
+    def get_id_token(self) -> str:
+        """
+        Gets the FABRIC ID token (if provided directly).
+
+        :return: FABRIC ID token or None
+        :rtype: String or None
+        """
+        return self.runtime_config.get(Constants.ID_TOKEN)
+
+    def set_id_token(self, id_token: str):
+        """
+        Sets the FABRIC ID token.
+
+        :param id_token: ID Token
+        :type id_token: String
+        """
+        self.runtime_config[Constants.ID_TOKEN] = id_token
 
     def get_bastion_username(self) -> str:
         """

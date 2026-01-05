@@ -620,6 +620,7 @@ class FablibManager(Config):
         am_host: str = None,
         ceph_mgr_host: str = None,
         token_location: str = None,
+        id_token: str = None,
         project_id: str = None,
         bastion_username: str = None,
         bastion_key_location: str = None,
@@ -642,20 +643,22 @@ class FablibManager(Config):
         keys in nodes in slices and FABRIC's bastion host, etc.  This
         requires some configuration, which is gathered from:
 
-            - constructor parameters (high priority)
+            - constructor parameters (highest priority)
 
-            - a configuration file (medium priority)
+            - a configuration file (medium priority, optional)
 
             - environment variables (low priority)
 
-            - defaults (if needed, and when possible)
+            - defaults (lowest priority, if needed and when possible)
 
-        Typically you would use the configuration file located at
-        ``"${HOME}/work/fabric_config/fabric_rc"``, and/or environment
-        variables.
+        The configuration file is optional. You can provide configuration
+        entirely through constructor parameters and/or environment variables.
+        If using a config file, it typically would be located at
+        ``"${HOME}/work/fabric_config/fabric_rc"``.
 
-        :param fabric_rc: Path to fablib configuration file.  Defaults
-            to ``"${HOME}/work/fabric_config/fabric_rc"``.
+        :param fabric_rc: Path to fablib configuration file. Optional.
+            Defaults to ``"${HOME}/work/fabric_config/fabric_rc"``, but
+            the file doesn't need to exist.
         :param credmgr_host: Name of credential manager host.
         :param orchestrator_host: Name of FABRIC orchestrator host.
         :param core_api_host: Name of Core API host.
@@ -663,6 +666,9 @@ class FablibManager(Config):
         :param ceph_mgr_host: Name of ceph manager host.
         :param token_location: Path to the file that contains your
             FABRIC auth token.
+        :param id_token: ID token string to use directly (optional).
+            If provided, token_location file check is skipped and
+            auto_token_refresh is automatically disabled.
         :param project_id: Your FABRIC project ID, obtained from
             https://cm.fabric-testbed.net/, usually via FABRIC portal.
         :param bastion_username: Your username on FABRIC bastion host,
@@ -686,9 +692,13 @@ class FablibManager(Config):
         :param offline: Avoid using FABRIC services when initializing.
             This is ``False`` by default, and set to ``True`` only in
             some unit tests.
-        :param auto_token_refresh: Auto refresh tokens
+        :param auto_token_refresh: Auto refresh tokens (automatically disabled if id_token is provided)
         :param validate_config: Whether to verify and persist configuration during initialization.
         """
+        # If id_token is provided, disable auto_token_refresh
+        if id_token is not None:
+            auto_token_refresh = False
+
         super().__init__(
             fabric_rc=fabric_rc,
             credmgr_host=credmgr_host,
@@ -697,6 +707,7 @@ class FablibManager(Config):
             am_host=am_host,
             ceph_mgr_host=ceph_mgr_host,
             token_location=token_location,
+            id_token=id_token,
             project_id=project_id,
             bastion_username=bastion_username,
             bastion_key_location=bastion_key_location,
@@ -1298,17 +1309,31 @@ Host * !bastion.fabric-testbed.net
             Utils.is_reachable(hostname=self.get_orchestrator_host())
             Utils.is_reachable(hostname=self.get_core_api_host())
 
-            self.manager = FabricManager(
-                oc_host=self.get_orchestrator_host(),
-                cm_host=self.get_credmgr_host(),
-                core_api_host=self.get_core_api_host(),
-                am_host=self.get_am_host(),
-                project_id=self.get_project_id(),
-                token_location=self.get_token_location(),
-                initialize=True,
-                scope="all",
-                auto_refresh=self.auto_token_refresh,
-            )
+            # Use id_token if provided, otherwise use token_location
+            if self.get_id_token():
+                self.manager = FabricManager(
+                    oc_host=self.get_orchestrator_host(),
+                    cm_host=self.get_credmgr_host(),
+                    core_api_host=self.get_core_api_host(),
+                    am_host=self.get_am_host(),
+                    project_id=self.get_project_id(),
+                    id_token=self.get_id_token(),
+                    initialize=True,
+                    scope="all",
+                    auto_refresh=self.auto_token_refresh,
+                )
+            else:
+                self.manager = FabricManager(
+                    oc_host=self.get_orchestrator_host(),
+                    cm_host=self.get_credmgr_host(),
+                    core_api_host=self.get_core_api_host(),
+                    am_host=self.get_am_host(),
+                    project_id=self.get_project_id(),
+                    token_location=self.get_token_location(),
+                    initialize=True,
+                    scope="all",
+                    auto_refresh=self.auto_token_refresh,
+                )
             self.manager.initialize()
             log.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager

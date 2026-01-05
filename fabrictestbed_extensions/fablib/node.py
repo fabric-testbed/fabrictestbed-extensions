@@ -3333,7 +3333,7 @@ class Node:
         net = self.get_slice().get_network(net_name)
         if not net:
             net = self.get_slice().add_l3network(
-                name=net_name, type=net_type, subnet=subnet
+                name=net_name, type=net_type, subnet=subnet, site=site
             )
 
         # Add ccontrol plane network to node1

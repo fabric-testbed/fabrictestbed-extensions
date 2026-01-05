@@ -371,6 +371,7 @@ class NetworkService:
         user_data={},
         technology: str = None,
         subnet: ipaddress.ip_network = None,
+        site: str = None,
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -402,6 +403,7 @@ class NetworkService:
             user_data=user_data,
             technology=technology,
             subnet=subnet,
+            site=site
         )
 
     @staticmethod
@@ -483,6 +485,7 @@ class NetworkService:
         user_data: dict = {},
         technology: str = None,
         subnet: ipaddress.ip_network = None,
+        site: str = None,
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -509,6 +512,9 @@ class NetworkService:
                        It's ignored for any other services.
         :type ipaddress.ip_network
 
+        :param site: Site for L3 networks
+        :type site: str
+
         :return: the new fablib network service
         :rtype: NetworkService
         """
@@ -520,8 +526,11 @@ class NetworkService:
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
-            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology
+            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology,
         )
+
+        if site is not None and nstype in NetworkService.__get_fim_l3network_service_types():
+            fim_network_service.site = site
 
         if subnet:
             if nstype == ServiceType.FABNetv4:

@@ -118,6 +118,7 @@ class Constants:
     CEPH_MGR_HOST = "ceph_mgr_host"
     AM_HOST = "am_host"
     TOKEN_LOCATION = "token_location"
+    ID_TOKEN = "id_token"
     PROJECT_ID = "project_id"
     PROJECT_NAME = "project_name"
     BASTION_HOST = "bastion_host"

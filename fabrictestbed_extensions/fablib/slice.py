@@ -1072,6 +1072,7 @@ class Slice:
         user_data: dict = {},
         technology: str = None,
         subnet: ipaddress.ip_network = None,
+        site: str = None,
     ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
@@ -1130,6 +1131,9 @@ class Slice:
             other services.
         :type subnet: ipaddress.ip_network
 
+        :param site: Site
+        :type site: str
+
         :return: a new L3 network service
         :rtype: NetworkService
         """
@@ -1144,6 +1148,7 @@ class Slice:
             user_data=user_data,
             technology=technology,
             subnet=subnet,
+            site=site
         )
 
     def add_facility_port(
