@@ -33,16 +33,62 @@ from atomicwrites import atomic_write
 class Utils:
     @staticmethod
     def is_reachable(*, hostname: str, port: int = 443):
-        try:
-            # Attempt to resolve the hostname to an IP address
-            ip_address = socket.gethostbyname(hostname)
+        import errno
 
-            # Attempt to create a socket connection to the IP address and port 80
-            with socket.create_connection((ip_address, port), timeout=5):
+        try:
+            # Get all available addresses (IPv4 and IPv6) for the hostname
+            addr_info = socket.getaddrinfo(
+                hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM
+            )
+
+            # Try to connect to each address until one succeeds
+            errors = []
+            permission_denied = False
+            for family, socktype, proto, canonname, sockaddr in addr_info:
+                try:
+                    sock = socket.socket(family, socktype, proto)
+                    sock.settimeout(5)
+                    sock.connect(sockaddr)
+                    sock.close()
+                    return True
+                except OSError as e:
+                    family_name = "IPv6" if family == socket.AF_INET6 else "IPv4"
+
+                    # EACCES (13) or EPERM (1) - permission denied by local firewall/security policy
+                    # Common on VMs with restricted network policies; treat as reachable since
+                    # DNS works and the block is local, not because the remote host is down
+                    if e.errno in (errno.EACCES, errno.EPERM):
+                        permission_denied = True
+                        errors.append(
+                            f"{family_name} {sockaddr[0]}: blocked by local policy"
+                        )
+                    # ENETUNREACH (101) - this address family isn't routable on this system
+                    elif e.errno == errno.ENETUNREACH:
+                        errors.append(
+                            f"{family_name} {sockaddr[0]}: network unreachable"
+                        )
+                    else:
+                        errors.append(f"{family_name} {sockaddr[0]}: {e}")
+                    continue
+                except socket.timeout as e:
+                    errors.append(f"timeout connecting to {sockaddr[0]}: {e}")
+                    continue
+
+            # If we got permission denied, treat as reachable since DNS resolves
+            # and we can't verify connectivity due to local security restrictions
+            if permission_denied:
                 return True
-        except (socket.gaierror, socket.timeout, OSError):
+
+            # If we tried all addresses and none worked, raise with details
+            error_details = "; ".join(errors)
+            raise OSError(
+                f"Could not reach {hostname}:{port}. Attempted addresses: {error_details}"
+            )
+        except socket.gaierror as e:
+            raise ConnectionError(f"Could not resolve hostname {hostname}: {e}")
+        except (socket.timeout, OSError) as e:
             raise ConnectionError(
-                f"Host: {hostname} is not reachable, please check your config file!"
+                f"Host: {hostname} is not reachable, please check your config file! Details: {e}"
             )
 
     @staticmethod

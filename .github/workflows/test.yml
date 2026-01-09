@@ -22,13 +22,15 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+          - "3.12"
+          - "3.13"
         os:
           # See https://github.com/actions/runner-images for available
           # runners.
           - "ubuntu-22.04"
           - "windows-2022"
-          - "macos-13" # Intel
           - "macos-14" # ARM
+          - "macos-15" # ARM
 
     runs-on: ${{ matrix.os }}
 

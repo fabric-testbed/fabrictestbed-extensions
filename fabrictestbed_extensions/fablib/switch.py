@@ -22,6 +22,12 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
+"""FABRIC P4 programmable switch abstraction.
+
+This module provides the Switch class for working with P4-programmable
+network switches in FABRIC. Switches extend the Node class with specialized
+functionality for programmable data planes.
+"""
 from __future__ import annotations
 
 import json
@@ -46,6 +52,16 @@ log = logging.getLogger("fablib")
 
 
 class Switch(Node):
+    """Represents a P4-programmable network switch in FABRIC.
+
+    Switch extends :class:`~fabrictestbed_extensions.fablib.node.Node` to model
+    programmable data-plane devices with interfaces exposed as P4 ports. The
+    management username defaults to the FABRIC system account for switch access.
+
+    :ivar str username: Set to :data:`~fabrictestbed_extensions.fablib.constants.Constants.FABRIC_USER`
+        for system-level access.
+    """
+
     def __init__(
         self,
         slice: Slice,
@@ -54,18 +70,18 @@ class Switch(Node):
         raise_exception: bool = False,
     ):
         """
-        Node constructor, usually invoked by ``Slice.add_node()``.
+        Switch constructor, usually invoked by ``Slice.add_switch()``.
 
-        :param slice: the fablib slice to have this node on
+        :param slice: the fablib slice to have this switch on
         :type slice: Slice
 
-        :param node: the FIM node that this Node represents
-        :type node: Node
+        :param node: the FIM node that this Switch represents
+        :type node: FimNode
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
 
-        :param raise_exception: Raise exception in case validation failes
+        :param raise_exception: Raise exception in case validation fails
         :type raise_exception: bool
 
         """
@@ -164,6 +180,15 @@ class Switch(Node):
 
     @staticmethod
     def get_pretty_name_dict():
+        """
+        Get a mapping of field names to human-readable labels for display.
+
+        Returns a dictionary that maps internal field names to user-friendly
+        display names used when rendering tables and formatted output.
+
+        :return: Dictionary mapping field names to pretty names
+        :rtype: dict
+        """
         return {
             "id": "ID",
             "name": "Name",
@@ -221,17 +246,54 @@ class Switch(Node):
         return rtn_dict
 
     def generate_template_context(self):
+        """
+        Generate the base template context for this switch.
+
+        Creates a dictionary context suitable for Jinja2 template rendering,
+        excluding the SSH command and setting an empty components list.
+
+        :return: Template context dictionary with switch attributes
+        :rtype: dict
+        """
         context = self.toDict(skip=["ssh_command"])
         context["components"] = []
         return context
 
     def get_template_context(self, skip: List[str] = None):
+        """
+        Get the full Jinja2 template context for this switch from the slice.
+
+        Retrieves the template rendering context from the slice, which includes
+        switch variables and configuration. By default, excludes SSH command.
+
+        :param skip: List of field names to exclude from the context
+        :type skip: List[str]
+
+        :return: Template context dictionary for Jinja2 rendering
+        :rtype: dict
+        """
         if not skip:
             skip = ["ssh_command"]
 
         return self.get_slice().get_template_context(self, skip=skip)
 
     def render_template(self, input_string, skip: List[str] = None):
+        """
+        Render a Jinja2 template string using the switch's context.
+
+        Processes the input template string with the switch's template
+        context variables and returns the rendered result. By default,
+        excludes SSH command from the context.
+
+        :param input_string: Jinja2 template string to render
+        :type input_string: str
+
+        :param skip: List of field names to exclude from the context
+        :type skip: List[str]
+
+        :return: Rendered template output string
+        :rtype: str
+        """
         if not skip:
             skip = ["ssh_command"]
 
