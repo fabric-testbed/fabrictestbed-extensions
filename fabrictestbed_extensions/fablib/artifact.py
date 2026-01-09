@@ -43,6 +43,7 @@ class Artifact:
     :ivar fablib_manager: Reference to the active :class:`~fabrictestbed_extensions.fablib.fablib.FablibManager`.
     :ivar dict artifact_info: Raw artifact metadata returned by the Artifact Manager service.
     """
+
     pretty_names = {
         "title": "Title",
         "uuid": "ID",

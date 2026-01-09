@@ -61,6 +61,7 @@ class Switch(Node):
     :ivar str username: Set to :data:`~fabrictestbed_extensions.fablib.constants.Constants.FABRIC_USER`
         for system-level access.
     """
+
     def __init__(
         self,
         slice: Slice,

@@ -66,6 +66,7 @@ class Constants:
 
     All constants are class attributes and should be accessed as Constants.CONSTANT_NAME.
     """
+
     DEFAULT_FABRIC_CREDMGR_HOST = "cm.fabric-testbed.net"
     DEFAULT_FABRIC_ORCHESTRATOR_HOST = "orchestrator.fabric-testbed.net"
     DEFAULT_FABRIC_CORE_API_HOST = "uis.fabric-testbed.net"
