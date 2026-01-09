@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Replace remaining instances of the use of root logger with logging.getLogger("fablib").
-- Updated dependency for `cryptography` and `Utils::is_reachable` to work for IPv4/IPv6.
+- Updated dependency for `cryptography` and `Utils::is_reachable` to work for IPv4/IPv6. (PR [#469](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/469))
 
 ## 1.9.5
 

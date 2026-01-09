@@ -37,7 +37,9 @@ class Utils:
 
         try:
             # Get all available addresses (IPv4 and IPv6) for the hostname
-            addr_info = socket.getaddrinfo(hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            addr_info = socket.getaddrinfo(
+                hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM
+            )
 
             # Try to connect to each address until one succeeds
             errors = []
@@ -57,10 +59,14 @@ class Utils:
                     # DNS works and the block is local, not because the remote host is down
                     if e.errno in (errno.EACCES, errno.EPERM):
                         permission_denied = True
-                        errors.append(f"{family_name} {sockaddr[0]}: blocked by local policy")
+                        errors.append(
+                            f"{family_name} {sockaddr[0]}: blocked by local policy"
+                        )
                     # ENETUNREACH (101) - this address family isn't routable on this system
                     elif e.errno == errno.ENETUNREACH:
-                        errors.append(f"{family_name} {sockaddr[0]}: network unreachable")
+                        errors.append(
+                            f"{family_name} {sockaddr[0]}: network unreachable"
+                        )
                     else:
                         errors.append(f"{family_name} {sockaddr[0]}: {e}")
                     continue
@@ -79,9 +85,7 @@ class Utils:
                 f"Could not reach {hostname}:{port}. Attempted addresses: {error_details}"
             )
         except socket.gaierror as e:
-            raise ConnectionError(
-                f"Could not resolve hostname {hostname}: {e}"
-            )
+            raise ConnectionError(f"Could not resolve hostname {hostname}: {e}")
         except (socket.timeout, OSError) as e:
             raise ConnectionError(
                 f"Host: {hostname} is not reachable, please check your config file! Details: {e}"
