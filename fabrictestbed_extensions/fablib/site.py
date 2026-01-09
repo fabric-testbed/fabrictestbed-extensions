@@ -22,6 +22,13 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja(kthare10@renci.org)
+"""FABRIC site and resource information management.
+
+This module provides classes for querying and managing information about
+FABRIC testbed sites and their available resources. The Site and Resources
+classes allow users to discover available compute, storage, and network
+resources across the FABRIC infrastructure.
+"""
 
 from __future__ import annotations
 

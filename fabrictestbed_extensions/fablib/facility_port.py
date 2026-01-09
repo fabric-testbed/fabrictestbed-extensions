@@ -101,9 +101,30 @@ class FacilityPort:
         return {"name": str(self.get_name())}
 
     def get_template_context(self):
+        """
+        Get the Jinja2 template context for this facility port.
+
+        Retrieves the template rendering context from the slice, which includes
+        variables and configuration that can be used in Jinja2 templates.
+
+        :return: Template context dictionary for Jinja2 rendering.
+        :rtype: dict
+        """
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
+        """
+        Render a Jinja2 template string using the facility port's context.
+
+        Processes the input template string with the facility port's template
+        context variables and returns the rendered result.
+
+        :param input_string: Jinja2 template string to render.
+        :type input_string: str
+
+        :return: Rendered template output string.
+        :rtype: str
+        """
         environment = jinja2.Environment()
         template = environment.from_string(input_string)
         output_string = template.render(self.get_template_context())
@@ -245,10 +266,19 @@ class FacilityPort:
     @staticmethod
     def get_facility_port(slice: Slice = None, facility_port: FimNode = None):
         """
+        Create a FacilityPort object from an existing FIM facility port.
 
-        :param slice:
-        :param facility_port:
-        :return:
+        Factory method that wraps a FIM (FABRIC Information Model) facility
+        port object in a FABlib FacilityPort wrapper.
+
+        :param slice: The slice containing the facility port.
+        :type slice: Slice
+
+        :param facility_port: FIM facility port object to wrap.
+        :type facility_port: FimNode
+
+        :return: FacilityPort object wrapping the FIM facility port.
+        :rtype: FacilityPort
         """
         return FacilityPort(slice, facility_port)
 
@@ -288,6 +318,15 @@ class FacilityPort:
             return list(self.interfaces.values())
 
     def update(self, fim_node: FimNode):
+        """
+        Update the facility port with new FIM node information.
+
+        Refreshes the internal FIM interface reference with updated data
+        from the FABRIC Information Model.
+
+        :param fim_node: Updated FIM node/interface object.
+        :type fim_node: FimNode
+        """
         if fim_node:
             self.fim_interface = fim_node
 
