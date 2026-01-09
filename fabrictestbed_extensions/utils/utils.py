@@ -34,11 +34,9 @@ class Utils:
     @staticmethod
     def is_reachable(*, hostname: str, port: int = 443):
         try:
-            # Attempt to resolve the hostname to an IP address
-            ip_address = socket.gethostbyname(hostname)
-
-            # Attempt to create a socket connection to the IP address and port 80
-            with socket.create_connection((ip_address, port), timeout=5):
+            # Attempt to create a socket connection to the hostname and port
+            # create_connection handles both IPv4 and IPv6 resolution automatically
+            with socket.create_connection((hostname, port), timeout=5):
                 return True
         except (socket.gaierror, socket.timeout, OSError):
             raise ConnectionError(
