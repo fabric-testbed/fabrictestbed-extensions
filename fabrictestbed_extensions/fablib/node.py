@@ -2340,11 +2340,20 @@ class Node:
 
             for route in stdout_json:
                 if route.get("dst") == "default":
-                    interface = route.get("dev")
-                    log.debug(
-                        f"Found default route on {ip_version} with interface: {interface}"
-                    )
-                    return interface
+                    if "dev" in route.keys():
+                        interface = route.get("dev")
+                        log.debug(
+                            f"Found default route on {ip_version} with interface: {interface}"
+                        )
+                        return interface
+                elif "nexthops" in route.keys():
+                    for nexthop in route.get("nexthops"):
+                        log.debug(f"nexthop : {nexthop.get('gateway')}")
+                        interface = nexthop.get("dev")
+                        return interface
+                else:
+                    return None
+
         except (json.JSONDecodeError, KeyError) as e:
             log.error(f"Failed to parse route list for {ip_version}: {e}")
         except Exception as e:
