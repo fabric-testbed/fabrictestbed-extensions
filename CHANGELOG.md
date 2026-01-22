@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 1.9.7
 
 ### Changed
-- Fix for when reporting management interface from OS for IPv6 on rocky nodes (PR [#470](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/470)
+- Fix for when reporting management interface from OS for IPv6 on rocky nodes (Issue [#471] PR [#470](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/470)
 
 ## 1.9.6
 
