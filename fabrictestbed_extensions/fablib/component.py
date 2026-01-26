@@ -65,8 +65,15 @@ log = logging.getLogger("fablib")
 
 
 class Component:
-    """
-    A class for working with FABRIC components.
+    """Represents a hardware component attached to a FABRIC node.
+
+    Components (NICs, GPUs, FPGAs, NVMe, etc.) extend a node's capabilities and
+    are typically created via :meth:`Node.add_component()
+    <fabrictestbed_extensions.fablib.node.Node.add_component>` rather than direct
+    instantiation.
+
+    :cvar dict component_model_map: Mapping of component model names to FIM types.
+    :cvar dict component_configure_commands: Component-specific configuration commands.
     """
 
     component_model_map = {
@@ -179,6 +186,15 @@ class Component:
         }
 
     def generate_template_context(self):
+        """
+        Generate the base template context for this component.
+
+        Creates a dictionary context suitable for Jinja2 template rendering,
+        including component attributes and an empty interfaces list.
+
+        :return: Template context dictionary with component attributes
+        :rtype: dict
+        """
         context = self.toDict()
         context["interfaces"] = []
         # for interface in self.get_interfaces():
@@ -188,9 +204,30 @@ class Component:
         return context
 
     def get_template_context(self):
+        """
+        Get the Jinja2 template context for this component from the slice.
+
+        Retrieves the template rendering context from the slice, which includes
+        component variables and configuration that can be used in Jinja2 templates.
+
+        :return: Template context dictionary for Jinja2 rendering
+        :rtype: dict
+        """
         return self.get_slice().get_template_context(self)
 
     def render_template(self, input_string):
+        """
+        Render a Jinja2 template string using the component's context.
+
+        Processes the input template string with the component's template
+        context variables and returns the rendered result.
+
+        :param input_string: Jinja2 template string to render
+        :type input_string: str
+
+        :return: Rendered template output string
+        :rtype: str
+        """
         environment = jinja2.Environment()
         # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
         template = environment.from_string(input_string)
