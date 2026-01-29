@@ -38,12 +38,12 @@ import traceback
 from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
-from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Component, node
 from fim.user.composite_node import CompositeNode
 from fim.view_only_dict import ViewOnlyDict
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.utils.utils import Utils
 
 log = logging.getLogger("fablib")
 
@@ -702,64 +702,7 @@ class Site:
         self.hosts = {}
         self.switches = {}
         self.site_info = {}
-        self._summary_data = None  # Used when created from summary API
         self.__load()
-
-    @classmethod
-    def from_summary(cls, site_data: dict, fablib_manager) -> "Site":
-        """
-        Create a Site object from resources_summary API data.
-
-        This is a factory method that creates a lightweight Site object
-        from pre-computed summary data, avoiding the need to parse the
-        full FIM topology graph.
-
-        :param site_data: Dictionary containing site summary data from
-            FabricManagerV2.query_sites() with fields like name, state,
-            cores_capacity, cores_allocated, components, hosts, etc.
-        :type site_data: dict
-
-        :param fablib_manager: The manager for the Fabric library.
-        :type fablib_manager: Any
-
-        :return: A Site object populated from summary data
-        :rtype: Site
-        """
-        # Create instance without calling __init__ to avoid FIM parsing
-        instance = object.__new__(cls)
-        instance.site = None  # No FIM site object
-        instance.fablib_manager = fablib_manager
-        instance.hosts = {}
-        instance.switches = {}
-        instance.site_info = {}
-        instance._summary_data = site_data
-
-        # Populate site_info from summary data
-        instance.site_info[Constants.CORES.lower()] = {
-            Constants.CAPACITY.lower(): site_data.get("cores_capacity", 0),
-            Constants.ALLOCATED.lower(): site_data.get("cores_allocated", 0),
-        }
-        instance.site_info[Constants.RAM.lower()] = {
-            Constants.CAPACITY.lower(): site_data.get("ram_capacity", 0),
-            Constants.ALLOCATED.lower(): site_data.get("ram_allocated", 0),
-        }
-        instance.site_info[Constants.DISK.lower()] = {
-            Constants.CAPACITY.lower(): site_data.get("disk_capacity", 0),
-            Constants.ALLOCATED.lower(): site_data.get("disk_allocated", 0),
-        }
-
-        # Populate components from summary data
-        components = site_data.get("components", {})
-        for comp_name, comp_data in components.items():
-            # Map component names to lowercase for consistency
-            comp_key = comp_name.lower()
-            if isinstance(comp_data, dict):
-                instance.site_info[comp_key] = {
-                    Constants.CAPACITY.lower(): comp_data.get("capacity", 0),
-                    Constants.ALLOCATED.lower(): comp_data.get("allocated", 0),
-                }
-
-        return instance
 
     def get_hosts(self) -> Dict[str, Host]:
         """
@@ -880,8 +823,6 @@ class Site:
         :return: str(MaintenanceState)
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("name", "")
             return self.site.name
         except Exception as e:
             # log.debug(f"Failed to get name for {site}")
@@ -894,8 +835,6 @@ class Site:
         :return: str(MaintenanceState)
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("state", "")
             if not host:
                 return str(self.site.maintenance_info.get(self.site.name).state)
             else:
@@ -917,8 +856,6 @@ class Site:
         :rtype: String
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("address", "")
             return self.site.location.postal
         except Exception as e:
             # log.debug(f"Failed to get postal address for {site}")
@@ -932,11 +869,6 @@ class Site:
         :rtype: Tuple(float,float)
         """
         try:
-            if self._summary_data is not None:
-                location = self._summary_data.get("location", [0, 0])
-                if isinstance(location, (list, tuple)) and len(location) >= 2:
-                    return (location[0], location[1])
-                return (0, 0)
             return self.site.location.to_latlon()
         except Exception as e:
             # log.debug(f"Failed to get latitude and longitude for {site}")
@@ -952,8 +884,6 @@ class Site:
         :rtype: bool
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("ptp_capable", False)
             return self.site.flags.ptp
         except Exception as e:
             # log.debug(f"Failed to get PTP status for {site}")
@@ -969,11 +899,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                hosts = self._summary_data.get("hosts")
-                if isinstance(hosts, list):
-                    return len(hosts)
-                return self._summary_data.get("hosts_count", 0)
             return self.site.capacities.unit
         except Exception as e:
             # log.debug(f"Failed to get host count {site}")
@@ -989,9 +914,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                # For summary data, we don't have separate CPU count, use cores
-                return self._summary_data.get("cores_capacity", 0)
             return self.site.capacities.cpu
         except Exception as e:
             # log.debug(f"Failed to get cpu capacity {site}")
@@ -1133,12 +1055,6 @@ class Site:
         """
         component_capacity = 0
         try:
-            if self._summary_data is not None:
-                # Use site_info populated from summary data
-                comp_key = component_model_name.lower()
-                return self.site_info.get(comp_key, {}).get(
-                    Constants.CAPACITY.lower(), 0
-                )
             for h in self.hosts.values():
                 component_capacity += h.get_component_capacity(
                     component_model_name=component_model_name
@@ -1163,12 +1079,6 @@ class Site:
         """
         component_allocated = 0
         try:
-            if self._summary_data is not None:
-                # Use site_info populated from summary data
-                comp_key = component_model_name.lower()
-                return self.site_info.get(comp_key, {}).get(
-                    Constants.ALLOCATED.lower(), 0
-                )
             for h in self.hosts.values():
                 component_allocated += h.get_component_allocated(
                     component_model_name=component_model_name
@@ -1203,9 +1113,7 @@ class Site:
         """
         Get the FIM object of the site.
 
-        Note: Returns None for Site objects created from summary data.
-
-        :return: The FIM of the site, or None if created from summary data.
+        :return: The FIM of the site.
         :rtype: node.Node
         """
         return self.site
@@ -1218,8 +1126,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("cores_capacity", 0)
             return self.site.capacities.core
         except Exception as e:
             # log.debug(f"Failed to get core capacity {site}")
@@ -1233,8 +1139,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("cores_allocated", 0)
             return self.site.capacity_allocations.core
         except Exception as e:
             # log.debug(f"Failed to get cores allocated {site}")
@@ -1248,8 +1152,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("cores_available", 0)
             return self.get_core_capacity() - self.get_core_allocated()
         except Exception as e:
             # log.debug(f"Failed to get cores available {site}")
@@ -1263,8 +1165,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("ram_capacity", 0)
             return self.site.capacities.ram
         except Exception as e:
             # log.debug(f"Failed to get ram capacity {site}")
@@ -1280,8 +1180,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("ram_allocated", 0)
             return self.site.capacity_allocations.ram
         except Exception as e:
             # log.debug(f"Failed to get ram allocated {site}")
@@ -1297,8 +1195,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("ram_available", 0)
             return self.get_ram_capacity() - self.get_ram_allocated()
         except Exception as e:
             # log.debug(f"Failed to get ram available {site_name}")
@@ -1312,8 +1208,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("disk_capacity", 0)
             return self.site.capacities.disk
         except Exception as e:
             # log.debug(f"Failed to get disk capacity {site}")
@@ -1327,8 +1221,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("disk_allocated", 0)
             return self.site.capacity_allocations.disk
         except Exception as e:
             # log.debug(f"Failed to get disk allocated {site}")
@@ -1344,8 +1236,6 @@ class Site:
         :rtype: int
         """
         try:
-            if self._summary_data is not None:
-                return self._summary_data.get("disk_available", 0)
             return self.get_disk_capacity() - self.get_disk_allocated()
         except Exception as e:
             # log.debug(f"Failed to get disk available {site_name}")
@@ -1358,9 +1248,4 @@ class Site:
         :return: list of host names
         :rtype: List[String]
         """
-        if self._summary_data is not None:
-            hosts = self._summary_data.get("hosts", [])
-            if isinstance(hosts, list):
-                return hosts
-            return []
         return list(self.hosts.keys())
