@@ -35,6 +35,7 @@ import logging
 import threading
 from typing import TYPE_CHECKING, List, Union
 
+from fabrictestbed_extensions.utils.utils import Utils
 from fim.slivers.path_info import Path
 from fim.user import ERO, Gateway
 from tabulate import tabulate
@@ -857,7 +858,7 @@ class NetworkService:
         else:
             pretty_names_dict = {}
 
-        node_table = self.get_fablib_manager().show_table(
+        node_table = Utils.show_table(
             data,
             fields=fields,
             title="Network",

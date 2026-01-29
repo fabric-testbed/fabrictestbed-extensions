@@ -60,6 +60,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
+from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
@@ -232,8 +233,8 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        if colors and self.get_fablib_manager().is_jupyter_notebook():
-            slice_table = self.get_fablib_manager().show_table(
+        if colors and Utils.is_jupyter_notebook():
+            slice_table = Utils.show_table(
                 data,
                 fields=fields,
                 title="Slice",
@@ -246,7 +247,7 @@ class Slice:
             if not quiet:
                 display(slice_table)
         else:
-            slice_table = self.get_fablib_manager().show_table(
+            slice_table = Utils.show_table(
                 data,
                 fields=fields,
                 title="Slice",
@@ -314,7 +315,7 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Components",
@@ -431,7 +432,7 @@ class Slice:
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Interfaces",
@@ -655,7 +656,7 @@ class Slice:
             return_status,
             new_topo,
         ) = self.fablib_manager.get_manager().get_slice_topology(
-            slice_object=self.sm_slice, as_self=self.user_only
+            slice_id=self.sm_slice.slice_id, as_self=self.user_only
         )
         if return_status != Status.OK:
             raise Exception(
@@ -1933,7 +1934,7 @@ class Slice:
             self.topology = None
             return
         return_status, result = self.fablib_manager.get_manager().delete(
-            slice_object=self.sm_slice
+            slice_id=self.sm_slice.slice_id
         )
 
         if return_status != Status.OK:
@@ -2578,7 +2579,7 @@ class Slice:
         if self._is_modify():
             if lease_in_hours:
                 return_status, result = self.fablib_manager.get_manager().renew(
-                    slice_object=self.sm_slice, new_lease_end_time=end_time_str
+                    slice_id=self.sm_slice.slice_id, lease_end_time=end_time_str
                 )
             else:
                 (
@@ -2640,7 +2641,7 @@ class Slice:
         if (
             progress
             and wait_jupyter == "text"
-            and self.fablib_manager.is_jupyter_notebook()
+            and Utils.is_jupyter_notebook()
         ):
             self.wait_jupyter(
                 timeout=wait_timeout,
@@ -2771,7 +2772,7 @@ class Slice:
 
         log.debug(f"network service: pretty_names_dict = {pretty_names_dict}")
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Networks",
@@ -2922,7 +2923,7 @@ class Slice:
 
         log.debug(f"pretty_names_dict = {pretty_names_dict}")
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Slivers",
@@ -3034,7 +3035,7 @@ class Slice:
 
         log.debug(f"pretty_names_dict = {pretty_names_dict}")
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Nodes",
@@ -3145,7 +3146,7 @@ class Slice:
 
         log.debug(f"pretty_names_dict = {pretty_names_dict}")
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Facilities",
@@ -3221,7 +3222,7 @@ class Slice:
         if (
             progress
             and wait_jupyter == "text"
-            and self.fablib_manager.is_jupyter_notebook()
+            and Utils.is_jupyter_notebook()
         ):
             self.wait_jupyter(
                 timeout=wait_timeout,

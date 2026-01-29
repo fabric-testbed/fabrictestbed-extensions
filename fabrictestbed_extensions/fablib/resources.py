@@ -38,6 +38,7 @@ from typing import List, Tuple, Union
 
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
+from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import interface, link, node
 from tabulate import tabulate
 
@@ -744,7 +745,7 @@ class Resources:
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Sites",
@@ -794,7 +795,7 @@ class Resources:
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Hosts",
@@ -941,7 +942,7 @@ class Links(Resources):
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Links",
@@ -1116,7 +1117,7 @@ class FacilityPorts(Resources):
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Facility Ports",

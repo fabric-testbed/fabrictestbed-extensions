@@ -58,6 +58,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
+from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
@@ -422,11 +423,11 @@ class Node:
 
         def state_color(val):
             if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "Configuring":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "Closed":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             return "background-color: %s" % color
@@ -436,8 +437,8 @@ class Node:
         else:
             pretty_names_dict = {}
 
-        if colors and self.get_fablib_manager().is_jupyter_notebook():
-            table = self.get_fablib_manager().show_table(
+        if colors and Utils.is_jupyter_notebook():
+            table = Utils.show_table(
                 data,
                 fields=fields,
                 title="Node",
@@ -450,7 +451,7 @@ class Node:
             if quiet == False:
                 display(table)
         else:
-            table = self.get_fablib_manager().show_table(
+            table = Utils.show_table(
                 data,
                 fields=fields,
                 title="Node",

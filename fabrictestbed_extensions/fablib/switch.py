@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, List, Union
 
 import jinja2
 from IPython.core.display_functions import display
+from fabrictestbed_extensions.utils.utils import Utils
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -346,11 +347,11 @@ class Switch(Node):
 
         def state_color(val):
             if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "Configuring":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "Closed":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             return "background-color: %s" % color
@@ -360,8 +361,8 @@ class Switch(Node):
         else:
             pretty_names_dict = {}
 
-        if colors and self.get_fablib_manager().is_jupyter_notebook():
-            table = self.get_fablib_manager().show_table(
+        if colors and Utils.is_jupyter_notebook():
+            table = Utils.show_table(
                 data,
                 fields=fields,
                 title="Switch",
@@ -374,7 +375,7 @@ class Switch(Node):
             if not quiet:
                 display(table)
         else:
-            table = self.get_fablib_manager().show_table(
+            table = Utils.show_table(
                 data,
                 fields=fields,
                 title="Switch",

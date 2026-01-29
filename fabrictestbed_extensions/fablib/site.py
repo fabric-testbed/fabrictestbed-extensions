@@ -38,6 +38,7 @@ import traceback
 from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
+from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Component, node
 from fim.user.composite_node import CompositeNode
 from fim.view_only_dict import ViewOnlyDict
@@ -422,7 +423,7 @@ class Host:
         else:
             pretty_names_dict = {}
 
-        host_table = self.get_fablib_manager().show_table(
+        host_table = Utils.show_table(
             data,
             fields=fields,
             title="Host",
@@ -1029,7 +1030,7 @@ class Site:
         else:
             pretty_names_dict = {}
 
-        site_table = self.get_fablib_manager().show_table(
+        site_table = Utils.show_table(
             data,
             fields=fields,
             title="Site",

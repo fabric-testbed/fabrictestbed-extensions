@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Any, List, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Flags
+from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Capacities, InterfaceType, Labels
 from tabulate import tabulate
 
@@ -334,7 +335,7 @@ class Interface:
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().show_table(
+        table = Utils.show_table(
             data,
             fields=fields,
             title="Interface",

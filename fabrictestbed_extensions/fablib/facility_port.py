@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, List, Union
 
 import jinja2
 from fabrictestbed.slice_editor import Capacities, Labels
+from fabrictestbed_extensions.utils.utils import Utils
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.interface import Interface
@@ -147,7 +148,7 @@ class FacilityPort:
         else:
             pretty_names_dict = {}
 
-        table = self.get_fablib_manager().show_table(
+        table = Utils.show_table(
             data,
             fields=fields,
             title="Facility Port",
