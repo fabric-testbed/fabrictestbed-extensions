@@ -612,7 +612,6 @@ class Resources:
 
         fablib_manager = self.get_fablib_manager()
         manager_v2 = fablib_manager.get_manager_v2()
-        id_token = fablib_manager.get_id_token()
 
         # Store parameters for lazy topology loading
         self._lazy_topology_params = {
@@ -624,9 +623,11 @@ class Resources:
         }
 
         # Use resources_summary API via FabricManagerV2 for better performance
+        # FabricManagerV2 handles token management internally with auto-refresh
         if manager_v2 is not None:
             try:
-                sites_summary = manager_v2.query_sites(id_token=id_token)
+                # Use ensure_valid_id_token() from manager_v2 for auto-refresh support
+                sites_summary = manager_v2.query_sites()
                 if sites_summary:
                     log.debug(f"Using resources_summary API: found {len(sites_summary)} sites")
                     # Build sites from summary data

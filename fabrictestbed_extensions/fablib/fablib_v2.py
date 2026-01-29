@@ -854,12 +854,26 @@ Host * !bastion.fabric-testbed.net
             )
             self.determine_bastion_username()
 
-            # Initialize FabricManagerV2 for resources_summary API
-            self.manager_v2 = FabricManagerV2(
-                credmgr_host=self.get_credmgr_host(),
-                orchestrator_host=self.get_orchestrator_host(),
-                core_api_host=self.get_core_api_host(),
-            )
+            # Initialize FabricManagerV2 for resources_summary API with token management
+            if self.get_id_token():
+                self.manager_v2 = FabricManagerV2(
+                    credmgr_host=self.get_credmgr_host(),
+                    orchestrator_host=self.get_orchestrator_host(),
+                    core_api_host=self.get_core_api_host(),
+                    id_token=self.get_id_token(),
+                    project_id=self.get_project_id(),
+                    auto_refresh=False,
+                    no_write=True,
+                )
+            else:
+                self.manager_v2 = FabricManagerV2(
+                    credmgr_host=self.get_credmgr_host(),
+                    orchestrator_host=self.get_orchestrator_host(),
+                    core_api_host=self.get_core_api_host(),
+                    token_location=self.get_token_location(),
+                    project_id=self.get_project_id(),
+                    auto_refresh=self.auto_token_refresh,
+                )
             log.debug("FabricManagerV2 initialized for resources_summary API!")
         except Exception as e:
             log.error(e, exc_info=True)
