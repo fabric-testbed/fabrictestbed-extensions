@@ -90,6 +90,8 @@ class Resources:
 
         self.sites = {}
 
+        self._lazy_topology_params = {}
+
         self.update(
             force_refresh=force_refresh,
             start=start,
@@ -188,6 +190,7 @@ class Resources:
         :rtype: node.Node
         """
         try:
+            self._ensure_topology_loaded()
             return self.topology.sites.get(site_name)
         except Exception as e:
             log.warning(f"Failed to get site {site_name}")
@@ -580,7 +583,10 @@ class Resources:
         includes: List[str] = None,
     ):
         """
-        Update the available resources by querying the FABRIC services
+        Update the available resources by querying the FABRIC services.
+
+        Uses FabricManagerV2's resources_summary API for faster queries when
+        available, falling back to the legacy resources API when needed.
 
         :param force_refresh: force a refresh of available testbed
             resources.
@@ -602,9 +608,53 @@ class Resources:
 
         :type: list of string
         """
-        log.info(f"Updating available resources")
+        log.info(f"Updating available resources using resources_summary API")
+
+        fablib_manager = self.get_fablib_manager()
+        manager_v2 = fablib_manager.get_manager_v2()
+        id_token = fablib_manager.get_id_token()
+
+        # Store parameters for lazy topology loading
+        self._lazy_topology_params = {
+            "force_refresh": force_refresh,
+            "start": start,
+            "end": end,
+            "avoid": avoid,
+            "includes": includes,
+        }
+
+        # Use resources_summary API via FabricManagerV2 for better performance
+        if manager_v2 is not None:
+            try:
+                sites_summary = manager_v2.query_sites(id_token=id_token)
+                if sites_summary:
+                    log.debug(f"Using resources_summary API: found {len(sites_summary)} sites")
+                    # Build sites from summary data
+                    self.sites = {}
+                    for site_data in sites_summary:
+                        site_name = site_data.get("name")
+                        if site_name:
+                            # Apply avoid/includes filters
+                            if avoid and site_name in avoid:
+                                continue
+                            if includes and site_name not in includes:
+                                continue
+                            s = Site.from_summary(
+                                site_data=site_data,
+                                fablib_manager=fablib_manager
+                            )
+                            self.sites[site_name] = s
+
+                    # Clear topology - will be loaded lazily if needed
+                    self.topology = None
+                    return
+            except Exception as e:
+                log.warning(f"resources_summary API failed, falling back to legacy API: {e}")
+
+        # Fallback to legacy resources API
+        log.info(f"Using legacy resources API")
         return_status, topology = (
-            self.get_fablib_manager()
+            fablib_manager
             .get_manager()
             .resources(
                 force_refresh=force_refresh,
@@ -628,6 +678,37 @@ class Resources:
             s = Site(site=site, fablib_manager=self.get_fablib_manager())
             self.sites[site_name] = s
 
+    def _ensure_topology_loaded(self):
+        """
+        Lazily load the full FIM topology if not already loaded.
+
+        This is called when topology-dependent operations are needed
+        (e.g., links, facility_ports, validate_requested_ero_path).
+        """
+        if self.topology is None:
+            log.info("Lazily loading FIM topology for backward compatibility")
+            params = getattr(self, "_lazy_topology_params", {})
+            return_status, topology = (
+                self.get_fablib_manager()
+                .get_manager()
+                .resources(
+                    force_refresh=params.get("force_refresh", False),
+                    level=2,
+                    start=params.get("start"),
+                    end=params.get("end"),
+                    excludes=params.get("avoid"),
+                    includes=params.get("includes"),
+                )
+            )
+            if return_status == Status.OK:
+                self.topology = topology
+            else:
+                raise Exception(
+                    "Failed to get advertised_topology: {}, {}".format(
+                        return_status, topology
+                    )
+                )
+
     def get_topology(self, update: bool = False) -> AdvertisedTopology:
         """
         Get the FIM object of the Resources.
@@ -644,9 +725,9 @@ class Resources:
         :return: The FIM of the resources.
         :rtype: AdvertisedTopology
         """
-        if update or self.topology is None:
+        if update:
             self.update()
-
+        self._ensure_topology_loaded()
         return self.topology
 
     def get_link_list(self, update: bool = False) -> List[str]:
@@ -661,6 +742,7 @@ class Resources:
         if update:
             self.update()
 
+        self._ensure_topology_loaded()
         rtn_links = []
         for link_name, link in self.topology.links.items():
             rtn_links.append(link.get("node_id"))
@@ -868,6 +950,7 @@ class Links(Resources):
         :return: Tabulated string of available resources
         :rtype: String
         """
+        self._ensure_topology_loaded()
         table = []
         for _, link in self.topology.links.items():
             iface = link.interface_list[0]
@@ -930,6 +1013,7 @@ class Links(Resources):
         :return: formatted table of resources
         :rtype: object
         """
+        self._ensure_topology_loaded()
         table = []
         for _, link in self.topology.links.items():
             iface = link.interface_list[0]
@@ -986,6 +1070,7 @@ class FacilityPorts(Resources):
         :return: Tabulated string of available resources
         :rtype: String
         """
+        self._ensure_topology_loaded()
         table = []
         for fp in self.topology.facilities.values():
             for iface in fp.interface_list:
@@ -1107,6 +1192,7 @@ class FacilityPorts(Resources):
         :return: Formatted table of resources.
         :rtype: object
         """
+        self._ensure_topology_loaded()
         table = []
         for fp in self.topology.facilities.values():
             for iface in fp.interface_list:

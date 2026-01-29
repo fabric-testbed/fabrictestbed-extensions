@@ -78,6 +78,7 @@ import warnings
 from fabric_ceph_client.fabric_ceph_client import CephManagerClient
 from fabrictestbed.external_api.artifact_manager import Visibility
 from fabrictestbed.fabric_manager import FabricManager, FabricManagerException
+from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fss_utils.sshkey import FABRICSSHKey
 
 from fabrictestbed_extensions.fablib.artifact import Artifact
@@ -239,6 +240,7 @@ class FablibManagerV2(Config):
                 self.output = "text"
 
         self.manager = None
+        self.manager_v2 = None
         self.resources = None
         self.links = None
         self.facility_ports = None
@@ -851,6 +853,14 @@ Host * !bastion.fabric-testbed.net
                 self.manager.get_project_name()
             )
             self.determine_bastion_username()
+
+            # Initialize FabricManagerV2 for resources_summary API
+            self.manager_v2 = FabricManagerV2(
+                credmgr_host=self.get_credmgr_host(),
+                orchestrator_host=self.get_orchestrator_host(),
+                core_api_host=self.get_core_api_host(),
+            )
+            log.debug("FabricManagerV2 initialized for resources_summary API!")
         except Exception as e:
             log.error(e, exc_info=True)
             raise e
@@ -1542,6 +1552,17 @@ Host * !bastion.fabric-testbed.net
         :rtype: FabricManager
         """
         return self.manager
+
+    def get_manager_v2(self) -> FabricManagerV2:
+        """
+        Not intended as API call
+
+        Gets the FabricManagerV2 instance for resources_summary API access.
+
+        :return: the FabricManagerV2 instance
+        :rtype: FabricManagerV2
+        """
+        return self.manager_v2
 
     def new_slice(self, name: str) -> Slice:
         """
