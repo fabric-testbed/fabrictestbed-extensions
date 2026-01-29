@@ -240,7 +240,6 @@ class FablibManagerV2(Config):
                 self.output = "text"
 
         self.manager = None
-        self.manager_v2 = None
         self.resources = None
         self.links = None
         self.facility_ports = None
@@ -798,14 +797,14 @@ Host * !bastion.fabric-testbed.net
         """
         return self.ssh_thread_pool_executor
 
-    def __build_manager(self) -> FabricManager:
+    def __build_manager(self) -> FabricManagerV2:
         """
         Not a user facing API call.
 
         Creates a new FabricManager object.
 
-        :return: a new FabricManager
-        :rtype: FabricManager
+        :return: a new FabricManagerV2
+        :rtype: FabricManagerV2
         """
         try:
             log.info(
@@ -824,39 +823,7 @@ Host * !bastion.fabric-testbed.net
 
             # Use id_token if provided, otherwise use token_location
             if self.get_id_token():
-                self.manager = FabricManager(
-                    oc_host=self.get_orchestrator_host(),
-                    cm_host=self.get_credmgr_host(),
-                    core_api_host=self.get_core_api_host(),
-                    am_host=self.get_am_host(),
-                    project_id=self.get_project_id(),
-                    id_token=self.get_id_token(),
-                    scope="all",
-                    auto_refresh=False,
-                    no_write=True
-                )
-            else:
-                self.manager = FabricManager(
-                    oc_host=self.get_orchestrator_host(),
-                    cm_host=self.get_credmgr_host(),
-                    core_api_host=self.get_core_api_host(),
-                    am_host=self.get_am_host(),
-                    project_id=self.get_project_id(),
-                    token_location=self.get_token_location(),
-                    scope="all",
-                    auto_refresh=self.auto_token_refresh,
-                )
-            log.debug("Fabric manager initialized!")
-            # Update Project ID to be same as in Slice Manager
-            self.set_project_id(project_id=self.manager.project_id)
-            self.runtime_config[Constants.PROJECT_NAME] = (
-                self.manager.get_project_name()
-            )
-            self.determine_bastion_username()
-
-            # Initialize FabricManagerV2 for resources_summary API with token management
-            if self.get_id_token():
-                self.manager_v2 = FabricManagerV2(
+                self.manager = FabricManagerV2(
                     credmgr_host=self.get_credmgr_host(),
                     orchestrator_host=self.get_orchestrator_host(),
                     core_api_host=self.get_core_api_host(),
@@ -866,7 +833,7 @@ Host * !bastion.fabric-testbed.net
                     no_write=True,
                 )
             else:
-                self.manager_v2 = FabricManagerV2(
+                self.manager = FabricManagerV2(
                     credmgr_host=self.get_credmgr_host(),
                     orchestrator_host=self.get_orchestrator_host(),
                     core_api_host=self.get_core_api_host(),
@@ -874,7 +841,13 @@ Host * !bastion.fabric-testbed.net
                     project_id=self.get_project_id(),
                     auto_refresh=self.auto_token_refresh,
                 )
-            log.debug("FabricManagerV2 initialized for resources_summary API!")
+            log.debug("Fabric manager initialized!")
+            # Update Project ID to be same as in Slice Manager
+            self.set_project_id(project_id=self.manager.project_id)
+            self.runtime_config[Constants.PROJECT_NAME] = (
+                self.manager.get_project_name()
+            )
+            self.determine_bastion_username()
         except Exception as e:
             log.error(e, exc_info=True)
             raise e
@@ -1516,46 +1489,7 @@ Host * !bastion.fabric-testbed.net
         finally:
             bastion_client.close()
 
-    def set_slice_manager(self, slice_manager: FabricManager):
-        """
-        Not intended as API call
-
-        Sets the slice manager of this fablib object.
-
-        :param slice_manager: the slice manager to set
-        :type slice_manager: SliceManager
-
-        .. deprecated:: 1.7.3
-           Use `set_manager()` instead.
-        """
-        self.set_manager(manager=slice_manager)
-
-    def get_slice_manager(self) -> FabricManager:
-        """
-        Not intended as API call
-
-        Gets the slice manager of this fablib object.
-
-        :return: the slice manager on this fablib object
-        :rtype: SliceManager
-
-        .. deprecated:: 1.7.3
-           Use `get_manager()` instead.
-        """
-        return self.get_manager()
-
-    def set_manager(self, manager: FabricManager):
-        """
-        Not intended as API call
-
-        Sets the manager of this fablib object.
-
-        :param manager: the manager to set
-        :type manager: FabricManager
-        """
-        self.manager = manager
-
-    def get_manager(self) -> FabricManager:
+    def get_manager(self) -> FabricManagerV2:
         """
         Not intended as API call
 
@@ -1566,17 +1500,6 @@ Host * !bastion.fabric-testbed.net
         :rtype: FabricManager
         """
         return self.manager
-
-    def get_manager_v2(self) -> FabricManagerV2:
-        """
-        Not intended as API call
-
-        Gets the FabricManagerV2 instance for resources_summary API access.
-
-        :return: the FabricManagerV2 instance
-        :rtype: FabricManagerV2
-        """
-        return self.manager_v2
 
     def new_slice(self, name: str) -> Slice:
         """
