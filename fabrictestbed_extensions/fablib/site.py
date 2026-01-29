@@ -970,7 +970,7 @@ class Site:
         """
         try:
             if self._summary_data is not None:
-                hosts = self._summary_data.get("hosts", [])
+                hosts = self._summary_data.get("hosts")
                 if isinstance(hosts, list):
                     return len(hosts)
                 return self._summary_data.get("hosts_count", 0)
