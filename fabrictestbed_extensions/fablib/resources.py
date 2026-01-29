@@ -646,6 +646,7 @@ class Resources:
                             )
                             self.sites[site_name] = s
 
+
                     # Clear topology - will be loaded lazily if needed
                     self.topology = None
                     return
@@ -821,7 +822,7 @@ class Resources:
         table = []
         for site_name, site in self.sites.items():
             site_dict = site.to_dict()
-            if site_dict.get("hosts"):
+            if site_dict.get("hosts") or site_dict.get("hosts_count"):
                 table.append(site_dict)
 
         if pretty_names:
