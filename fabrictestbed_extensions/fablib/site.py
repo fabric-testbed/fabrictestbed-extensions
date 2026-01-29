@@ -973,7 +973,7 @@ class Site:
                 hosts = self._summary_data.get("hosts", [])
                 if isinstance(hosts, list):
                     return len(hosts)
-                return 0
+                return self._summary_data.get("hosts_count", 0)
             return self.site.capacities.unit
         except Exception as e:
             # log.debug(f"Failed to get host count {site}")
