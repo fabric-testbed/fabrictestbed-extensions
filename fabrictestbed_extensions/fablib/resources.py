@@ -36,6 +36,7 @@ import logging
 from datetime import datetime
 from typing import List, Tuple, Union
 
+from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
 from fabrictestbed_extensions.utils.utils import Utils
@@ -611,7 +612,6 @@ class Resources:
         log.info(f"Updating available resources using resources_summary API")
 
         fablib_manager = self.get_fablib_manager()
-        manager_v2 = fablib_manager.get_manager_v2()
 
         # Store parameters for lazy topology loading
         self._lazy_topology_params = {
@@ -624,10 +624,10 @@ class Resources:
 
         # Use resources_summary API via FabricManagerV2 for better performance
         # FabricManagerV2 handles token management internally with auto-refresh
-        if manager_v2 is not None:
+        if isinstance(fablib_manager, FabricManagerV2):
             try:
                 # Use ensure_valid_id_token() from manager_v2 for auto-refresh support
-                sites_summary = manager_v2.query_sites()
+                sites_summary = fablib_manager.query_sites()
                 if sites_summary:
                     log.debug(f"Using resources_summary API: found {len(sites_summary)} sites")
                     # Build sites from summary data
