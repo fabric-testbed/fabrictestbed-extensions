@@ -718,15 +718,6 @@ class FablibManager(Config):
             offline=offline,
             **kwargs,
         )
-
-        if output is not None:
-            self.output = output
-        else:
-            if Utils.is_jupyter_notebook():
-                self.output = "pandas"
-            else:
-                self.output = "text"
-
         self.manager = None
         self.resources = None
         self.links = None

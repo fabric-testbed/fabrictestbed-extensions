@@ -163,7 +163,7 @@ class Utils:
             return False
 
     @staticmethod
-    def show_table_text(table, quiet=False):
+    def _show_table_text(table, quiet=False):
         """
         Make a table in text form suitable for terminal.
 
@@ -185,7 +185,7 @@ class Utils:
         return printable_table
 
     @staticmethod
-    def show_table_jupyter(
+    def _show_table_jupyter(
         table, headers=None, title="", title_font_size="1.25em", quiet=False
     ):
         """
@@ -255,7 +255,7 @@ class Utils:
         return printable_table
 
     @staticmethod
-    def show_table_json(data, quiet=False):
+    def _show_table_json(data, quiet=False):
         """
         Make a table in JSON format.
 
@@ -277,7 +277,7 @@ class Utils:
         return json_str
 
     @staticmethod
-    def show_table_dict(data, quiet=False):
+    def _show_table_dict(data, quiet=False):
         """
         Show the table.
 
@@ -332,18 +332,20 @@ class Utils:
         :return: Input :py:obj:`data` formatted as a table.
         :rtype: Depends on :py:obj:`output` parameter.
         """
-        table = Utils.create_show_table(
+        output = Utils._determine_output_type(output)
+        
+        table = Utils._create_show_table(
             data, fields=fields, pretty_names_dict=pretty_names_dict
         )
 
         if output == "text" or output == "default":
-            return Utils.show_table_text(table, quiet=quiet)
+            return Utils._show_table_text(table, quiet=quiet)
         elif output == "json":
-            return Utils.show_table_json(data, quiet=quiet)
+            return Utils._show_table_json(data, quiet=quiet)
         elif output == "dict":
-            return Utils.show_table_dict(data, quiet=quiet)
+            return Utils._show_table_dict(data, quiet=quiet)
         elif output == "pandas" or output == "jupyter_default":
-            return Utils.show_table_jupyter(
+            return Utils._show_table_jupyter(
                 table,
                 headers=fields,
                 title=title,
@@ -354,7 +356,7 @@ class Utils:
             log.error(f"Unknown output type: {output}")
 
     @staticmethod
-    def list_table_text(
+    def _list_table_text(
         table: List[List[Any]],
         headers: Union[List[str], None] = None,
         quiet: bool = False,
@@ -382,7 +384,7 @@ class Utils:
         return printable_table
 
     @staticmethod
-    def list_table_jupyter(
+    def _list_table_jupyter(
         table: List[List[Any]],
         headers: Union[List[str], None] = None,
         title: str = "",
@@ -479,7 +481,7 @@ class Utils:
         return printable_table
 
     @staticmethod
-    def list_table_json(data: List[Dict[str, str]], quiet: bool = False):
+    def _list_table_json(data: List[Dict[str, str]], quiet: bool = False):
         """
         Return a JSON representation of tabular data.
 
@@ -499,7 +501,7 @@ class Utils:
         return json_str
 
     @staticmethod
-    def list_table_list(data: List[Dict[str, str]], quiet: bool = False):
+    def _list_table_list(data: List[Dict[str, str]], quiet: bool = False):
         """
         Return text representation of tabular data.
 
@@ -544,6 +546,7 @@ class Utils:
 
         :return: Input :py:obj:`data` formatted as a table.
         """
+        output = Utils._determine_output_type(output)
         if filter_function:
             data = list(filter(filter_function, data))
 
@@ -567,16 +570,16 @@ class Utils:
         log.debug(f"headers: {headers}\n\n")
 
         if output == "text":
-            table = Utils.create_list_table(data, fields=fields)
-            return Utils.list_table_text(table, headers=headers, quiet=quiet)
+            table = Utils._create_list_table(data, fields=fields)
+            return Utils._list_table_text(table, headers=headers, quiet=quiet)
         elif output == "json":
-            return Utils.list_table_json(data, quiet=quiet)
+            return Utils._list_table_json(data, quiet=quiet)
         elif output == "list":
-            return Utils.list_table_list(data, quiet=quiet)
+            return Utils._list_table_list(data, quiet=quiet)
         elif output == "pandas":
-            table = Utils.create_list_table(data, fields=fields)
+            table = Utils._create_list_table(data, fields=fields)
 
-            return Utils.list_table_jupyter(
+            return Utils._list_table_jupyter(
                 table,
                 headers=headers,
                 title=title,
@@ -588,7 +591,7 @@ class Utils:
             log.error(f"Unknown output type: {output}")
 
     @staticmethod
-    def create_list_table(
+    def _create_list_table(
         data: List[Dict[str, str]], fields: Union[List[str], None] = None
     ):
         """
@@ -612,7 +615,7 @@ class Utils:
         return table
 
     @staticmethod
-    def create_show_table(
+    def _create_show_table(
         data: Dict[str, Any],
         fields: Union[List[str], None] = None,
         pretty_names_dict: dict[str, str] = {},
@@ -646,3 +649,12 @@ class Utils:
                     table.append([field, value])
 
         return table
+
+    @staticmethod
+    def _determine_output_type(output: Union[str, None]) -> str:
+        if output is None:
+            if Utils.is_jupyter_notebook():
+                output = "pandas"
+            else:
+                output = "text"
+        return output

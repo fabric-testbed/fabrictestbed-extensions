@@ -75,9 +75,7 @@ import threading
 import traceback
 import warnings
 
-from fabric_ceph_client.fabric_ceph_client import CephManagerClient
 from fabrictestbed.external_api.artifact_manager import Visibility
-from fabrictestbed.fabric_manager import FabricManager, FabricManagerException
 from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fss_utils.sshkey import FABRICSSHKey
 
@@ -101,7 +99,7 @@ if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
     from fabrictestbed_extensions.fablib.node import Node
 
-from fabrictestbed.slice_manager import SliceManager, SliceState, Status
+from fabrictestbed.slice_manager import SliceState, Status
 from fim.user import Node as FimNode
 
 from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
@@ -230,15 +228,6 @@ class FablibManagerV2(Config):
             offline=offline,
             **kwargs,
         )
-
-        if output is not None:
-            self.output = output
-        else:
-            if Utils.is_jupyter_notebook():
-                self.output = "pandas"
-            else:
-                self.output = "text"
-
         self.manager = None
         self.resources = None
         self.links = None
@@ -801,7 +790,7 @@ Host * !bastion.fabric-testbed.net
         """
         Not a user facing API call.
 
-        Creates a new FabricManager object.
+        Creates a new FabricManagerV2 object.
 
         :return: a new FabricManagerV2
         :rtype: FabricManagerV2
@@ -1497,7 +1486,7 @@ Host * !bastion.fabric-testbed.net
         Gets the manager of this fablib object.
 
         :return: the manager on this fablib object
-        :rtype: FabricManager
+        :rtype: FabricManagerV2
         """
         return self.manager
 
