@@ -627,7 +627,7 @@ class Resources:
         if isinstance(fablib_manager.get_manager(), FabricManagerV2):
             try:
                 # Use ensure_valid_id_token() from manager_v2 for auto-refresh support
-                sites_summary = fablib_manager.query_sites()
+                sites_summary = fablib_manager.get_manager().query_sites()
                 if sites_summary:
                     log.debug(f"Using resources_summary API: found {len(sites_summary)} sites")
                     # Build sites from summary data
