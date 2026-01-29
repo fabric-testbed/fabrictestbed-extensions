@@ -624,7 +624,7 @@ class Resources:
 
         # Use resources_summary API via FabricManagerV2 for better performance
         # FabricManagerV2 handles token management internally with auto-refresh
-        if isinstance(fablib_manager, FabricManagerV2):
+        if isinstance(fablib_manager.get_manager(), FabricManagerV2):
             try:
                 # Use ensure_valid_id_token() from manager_v2 for auto-refresh support
                 sites_summary = fablib_manager.query_sites()
