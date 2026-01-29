@@ -651,6 +651,7 @@ class Resources:
                     return
             except Exception as e:
                 log.warning(f"resources_summary API failed, falling back to legacy API: {e}")
+                raise e
 
         # Fallback to legacy resources API
         log.info(f"Using legacy resources API")
