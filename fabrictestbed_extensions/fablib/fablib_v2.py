@@ -1567,7 +1567,7 @@ Host * !bastion.fabric-testbed.net
         from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
-            self.resources = Resources(
+            self.resources = ResourcesV2Wrapper(
                 self,
                 force_refresh=force_refresh,
                 start=start,
