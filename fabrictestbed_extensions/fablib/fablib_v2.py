@@ -87,7 +87,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 import paramiko
 
@@ -102,7 +102,7 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceState, Status
 from fim.user import Node as FimNode
 
-from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
+from fabrictestbed_extensions.fablib.resources_v2 import ResourcesV2Wrapper
 from fabrictestbed_extensions.fablib.slice import Slice
 
 log = logging.getLogger("fablib")
@@ -230,8 +230,6 @@ class FablibManagerV2(Config):
         )
         self.manager = None
         self.resources = None
-        self.links = None
-        self.facility_ports = None
         self.auto_token_refresh = auto_token_refresh
         self.last_resources_filtered_by_time = False
 
@@ -925,7 +923,6 @@ Host * !bastion.fabric-testbed.net
             quiet=quiet,
             filter_function=filter_function,
             pretty_names=pretty_names,
-            latlon=latlon,
         )
 
     def list_hosts(
@@ -1208,49 +1205,31 @@ Host * !bastion.fabric-testbed.net
                 output=output,
                 quiet=quiet,
                 pretty_names=pretty_names,
-                latlon=latlon,
             )
         )
 
-    def get_links(self, update: bool = True) -> Links:
+    def get_links(self, update: bool = True) -> ResourcesV2Wrapper:
         """
-        Get the links.
+        Get the resources object (which includes links).
 
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
-
-        :param update:
-        :return: Links
+        :param update: whether to refresh resources
+        :return: ResourcesV2Wrapper
         """
-
-        if self.links is None:
-            self.links = Links(self)
-        elif update:
-            self.links.update()
-
-        return self.links
+        return self.get_resources(update=update)
 
     def get_facility_ports(
         self,
         update: bool = False,
         start: datetime = None,
         end: datetime = None,
-    ) -> FacilityPorts:
+    ) -> ResourcesV2Wrapper:
         """
-        Get the facility ports.
+        Get the resources object (which includes facility ports).
 
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
-
-        :param update:
-
+        :param update: whether to refresh resources
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
-        :type: datetime
-
-        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
-        :type: datetime
-
-        :return: Links
+        :param end: end time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :return: ResourcesV2Wrapper
         """
         if not update:
             if start or end:
@@ -1260,12 +1239,7 @@ Host * !bastion.fabric-testbed.net
                 update = True
                 self.last_resources_filtered_by_time = False
 
-        if self.facility_ports is None:
-            self.facility_ports = FacilityPorts(self)
-        elif update:
-            self.facility_ports.update(start=start, end=end)
-
-        return self.facility_ports
+        return self.get_resources(update=update, start=start, end=end)
 
     def get_resources(
         self,
@@ -1275,7 +1249,7 @@ Host * !bastion.fabric-testbed.net
         end: datetime = None,
         avoid: List[str] = None,
         includes: List[str] = None,
-    ) -> Resources:
+    ) -> ResourcesV2Wrapper:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1299,7 +1273,7 @@ Host * !bastion.fabric-testbed.net
         :type: list of string
 
         :return: the resources object
-        :rtype: Resources
+        :rtype: ResourcesV2Wrapper
         """
         if not update:
             if start or end:
@@ -1533,7 +1507,7 @@ Host * !bastion.fabric-testbed.net
         end: datetime = None,
         avoid: List[str] = None,
         includes: List[str] = None,
-    ) -> Resources:
+    ) -> ResourcesV2Wrapper:
         """
         Get the available resources.
 
@@ -1559,12 +1533,10 @@ Host * !bastion.fabric-testbed.net
         :param includes: list of sites to include
         :type: list of string
 
-        :return: Available Resources object
+        :return: Available ResourcesV2Wrapper object
         """
         if start and end and (end - start) < datetime.timedelta(minutes=60):
             raise Exception("Time range should be at least 60 minutes long!")
-
-        from fabrictestbed_extensions.fablib.resources import Resources
 
         if self.resources is None:
             self.resources = ResourcesV2Wrapper(
