@@ -45,6 +45,7 @@ from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
 
+from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.site import ResourceConstants
 from fabrictestbed_extensions.utils.utils import Utils
 
@@ -54,39 +55,6 @@ log = logging.getLogger("fablib")
 # ------------------------------------------------------------------
 # Pretty-name dictionaries
 # ------------------------------------------------------------------
-
-SITE_PRETTY_NAMES: Dict[str, str] = {
-    "name": "Name",
-    "state": "State",
-    "address": "Address",
-    "location": "Location",
-    "ptp_capable": "PTP Capable",
-    "ipv4_management": "IPv4 Mgmt",
-    "hosts_count": "Hosts",
-    "cores_capacity": "Cores Capacity",
-    "cores_allocated": "Cores Allocated",
-    "cores_available": "Cores Available",
-    "ram_capacity": "RAM Capacity",
-    "ram_allocated": "RAM Allocated",
-    "ram_available": "RAM Available",
-    "disk_capacity": "Disk Capacity",
-    "disk_allocated": "Disk Allocated",
-    "disk_available": "Disk Available",
-}
-
-HOST_PRETTY_NAMES: Dict[str, str] = {
-    "name": "Name",
-    "site": "Site",
-    "cores_capacity": "Cores Capacity",
-    "cores_allocated": "Cores Allocated",
-    "cores_available": "Cores Available",
-    "ram_capacity": "RAM Capacity",
-    "ram_allocated": "RAM Allocated",
-    "ram_available": "RAM Available",
-    "disk_capacity": "Disk Capacity",
-    "disk_allocated": "Disk Allocated",
-    "disk_available": "Disk Available",
-}
 
 LINK_PRETTY_NAMES: Dict[str, str] = {
     "name": "Link Name",
@@ -107,52 +75,157 @@ FACILITY_PORT_PRETTY_NAMES: Dict[str, str] = {
 
 
 # ------------------------------------------------------------------
-# Helpers
+# Helpers – build ordered dicts matching v1 Site.to_dict / Host.to_dict
 # ------------------------------------------------------------------
 
-_COMPONENT_KEY_MAP: Dict[str, str] = {
-    "GPU-Tesla T4": "tesla_t4",
-    "GPU-RTX6000": "rtx6000",
-    "GPU-A30": "a30",
-    "GPU-A40": "a40",
-    "SmartNIC-ConnectX-6": "nic_connectx_6",
-    "SmartNIC-ConnectX-5": "nic_connectx_5",
-    "SmartNIC-ConnectX-7-100": "nic_connectx_7_100",
-    "SmartNIC-ConnectX-7-400": "nic_connectx_7_400",
-    "SmartNIC-BlueField2-ConnectX-6": "nic_bluefield2_connectx_5",
-    "SharedNIC-ConnectX-6": "nic_basic",
-    "NVME-P4510": "nvme",
-    "FPGA-Xilinx-U280": "fpga_u280",
-    "FPGA-Xilinx-SN1022": "fpga_sn1022",
+# Reverse map: FIM model name → v1 non_pretty_name used by attribute_name_mappings
+_FIM_MODEL_TO_ATTR: Dict[str, str] = {}
+for _attr, _names in ResourceConstants.attribute_name_mappings.items():
+    _FIM_MODEL_TO_ATTR[_attr] = _attr          # exact FIM key (lowered)
+    _FIM_MODEL_TO_ATTR[_attr.lower()] = _attr   # lowered duplicate safe
+
+# Also map component model names that appear in the summary JSON
+# to the attribute_name_mappings key they correspond to.
+_SUMMARY_COMP_TO_ATTR: Dict[str, str] = {
+    "GPU-Tesla T4": Constants.GPU_TESLA_T4,
+    "GPU-RTX6000": Constants.GPU_RTX6000,
+    "GPU-A30": Constants.GPU_A30,
+    "GPU-A40": Constants.GPU_A40,
+    "SmartNIC-ConnectX-6": Constants.SMART_NIC_CONNECTX_6,
+    "SmartNIC-ConnectX-5": Constants.SMART_NIC_CONNECTX_5,
+    "SmartNIC-ConnectX-7-100": Constants.SMART_NIC_CONNECTX_7_100,
+    "SmartNIC-ConnectX-7-400": Constants.SMART_NIC_CONNECTX_7_400,
+    "SmartNIC-BlueField2-ConnectX-6": Constants.SMART_NIC_BlueField2_CONNECTX_6,
+    "SharedNIC-ConnectX-6": Constants.NIC_SHARED_CONNECTX_6,
+    "NVME-P4510": Constants.NVME_P4510,
+    "FPGA-Xilinx-U280": Constants.FPGA_XILINX_U280,
+    "FPGA-Xilinx-SN1022": Constants.FPGA_XILINX_SN1022,
 }
 
 
-def _component_key(model: str) -> str:
-    """Map a FIM component model string to a short snake_case key."""
-    return _COMPONENT_KEY_MAP.get(model, model.lower().replace("-", "_"))
+def _site_summary_to_v1_dict(site_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert a resources_summary site dict to a v1-compatible ordered dict.
 
+    The key order and key names match ``Site.to_dict()`` exactly so that
+    ``Utils.list_table`` renders identical columns.
+    """
+    # -- header fields (same order as Site.to_dict) --
+    hosts_raw = site_data.get("hosts")
+    if isinstance(hosts_raw, list):
+        hosts_count = len(hosts_raw)
+    elif isinstance(hosts_raw, int):
+        hosts_count = hosts_raw
+    else:
+        hosts_count = site_data.get("hosts_count", 0)
 
-def _flatten_components(d: Dict[str, Any]) -> Dict[str, Any]:
-    """Pop 'components' from *d* and flatten into ``<key>_{capacity,allocated,available}``."""
-    components = d.pop("components", {}) or {}
-    for model, vals in components.items():
-        if not isinstance(vals, dict):
-            continue
-        key = _component_key(model)
-        cap = vals.get("capacity", 0) or 0
-        alloc = vals.get("allocated", 0) or 0
-        d[f"{key}_capacity"] = cap
-        d[f"{key}_allocated"] = alloc
-        d[f"{key}_available"] = max(0, cap - alloc)
+    d: Dict[str, Any] = {
+        "name": site_data.get("name"),
+        "state": site_data.get("state"),
+        "address": site_data.get("address"),
+        "location": site_data.get("location"),
+        "ptp_capable": site_data.get("ptp_capable"),
+        "hosts": hosts_count,
+        "cpus": site_data.get("cores_capacity", 0),
+    }
+
+    # Build a lookup from attribute_name_mappings key → {capacity, allocated}
+    # sourced from the flat summary keys and nested components dict.
+    components = site_data.get("components") or {}
+
+    def _get_cap_alloc(attr_key: str) -> Tuple[int, int]:
+        """Return (capacity, allocated) for a given attribute_name_mappings key."""
+        low = attr_key.lower()
+        # cores / ram / disk come as flat top-level keys
+        names = ResourceConstants.attribute_name_mappings[attr_key]
+        non_pretty = names.get(Constants.NON_PRETTY_NAME)
+
+        # Try flat summary keys first (e.g. cores_capacity, ram_capacity)
+        cap_key = f"{low}_capacity"
+        alloc_key = f"{low}_allocated"
+        if cap_key in site_data:
+            return (site_data.get(cap_key, 0) or 0,
+                    site_data.get(alloc_key, 0) or 0)
+
+        # Try components dict (keyed by FIM model name)
+        for comp_name, const_key in _SUMMARY_COMP_TO_ATTR.items():
+            if const_key == attr_key and comp_name in components:
+                cv = components[comp_name]
+                if isinstance(cv, dict):
+                    return (cv.get("capacity", 0) or 0,
+                            cv.get("allocated", 0) or 0)
+
+        # Also try lowercased component key
+        if low in components:
+            cv = components[low]
+            if isinstance(cv, dict):
+                return (cv.get("capacity", 0) or 0,
+                        cv.get("allocated", 0) or 0)
+
+        return (0, 0)
+
+    # -- iterate in the exact order defined by attribute_name_mappings --
+    for attr_key, names in ResourceConstants.attribute_name_mappings.items():
+        non_pretty = names.get(Constants.NON_PRETTY_NAME)
+        cap, alloc = _get_cap_alloc(attr_key)
+        avail = cap - alloc
+        d[f"{non_pretty}_{Constants.AVAILABLE.lower()}"] = avail
+        d[f"{non_pretty}_{Constants.CAPACITY.lower()}"] = cap
+        d[f"{non_pretty}_{Constants.ALLOCATED.lower()}"] = alloc
+
     return d
 
 
-def _merged_pretty_names() -> Dict[str, str]:
-    """Combine v2 pretty names with the v1 ResourceConstants.pretty_names."""
-    merged = dict(ResourceConstants.pretty_names)
-    merged.update(SITE_PRETTY_NAMES)
-    merged.update(HOST_PRETTY_NAMES)
-    return merged
+def _host_summary_to_v1_dict(host_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert a resources_summary host dict to a v1-compatible ordered dict.
+
+    The key order and key names match ``Host.to_dict()`` exactly.
+    """
+    d: Dict[str, Any] = {
+        "name": host_data.get("name"),
+        "state": host_data.get("state"),
+        "address": host_data.get("address"),
+        "location": host_data.get("location"),
+        "ptp_capable": host_data.get("ptp_capable"),
+    }
+
+    components = host_data.get("components") or {}
+
+    def _get_cap_alloc(attr_key: str) -> Tuple[int, int]:
+        low = attr_key.lower()
+        # cores / ram / disk come as flat keys
+        cap_key = f"{low}_capacity"
+        alloc_key = f"{low}_allocated"
+        if cap_key in host_data:
+            return (host_data.get(cap_key, 0) or 0,
+                    host_data.get(alloc_key, 0) or 0)
+
+        for comp_name, const_key in _SUMMARY_COMP_TO_ATTR.items():
+            if const_key == attr_key and comp_name in components:
+                cv = components[comp_name]
+                if isinstance(cv, dict):
+                    return (cv.get("capacity", 0) or 0,
+                            cv.get("allocated", 0) or 0)
+
+        if low in components:
+            cv = components[low]
+            if isinstance(cv, dict):
+                return (cv.get("capacity", 0) or 0,
+                        cv.get("allocated", 0) or 0)
+
+        return (0, 0)
+
+    for attr_key, names in ResourceConstants.attribute_name_mappings.items():
+        # Host.to_dict skips P4-Switch
+        if attr_key in Constants.P4_SWITCH:
+            continue
+        non_pretty = names.get(Constants.NON_PRETTY_NAME)
+        cap, alloc = _get_cap_alloc(attr_key)
+        avail = cap - alloc
+        d[f"{non_pretty}_{Constants.AVAILABLE.lower()}"] = avail
+        d[f"{non_pretty}_{Constants.CAPACITY.lower()}"] = cap
+        d[f"{non_pretty}_{Constants.ALLOCATED.lower()}"] = alloc
+
+    return d
 
 
 # ==================================================================
@@ -391,21 +464,6 @@ class ResourcesV2Wrapper:
     def __str__(self) -> str:
         return self.list_sites(output="text", quiet=True)
 
-    def _site_table_row(self, site_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Build a flat dict for one site suitable for Utils.list_table."""
-        d = dict(site_data)
-        _flatten_components(d)
-        # Ensure hosts_count is present (summary may use "hosts" as a list)
-        if "hosts_count" not in d:
-            hosts = d.pop("hosts", None)
-            if isinstance(hosts, list):
-                d["hosts_count"] = len(hosts)
-            elif isinstance(hosts, int):
-                d["hosts_count"] = hosts
-            else:
-                d["hosts_count"] = 0
-        return d
-
     def list_sites(
         self,
         output: Optional[str] = None,
@@ -416,8 +474,8 @@ class ResourcesV2Wrapper:
     ) -> object:
         table = []
         for site_data in self._sites_data:
-            row = self._site_table_row(site_data)
-            if row.get("hosts_count", 0) > 0:
+            row = _site_summary_to_v1_dict(site_data)
+            if row.get("hosts") or row.get("hosts_count"):
                 table.append(row)
 
         return Utils.list_table(
@@ -427,7 +485,7 @@ class ResourcesV2Wrapper:
             output=output,
             quiet=quiet,
             filter_function=filter_function,
-            pretty_names_dict=_merged_pretty_names() if pretty_names else {},
+            pretty_names_dict=ResourceConstants.pretty_names if pretty_names else {},
         )
 
     def show_site(
@@ -442,31 +500,19 @@ class ResourcesV2Wrapper:
         if not site_data:
             return f"Site '{site_name}' not found."
 
-        data = self._site_table_row(site_data)
+        data = _site_summary_to_v1_dict(site_data)
         return Utils.show_table(
             data,
             fields=fields,
             title=f"Site: {site_name}",
             output=output,
             quiet=quiet,
-            pretty_names_dict=_merged_pretty_names() if pretty_names else {},
+            pretty_names_dict=ResourceConstants.pretty_names if pretty_names else {},
         )
 
     # ----------------------------------------------------------
     # list / show — hosts
     # ----------------------------------------------------------
-
-    def _host_table_row(self, host_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Build a flat dict for one host suitable for Utils.list_table."""
-        d = dict(host_data)
-        _flatten_components(d)
-        # Ensure *_available keys are present
-        for resource in ("cores", "ram", "disk"):
-            if f"{resource}_available" not in d:
-                cap = d.get(f"{resource}_capacity", 0) or 0
-                alloc = d.get(f"{resource}_allocated", 0) or 0
-                d[f"{resource}_available"] = max(0, cap - alloc)
-        return d
 
     def list_hosts(
         self,
@@ -476,7 +522,7 @@ class ResourcesV2Wrapper:
         filter_function: Optional[Callable] = None,
         pretty_names: bool = True,
     ) -> object:
-        table = [self._host_table_row(h) for h in self._hosts_data]
+        table = [_host_summary_to_v1_dict(h) for h in self._hosts_data]
 
         return Utils.list_table(
             table,
@@ -485,7 +531,7 @@ class ResourcesV2Wrapper:
             output=output,
             quiet=quiet,
             filter_function=filter_function,
-            pretty_names_dict=_merged_pretty_names() if pretty_names else {},
+            pretty_names_dict=ResourceConstants.pretty_names if pretty_names else {},
         )
 
     def show_host(
@@ -498,14 +544,14 @@ class ResourcesV2Wrapper:
     ) -> object:
         for h in self._hosts_data:
             if h.get("name") == host_name:
-                data = self._host_table_row(h)
+                data = _host_summary_to_v1_dict(h)
                 return Utils.show_table(
                     data,
                     fields=fields,
                     title=f"Host: {host_name}",
                     output=output,
                     quiet=quiet,
-                    pretty_names_dict=_merged_pretty_names() if pretty_names else {},
+                    pretty_names_dict=ResourceConstants.pretty_names if pretty_names else {},
                 )
         return f"Host '{host_name}' not found."
 
