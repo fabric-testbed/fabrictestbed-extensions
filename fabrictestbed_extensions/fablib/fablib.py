@@ -711,7 +711,7 @@ class FablibManager(Config):
         if output is not None:
             self.output = output
         else:
-            if self.is_jupyter_notebook():
+            if Utils.is_jupyter_notebook():
                 self.output = "pandas"
             else:
                 self.output = "text"
