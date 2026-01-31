@@ -1634,7 +1634,7 @@ Host * !bastion.fabric-testbed.net
         else:
             pretty_names_dict = {}
 
-        return self.show_table(
+        return Utils.show_table(
             self.get_config(),
             fields=fields,
             title="FABlib Config",
@@ -2198,7 +2198,7 @@ Host * !bastion.fabric-testbed.net
         else:
             pretty_names_dict = {}
 
-        return self.list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Slices",
@@ -2653,7 +2653,7 @@ Host * !bastion.fabric-testbed.net
         table = [a.to_dict() for a in self.get_artifacts()]
 
         # Use the existing list_table function for output formatting
-        table = self.list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Artifacts",
