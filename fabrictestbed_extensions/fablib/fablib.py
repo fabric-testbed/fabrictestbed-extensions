@@ -77,7 +77,7 @@ import warnings
 
 from fabric_ceph_client.fabric_ceph_client import CephManagerClient
 from fabrictestbed.external_api.artifact_manager import Visibility
-from fabrictestbed.fabric_manager import FabricManager, FabricManagerException
+from fabrictestbed.fabric_manager import FabricManager
 from fss_utils.sshkey import FABRICSSHKey
 
 from fabrictestbed_extensions.fablib.artifact import Artifact
@@ -596,7 +596,7 @@ class fablib:
         """
         Check if we're running inside a Jupyter notebook.
         """
-        return Utils.is_jupyter_notebook()
+        return fablib.get_default_fablib_manager().is_jupyter_notebook()
 
 
 class FablibManager(Config):
@@ -620,7 +620,6 @@ class FablibManager(Config):
         am_host: str = None,
         ceph_mgr_host: str = None,
         token_location: str = None,
-        id_token: str = None,
         project_id: str = None,
         bastion_username: str = None,
         bastion_key_location: str = None,
@@ -643,22 +642,20 @@ class FablibManager(Config):
         keys in nodes in slices and FABRIC's bastion host, etc.  This
         requires some configuration, which is gathered from:
 
-            - constructor parameters (highest priority)
+            - constructor parameters (high priority)
 
-            - a configuration file (medium priority, optional)
+            - a configuration file (medium priority)
 
             - environment variables (low priority)
 
-            - defaults (lowest priority, if needed and when possible)
+            - defaults (if needed, and when possible)
 
-        The configuration file is optional. You can provide configuration
-        entirely through constructor parameters and/or environment variables.
-        If using a config file, it typically would be located at
-        ``"${HOME}/work/fabric_config/fabric_rc"``.
+        Typically you would use the configuration file located at
+        ``"${HOME}/work/fabric_config/fabric_rc"``, and/or environment
+        variables.
 
-        :param fabric_rc: Path to fablib configuration file. Optional.
-            Defaults to ``"${HOME}/work/fabric_config/fabric_rc"``, but
-            the file doesn't need to exist.
+        :param fabric_rc: Path to fablib configuration file.  Defaults
+            to ``"${HOME}/work/fabric_config/fabric_rc"``.
         :param credmgr_host: Name of credential manager host.
         :param orchestrator_host: Name of FABRIC orchestrator host.
         :param core_api_host: Name of Core API host.
@@ -666,9 +663,6 @@ class FablibManager(Config):
         :param ceph_mgr_host: Name of ceph manager host.
         :param token_location: Path to the file that contains your
             FABRIC auth token.
-        :param id_token: ID token string to use directly (optional).
-            If provided, token_location file check is skipped and
-            auto_token_refresh is automatically disabled.
         :param project_id: Your FABRIC project ID, obtained from
             https://cm.fabric-testbed.net/, usually via FABRIC portal.
         :param bastion_username: Your username on FABRIC bastion host,
@@ -692,13 +686,9 @@ class FablibManager(Config):
         :param offline: Avoid using FABRIC services when initializing.
             This is ``False`` by default, and set to ``True`` only in
             some unit tests.
-        :param auto_token_refresh: Auto refresh tokens (automatically disabled if id_token is provided)
+        :param auto_token_refresh: Auto refresh tokens
         :param validate_config: Whether to verify and persist configuration during initialization.
         """
-        # If id_token is provided, disable auto_token_refresh
-        if id_token is not None:
-            auto_token_refresh = False
-
         super().__init__(
             fabric_rc=fabric_rc,
             credmgr_host=credmgr_host,
@@ -707,7 +697,6 @@ class FablibManager(Config):
             am_host=am_host,
             ceph_mgr_host=ceph_mgr_host,
             token_location=token_location,
-            id_token=id_token,
             project_id=project_id,
             bastion_username=bastion_username,
             bastion_key_location=bastion_key_location,
@@ -718,6 +707,15 @@ class FablibManager(Config):
             offline=offline,
             **kwargs,
         )
+
+        if output is not None:
+            self.output = output
+        else:
+            if self.is_jupyter_notebook():
+                self.output = "pandas"
+            else:
+                self.output = "text"
+
         self.manager = None
         self.resources = None
         self.links = None
@@ -1300,30 +1298,18 @@ Host * !bastion.fabric-testbed.net
             Utils.is_reachable(hostname=self.get_orchestrator_host())
             Utils.is_reachable(hostname=self.get_core_api_host())
 
-            # Use id_token if provided, otherwise use token_location
-            if self.get_id_token():
-                self.manager = FabricManager(
-                    oc_host=self.get_orchestrator_host(),
-                    cm_host=self.get_credmgr_host(),
-                    core_api_host=self.get_core_api_host(),
-                    am_host=self.get_am_host(),
-                    project_id=self.get_project_id(),
-                    id_token=self.get_id_token(),
-                    scope="all",
-                    auto_refresh=False,
-                    no_write=True
-                )
-            else:
-                self.manager = FabricManager(
-                    oc_host=self.get_orchestrator_host(),
-                    cm_host=self.get_credmgr_host(),
-                    core_api_host=self.get_core_api_host(),
-                    am_host=self.get_am_host(),
-                    project_id=self.get_project_id(),
-                    token_location=self.get_token_location(),
-                    scope="all",
-                    auto_refresh=self.auto_token_refresh,
-                )
+            self.manager = FabricManager(
+                oc_host=self.get_orchestrator_host(),
+                cm_host=self.get_credmgr_host(),
+                core_api_host=self.get_core_api_host(),
+                am_host=self.get_am_host(),
+                project_id=self.get_project_id(),
+                token_location=self.get_token_location(),
+                initialize=True,
+                scope="all",
+                auto_refresh=self.auto_token_refresh,
+            )
+            self.manager.initialize()
             log.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager
             self.set_project_id(project_id=self.manager.project_id)
@@ -1648,7 +1634,7 @@ Host * !bastion.fabric-testbed.net
         else:
             pretty_names_dict = {}
 
-        return Utils.show_table(
+        return self.show_table(
             self.get_config(),
             fields=fields,
             title="FABlib Config",
@@ -2212,7 +2198,7 @@ Host * !bastion.fabric-testbed.net
         else:
             pretty_names_dict = {}
 
-        return Utils.list_table(
+        return self.list_table(
             table,
             fields=fields,
             title="Slices",
@@ -2667,7 +2653,7 @@ Host * !bastion.fabric-testbed.net
         table = [a.to_dict() for a in self.get_artifacts()]
 
         # Use the existing list_table function for output formatting
-        table = Utils.list_table(
+        table = self.list_table(
             table,
             fields=fields,
             title="Artifacts",
@@ -2692,16 +2678,9 @@ Host * !bastion.fabric-testbed.net
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
         :raises FabricManagerException: If an error occurs during the deletion process.
         """
-        if artifact_id:
-            self.get_manager().delete_artifact(artifact_id=artifact_id)
-        elif artifact_title:
-            artifacts = self.get_artifacts(artifact_title=artifact_title)
-            if len(artifacts) == 1:
-                self.get_manager().delete_artifact(artifact_id=artifacts[0].to_dict().get("uuid"))
-            else:
-                raise ValueError("More than one artifact found")
-        else:
-            raise ValueError("artifact_title or artifact_id must be provided")
+        self.get_manager().delete_artifact(
+            artifact_id=artifact_id, artifact_title=artifact_title
+        )
 
     def get_tags(self):
         """
@@ -2769,79 +2748,6 @@ Host * !bastion.fabric-testbed.net
             version=version,
             version_urn=version_urn,
         )
-
-    def list_storage(
-        self,
-        offset: int = 0,
-        limit: int = 200,
-        fetch_all: bool = False,
-        output=None,
-        fields=None,
-        quiet=False,
-        filter_function=None,
-    ) -> object:
-        """
-        List storage volumes available for the project.
-
-        :param offset: Pagination offset (default: 0).
-        :type offset: int
-        :param limit: Maximum number of records to fetch per page (default: 200).
-        :type limit: int
-        :param fetch_all: If True, automatically fetch all storage volumes across all pages (default: False).
-        :type fetch_all: bool
-        :param output: Output format - 'text', 'pandas', 'json'
-        :param fields: List of fields (table columns) to show
-        :param quiet: True to suppress printing/display
-        :param filter_function: Lambda function to filter data by field values
-        :return: Table in format specified by output parameter
-        :raises FabricManagerException: If there is an error in listing storage volumes.
-        """
-        if fetch_all:
-            # Fetch all storage volumes across all pages
-            storage_list = []
-            current_offset = offset
-            current_limit = limit
-
-            while True:
-                page_data = self.get_manager().list_storage(offset=current_offset, limit=current_limit)
-
-                if not page_data:
-                    break
-
-                storage_list.extend(page_data)
-
-                # Check if we got fewer items than requested, meaning we've reached the end
-                if len(page_data) < current_limit:
-                    break
-
-                current_offset += len(page_data)
-        else:
-            # Fetch single page
-            storage_list = self.get_manager().list_storage(offset=offset, limit=limit)
-
-        # Use the existing list_table function for output formatting
-        table = Utils.list_table(
-            storage_list,
-            fields=fields,
-            title="Storage Volumes",
-            output=output,
-            quiet=quiet,
-            filter_function=filter_function,
-        )
-
-        return table
-
-    def get_storage(self, uuid: str) -> list:
-        """
-        Get a specific storage volume by UUID.
-
-        :param uuid: Storage volume UUID.
-        :type uuid: str
-        :return: Storage volume details.
-        :rtype: list
-        :raises FabricManagerException: If there is an error retrieving the storage volume.
-        """
-        return self.get_manager().get_storage(uuid=uuid)
 
     def discover_ceph_clusters(self, verify: bool = True) -> list:
         """

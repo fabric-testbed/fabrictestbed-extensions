@@ -102,8 +102,8 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceState, Status
 from fim.user import Node as FimNode
 
-from fabrictestbed_extensions.fablib.resources_v2 import ResourcesV2Wrapper
-from fabrictestbed_extensions.fablib.slice import Slice
+from fabrictestbed_extensions.fablib.resources_v2 import ResourcesV2
+from fabrictestbed_extensions.fablib.slice_v2 import SliceV2
 
 log = logging.getLogger("fablib")
 
@@ -249,7 +249,7 @@ class FablibManagerV2(Config):
         self.__slices_by_name = {}
         self.__slices_by_id = {}
 
-    def cache_slice(self, slice_object: Slice):
+    def cache_slice(self, slice_object: SliceV2):
         """
         Caches a Slice object by its name and ID.
 
@@ -257,21 +257,21 @@ class FablibManagerV2(Config):
         dictionaries for quick retrieval based on either its name or its ID.
 
         :param slice_object: The Slice object to be cached.
-        :type slice_object: Slice
+        :type slice_object: SliceV2
         """
         with self.lock:
             self.__slices_by_name[slice_object.get_name()] = slice_object
             if slice_object.get_slice_id():
                 self.__slices_by_id[slice_object.get_slice_id()] = slice_object
 
-    def remove_slice_from_cache(self, slice_object: Slice):
+    def remove_slice_from_cache(self, slice_object: SliceV2):
         """
         Removes a Slice object from the cache by its name and ID.
 
         Removes the slice from both `__slices_by_name` and `__slices_by_id` if present.
 
         :param slice_object: The Slice object to be removed from the cache.
-        :type slice_object: Slice
+        :type slice_object: SliceV2
         """
         with self.lock:
             if (
@@ -287,7 +287,7 @@ class FablibManagerV2(Config):
 
     def _get_slice_from_cache(
         self, slice_id: str = None, slice_name: str = None
-    ) -> Slice:
+    ) -> SliceV2:
         """
         Retrieves a Slice object from the cache by its ID or name.
 
@@ -296,7 +296,7 @@ class FablibManagerV2(Config):
         :param slice_id: The ID of the slice to retrieve.
         :param slice_name: The name of the slice to retrieve.
         :return: The Slice object if found, or None.
-        :rtype: Slice
+        :rtype: SliceV2
         """
         with self.lock:
             if slice_id:
@@ -830,7 +830,7 @@ Host * !bastion.fabric-testbed.net
                 )
             log.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager
-            self.set_project_id(project_id=self.manager.project_id)
+            self.set_project_id(project_id=self.manager.get_project_id())
             self.runtime_config[Constants.PROJECT_NAME] = (
                 self.manager.get_project_name()
             )
@@ -1208,7 +1208,7 @@ Host * !bastion.fabric-testbed.net
             )
         )
 
-    def get_links(self, update: bool = True) -> ResourcesV2Wrapper:
+    def get_links(self, update: bool = True) -> ResourcesV2:
         """
         Get the resources object (which includes links).
 
@@ -1222,7 +1222,7 @@ Host * !bastion.fabric-testbed.net
         update: bool = False,
         start: datetime = None,
         end: datetime = None,
-    ) -> ResourcesV2Wrapper:
+    ) -> ResourcesV2:
         """
         Get the resources object (which includes facility ports).
 
@@ -1249,7 +1249,7 @@ Host * !bastion.fabric-testbed.net
         end: datetime = None,
         avoid: List[str] = None,
         includes: List[str] = None,
-    ) -> ResourcesV2Wrapper:
+    ) -> ResourcesV2:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1273,7 +1273,7 @@ Host * !bastion.fabric-testbed.net
         :type: list of string
 
         :return: the resources object
-        :rtype: ResourcesV2Wrapper
+        :rtype: ResourcesV2
         """
         if not update:
             if start or end:
@@ -1464,17 +1464,17 @@ Host * !bastion.fabric-testbed.net
         """
         return self.manager
 
-    def new_slice(self, name: str) -> Slice:
+    def new_slice(self, name: str) -> SliceV2:
         """
         Creates a new slice with the given name.
 
         :param name: the name to give the slice
         :type name: String
         :return: a new slice
-        :rtype: Slice
+        :rtype: SliceV2
         """
         # fabric = fablib()
-        new_slice = Slice.new_slice(self, name=name)
+        new_slice = SliceV2.new_slice(self, name=name)
         return new_slice
 
     def get_site_advertisement(self, site: str) -> FimNode:
@@ -1507,7 +1507,7 @@ Host * !bastion.fabric-testbed.net
         end: datetime = None,
         avoid: List[str] = None,
         includes: List[str] = None,
-    ) -> ResourcesV2Wrapper:
+    ) -> ResourcesV2:
         """
         Get the available resources.
 
@@ -1539,7 +1539,7 @@ Host * !bastion.fabric-testbed.net
             raise Exception("Time range should be at least 60 minutes long!")
 
         if self.resources is None:
-            self.resources = ResourcesV2Wrapper(
+            self.resources = ResourcesV2(
                 self,
                 force_refresh=force_refresh,
                 start=start,
@@ -1578,7 +1578,7 @@ Host * !bastion.fabric-testbed.net
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
         :return: a list of fim models of slices
-        :rtype: List[Slice]
+        :rtype: List[SliceV2]
         """
         return_status, slices = self.get_manager().slices(
             excludes=excludes, limit=200, as_self=user_only
@@ -1647,7 +1647,7 @@ Host * !bastion.fabric-testbed.net
             table.append(slice.toDict())
 
         if pretty_names:
-            pretty_names_dict = Slice.get_pretty_names_dict()
+            pretty_names_dict = SliceV2.get_pretty_names_dict()
         else:
             pretty_names_dict = {}
 
@@ -1724,7 +1724,7 @@ Host * !bastion.fabric-testbed.net
         slice_id: str = None,
         user_only: bool = True,
         show_un_submitted: bool = False,
-    ) -> List[Slice]:
+    ) -> List[SliceV2]:
         """
         Gets a list of slices from the slice manager.
 
@@ -1742,7 +1742,7 @@ Host * !bastion.fabric-testbed.net
         :type show_un_submitted: bool
 
         :return: a list of slices
-        :rtype: List[Slice]
+        :rtype: List[SliceV2]
         """
         import time
 
@@ -1774,7 +1774,7 @@ Host * !bastion.fabric-testbed.net
         return_slices = []
         if return_status == Status.OK:
             for slice in slices:
-                slice_object = Slice.get_slice(
+                slice_object = SliceV2.get_slice(
                     self, sm_slice=slice, user_only=user_only
                 )
                 return_slices.append(slice_object)
@@ -1788,7 +1788,7 @@ Host * !bastion.fabric-testbed.net
         slice_id: str = None,
         user_only: bool = True,
         show_un_submitted: bool = False,
-    ) -> Slice:
+    ) -> SliceV2:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1807,7 +1807,7 @@ Host * !bastion.fabric-testbed.net
         :type show_un_submitted: bool
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
-        :rtype: Slice
+        :rtype: SliceV2
         """
         # Get the appropriate slices list
         if slice_id:
@@ -2029,7 +2029,7 @@ Host * !bastion.fabric-testbed.net
         :param visibility: Visibility level of the artifact
         :param update_existing: Flag indicating whether to update an existing artifact
         :return: Dictionary containing the artifact details
-        :raises FabricManagerException: If there is an error in creating or updating the artifact.
+        :raises FabricManagerV2Exception: If there is an error in creating or updating the artifact.
         """
         artifact_info = self.get_manager().create_artifact(
             artifact_title=artifact_title,
@@ -2100,7 +2100,7 @@ Host * !bastion.fabric-testbed.net
         :param filter_function: Lambda function to filter data by field values
         :param pretty_names: Whether to use pretty names for fields
         :return: Table in format specified by output parameter
-        :raises FabricManagerException: If there is an error in listing the artifacts.
+        :raises FabricManagerV2Exception: If there is an error in listing the artifacts.
         """
         # Fetch the list of artifacts from the manager
         table = [a.to_dict() for a in self.get_artifacts()]
@@ -2129,7 +2129,7 @@ Host * !bastion.fabric-testbed.net
         :param artifact_id: The unique identifier of the artifact to be deleted.
         :param artifact_title: The title of the artifact to be deleted.
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the deletion process.
+        :raises FabricManagerV2Exception: If an error occurs during the deletion process.
         """
         if artifact_id:
             self.get_manager().delete_artifact(artifact_id=artifact_id)
@@ -2150,7 +2150,7 @@ Host * !bastion.fabric-testbed.net
         Tags are useful for categorizing and searching for artifacts.
 
         :return: A list of tags.
-        :raises FabricManagerException: If an error occurs while retrieving the tags.
+        :raises FabricManagerV2Exception: If an error occurs while retrieving the tags.
         """
         return self.get_manager().get_tags()
 
@@ -2169,7 +2169,7 @@ Host * !bastion.fabric-testbed.net
         :param artifact_title: The title of the artifact to which the file will be uploaded.
         :return: A dictionary containing the details of the uploaded file.
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the upload process.
+        :raises FabricManagerV2Exception: If an error occurs during the upload process.
         """
         return self.get_manager().upload_file_to_artifact(
             file_to_upload=file_to_upload,
@@ -2199,7 +2199,7 @@ Host * !bastion.fabric-testbed.net
         :param version_urn: Version urn for the artifact
         :return: The path to the downloaded artifact.
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the download process.
+        :raises FabricManagerV2Exception: If an error occurs during the download process.
         """
         return self.get_manager().download_artifact(
             download_dir=download_dir,
@@ -2233,7 +2233,7 @@ Host * !bastion.fabric-testbed.net
         :param quiet: True to suppress printing/display
         :param filter_function: Lambda function to filter data by field values
         :return: Table in format specified by output parameter
-        :raises FabricManagerException: If there is an error in listing storage volumes.
+        :raises FabricManagerV2Exception: If there is an error in listing storage volumes.
         """
         if fetch_all:
             # Fetch all storage volumes across all pages
@@ -2278,7 +2278,7 @@ Host * !bastion.fabric-testbed.net
         :type uuid: str
         :return: Storage volume details.
         :rtype: list
-        :raises FabricManagerException: If there is an error retrieving the storage volume.
+        :raises FabricManagerV2Exception: If there is an error retrieving the storage volume.
         """
         return self.get_manager().get_storage(uuid=uuid)
 

@@ -232,7 +232,7 @@ def _host_summary_to_v1_dict(host_data: Dict[str, Any]) -> Dict[str, Any]:
 # ResourcesV2Wrapper — sites + hosts (main entry point)
 # ==================================================================
 
-class ResourcesV2Wrapper:
+class ResourcesV2:
     """High-performance resource manager backed by ``resources_summary``.
 
     Uses ``FabricManagerV2.resources_summary()`` to fetch sites, hosts,

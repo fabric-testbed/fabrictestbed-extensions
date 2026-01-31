@@ -31,9 +31,9 @@ Methods to manage FABRIC `slices`_.
 You would create and use a slice like so::
 
     from ipaddress import IPv4Address
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
+    from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
 
-    fablib = FablibManager()
+    fablib = FablibManagerV2()
 
     # Create a slice and add resources to it, creating a topology.
     slice = fablib.new_slice(name="MySlice")
@@ -53,13 +53,14 @@ import ipaddress
 import json
 import logging
 import sys
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
+
+from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
 from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
@@ -74,7 +75,6 @@ if TYPE_CHECKING:
         Slice as OrchestratorSlice,
         Sliver as OrchestratorSliver,
     )
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -94,9 +94,9 @@ from fabrictestbed_extensions.fablib.node import Node
 log = logging.getLogger("fablib")
 
 
-class Slice:
+class SliceV2:
     def __init__(
-        self, fablib_manager: FablibManager, name: str = None, user_only: bool = True
+        self, fablib_manager: FablibManagerV2, name: str = None, user_only: bool = True
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -445,14 +445,14 @@ class Slice:
         return table
 
     @staticmethod
-    def new_slice(fablib_manager: FablibManager, name: str = None):
+    def new_slice(fablib_manager: FablibManagerV2, name: str = None):
         """
         Create a new slice
         :param fablib_manager:
         :param name:
         :return: Slice
         """
-        slice = Slice(fablib_manager=fablib_manager, name=name)
+        slice = SliceV2(fablib_manager=fablib_manager, name=name)
         slice.topology = ExperimentTopology()
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
@@ -460,7 +460,7 @@ class Slice:
 
     @staticmethod
     def get_slice(
-        fablib_manager: FablibManager,
+        fablib_manager: FablibManagerV2,
         sm_slice: OrchestratorSlice = None,
         user_only: bool = True,
     ):
@@ -476,7 +476,7 @@ class Slice:
         """
         log.info("slice.get_slice()")
 
-        slice = Slice(fablib_manager=fablib_manager, name=sm_slice.name)
+        slice = SliceV2(fablib_manager=fablib_manager, name=sm_slice.name)
         slice.sm_slice = sm_slice
         slice.slice_id = sm_slice.slice_id
         slice.slice_name = sm_slice.name
@@ -2602,7 +2602,7 @@ class Slice:
                     raise Exception(
                         "Extra SSH keys must be provided as a list of strings."
                     )
-            if not ssh_keys:
+            if not ssh_keys or len(ssh_keys) < 1:
                 raise Exception(
                     "No SSH keys available. Provide extra_ssh_keys or "
                     "configure a default slice public key."
@@ -2615,7 +2615,7 @@ class Slice:
             (
                 return_status,
                 slice_reservations,
-            ) = self.fablib_manager.get_manager().create(
+            ) = self.fablib_manager.get_manager().create_slice(
                 slice_name=self.slice_name,
                 slice_graph=slice_graph,
                 ssh_key=ssh_keys,
