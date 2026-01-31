@@ -596,7 +596,7 @@ class fablib:
         """
         Check if we're running inside a Jupyter notebook.
         """
-        return fablib.get_default_fablib_manager().is_jupyter_notebook()
+        return Utils.is_jupyter_notebook()
 
 
 class FablibManager(Config):
