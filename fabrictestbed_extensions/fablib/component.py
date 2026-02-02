@@ -94,19 +94,36 @@ class Component:
         Constants.CMP_FPGA_Xilinx_SN1022: ComponentModelType.FPGA_Xilinx_SN1022,
     }
 
+    v4_commands = [
+                        "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+                        "sudo ip link set tmfifo_net0 up",
+                        "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+                  ]
+
+    v6_commands = [
+                        "sudo ip -6 addr add fd00:bf3::1/64 dev tmfifo_net0",
+                        "sudo ip link set tmfifo_net0 up",
+                        "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+                        "sudo echo \"net.ipv6.conf.all.forwarding=1\" > /etc/sysctl.d/99-ipv6-forward.conf",
+                        "sysctl --system",
+                        "sudo ip6tables - A FORWARD - i tmfifo_net0 - o enp3s0 - j ACCEPT",
+                        "sudo ip6tables - A FORWARD - i enp3s0 - o tmfifo_net0 - m state - -state ESTABLISHED, RELATED - j ACCEPT",
+                        "sudo ip6tables -t nat -A POSTROUTING   -s fd00:bf3::/64 -o enp3s0 -j MASQUERADE"
+    ]
+
     component_configure_commands = {
-        Constants.CMP_NIC_ConnectX_7_100: [
-            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
-            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
-        ],
-        Constants.CMP_NIC_ConnectX_7_400: [
-            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
-            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
-        ],
-        Constants.CMP_NIC_BlueField2_ConnectX_6: [
-            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
-            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
-        ],
+        Constants.CMP_NIC_ConnectX_7_100: {
+            "v4" :v4_commands,
+            "v6" : v6_commands
+        },
+        Constants.CMP_NIC_ConnectX_7_400: {
+            "v4" :v4_commands,
+            "v6" : v6_commands
+        },
+        Constants.CMP_NIC_BlueField2_ConnectX_6: {
+            "v4" :v4_commands,
+            "v6" : v6_commands
+        },
     }
 
     def __str__(self):
@@ -643,7 +660,11 @@ class Component:
         start = time.time()
         try:
             if not commands or len(commands) == 0:
-                commands = Component.component_configure_commands.get(self.get_model())
+                commands_per_iptype = Component.component_configure_commands.get(self.get_model())
+                if self.node.get_site() in ["BRIST", "TOKY", "FIU"]:
+                    commands_per_iptype.get("v4")
+                else:
+                    commands_per_iptype.get("v6")
 
             if not commands or len(commands) == 0:
                 return output
