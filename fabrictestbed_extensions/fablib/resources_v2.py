@@ -39,9 +39,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
-from fabrictestbed.fabric_manager_v2 import FabricManagerV2
+if TYPE_CHECKING:
+    from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
 

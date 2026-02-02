@@ -60,7 +60,6 @@ from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
 
-from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
 from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
@@ -75,6 +74,7 @@ if TYPE_CHECKING:
         Slice as OrchestratorSlice,
         Sliver as OrchestratorSliver,
     )
+    from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
 
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
