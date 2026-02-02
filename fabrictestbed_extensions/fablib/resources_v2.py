@@ -59,6 +59,7 @@ LINK_PRETTY_NAMES: Dict[str, str] = {
     "name": "Link Name",
     "layer": "Layer",
     "bandwidth": "Capacity (Gbps)",
+    "available_bandwidth": "Available (Gbps)",
     "allocated_bandwidth": "Allocated (Gbps)",
     "sites": "Sites",
 }
