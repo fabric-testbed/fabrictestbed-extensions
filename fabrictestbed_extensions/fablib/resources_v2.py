@@ -459,6 +459,25 @@ class ResourcesV2:
         return bool(self._site_val(site_name, "ptp_capable", False))
 
     # ----------------------------------------------------------
+    # Host accessors
+    # ----------------------------------------------------------
+
+    def get_hosts_by_site(self, site_name: str) -> Dict[str, Dict[str, Any]]:
+        """Return hosts for a given site as a dict keyed by host name."""
+        return {
+            h["name"]: h
+            for h in self._hosts_data
+            if h.get("site") == site_name and h.get("name")
+        }
+
+    def get_host(self, host_name: str) -> Optional[Dict[str, Any]]:
+        """Return a single host dict by name, or None."""
+        for h in self._hosts_data:
+            if h.get("name") == host_name:
+                return h
+        return None
+
+    # ----------------------------------------------------------
     # list / show — sites
     # ----------------------------------------------------------
 

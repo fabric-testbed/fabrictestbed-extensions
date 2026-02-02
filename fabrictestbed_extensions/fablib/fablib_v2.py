@@ -1873,140 +1873,22 @@ Host * !bastion.fabric-testbed.net
                 if progress:
                     print(f", Failed!")
 
-    @staticmethod
-    def __can_allocate_node_in_host(
-        host: Host, node: Node, allocated: dict, site: Site
-    ) -> Tuple[bool, str]:
-        """
-        Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
-
-        :return: Tuple indicating status for validation and error message in case of failure
-        :rtype: Tuple[bool, str]
-        """
-        if host is None or site is None:
-            return (
-                True,
-                f"Ignoring validation: Host: {host}, Site: {site} not available.",
-            )
-
-        msg = f"Node can be allocated on the host: {host.get_name()}."
-
-        if host.get_state() != "Active":
-            msg = f"Node cannot be allocated on {host.get_name()}, {host.get_name()} is in {host.get_state()}!"
-            return False, msg
-
-        allocated_core = allocated.setdefault("core", 0)
-        allocated_ram = allocated.setdefault("ram", 0)
-        allocated_disk = allocated.setdefault("disk", 0)
-        available_cores = host.get_core_available()
-        available_ram = host.get_ram_available()
-        available_disk = host.get_disk_available()
-
-        if (
-            node.get_requested_cores() > available_cores
-            or node.get_requested_disk() > available_disk
-            or node.get_requested_ram() > available_ram
-        ):
-            msg = f"Insufficient Resources: Host: {host.get_name()} does not meet core/ram/disk requirements."
-            return False, msg
-
-        # Check if there are enough components available
-        for c in node.get_components():
-            comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
-            substrate_component = host.get_component(comp_model_type=comp_model_type)
-            if not substrate_component:
-                msg = f"Invalid Request: Host: {host.get_name()} does not have the requested component: {comp_model_type}."
-                return False, msg
-
-            allocated_comp_count = allocated.setdefault(comp_model_type, 0)
-            available_comps = (
-                substrate_component.capacities.unit
-                - (
-                    substrate_component.capacity_allocations.unit
-                    if substrate_component.capacity_allocations
-                    else 0
-                )
-                - allocated_comp_count
-            )
-            if available_comps <= 0:
-                msg = f"Insufficient Resources: Host: {host.get_name()} has reached the limit for component: {comp_model_type}."
-                return False, msg
-
-            allocated[comp_model_type] += 1
-
-        allocated["core"] += node.get_requested_cores()
-        allocated["ram"] += node.get_requested_ram()
-        allocated["disk"] += node.get_requested_disk()
-
-        return True, msg
-
     def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
         """
-        Validate a node w.r.t available resources on a site before submission
+        Validate a node w.r.t available resources on a site before submission.
+
+        Delegates to :class:`NodeValidatorV2` with pre-fetched resources.
+        This method must remain on ``FablibManagerV2`` because
+        ``Node.add_component()`` calls ``self.get_fablib_manager().validate_node()``.
 
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        try:
-            error = None
-            if allocated is None:
-                allocated = {}
-            site = self.get_resources().get_site(site_name=node.get_site())
+        from fabrictestbed_extensions.fablib.validator_v2 import NodeValidatorV2
 
-            if not site:
-                log.warning(
-                    f"Ignoring validation: Site: {node.get_site()} not available in resources."
-                )
-                return (
-                    True,
-                    f"Ignoring validation: Site: {node.get_site()} not available in resources.",
-                )
-
-            site_state = site.get_state()
-            if site_state != "Active":
-                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
-                log.error(msg)
-                return False, msg
-            hosts = site.get_hosts()
-            if not hosts:
-                msg = f"Node cannot be validated, host information not available for {site}."
-                log.error(msg)
-                return False, msg
-
-            if node.get_host():
-                if node.get_host() not in hosts:
-                    msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
-                    log.error(msg)
-                    return False, msg
-
-                host = hosts.get(node.get_host())
-
-                allocated_comps = allocated.setdefault(node.get_host(), {})
-                status, error = self.__can_allocate_node_in_host(
-                    host=host, node=node, allocated=allocated_comps, site=site
-                )
-
-                if not status:
-                    log.error(error)
-                    return status, error
-
-            for host in hosts.values():
-                allocated_comps = allocated.setdefault(host.get_name(), {})
-                status, error = self.__can_allocate_node_in_host(
-                    host=host, node=node, allocated=allocated_comps, site=site
-                )
-                if status:
-                    return status, error
-
-            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.get_name()}."
-            if error:
-                msg += f" Details: {error}"
-            log.error(msg)
-            return False, msg
-        except Exception as e:
-            log.error(e)
-            log.error(traceback.format_exc())
-            return False, str(e)
+        return NodeValidatorV2.validate_node(
+            node=node, resources=self.get_resources(), allocated=allocated
+        )
 
     def create_artifact(
         self,

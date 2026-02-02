@@ -305,11 +305,6 @@ class SliceV2:
         for component in self.get_components(refresh=refresh):
             table.append(component.toDict())
 
-        # if fields == None:
-        #    fields = ["Name", "Details", "Disk",
-        #              "Units", "PCI Address", "Model",
-        #              "Type"]
-
         if pretty_names:
             pretty_names_dict = Component.get_pretty_name_dict()
         else:
@@ -613,8 +608,7 @@ class SliceV2:
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        return_status, slices = self.fablib_manager.get_manager().slices(
-            excludes=[],
+        slices = self.fablib_manager.get_manager().list_slices(
             slice_id=self.slice_id,
             name=self.slice_name,
             as_self=self.user_only,
@@ -627,14 +621,12 @@ class SliceV2:
                 f"elapsed time: {end - start} seconds"
             )
 
-        if return_status == Status.OK:
-            self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[
-                0
-            ]
-        else:
+        if len(slices) == 0:
             raise Exception(
-                "Failed to get slice list: {}, {}".format(return_status, slices)
+                f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
             )
+
+        self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
 
     def update_topology(self):
         """
@@ -652,19 +644,16 @@ class SliceV2:
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
         )
 
-        (
-            return_status,
-            new_topo,
-        ) = self.fablib_manager.get_manager().get_slice_topology(
-            slice_id=self.sm_slice.slice_id, as_self=self.user_only
-        )
-        if return_status != Status.OK:
+        slices = self.fablib_manager.get_manager().list_slices(slice_id=self.sm_slice.slice_id,
+                                                               as_self=self.user_only)
+        if len(slices) == 0:
             raise Exception(
-                "Failed to get slice topology: {}, {}".format(return_status, new_topo)
+                f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
             )
 
         # Set slice attributes
-        self.topology = new_topo
+        self.topology = ExperimentTopology()
+        self.topology.load(graph_string=slices[0].get("model"))
         self.get_nodes()
         self.get_facilities()
         self.get_interfaces(refresh=True)
@@ -685,14 +674,8 @@ class SliceV2:
             f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}"
         )
 
-        status, slivers = self.fablib_manager.get_manager().slivers(
-            slice_object=self.sm_slice, as_self=self.user_only
-        )
-        if status == Status.OK:
-            self.slivers = slivers
-            return
-
-        raise Exception(f"{slivers}")
+        self.slivers = self.fablib_manager.get_manager().list_slivers(slice_id=self.sm_slice.slice_id,
+                                                                      as_self=self.user_only)
 
     def get_sliver(self, reservation_id: str) -> OrchestratorSliver:
         """
@@ -1364,6 +1347,7 @@ class SliceV2:
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=aswitch)
+
             if not status:
                 aswitch.delete()
                 aswitch = None
@@ -1933,15 +1917,7 @@ class SliceV2:
         if not self.sm_slice:
             self.topology = None
             return
-        return_status, result = self.fablib_manager.get_manager().delete(
-            slice_id=self.sm_slice.slice_id
-        )
-
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to delete slice: {}, {}".format(return_status, result)
-            )
-
+        self.fablib_manager.get_manager().delete_slice(slice_id=self.sm_slice.slice_id)
         self.topology = None
 
     def renew(self, end_date: str = None, days: int = None, **kwargs):
@@ -2026,13 +2002,13 @@ class SliceV2:
         if progress:
             print("Waiting for slice .", end="")
         while time.time() < timeout_start + timeout:
-            return_status, slices = self.fablib_manager.get_manager().slices(
-                excludes=[],
+            slices = self.fablib_manager.get_manager().list_slices(
                 slice_id=self.slice_id,
                 name=self.slice_name,
                 as_self=self.user_only,
+                graph_format="NONE"
             )
-            if return_status == Status.OK:
+            if len(slices) > 0:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.state == "StableOK" or slice.state == "ModifyOK":
                     if progress:
@@ -2578,15 +2554,12 @@ class SliceV2:
         # Request slice from Orchestrator
         if self._is_modify():
             if lease_in_hours:
-                return_status, result = self.fablib_manager.get_manager().renew(
+                self.fablib_manager.get_manager().renew_slice(
                     slice_id=self.sm_slice.slice_id, lease_end_time=end_time_str
                 )
             else:
-                (
-                    return_status,
-                    slice_reservations,
-                ) = self.fablib_manager.get_manager().modify(
-                    slice_id=self.slice_id, slice_graph=slice_graph
+                slice_reservations = self.fablib_manager.get_manager().modify_slice(
+                    slice_id=self.slice_id, graph_model=slice_graph
                 )
         else:
             # retrieve and validate SSH keys
@@ -2612,38 +2585,21 @@ class SliceV2:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
-            (
-                return_status,
-                slice_reservations,
-            ) = self.fablib_manager.get_manager().create_slice(
-                slice_name=self.slice_name,
-                slice_graph=slice_graph,
-                ssh_key=ssh_keys,
+            slice_reservations = self.fablib_manager.get_manager().create_slice(
+                name=self.slice_name,
+                graph_model=slice_graph,
+                ssh_keys=ssh_keys,
                 lease_end_time=end_time_str,
                 lease_start_time=start_time_str,
                 lifetime=lease_in_hours,
             )
-            if return_status == Status.OK:
+            if len(slice_reservations):
                 log.info(
-                    f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}"
+                    f"Submit request success: slice_reservations: {slice_reservations}"
                 )
                 log.debug(f"slice_reservations: {slice_reservations}")
                 log.debug(f"slice_id: {slice_reservations[0].slice_id}")
                 self.slice_id = slice_reservations[0].slice_id
-            else:
-                log.error(
-                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
-                )
-                raise Exception(
-                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
-                )
-
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to submit slice: {}, {}".format(
-                    return_status, slice_reservations
-                )
-            )
 
         if (
             progress
@@ -3211,18 +3167,9 @@ class SliceV2:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        (
-            return_status,
-            slice_reservations,
-        ) = self.fablib_manager.get_manager().modify(
-            slice_id=self.slice_id, slice_graph=slice_graph
+        slice_reservations = self.fablib_manager.get_manager().modify_slice(
+            slice_id=self.slice_id, graph_model=slice_graph
         )
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to submit modify slice: {}, {}".format(
-                    return_status, slice_reservations
-                )
-            )
 
         log.debug(f"slice_reservations: {slice_reservations}")
 
@@ -3261,19 +3208,10 @@ class SliceV2:
         Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
-        return_status, topology = self.fablib_manager.get_manager().modify_accept(
+        self.topology = self.fablib_manager.get_manager().accept_modify(
             slice_id=self.slice_id
         )
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to accept the last modify slice: {}, {}".format(
-                    return_status, topology
-                )
-            )
-        else:
-            self.topology = topology
-
-        log.debug(f"modified topology: {topology}")
+        log.debug(f"modified topology: {self.topology}")
 
         self.update_slice()
 
@@ -3307,7 +3245,10 @@ class SliceV2:
 
     def validate(self, raise_exception: bool = True) -> Tuple[bool, Dict[str, str]]:
         """
-        Validate the slice w.r.t available resources before submission
+        Validate the slice w.r.t available resources before submission.
+
+        Fetches resources once and delegates to
+        :meth:`NodeValidatorV2.validate_nodes` for batch validation.
 
         :param raise_exception: raise exception if validation fails
         :type raise_exception: bool
@@ -3316,19 +3257,22 @@ class SliceV2:
                  each requested node
         :rtype: Tuple[bool, Dict[str, str]]
         """
-        allocated = {}
-        errors = {}
-        nodes_to_remove = []
-        for n in self.get_nodes():
-            status, error = self.get_fablib_manager().validate_node(
-                node=n, allocated=allocated
-            )
-            if not status:
-                nodes_to_remove.append(n)
-                errors[n.get_name()] = error
-                log.warning(f"{n.get_name()} - {error}")
-        for n in nodes_to_remove:
-            n.delete()
-        if raise_exception and len(errors):
+        from fabrictestbed_extensions.fablib.validator_v2 import NodeValidatorV2
+
+        resources = self.get_fablib_manager().get_resources()
+        nodes = self.get_nodes()
+
+        all_valid, errors = NodeValidatorV2.validate_nodes(
+            nodes=nodes, resources=resources
+        )
+
+        # Remove invalid nodes
+        if errors:
+            for n in nodes:
+                if n.get_name() in errors:
+                    log.warning(f"{n.get_name()} - {errors[n.get_name()]}")
+                    n.delete()
+
+        if raise_exception and errors:
             raise Exception(f"Slice validation failed - {errors}!")
-        return len(errors) == 0, errors
+        return all_valid, errors

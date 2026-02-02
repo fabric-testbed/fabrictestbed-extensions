@@ -656,7 +656,7 @@ class Slice:
             return_status,
             new_topo,
         ) = self.fablib_manager.get_manager().get_slice_topology(
-            slice_id=self.sm_slice.slice_id, as_self=self.user_only
+            slice_object=self.sm_slice, as_self=self.user_only
         )
         if return_status != Status.OK:
             raise Exception(
@@ -1934,7 +1934,7 @@ class Slice:
             self.topology = None
             return
         return_status, result = self.fablib_manager.get_manager().delete(
-            slice_id=self.sm_slice.slice_id
+            slice_object=self.sm_slice
         )
 
         if return_status != Status.OK:
@@ -2579,7 +2579,7 @@ class Slice:
         if self._is_modify():
             if lease_in_hours:
                 return_status, result = self.fablib_manager.get_manager().renew(
-                    slice_id=self.sm_slice.slice_id, lease_end_time=end_time_str
+                    slice_object=self.sm_slice.slice_id, new_lease_end_time=end_time_str
                 )
             else:
                 (
