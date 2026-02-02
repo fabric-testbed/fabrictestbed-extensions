@@ -39,10 +39,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
-if TYPE_CHECKING:
-    from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fabrictestbed.slice_editor import AdvertisedTopology
 from fabrictestbed.slice_manager import Status
 
@@ -299,6 +297,7 @@ class ResourcesV2:
         self._topology = None
 
         manager = self.fablib_manager.get_manager()
+        from fabrictestbed.fabric_manager_v2 import FabricManagerV2
         if not isinstance(manager, FabricManagerV2):
             raise Exception(
                 "ResourcesV2Wrapper requires FabricManagerV2 as the manager"
