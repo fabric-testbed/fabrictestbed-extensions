@@ -552,6 +552,9 @@ class Utils:
 
         log.debug(f"data: {data}\n\n")
 
+        if fields is None and len(pretty_names_dict) > 0:
+            fields = pretty_names_dict.keys()
+
         if fields is None and len(data) > 0:
             fields = list(data[0].keys())
 
