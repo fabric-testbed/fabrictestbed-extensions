@@ -2525,7 +2525,7 @@ class SliceV2:
 
         :return: slice_id
         """
-        slice_reservations = None
+        slice_reservations = []
 
         if not wait:
             progress = False
@@ -2598,8 +2598,8 @@ class SliceV2:
                     f"Submit request success: slice_reservations: {slice_reservations}"
                 )
                 log.debug(f"slice_reservations: {slice_reservations}")
-                log.debug(f"slice_id: {slice_reservations[0].slice_id}")
-                self.slice_id = slice_reservations[0].slice_id
+                log.debug(f"slice_id: {slice_reservations[0].get('slice_id')}")
+                self.slice_id = slice_reservations[0].get('slice_id')
 
         if (
             progress
