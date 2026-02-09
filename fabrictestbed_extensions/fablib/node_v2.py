@@ -52,8 +52,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-from fim.user import NodeType
-
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.node import Node

@@ -108,7 +108,7 @@ class SliceV2:
         self.sm_slice: Optional[SliceDTO] = None
         self.slice_id: Optional[str] = None
         self.topology: Optional[ExperimentTopology] = None
-        self.slivers: List[SliceDTO] = []
+        self.slivers: List[SliverDTO] = []
         self.fablib_manager:FablibManagerV2 = fablib_manager
 
         self.nodes: Dict[str, Node] = {}
@@ -423,7 +423,7 @@ class SliceV2:
 
             table.append(iface.toDict())
         if pretty_names:
-            pretty_names_dict = Interface.get_pretty_name_dict()
+            pretty_names_dict = InterfaceV2.get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -954,10 +954,10 @@ class SliceV2:
         self,
         name: str,
         mirror_interface_name: str,
-        receive_interface: Optional[Interface] = None,
+        receive_interface: Optional[InterfaceV2] = None,
         mirror_interface_vlan: Optional[str] = None,
         mirror_direction: Optional[str] = "both",
-    ) -> NetworkService:
+    ) -> NetworkServiceV2:
         """
         Adds a special PortMirror service.
 
@@ -989,12 +989,12 @@ class SliceV2:
     def add_l2network(
         self,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: List[InterfaceV2] = [],
         type: str = None,
         subnet: ipaddress = None,
         gateway: ipaddress = None,
         user_data: dict = {},
-    ) -> NetworkService:
+    ) -> NetworkServiceV2:
         """
         Adds a new L2 network service to this slice.
 
@@ -1063,13 +1063,13 @@ class SliceV2:
     def add_l3network(
         self,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: List[InterfaceV2] = [],
         type: str = "IPv4",
         user_data: dict = {},
         technology: str = None,
         subnet: ipaddress.ip_network = None,
         site: str = None,
-    ) -> NetworkService:
+    ) -> NetworkServiceV2:
         """
         Adds a new L3 network service to this slice.
 
@@ -1156,7 +1156,7 @@ class SliceV2:
         peer_labels: Labels = None,
         bandwidth: int = None,
         mtu: int = None,
-    ) -> FacilityPort:
+    ) -> FacilityPortV2:
         """
         Adds a new L2 facility port to this slice
 
@@ -1377,7 +1377,7 @@ class SliceV2:
         avoid: List[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
-    ) -> Switch:
+    ) -> SwitchV2:
         """
         Creates a new switch on this fablib slice.
 
@@ -1440,7 +1440,7 @@ class SliceV2:
 
     def get_object_by_reservation(
         self, reservation_id: str
-    ) -> Union[Node, NetworkService, Interface, None]:
+    ) -> Union[Node, NetworkServiceV2, InterfaceV2, None]:
         """
         Gets an object associated with this slice by its reservation ID.
 
@@ -1619,7 +1619,7 @@ class SliceV2:
         self.__initialize_nodes()
         return list(self.nodes.values())
 
-    def get_facility(self, name: str) -> FacilityPort:
+    def get_facility(self, name: str) -> FacilityPortV2:
         """
         Gets a facility port from the slice by name.
 
@@ -1642,7 +1642,7 @@ class SliceV2:
             log.info(e, exc_info=True)
             raise Exception(f"Facility not found: {name}")
 
-    def get_facilities(self) -> List[FacilityPort]:
+    def get_facilities(self) -> List[FacilityPortV2]:
         """
         Gets a list of all nodes in this slice.
 
@@ -1791,7 +1791,7 @@ class SliceV2:
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> Union[dict[str, InterfaceV2], list[InterfaceV2]]:
         """
         Gets all interfaces in this slice.
 
@@ -1824,7 +1824,7 @@ class SliceV2:
         else:
             return list(self.interfaces.values())
 
-    def get_interface(self, name: str = None, refresh: bool = False) -> Interface:
+    def get_interface(self, name: str = None, refresh: bool = False) -> InterfaceV2:
         """
         Gets a particular interface from this slice.
 
@@ -1843,7 +1843,7 @@ class SliceV2:
                 return interface
         raise Exception("Interface not found: {}".format(name))
 
-    def get_l3networks(self) -> List[NetworkService]:
+    def get_l3networks(self) -> List[NetworkServiceV2]:
         """
         Gets all L3 networks services in this slice
 
@@ -1857,7 +1857,7 @@ class SliceV2:
 
         return []
 
-    def get_l3network(self, name: str = None) -> Union[NetworkService or None]:
+    def get_l3network(self, name: str = None) -> Union[NetworkServiceV2 or None]:
         """
         Gets a particular L3 network service from this slice.
 
@@ -1872,7 +1872,7 @@ class SliceV2:
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_l2networks(self) -> List[NetworkService]:
+    def get_l2networks(self) -> List[NetworkServiceV2]:
         """
         Gets a list of the L2 network services on this slice.
 
@@ -1886,7 +1886,7 @@ class SliceV2:
 
         return []
 
-    def get_l2network(self, name: str = None) -> Optional[NetworkService]:
+    def get_l2network(self, name: str = None) -> Optional[NetworkServiceV2]:
         """
         Gets a particular L2 network service from this slice.
 
@@ -1900,7 +1900,7 @@ class SliceV2:
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_network_services(self, force_refresh: bool = False) -> List[NetworkService]:
+    def get_network_services(self, force_refresh: bool = False) -> List[NetworkServiceV2]:
         """
         Not intended for API use. See: slice.get_networks()
 
@@ -1946,7 +1946,7 @@ class SliceV2:
 
         return list(self.network_services.values())
 
-    def get_networks(self) -> List[NetworkService]:
+    def get_networks(self) -> List[NetworkServiceV2]:
         """
         Gets all network services (L2 and L3) in this slice.
 
@@ -1962,7 +1962,7 @@ class SliceV2:
 
         return []
 
-    def get_network(self, name: str = None) -> Optional[NetworkService]:
+    def get_network(self, name: str = None) -> Optional[NetworkServiceV2]:
         """
         Gets a particular network service from this slice.
 
