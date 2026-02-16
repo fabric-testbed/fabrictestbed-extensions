@@ -935,7 +935,7 @@ class NetworkService(TemplateMixin):
         Gets site name on network service.
         """
         try:
-            return self.get_sliver().sliver.get('site')
+            return self.get_sliver().sliver.get('Site')
         except Exception as e:
             log.warning(f"Failed to get site: {e}")
 
@@ -1038,8 +1038,12 @@ class NetworkService(TemplateMixin):
 
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
+                    if self.get_sliver().sliver.get('Type') == "FABNetv4":
+                        gw_key = "ipv4"
+                    else:
+                        gw_key = "ipv6"
                     gateway = ipaddress.ip_address(
-                        self.get_sliver().sliver.get('gateway', {}).get('gateway')
+                        self.get_sliver().sliver.get('Gateway', {}).get(gw_key)
                     )
                 else:
                     # L2 Network
@@ -1119,8 +1123,12 @@ class NetworkService(TemplateMixin):
             subnet = None
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
+                    if self.get_sliver().sliver.get('Type') == "FABNetv4":
+                        subnet_key = "ipv4_subnet"
+                    else:
+                        subnet_key = "ipv6_subnet"
                     subnet = ipaddress.ip_network(
-                        self.get_sliver().sliver.get('gateway', {}).get('subnet')
+                        self.get_sliver().sliver.get('gateway', {}).get(subnet_key)
                     )
                 else:
                     # L2 Network
