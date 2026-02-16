@@ -32,9 +32,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import jinja2
 from IPython.core.display_functions import display
 from fabrictestbed_extensions.utils.utils import Utils
 from tabulate import tabulate
@@ -91,6 +90,27 @@ class Switch(Node):
         )
         self.username = Constants.FABRIC_USER
 
+        # Cached interfaces
+        self._interfaces_cache: Dict[str, Interface] = {}
+
+    def _invalidate_cache(self):
+        """Invalidate all cached properties including interfaces."""
+        super()._invalidate_cache()
+        self._interfaces_cache = {}
+
+    def update(self, fim_node: FimNode = None):
+        """
+        Update the switch with new FIM data.
+
+        :param fim_node: The new FIM node data
+        :type fim_node: FimNode
+        """
+        if fim_node:
+            self.fim_node = fim_node
+            self._invalidate_cache()
+            self.get_interfaces(refresh=True)
+            self._fim_dirty = False
+
     def __str__(self):
         """
         Creates a tabulated string describing the properties of the
@@ -114,6 +134,22 @@ class Switch(Node):
         return tabulate(table)  # , headers=["Property", "Value"])
 
     @staticmethod
+    def get_switch(slice: Slice, node: FimNode) -> Switch:
+        """
+        Factory method to create a SwitchV2 from a FIM node.
+
+        :param slice: the slice this switch belongs to
+        :type slice: SliceV2
+        :param node: the FIM node
+        :type node: FimNode
+        :return: a SwitchV2 instance
+        :rtype: SwitchV2
+        """
+        switch = Switch(slice=slice, node=node)
+        switch.get_interfaces()
+        return switch
+
+    @staticmethod
     def new_switch(
         slice: Slice = None,
         name: str = None,
@@ -123,52 +159,48 @@ class Switch(Node):
         raise_exception: bool = False,
     ) -> Switch:
         """
-        Not intended for API call.  See: Slice.add_node()
+        Creates a new FABRIC switch on the slice.
 
-        Creates a new FABRIC node and returns a fablib node with the
-        new node.
+        Not intended for API use. Use slice.add_switch() instead.
 
-        :param slice: the fablib slice to build the new node on
-        :type slice: Slice
-
-        :param name: the name of the new node
+        :param slice: the fablib slice to build the new switch on
+        :type slice: SliceV2
+        :param name: the name of the new switch
         :type name: str
-
-        :param site: the name of the site to build the node on
+        :param site: the name of the site to build the switch on
         :type site: str
-
-        :param avoid: a list of node names to avoid
+        :param avoid: a list of site names to avoid
         :type avoid: List[str]
-
-        :param validate: Validate node can be allocated w.r.t available resources
+        :param validate: Validate switch can be allocated w.r.t available resources
         :type validate: bool
-
-        :param raise_exception: Raise exception in case of failure
+        :param raise_exception: Raise exception if validation fails
         :type raise_exception: bool
-
-        :return: a new fablib node
-        :rtype: Node
+        :return: a new Switch
+        :rtype: Switch
         """
-        if not avoid:
+        if avoid is None:
             avoid = []
 
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(
-                avoid=avoid,
-            )
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
-        log.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
-        node = Switch(
+        log.info(f"Adding switch: {name}, slice: {slice.get_name()}, site: {site}")
+
+        from fabrictestbed.slice_editor import Capacities
+
+        switch = Switch(
             slice,
             slice.topology.add_switch(name=name, site=site),
             validate=validate,
             raise_exception=raise_exception,
         )
-        node.__set_capacities(unit=1)
+        # Set capacities
+        cap = Capacities(unit=1)
+        switch.get_fim().set_properties(capacities=cap)
+        switch.init_fablib_data()
 
-        node.init_fablib_data()
+        return switch
 
-        return node
 
     def toJson(self):
         """
@@ -259,51 +291,6 @@ class Switch(Node):
         context = self.toDict(skip=["ssh_command"])
         context["components"] = []
         return context
-
-    def get_template_context(self, skip: List[str] = None):
-        """
-        Get the full Jinja2 template context for this switch from the slice.
-
-        Retrieves the template rendering context from the slice, which includes
-        switch variables and configuration. By default, excludes SSH command.
-
-        :param skip: List of field names to exclude from the context
-        :type skip: List[str]
-
-        :return: Template context dictionary for Jinja2 rendering
-        :rtype: dict
-        """
-        if not skip:
-            skip = ["ssh_command"]
-
-        return self.get_slice().get_template_context(self, skip=skip)
-
-    def render_template(self, input_string, skip: List[str] = None):
-        """
-        Render a Jinja2 template string using the switch's context.
-
-        Processes the input template string with the switch's template
-        context variables and returns the rendered result. By default,
-        excludes SSH command from the context.
-
-        :param input_string: Jinja2 template string to render
-        :type input_string: str
-
-        :param skip: List of field names to exclude from the context
-        :type skip: List[str]
-
-        :return: Rendered template output string
-        :rtype: str
-        """
-        if not skip:
-            skip = ["ssh_command"]
-
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context(skip=skip))
-
-        return output_string
 
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
@@ -414,9 +401,11 @@ class Switch(Node):
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> Union[Dict[str, Interface], List[Interface]]:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
+        Results are cached. Use refresh=True to force reload.
 
         :param include_subs: Flag indicating if sub interfaces should be included
         :type include_subs: bool
@@ -424,24 +413,59 @@ class Switch(Node):
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
 
-        :return: a list of interfaces on the node
-        :rtype: List[Interface]
+        :param output: return type - 'list' or 'dict'
+        :type output: str
+
+        :return: interfaces on the node
+        :rtype: Union[Dict[str, Interface], List[Interface]]
         """
-        if refresh or len(self.interfaces) == 0:
-            # Add them to the list in sorted order
-            for name, ifs in self.get_fim().interfaces.items():
-                self.interfaces[name] = Interface(
-                    node=self, fim_interface=ifs, model="NIC_P4"
-                )
+        if self._interfaces_cache and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self._interfaces_cache
+            return [
+                self._interfaces_cache[key]
+                for key in sorted(self._interfaces_cache.keys())
+            ]
+
+        self._interfaces_cache = {}
+
+        try:
+            if self.fim_node and hasattr(self.fim_node, "interfaces"):
+                for name, fim_iface in self.fim_node.interfaces.items():
+                    self._interfaces_cache[name] = Interface(
+                        node=self, fim_interface=fim_iface, model="NIC_P4"
+                    )
+        except Exception as e:
+            log.debug(f"Error getting interfaces: {e}")
+
+        # Keep self.interfaces in sync for backward compatibility
+        self.interfaces = dict(self._interfaces_cache)
 
         if output == "dict":
-            return self.interfaces
+            return self._interfaces_cache
 
-        # Extract and sort interface names numerically
-        sorted_interfaces = [
-            self.interfaces[key] for key in sorted(self.interfaces.keys())
+        return [
+            self._interfaces_cache[key]
+            for key in sorted(self._interfaces_cache.keys())
         ]
-        return sorted_interfaces
+
+    def get_interface(
+        self, name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
+        """
+        Gets a specific interface by name.
+
+        :param name: the interface name
+        :type name: str
+        :param refresh: force refresh from FIM
+        :type refresh: bool
+        :return: the interface
+        :rtype: Interface
+        """
+        if not self._interfaces_cache or refresh or self._fim_dirty:
+            self.get_interfaces(refresh=refresh, output="dict")
+
+        return self._interfaces_cache.get(name)
 
     @staticmethod
     def get_node(slice: Slice = None, node=None):

@@ -45,7 +45,7 @@ from fabrictestbed_extensions.fablib.node import Node
 log = logging.getLogger("fablib")
 
 
-class NodeValidatorV2:
+class NodeValidator:
     """Validates node allocation against ResourcesV2 plain-dict data.
 
     All methods are ``@staticmethod`` — no instance state is needed.
@@ -202,7 +202,7 @@ class NodeValidatorV2:
 
                 host = hosts.get(node.get_host())
                 allocated_comps = allocated.setdefault(node.get_host(), {})
-                status, error = NodeValidatorV2.can_allocate_node_in_host(
+                status, error = NodeValidator.can_allocate_node_in_host(
                     host=host, node=node, allocated=allocated_comps, site=site
                 )
                 if not status:
@@ -212,7 +212,7 @@ class NodeValidatorV2:
             # No specific host — try each host until one fits.
             for host_name, host in hosts.items():
                 allocated_comps = allocated.setdefault(host_name, {})
-                status, error = NodeValidatorV2.can_allocate_node_in_host(
+                status, error = NodeValidator.can_allocate_node_in_host(
                     host=host, node=node, allocated=allocated_comps, site=site
                 )
                 if status:
@@ -248,7 +248,7 @@ class NodeValidatorV2:
         allocated: Dict[str, dict] = {}
         errors: Dict[str, str] = {}
         for node in nodes:
-            status, error = NodeValidatorV2.validate_node(
+            status, error = NodeValidator.validate_node(
                 node=node, resources=resources, allocated=allocated
             )
             if not status:

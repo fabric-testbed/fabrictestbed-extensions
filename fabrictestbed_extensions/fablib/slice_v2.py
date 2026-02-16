@@ -67,8 +67,7 @@ from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
-from fabrictestbed_extensions.fablib.facility_port_v2 import FacilityPortV2
-from fabrictestbed_extensions.fablib.switch_v2 import SwitchV2
+from fabrictestbed_extensions.fablib.switch import Switch
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
@@ -83,17 +82,18 @@ from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.attestable_switch import Attestable_Switch
 from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.interface_v2 import InterfaceV2
-from fabrictestbed_extensions.fablib.network_service_v2 import NetworkServiceV2
+from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
-from fabrictestbed_extensions.fablib.node_v2 import NodeV2
+from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
 log = logging.getLogger("fablib")
 
 
 class SliceV2:
     def __init__(
-        self, fablib_manager: FablibManagerV2, name: str = None, user_only: bool = True
+        self, fablib_manager: FablibManagerV2, name: str = None, user_only: bool = True,
+            sm_slice: Optional[SliceDTO] = None,
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -103,18 +103,20 @@ class SliceV2:
         """
         super().__init__()
 
-        self.network_iface_map = None
-        self.slice_name = name
-        self.sm_slice: Optional[SliceDTO] = None
-        self.slice_id: Optional[str] = None
-        self.topology: Optional[ExperimentTopology] = None
-        self.slivers: List[SliverDTO] = []
         self.fablib_manager:FablibManagerV2 = fablib_manager
+        self.network_iface_map = None
+        self.sm_slice: Optional[SliceDTO] = sm_slice
+        self.slice_name = sm_slice.slice_id if sm_slice else name
+        self.slice_id: Optional[str] = sm_slice.slice_id if sm_slice else None
+        self.topology: Optional[ExperimentTopology] = ExperimentTopology()
+        if self.sm_slice and self.sm_slice.model and len(self.sm_slice.model) > 0:
+            self.topology.load(graph_string=self.sm_slice.model)
 
+        self.slivers: List[SliverDTO] = []
         self.nodes: Dict[str, Node] = {}
-        self.facilities: Dict[str, FacilityPortV2] = {}
-        self.interfaces: Dict[str, InterfaceV2] = {}
-        self.network_services: Dict[str, NetworkServiceV2] = {}
+        self.facilities: Dict[str, FacilityPort] = {}
+        self.interfaces: Dict[str, Interface] = {}
+        self.network_services: Dict[str, NetworkService] = {}
         self.update_topology_count: int = 0
         self.update_slivers_count: int = 0
         self.update_slice_count: int = 0
@@ -423,7 +425,7 @@ class SliceV2:
 
             table.append(iface.toDict())
         if pretty_names:
-            pretty_names_dict = InterfaceV2.get_pretty_name_dict()
+            pretty_names_dict = Interface.get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -448,7 +450,6 @@ class SliceV2:
         :return: Slice
         """
         slice = SliceV2(fablib_manager=fablib_manager, name=name)
-        slice.topology = ExperimentTopology()
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
         return slice
@@ -471,12 +472,8 @@ class SliceV2:
         """
         log.info("slice.get_slice()")
 
-        slice = SliceV2(fablib_manager=fablib_manager, name=sm_slice.name)
-        slice.topology = ExperimentTopology()
-        slice.sm_slice = sm_slice
-        slice.slice_id = sm_slice.slice_id
-        slice.slice_name = sm_slice.name
-        slice.user_only = user_only
+        slice = SliceV2(fablib_manager=fablib_manager, sm_slice=sm_slice,
+                        user_only=user_only)
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
 
@@ -954,10 +951,10 @@ class SliceV2:
         self,
         name: str,
         mirror_interface_name: str,
-        receive_interface: Optional[InterfaceV2] = None,
+        receive_interface: Optional[Interface] = None,
         mirror_interface_vlan: Optional[str] = None,
         mirror_direction: Optional[str] = "both",
-    ) -> NetworkServiceV2:
+    ) -> NetworkService:
         """
         Adds a special PortMirror service.
 
@@ -976,7 +973,7 @@ class SliceV2:
         """
         self.nodes = None
         self.interfaces = {}
-        port_mirror_service = NetworkServiceV2.new_portmirror_service(
+        port_mirror_service = NetworkService.new_portmirror_service(
             slice=self,
             name=name,
             mirror_interface_name=mirror_interface_name,
@@ -989,12 +986,12 @@ class SliceV2:
     def add_l2network(
         self,
         name: str = None,
-        interfaces: List[InterfaceV2] = [],
+        interfaces: List[Interface] = [],
         type: str = None,
         subnet: ipaddress = None,
         gateway: ipaddress = None,
         user_data: dict = {},
-    ) -> NetworkServiceV2:
+    ) -> NetworkService:
         """
         Adds a new L2 network service to this slice.
 
@@ -1050,7 +1047,7 @@ class SliceV2:
         self.nodes = None
         self.interfaces = {}
 
-        network_service = NetworkServiceV2.new_l2network(
+        network_service = NetworkService.new_l2network(
             slice=self, name=name, interfaces=interfaces, type=type, user_data=user_data
         )
         if subnet:
@@ -1063,13 +1060,13 @@ class SliceV2:
     def add_l3network(
         self,
         name: str = None,
-        interfaces: List[InterfaceV2] = [],
+        interfaces: List[Interface] = [],
         type: str = "IPv4",
         user_data: dict = {},
         technology: str = None,
         subnet: ipaddress.ip_network = None,
         site: str = None,
-    ) -> NetworkServiceV2:
+    ) -> NetworkService:
         """
         Adds a new L3 network service to this slice.
 
@@ -1136,7 +1133,7 @@ class SliceV2:
         self.nodes = None
         self.interfaces = {}
 
-        return NetworkServiceV2.new_l3network(
+        return NetworkService.new_l3network(
             slice=self,
             name=name,
             interfaces=interfaces,
@@ -1156,7 +1153,7 @@ class SliceV2:
         peer_labels: Labels = None,
         bandwidth: int = None,
         mtu: int = None,
-    ) -> FacilityPortV2:
+    ) -> FacilityPort:
         """
         Adds a new L2 facility port to this slice
 
@@ -1177,7 +1174,7 @@ class SliceV2:
         :return: a new L2 facility port
         :rtype: NetworkService
         """
-        return FacilityPortV2.new_facility_port(
+        return FacilityPort.new_facility_port(
             slice=self,
             name=name,
             site=site,
@@ -1252,9 +1249,9 @@ class SliceV2:
         :type raise_exception: bool
 
         :return: a new node
-        :rtype: NodeV2
+        :rtype: Node
         """
-        node = NodeV2.new_node(
+        node = Node.new_node(
             slice=self,
             name=name,
             site=site,
@@ -1377,7 +1374,7 @@ class SliceV2:
         avoid: List[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
-    ) -> SwitchV2:
+    ) -> Switch:
         """
         Creates a new switch on this fablib slice.
 
@@ -1409,7 +1406,7 @@ class SliceV2:
         if not avoid:
             avoid = []
 
-        node = SwitchV2.new_switch(
+        node = Switch.new_switch(
             slice=self,
             name=name,
             site=site,
@@ -1440,7 +1437,7 @@ class SliceV2:
 
     def get_object_by_reservation(
         self, reservation_id: str
-    ) -> Union[Node, NetworkServiceV2, InterfaceV2, None]:
+    ) -> Union[Node, NetworkService, Interface, None]:
         """
         Gets an object associated with this slice by its reservation ID.
 
@@ -1571,10 +1568,10 @@ class SliceV2:
             for node_name, fim_node in current_topology_nodes.items():
                 if node_name not in self.nodes:
                     if fim_node.type == NodeType.Switch:
-                        node_obj = SwitchV2.get_switch(self, fim_node)
+                        node_obj = Switch.get_switch(self, fim_node)
                     else:
                         # Add new node to the dictionary if it doesn't exist
-                        node_obj = NodeV2.get_node(self, fim_node)
+                        node_obj = Node.get_node(self, fim_node)
                     self.nodes[node_name] = node_obj
                 else:
                     # Update existing node's fim_node reference
@@ -1619,7 +1616,7 @@ class SliceV2:
         self.__initialize_nodes()
         return list(self.nodes.values())
 
-    def get_facility(self, name: str) -> FacilityPortV2:
+    def get_facility(self, name: str) -> FacilityPort:
         """
         Gets a facility port from the slice by name.
 
@@ -1635,14 +1632,14 @@ class SliceV2:
 
             # Not in cache - get from topology and cache it
             fim_facility = self.get_fim_topology().facilities[name]
-            facility = FacilityPortV2.get_facility_port(self, fim_facility)
+            facility = FacilityPort.get_facility_port(self, fim_facility)
             self.facilities[name] = facility
             return facility
         except Exception as e:
             log.info(e, exc_info=True)
             raise Exception(f"Facility not found: {name}")
 
-    def get_facilities(self) -> List[FacilityPortV2]:
+    def get_facilities(self) -> List[FacilityPort]:
         """
         Gets a list of all nodes in this slice.
 
@@ -1686,7 +1683,7 @@ class SliceV2:
             # Update the facilities dictionary with current topology facilities
             for fac_name, facility in current.items():
                 if fac_name not in self.facilities:
-                    self.facilities[fac_name] = FacilityPortV2.get_facility_port(
+                    self.facilities[fac_name] = FacilityPort.get_facility_port(
                         self, facility
                     )
                 else:
@@ -1778,9 +1775,9 @@ class SliceV2:
             # Not in cache - get from topology (single access)
             fim_node = self.get_fim_topology().nodes[name]
             if fim_node.type == NodeType.Switch:
-                node_obj = SwitchV2.get_switch(self, fim_node)
+                node_obj = Switch.get_switch(self, fim_node)
             else:
-                node_obj = NodeV2.get_node(self, fim_node)
+                node_obj = Node.get_node(self, fim_node)
 
             # Cache it for future access
             self.nodes[name] = node_obj
@@ -1791,7 +1788,7 @@ class SliceV2:
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, InterfaceV2], list[InterfaceV2]]:
+    ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets all interfaces in this slice.
 
@@ -1824,7 +1821,7 @@ class SliceV2:
         else:
             return list(self.interfaces.values())
 
-    def get_interface(self, name: str = None, refresh: bool = False) -> InterfaceV2:
+    def get_interface(self, name: str = None, refresh: bool = False) -> Interface:
         """
         Gets a particular interface from this slice.
 
@@ -1843,7 +1840,7 @@ class SliceV2:
                 return interface
         raise Exception("Interface not found: {}".format(name))
 
-    def get_l3networks(self) -> List[NetworkServiceV2]:
+    def get_l3networks(self) -> List[NetworkService]:
         """
         Gets all L3 networks services in this slice
 
@@ -1851,13 +1848,13 @@ class SliceV2:
         :rtype: List[NetworkService]
         """
         try:
-            return NetworkServiceV2.get_l3network_services(self)
+            return NetworkService.get_l3network_services(self)
         except Exception as e:
             log.info(e, exc_info=True)
 
         return []
 
-    def get_l3network(self, name: str = None) -> Union[NetworkServiceV2 or None]:
+    def get_l3network(self, name: str = None) -> Union[NetworkService or None]:
         """
         Gets a particular L3 network service from this slice.
 
@@ -1868,11 +1865,11 @@ class SliceV2:
         :rtype: list[NetworkService]
         """
         try:
-            return NetworkServiceV2.get_l3network_service(self, name)
+            return NetworkService.get_l3network_service(self, name)
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_l2networks(self) -> List[NetworkServiceV2]:
+    def get_l2networks(self) -> List[NetworkService]:
         """
         Gets a list of the L2 network services on this slice.
 
@@ -1880,13 +1877,13 @@ class SliceV2:
         :rtype: list[NetworkService]
         """
         try:
-            return NetworkServiceV2.get_l2network_services(self)
+            return NetworkService.get_l2network_services(self)
         except Exception as e:
             log.info(e, exc_info=True)
 
         return []
 
-    def get_l2network(self, name: str = None) -> Optional[NetworkServiceV2]:
+    def get_l2network(self, name: str = None) -> Optional[NetworkService]:
         """
         Gets a particular L2 network service from this slice.
 
@@ -1896,11 +1893,11 @@ class SliceV2:
         :rtype: NetworkService
         """
         try:
-            return NetworkServiceV2.get_l2network_service(self, name)
+            return NetworkService.get_l2network_service(self, name)
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_network_services(self, force_refresh: bool = False) -> List[NetworkServiceV2]:
+    def get_network_services(self, force_refresh: bool = False) -> List[NetworkService]:
         """
         Not intended for API use. See: slice.get_networks()
 
@@ -1920,12 +1917,12 @@ class SliceV2:
         try:
             # Get topology network services (single access)
             fim_network_services = self.get_fim_topology().network_services
-            valid_types = NetworkServiceV2.get_fim_network_service_types()
+            valid_types = NetworkService.get_fim_network_service_types()
 
             for net_name, net in fim_network_services.items():
                 if str(net.get_property("type")) in valid_types:
                     if net_name not in self.network_services:
-                        self.network_services[net_name] = NetworkServiceV2(
+                        self.network_services[net_name] = NetworkService(
                             slice=self, fim_network_service=net
                         )
                     else:
@@ -1946,7 +1943,7 @@ class SliceV2:
 
         return list(self.network_services.values())
 
-    def get_networks(self) -> List[NetworkServiceV2]:
+    def get_networks(self) -> List[NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice.
 
@@ -1962,7 +1959,7 @@ class SliceV2:
 
         return []
 
-    def get_network(self, name: str = None) -> Optional[NetworkServiceV2]:
+    def get_network(self, name: str = None) -> Optional[NetworkService]:
         """
         Gets a particular network service from this slice.
 
@@ -2810,7 +2807,7 @@ class SliceV2:
         table = sorted(table, key=lambda x: (x["name"]))
 
         if pretty_names:
-            pretty_names_dict = NetworkServiceV2.get_pretty_name_dict()
+            pretty_names_dict = NetworkService.get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -3184,7 +3181,7 @@ class SliceV2:
         table = sorted(table, key=lambda x: (x["name"]))
 
         if pretty_names:
-            pretty_names_dict = FacilityPortV2.get_pretty_name_dict()
+            pretty_names_dict = FacilityPort.get_pretty_name_dict()
         else:
             pretty_names_dict = {}
 
@@ -3329,7 +3326,7 @@ class SliceV2:
         Validate the slice w.r.t available resources before submission.
 
         Fetches resources once and delegates to
-        :meth:`NodeValidatorV2.validate_nodes` for batch validation.
+        :meth:`NodeValidator.validate_nodes` for batch validation.
 
         :param raise_exception: raise exception if validation fails
         :type raise_exception: bool
@@ -3338,12 +3335,12 @@ class SliceV2:
                  each requested node
         :rtype: Tuple[bool, Dict[str, str]]
         """
-        from fabrictestbed_extensions.fablib.validator_v2 import NodeValidatorV2
+        from fabrictestbed_extensions.fablib.validator import NodeValidator
 
         resources = self.get_fablib_manager().get_resources()
         nodes = self.get_nodes()
 
-        all_valid, errors = NodeValidatorV2.validate_nodes(
+        all_valid, errors = NodeValidator.validate_nodes(
             nodes=nodes, resources=resources
         )
 

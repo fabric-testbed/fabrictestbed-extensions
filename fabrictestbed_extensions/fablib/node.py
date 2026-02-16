@@ -55,7 +55,6 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
-import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
 from fabrictestbed_extensions.utils.utils import Utils
@@ -80,14 +79,17 @@ from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 log = logging.getLogger("fablib")
 
 
-class Node:
+class Node(TemplateMixin):
     """
     A class for working with FABRIC nodes.
     """
+
+    _default_skip = ["ssh_command"]
 
     default_cores = 2
     default_ram = 8
@@ -142,7 +144,28 @@ class Node:
 
         self.sliver = None
 
+        # V2 specific: dirty flag for caching
+        self._fim_dirty: bool = True
+
+        # V2 specific: cached FIM properties (None means not yet cached)
+        self._cached_name: Optional[str] = None
+        self._cached_site: Optional[str] = None
+        self._cached_management_ip: Optional[str] = None
+        self._cached_reservation_id: Optional[str] = None
+
         logging.getLogger("paramiko").setLevel(logging.WARNING)
+
+    def _invalidate_cache(self):
+        """
+        Invalidate all cached properties.
+
+        Called when the FIM node is updated.
+        """
+        self._fim_dirty = True
+        self._cached_name = None
+        self._cached_site = None
+        self._cached_management_ip = None
+        self._cached_reservation_id = None
 
     def get_fablib_manager(self):
         """
@@ -194,43 +217,39 @@ class Node:
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = [],
+        avoid: List[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
-    ):
+    ) -> Node:
         """
-        Not intended for API call.  See: Slice.add_node()
+        Creates a new FABRIC node on the slice.
 
-        Creates a new FABRIC node and returns a fablib node with the
-        new node.
+        Not intended for API use. Use slice.add_node() instead.
 
         :param slice: the fablib slice to build the new node on
-        :type slice: Slice
-
+        :type slice: SliceV2
         :param name: the name of the new node
         :type name: str
-
         :param site: the name of the site to build the node on
         :type site: str
-
-        :param avoid: a list of node names to avoid
+        :param avoid: a list of site names to avoid
         :type avoid: List[str]
-
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
-
-        :param raise_exception: Raise exception in case of failure
+        :param raise_exception: Raise exception if validation fails
         :type raise_exception: bool
-
-        :return: a new fablib node
+        :return: a new Node
         :rtype: Node
         """
+        if avoid is None:
+            avoid = []
+
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(
-                avoid=avoid,
-            )
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
         log.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
+
+        # Create FIM node and NodeV2 instance
         node = Node(
             slice,
             slice.topology.add_node(name=name, site=site),
@@ -241,7 +260,6 @@ class Node:
             cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
         )
         node.set_image(Node.default_image)
-
         node.init_fablib_data()
 
         return node
@@ -262,9 +280,7 @@ class Node:
         :return: a new fablib node storing resources
         :rtype: Node
         """
-        ret_val = Node(slice, node)
-        ret_val.get_interfaces()
-        return ret_val
+        return Node(slice=slice, node=node)
 
     def toJson(self):
         """
@@ -362,17 +378,6 @@ class Node:
         #    context["components"].append(component.generate_template_context())
 
         return context
-
-    def get_template_context(self, skip: List[str] = ["ssh_command"]):
-        return self.get_slice().get_template_context(self, skip=skip)
-
-    def render_template(self, input_string, skip: List[str] = ["ssh_command"]):
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context(skip=skip))
-
-        return output_string
 
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
@@ -871,17 +876,21 @@ class Node:
         """
         return self.slice
 
-    def get_name(self) -> str or None:
+    def get_name(self) -> str:
         """
         Gets the name of the FABRIC node.
+
+        Results are cached for performance.
 
         :return: the name of the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().name
-        except:
-            return None
+        if self._cached_name is None:
+            try:
+                self._cached_name = self.fim_node.name
+            except Exception:
+                self._cached_name = ""
+        return self._cached_name
 
     def get_instance_name(self) -> str or None:
         """
@@ -1012,45 +1021,56 @@ class Node:
         except:
             return None
 
-    def get_site(self) -> str or None:
+    def get_site(self) -> str:
         """
-        Gets the sitename on the FABRIC node.
+        Gets the site this node is on.
 
-        :return: the sitename on the node
+        Results are cached for performance.
+
+        :return: the site this node is on
         :rtype: String
         """
-        try:
-            return self.get_fim_node().site
-        except:
-            return None
+        if self._cached_site is None:
+            try:
+                self._cached_site = self.fim_node.site
+            except Exception:
+                self._cached_site = ""
+        return self._cached_site
 
-    def get_management_ip(self) -> str or None:
+    def get_management_ip(self) -> str:
         """
-        Gets the management IP on the FABRIC node.
+        Gets the management IP of the node (IPv6).
+
+        Results are cached for performance.
 
         :return: management IP
         :rtype: String
         """
-        try:
-            return self.get_fim_node().management_ip
-        except:
-            return None
+        if self._cached_management_ip is None:
+            try:
+                self._cached_management_ip = str(self.fim_node.management_ip)
+            except Exception:
+                self._cached_management_ip = ""
+        return self._cached_management_ip
 
-    def get_reservation_id(self) -> str or None:
+    def get_reservation_id(self) -> str:
         """
-        Gets the reservation ID on the FABRIC node.
+        Gets the reservation ID of the node.
 
-        :return: reservation ID on the node
+        Results are cached for performance.
+
+        :return: reservation ID
         :rtype: String
         """
-        try:
-            return (
-                self.get_fim_node()
-                .get_property(pname="reservation_info")
-                .reservation_id
-            )
-        except:
-            return None
+        if self._cached_reservation_id is None:
+            try:
+                self._cached_reservation_id = str(
+                    self.fim_node.get_property(pname="reservation_info").reservation_id
+                )
+            except Exception:
+                self._cached_reservation_id = ""
+        return self._cached_reservation_id
+
 
     def get_reservation_state(self) -> str or None:
         """
@@ -1081,77 +1101,6 @@ class Node:
             )
         except:
             return ""
-
-    def get_interfaces(
-        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
-        """
-        Gets a list of the interfaces associated with the FABRIC node.
-
-        :param include_subs: Flag indicating if sub interfaces should be included
-        :type include_subs: bool
-
-        :param refresh: Refresh the interface object with latest Fim info
-        :type refresh: bool
-
-        :param output: Specify how the return type is expected; Possible values: list or dict
-        :type output: str
-
-        :return: a list or dict of interfaces on the node
-        :rtype: Union[dict[str, Interface], list[Interface]]
-        """
-        if refresh or len(self.interfaces) == 0:
-            self.interfaces = {}
-            for component in self.get_components(refresh=refresh):
-                c_interfaces = component.get_interfaces(
-                    include_subs=include_subs, refresh=refresh, output="dict"
-                )
-                self.interfaces.update(c_interfaces)
-
-        if output == "dict":
-            return self.interfaces
-        else:
-            return list(self.interfaces.values())
-
-    def get_interface(
-        self, name: str = None, network_name: str = None, refresh: bool = False
-    ) -> Interface or None:
-        """
-        Gets a particular interface associated with a FABRIC node.
-        Accepts either the interface name or a network_name.  If a
-        network name is used this method will return the interface on
-        the node that is connected to the network specified.  If a
-        name and network_name are both used, the interface name will
-        take precedence.
-
-        :param name: interface name to search for
-        :type name: str
-
-        :param network_name: network name to search for
-        :type name: str
-
-        :param refresh: Refresh the interface object with latest Fim info
-        :type refresh: bool
-
-        :raise Exception: if interface is not found
-
-        :return: an interface on the node
-        :rtype: Interface
-        """
-        if name is not None:
-            interface = self.get_interfaces(refresh=refresh, output="dict").get(name)
-            if interface is not None:
-                return interface
-        elif network_name is not None:
-            for interface in self.get_interfaces(refresh=refresh):
-                if (
-                    interface is not None
-                    and interface.get_network() is not None
-                    and interface.get_network().get_name() == network_name
-                ):
-                    return interface
-
-        raise Exception("Interface not found: {}".format(name))
 
     def get_username(self) -> str:
         """
@@ -1277,16 +1226,36 @@ class Node:
         """
         Gets a list of components associated with this node.
 
-        :param refresh: Refresh the component object with latest Fim info
-        :type refresh: bool
+        Results are cached. Use refresh=True to force reload from FIM.
 
+        :param refresh: Refresh the component objects with latest FIM info
+        :type refresh: bool
         :return: a list of components on this node
         :rtype: List[Component]
         """
-        if refresh or len(self.components) == 0:
+        # Skip refresh if cache is valid
+        if self.components and not refresh and not self._fim_dirty:
+            return list(self.components.values())
+
+        # Get components from FIM (single access)
+        fim_components = self.fim_node.components
+
+        if refresh or not self.components:
             self.components.clear()
-            for component_name, component in self.get_fim_node().components.items():
-                self.components[component_name] = Component(self, component)
+
+        # Update or create component objects
+        for component_name, fim_component in fim_components.items():
+            if component_name not in self.components:
+                self.components[component_name] = Component(self, fim_component)
+            elif refresh:
+                # Update existing component's FIM reference
+                self.components[component_name].fim_component = fim_component
+
+        # Remove components no longer in FIM
+        current_names = set(fim_components.keys())
+        to_remove = [name for name in self.components if name not in current_names]
+        for name in to_remove:
+            del self.components[name]
 
         return list(self.components.values())
 
@@ -1294,25 +1263,29 @@ class Node:
         """
         Retrieve a component associated with this node.
 
-        :param name: Name of the component to retrieve.
-        :param refresh: Whether to refresh the component from the latest FIM data.
-        :return: The requested component.
-        :raises Exception: If the component is not found.
+        Results are cached. Use refresh=True to force reload from FIM.
+
+        :param name: Name of the component to retrieve
+        :type name: str
+        :param refresh: Whether to refresh the component from the latest FIM data
+        :type refresh: bool
+        :return: The requested component
+        :rtype: Component
+        :raises Exception: If the component is not found
         """
         try:
             calculated_name = Component.calculate_name(node=self, name=name)
 
-            if not refresh:
-                # Check both calculated and raw names
+            # Check cache first (if not forcing refresh)
+            if not refresh and not self._fim_dirty:
                 for key in (calculated_name, name):
                     if key in self.components:
                         return self.components[key]
 
-            # Attempt to retrieve from FIM node
-            fim_node = self.get_fim_node()
-            fim_comp = fim_node.components.get(
-                calculated_name
-            ) or fim_node.components.get(name)
+            # Get from FIM (single access)
+            fim_components = self.fim_node.components
+            fim_comp = fim_components.get(calculated_name) or fim_components.get(name)
+
             if not fim_comp:
                 raise Exception(f"Component not found in FIM: {name}")
 
@@ -1325,6 +1298,79 @@ class Node:
         except Exception as e:
             log.error(f"Error retrieving component '{name}': {e}", exc_info=True)
             raise Exception(f"Component not found: {name}")
+
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[Dict[str, Interface], List[Interface]]:
+        """
+        Gets a list of the interfaces associated with the FABRIC node.
+
+        Results are cached. Use refresh=True to force reload from FIM.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
+        :param refresh: Refresh the interface objects with latest FIM info
+        :type refresh: bool
+        :param output: Return type - 'list' or 'dict'
+        :type output: str
+        :return: interfaces on the node
+        :rtype: Union[Dict[str, Interface], List[Interface]]
+        """
+        # Skip refresh if cache is valid
+        if self.interfaces and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self.interfaces
+            return list(self.interfaces.values())
+
+        # Rebuild interface cache from components
+        self.interfaces.clear()
+        for component in self.get_components(refresh=refresh):
+            c_interfaces = component.get_interfaces(
+                include_subs=include_subs, refresh=refresh, output="dict"
+            )
+            self.interfaces.update(c_interfaces)
+
+        if output == "dict":
+            return self.interfaces
+        return list(self.interfaces.values())
+
+    def get_interface(
+        self, name: str = None, network_name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
+        """
+        Gets a particular interface associated with a FABRIC node.
+
+        Accepts either the interface name or a network_name. If a network name
+        is used, returns the interface connected to that network. If both name
+        and network_name are provided, name takes precedence.
+
+        :param name: interface name to search for
+        :type name: str
+        :param network_name: network name to search for
+        :type network_name: str
+        :param refresh: Refresh interface objects with latest FIM info
+        :type refresh: bool
+        :return: an interface on the node
+        :rtype: Interface
+        :raises Exception: if interface is not found
+        """
+        # Ensure interfaces are loaded
+        interfaces = self.get_interfaces(refresh=refresh, output="dict")
+
+        if name is not None:
+            interface = interfaces.get(name)
+            if interface is not None:
+                return interface
+        elif network_name is not None:
+            for interface in interfaces.values():
+                if (
+                    interface is not None
+                    and interface.get_network() is not None
+                    and interface.get_network().get_name() == network_name
+                ):
+                    return interface
+
+        raise Exception(f"Interface not found: {name or network_name}")
 
     def get_ssh_command(self) -> str:
         """
@@ -3871,5 +3917,7 @@ class Node:
     def update(self, fim_node: FimNode):
         if fim_node:
             self.fim_node = fim_node
+            self._invalidate_cache()
             self.get_components(refresh=True)
             self.get_interfaces(refresh=True)
+            self._fim_dirty = False

@@ -43,10 +43,10 @@ import json
 import time
 from typing import TYPE_CHECKING, Union
 
-import jinja2
 from fim.user import ComponentType
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -64,7 +64,7 @@ from tabulate import tabulate
 log = logging.getLogger("fablib")
 
 
-class Component:
+class Component(TemplateMixin):
     """Represents a hardware component attached to a FABRIC node.
 
     Components (NICs, GPUs, FPGAs, NVMe, etc.) extend a node's capabilities and
@@ -203,38 +203,6 @@ class Component:
 
         #    context["interfaces"].append(interface.generate_template_context())
         return context
-
-    def get_template_context(self):
-        """
-        Get the Jinja2 template context for this component from the slice.
-
-        Retrieves the template rendering context from the slice, which includes
-        component variables and configuration that can be used in Jinja2 templates.
-
-        :return: Template context dictionary for Jinja2 rendering
-        :rtype: dict
-        """
-        return self.get_slice().get_template_context(self)
-
-    def render_template(self, input_string):
-        """
-        Render a Jinja2 template string using the component's context.
-
-        Processes the input template string with the component's template
-        context variables and returns the rendered result.
-
-        :param input_string: Jinja2 template string to render
-        :type input_string: str
-
-        :return: Rendered template output string
-        :rtype: str
-        """
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context())
-
-        return output_string
 
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True

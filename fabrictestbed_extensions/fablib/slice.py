@@ -305,11 +305,6 @@ class Slice:
         for component in self.get_components(refresh=refresh):
             table.append(component.toDict())
 
-        # if fields == None:
-        #    fields = ["Name", "Details", "Disk",
-        #              "Units", "PCI Address", "Model",
-        #              "Type"]
-
         if pretty_names:
             pretty_names_dict = Component.get_pretty_name_dict()
         else:
