@@ -1913,9 +1913,9 @@ Host * !bastion.fabric-testbed.net
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        from fabrictestbed_extensions.fablib.validator_v2 import NodeValidatorV2
+        from fabrictestbed_extensions.fablib.validator import NodeValidator
 
-        return NodeValidatorV2.validate_node(
+        return NodeValidator.validate_node(
             node=node, resources=self.get_resources(), allocated=allocated
         )
 

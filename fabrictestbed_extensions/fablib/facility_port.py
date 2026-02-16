@@ -35,10 +35,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, List, Union, Optional, Dict
 
-from fabrictestbed.fabric_manager import FabricManager
 from fabrictestbed.slice_editor import Capacities, Labels
 
-from fabrictestbed_extensions.fablib.fablib import FablibManager
 from fabrictestbed_extensions.utils.utils import Utils
 from tabulate import tabulate
 
@@ -47,7 +45,7 @@ from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 if TYPE_CHECKING:
     from fim.user.node import Node as FimNode
-
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
     from fabrictestbed_extensions.fablib.slice import Slice
 
 log = logging.getLogger("fablib")
