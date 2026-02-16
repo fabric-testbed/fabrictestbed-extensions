@@ -919,7 +919,11 @@ class Config:
         if self.get_log_level():
             self.log.setLevel(self.LOG_LEVELS[self.get_log_level()])
 
-        if self.get_log_file():
+        # Avoid adding duplicate handlers when setup_logging is called multiple times
+        # (e.g., multiple FablibManager instances sharing the same "fablib" logger).
+        existing_handler_types = {type(h) for h in self.log.handlers}
+
+        if self.get_log_file() and RotatingFileHandler not in existing_handler_types:
             file_handler = RotatingFileHandler(
                 self.get_log_file(), backupCount=int(5), maxBytes=int(1024 * 1024 * 5)
             )
@@ -928,9 +932,10 @@ class Config:
             )
             self.log.addHandler(file_handler)
 
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.CRITICAL)
-        self.log.addHandler(console_handler)
+        if logging.StreamHandler not in existing_handler_types:
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.CRITICAL)
+            self.log.addHandler(console_handler)
 
     @staticmethod
     def get_metadata_tag() -> str:
