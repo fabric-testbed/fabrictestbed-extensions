@@ -98,7 +98,7 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_manager import SliceState
 
 from fabrictestbed_extensions.fablib.resources_v2 import ResourcesV2
-from fabrictestbed_extensions.fablib.slice_v2 import SliceV2
+from fabrictestbed_extensions.fablib.slice import Slice
 
 log = logging.getLogger("fablib")
 
@@ -243,7 +243,7 @@ class FablibManagerV2(Config):
         self.__slices_by_name = {}
         self.__slices_by_id = {}
 
-    def cache_slice(self, slice_object: SliceV2):
+    def cache_slice(self, slice_object: Slice):
         """
         Caches a Slice object by its name and ID.
 
@@ -254,7 +254,7 @@ class FablibManagerV2(Config):
         This ensures that the cache always contains the most recent slice object.
 
         :param slice_object: The Slice object to be cached.
-        :type slice_object: SliceV2
+        :type slice_object: Slice
         """
         with self.lock:
             name = slice_object.get_name()
@@ -272,28 +272,28 @@ class FablibManagerV2(Config):
             if slice_id:
                 self.__slices_by_id[slice_id] = slice_object
 
-    def update_slice_cache_id(self, slice_object: SliceV2):
+    def update_slice_cache_id(self, slice_object: Slice):
         """
         Updates the cache when a slice gets a new ID (e.g., after submit).
 
         This should be called after a slice is submitted and receives its slice_id.
 
         :param slice_object: The Slice object whose ID was updated.
-        :type slice_object: SliceV2
+        :type slice_object: Slice
         """
         with self.lock:
             slice_id = slice_object.get_slice_id()
             if slice_id and slice_id not in self.__slices_by_id:
                 self.__slices_by_id[slice_id] = slice_object
 
-    def remove_slice_from_cache(self, slice_object: SliceV2):
+    def remove_slice_from_cache(self, slice_object: Slice):
         """
         Removes a Slice object from the cache by its name and ID.
 
         Removes the slice from both `__slices_by_name` and `__slices_by_id` if present.
 
         :param slice_object: The Slice object to be removed from the cache.
-        :type slice_object: SliceV2
+        :type slice_object: Slice
         """
         with self.lock:
             if (
@@ -309,7 +309,7 @@ class FablibManagerV2(Config):
 
     def _get_slice_from_cache(
         self, slice_id: str = None, slice_name: str = None
-    ) -> Optional[SliceV2]:
+    ) -> Optional[Slice]:
         """
         Retrieves a Slice object from the cache by its ID or name.
 
@@ -318,7 +318,7 @@ class FablibManagerV2(Config):
         :param slice_id: The ID of the slice to retrieve.
         :param slice_name: The name of the slice to retrieve.
         :return: The Slice object if found, or None.
-        :rtype: SliceV2
+        :rtype: Slice
         """
         with self.lock:
             if slice_id:
@@ -1538,17 +1538,17 @@ Host * !bastion.fabric-testbed.net
         """
         return self.manager
 
-    def new_slice(self, name: str) -> SliceV2:
+    def new_slice(self, name: str) -> Slice:
         """
         Creates a new slice with the given name.
 
         :param name: the name to give the slice
         :type name: String
         :return: a new slice
-        :rtype: SliceV2
+        :rtype: Slice
         """
         # fabric = fablib()
-        new_slice = SliceV2.new_slice(self, name=name)
+        new_slice = Slice.new_slice(self, name=name)
         return new_slice
 
     def get_available_resources(
@@ -1665,7 +1665,7 @@ Host * !bastion.fabric-testbed.net
             table.append(slice.toDict())
 
         if pretty_names:
-            pretty_names_dict = SliceV2.get_pretty_names_dict()
+            pretty_names_dict = Slice.get_pretty_names_dict()
         else:
             pretty_names_dict = {}
 
@@ -1742,7 +1742,7 @@ Host * !bastion.fabric-testbed.net
         slice_id: Optional[str] = None,
         user_only: Optional[bool] = True,
         show_un_submitted: Optional[bool] = False,
-    ) -> List[SliceV2]:
+    ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -1763,7 +1763,7 @@ Host * !bastion.fabric-testbed.net
         :type show_un_submitted: bool
 
         :return: a list of slices
-        :rtype: List[SliceV2]
+        :rtype: List[Slice]
         """
         import time
 
@@ -1803,7 +1803,7 @@ Host * !bastion.fabric-testbed.net
 
         return_slices = []
         for slice in slices:
-            slice_object = SliceV2.get_slice(
+            slice_object = Slice.get_slice(
                 self, sm_slice=slice, user_only=user_only
             )
             return_slices.append(slice_object)
@@ -1815,7 +1815,7 @@ Host * !bastion.fabric-testbed.net
         slice_id: str = None,
         user_only: bool = True,
         show_un_submitted: bool = False,
-    ) -> SliceV2:
+    ) -> Slice:
         """
         Gets a slice by name or slice_id. Dead and Closing slices may have
         non-unique names and must be queried by slice_id.  Slices in all other
@@ -1834,7 +1834,7 @@ Host * !bastion.fabric-testbed.net
         :type show_un_submitted: bool
         :raises: Exception: if slice name or slice id are not inputted
         :return: the slice, if found
-        :rtype: SliceV2
+        :rtype: Slice
         """
         # Get the appropriate slices list
         if slice_id:
