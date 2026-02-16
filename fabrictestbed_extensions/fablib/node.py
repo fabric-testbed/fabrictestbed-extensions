@@ -57,6 +57,8 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
+from fabrictestbed.external_api.orchestrator_client import SliverDTO
+
 from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
@@ -201,7 +203,7 @@ class Node(TemplateMixin):
 
         return tabulate(table)  # , headers=["Property", "Value"])
 
-    def get_sliver(self) -> OrchestratorSliver:
+    def get_sliver(self) -> SliverDTO:
         """
         Gets the node SM sliver.
 

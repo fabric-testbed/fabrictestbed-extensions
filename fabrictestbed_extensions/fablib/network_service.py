@@ -35,6 +35,8 @@ import logging
 import threading
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+from fabrictestbed.external_api.orchestrator_client import SliverDTO
+
 from fabrictestbed_extensions.utils.utils import Utils
 from fim.slivers.path_info import Path
 from fim.user import ERO, Gateway
@@ -43,7 +45,6 @@ from tabulate import tabulate
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
-    from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
 import ipaddress
 import json
@@ -298,7 +299,7 @@ class NetworkService(TemplateMixin):
         name: str = None,
         mirror_interface_name: str = None,
         mirror_interface_vlan: str = None,
-        receive_interface: Interface or None = None,
+        receive_interface: Optional[Interface] = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
@@ -369,9 +370,9 @@ class NetworkService(TemplateMixin):
         name: str = None,
         interfaces: List[Interface] = [],
         type: str = None,
-        user_data={},
+        user_data: dict = {},
         technology: str = None,
-        subnet: ipaddress.ip_network = None,
+        subnet: Optional[ipaddress.ip_network] = None,
         site: str = None,
     ):
         """
@@ -485,7 +486,7 @@ class NetworkService(TemplateMixin):
         interfaces: List[Interface] = [],
         user_data: dict = {},
         technology: str = None,
-        subnet: ipaddress.ip_network = None,
+        subnet: Optional[ipaddress.ip_network] = None,
         site: str = None,
     ):
         """
@@ -521,7 +522,7 @@ class NetworkService(TemplateMixin):
         """
         fim_interfaces = []
         for interface in interfaces:
-            fim_interfaces.append(interface.get_fim_interface())
+            fim_interfaces.append(interface.get_fim())
 
         log.info(
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
@@ -591,7 +592,8 @@ class NetworkService(TemplateMixin):
         """
         Gets a particular L3 network service from this slice.
 
-
+        :param slice: the fabric slice to build this network on
+        :type slice: Slice
         :param name: Name network
         :type name: String
         :return: network services on this slice
@@ -618,7 +620,6 @@ class NetworkService(TemplateMixin):
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
-        fim_network_service = None
         for net_name, net in topology.network_services.items():
             if (
                 str(net.get_property("type"))
@@ -663,7 +664,6 @@ class NetworkService(TemplateMixin):
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
-        fim_network_service = None
         for net_name, net in topology.network_services.items():
             if (
                 str(net.get_property("type"))
@@ -680,6 +680,8 @@ class NetworkService(TemplateMixin):
         """
         Gest a particular network service from this slice.
 
+        :param slice: the fablib slice from which to get the network services
+        :type slice: Slice
         :param name: the name of the network service to search for
         :type name: str
         :return: a particular network service
@@ -734,8 +736,8 @@ class NetworkService(TemplateMixin):
         self._cached_name: Optional[str] = name
         self._cached_type: Optional[str] = None
         self._cached_layer: Optional[str] = None
-        self._cached_subnet: Optional[str] = None
-        self._cached_gateway: Optional[str] = None
+        self._cached_subnet: Optional[Union[IPv4Network, IPv6Network]] = None
+        self._cached_gateway: Optional[Union[IPv4Address, IPv6Address]] = None
         self._cached_reservation_id: Optional[str] = None
         self._interfaces_cache: Dict[str, Interface] = {}
 
@@ -897,10 +899,6 @@ class NetworkService(TemplateMixin):
 
         data = self.toDict()
 
-        # fields = ["ID", "Name", "Layer", "Type", "Site",
-        #        "Gateway", "Subnet","State", "Error",
-        #         ]
-
         if pretty_names:
             pretty_names_dict = self.get_pretty_name_dict()
         else:
@@ -937,7 +935,7 @@ class NetworkService(TemplateMixin):
         Gets site name on network service.
         """
         try:
-            return self.get_sliver().fim_sliver.site
+            return self.get_sliver().sliver.get('site')
         except Exception as e:
             log.warning(f"Failed to get site: {e}")
 
@@ -985,7 +983,7 @@ class NetworkService(TemplateMixin):
                 self._cached_type = None
         return self._cached_type
 
-    def get_sliver(self) -> OrchestratorSliver:
+    def get_sliver(self) -> SliverDTO:
         """
         Gets the sliver.
         """
@@ -1022,7 +1020,7 @@ class NetworkService(TemplateMixin):
         except:
             return ""
 
-    def get_gateway(self) -> IPv4Address or IPv6Address or None:
+    def get_gateway(self) -> Optional[Union[IPv4Address, IPv6Address]]:
         """
         Gets the assigned gateway for a FABnetv L3 IPv6 or IPv4 network.
 
@@ -1041,7 +1039,7 @@ class NetworkService(TemplateMixin):
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
                     gateway = ipaddress.ip_address(
-                        self.get_sliver().fim_sliver.gateway.gateway
+                        self.get_sliver().sliver.get('gateway', {}).get('gateway')
                     )
                 else:
                     # L2 Network
@@ -1050,8 +1048,8 @@ class NetworkService(TemplateMixin):
                         gateway = ipaddress.ip_address(fablib_data["subnet"]["gateway"])
                     except Exception as e:
                         gateway = None
-            else:
-                gateway = f"{self.get_name()}.gateway"
+            #else:
+            #    gateway = f"{self.get_name()}.gateway"
 
             if gateway is not None:
                 self._cached_gateway = gateway
@@ -1061,7 +1059,7 @@ class NetworkService(TemplateMixin):
 
     def get_available_ips(
         self, count: int = 256
-    ) -> List[IPv4Address or IPv6Address] or None:
+    ) -> Optional[List[IPv4Address or IPv6Address]]:
         """
         Gets the IPs available for a FABnet L3 network
 
@@ -1084,7 +1082,7 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to get_available_ips: {e}")
 
-    def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
+    def get_public_ips(self) -> Optional[Union[List[IPv4Address] or List[IPv6Address]]]:
         """
         Get list of public IPs assigned to the FabNetv*Ext service
 
@@ -1104,7 +1102,7 @@ class NetworkService(TemplateMixin):
                 return result
         return None
 
-    def get_subnet(self) -> IPv4Network or IPv6Network or None:
+    def get_subnet(self) -> Optional[Union[IPv4Network, IPv6Network]]:
         """
         Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network.
 
@@ -1122,7 +1120,7 @@ class NetworkService(TemplateMixin):
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
                     subnet = ipaddress.ip_network(
-                        self.get_sliver().fim_sliver.gateway.subnet
+                        self.get_sliver().sliver.get('gateway', {}).get('subnet')
                     )
                 else:
                     # L2 Network
@@ -1145,7 +1143,7 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to get subnet: {e}")
 
-    def get_reservation_id(self) -> str or None:
+    def get_reservation_id(self) -> Optional[str]:
         """
         Gets the reservation id of the network.
 
@@ -1173,7 +1171,7 @@ class NetworkService(TemplateMixin):
                 self._cached_reservation_id = None
         return self._cached_reservation_id
 
-    def get_reservation_state(self) -> str or None:
+    def get_reservation_state(self) -> Optional[str]:
         """
         Gets the reservation state of the network
 
@@ -1238,7 +1236,7 @@ class NetworkService(TemplateMixin):
 
         return self.interfaces
 
-    def get_interface(self, name: str = None, refresh: bool = False) -> Interface or None:
+    def get_interface(self, name: str = None, refresh: bool = False) -> Optional[Interface]:
         """
         Gets a particular interface on this network service.
 
@@ -1274,7 +1272,6 @@ class NetworkService(TemplateMixin):
         :rtype: bool
         """
         for fim_interface in self.get_fim_network_service().interface_list:
-            # print(f"fim_interface.name: {fim_interface.name}, interface.get_name(): {interface.get_name()}")
             if fim_interface.name.endswith(interface.get_name()):
                 return True
 
@@ -1310,7 +1307,7 @@ class NetworkService(TemplateMixin):
         name = self.get_name()
 
         for interface in self.get_interfaces():
-            fim_interfaces.append(interface.get_fim_interface())
+            fim_interfaces.append(interface.get_fim())
             self.get_fim().disconnect_interface(interface=interface.get_fim())
 
         user_data = self.get_user_data()
@@ -1423,7 +1420,7 @@ class NetworkService(TemplateMixin):
         user_data["fablib_data"] = fablib_data
         self.set_user_data(user_data)
 
-    def set_subnet(self, subnet: IPv4Network or IPv6Network):
+    def set_subnet(self, subnet: Union[IPv4Network, IPv6Network]):
         """
         Add subnet info to the network service.
         """
@@ -1435,7 +1432,7 @@ class NetworkService(TemplateMixin):
         self.set_fablib_data(fablib_data)
         self._cached_subnet = None
 
-    def set_gateway(self, gateway: IPv4Address or IPv6Address):
+    def set_gateway(self, gateway: Union[IPv4Address, IPv6Address]):
         """
         Add gateway info to the network service.
         """
@@ -1459,7 +1456,7 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             return []
 
-    def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
+    def set_allocated_ip(self, addr: Optional[Union[IPv4Address, IPv6Address]] = None):
         """
         Add ``addr`` to the list of allocated IPs.
         """
@@ -1470,7 +1467,7 @@ class NetworkService(TemplateMixin):
         allocated_ips.append(str(addr))
         self.set_fablib_data(fablib_data)
 
-    def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
+    def allocate_ip(self, addr: Optional[Union[IPv4Address, IPv6Address]] = None):
         """
         Allocate an IP for the network service.
         """
@@ -1497,7 +1494,7 @@ class NetworkService(TemplateMixin):
         finally:
             self.lock.release()
 
-    def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
+    def set_allocated_ips(self, allocated_ips: list[Union[IPv4Address, IPv6Address]]):
         """
         Set a list of IPs to be "allocated IPs".
         """
@@ -1512,7 +1509,7 @@ class NetworkService(TemplateMixin):
         fablib_data["subnet"]["allocated_ips"] = allocated_ips_strs
         self.set_fablib_data(fablib_data)
 
-    def free_ip(self, addr: IPv4Address or IPv6Address):
+    def free_ip(self, addr: Union[IPv4Address, IPv6Address]):
         """
         Remove an IP from the list of allocated IPs.
         """
