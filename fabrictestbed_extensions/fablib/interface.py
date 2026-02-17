@@ -99,26 +99,44 @@ class Interface(TemplateMixin):
         self.interfaces = {}
         self.parent = parent
 
-        # V2 specific: dirty flag for caching
-        self._fim_dirty: bool = True
-
         # V2 specific: cached FIM properties
-        self._cached_name: Optional[str] = None
         self._cached_mac: Optional[str] = None
         self._cached_vlan: Optional[str] = None
         self._cached_bandwidth: Optional[int] = None
         self._cached_site: Optional[str] = None
         self._cached_physical_os_interface: Optional[str] = None
+        self._cached_switch_port: Optional[str] = None
+        self._cached_flag: Optional[bool] = False
+        self._cached_peer_port_name: Optional[str] = None
+        self._cached_fim_type: Optional[str] = None
+        self._cached_peer_account_id: Optional[str] = None
+        self._cached_peer_bgp_key: Optional[str] = None
+        self._cached_peer_asn: Optional[str] = None
+        self._cached_peer_subnet: Optional[str] = None
+        self._cached_subnet: Optional[str] = None
+        self._cached_peer_port_vlan: Optional[str] = None
+
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        self._fim_dirty = True
-        self._cached_name = None
+        super(Interface, self)._invalidate_cache()
+
         self._cached_mac = None
         self._cached_vlan = None
         self._cached_bandwidth = None
         self._cached_site = None
         self._cached_physical_os_interface = None
+        self._cached_switch_port = None
+        self._cached_flag = False
+        self._cached_peer_port_name = None
+        self._cached_fim_type = None
+        self._cached_peer_account_id = None
+        self._cached_peer_bgp_key = None
+        self._cached_peer_asn = None
+        self._cached_peer_subnet = None
+        self._cached_subnet = None
+        self._cached_peer_port_vlan = None
+        self.interfaces = {}
 
     def update(self, fim_interface: FimInterface = None):
         """
@@ -282,16 +300,17 @@ class Interface(TemplateMixin):
         :return: name of the port on switch
         :rtype: String
         """
-        network = self.get_network()
-        if network and network.get_fim():
-            ifs = None
-            for ifs_name in network.get_fim().interfaces.keys():
-                if self.get_name() in ifs_name:
-                    ifs = network.get_fim().interfaces[ifs_name]
-                    break
-            if ifs and ifs.labels and ifs.labels.local_name:
-                return ifs.labels.local_name
-        return None
+        if self._cached_switch_port is None:
+            network = self.get_network()
+            if network and network.get_fim():
+                ifs = None
+                for ifs_name in network.get_fim().interfaces.keys():
+                    if self.get_name() in ifs_name:
+                        ifs = network.get_fim().interfaces[ifs_name]
+                        break
+                if ifs and ifs.labels and ifs.labels.local_name:
+                    self._cached_switch_port = ifs.labels.local_name
+        return self._cached_switch_port
 
     def get_numa_node(self) -> Optional[str]:
         """
@@ -370,6 +389,7 @@ class Interface(TemplateMixin):
         """
         fim_iface = self.get_fim()
         fim_iface.flags = Flags(auto_config=True)
+        self._cached_flag = True
 
     def unset_auto_config(self):
         """
@@ -383,20 +403,21 @@ class Interface(TemplateMixin):
         """
         fim_iface = self.get_fim()
         fim_iface.flags = Flags(auto_config=False)
+        self._cached_flag = False
 
     def get_peer_port_name(self) -> Optional[str]:
         """
         If available provide the name of the attached port on the dataplane switch.
         Only possible once the slice has been instantiated.
         """
-        if (
-            self.fim_interface
-            and self.fim_interface.get_peers()
-            and self.fim_interface.get_peers()[0]
-        ):
-            return self.fim_interface.get_peers()[0].labels.local_name
-        else:
-            return None
+        if self._cached_peer_port_name is None:
+            if (
+                self.fim_interface
+                and self.fim_interface.get_peers()
+                and self.fim_interface.get_peers()[0]
+            ):
+                self._cached_peer_port_name = self.fim_interface.get_peers()[0].labels.local_name
+        return self._cached_peer_port_name
 
     def get_peer_port_vlan(self) -> Optional[str]:
         """
@@ -406,12 +427,14 @@ class Interface(TemplateMixin):
         :return: VLAN to be used for Port Mirroring
         :rtype: String
         """
-        vlan = self.get_vlan()
-        if not vlan:
-            label_allocations = self.get_fim().get_property(pname="label_allocations")
-            if label_allocations:
-                return label_allocations.vlan
-        return None
+        if self._cached_peer_port_vlan is None:
+            self._cached_peer_port_vlan = self.get_vlan()
+            if not self._cached_peer_port_vlan:
+                label_allocations = self.get_fim().get_property(pname="label_allocations")
+                if label_allocations:
+                    self._cached_peer_port_vlan = label_allocations.vlan
+
+        return self._cached_peer_port_vlan
 
     def get_device_name(self) -> Optional[str]:
         """
@@ -428,12 +451,12 @@ class Interface(TemplateMixin):
 
             if self.node and isinstance(self.node, Switch):
                 match = re.search(
-                    r"\d+", self.fim_interface.name
+                    r"\d+", self.get_name()
                 )  # Find digits in the string
                 if match:
                     return match.group()
 
-                return self.fim_interface.name
+                return self.get_name()
 
             fablib_data = self.get_fablib_data()
             if "dev" in fablib_data and fablib_data.get("dev"):
@@ -595,10 +618,11 @@ class Interface(TemplateMixin):
         :return: reservation id
         :rtype: String
         """
-        try:
-            return self.get_fim().get_property(pname="reservation_info").reservation_id
-        except:
-            return None
+        if self.get_network():
+            return self.get_network().get_reservation_id()
+        elif self.get_node():
+            return self.get_node().get_reservation_id()
+        return None
 
     def get_reservation_state(self) -> Optional[str]:
         """
@@ -607,12 +631,11 @@ class Interface(TemplateMixin):
         :return: reservation state
         :rtype: String
         """
-        try:
-            return (
-                self.get_fim().get_property(pname="reservation_info").reservation_state
-            )
-        except:
-            return None
+        if self.get_network():
+            return self.get_network().get_reservation_state()
+        elif self.get_node():
+            return self.get_node().get_reservation_state()
+        return None
 
     def get_error_message(self) -> str:
         """
@@ -621,10 +644,11 @@ class Interface(TemplateMixin):
         :return: error
         :rtype: String
         """
-        try:
-            return self.get_fim().get_property(pname="reservation_info").error_message
-        except:
-            return ""
+        if self.get_network():
+            return self.get_network().get_error_message()
+        elif self.get_node():
+            return self.get_node().get_error_message()
+        return None
 
     def get_short_name(self):
         """
@@ -646,25 +670,6 @@ class Interface(TemplateMixin):
         )
         return self.get_name()[prefix_length:]
 
-    def get_name(self) -> str:
-        """
-        Gets the name of the interface.
-
-        Results are cached for performance.
-
-        :return: the interface name
-        :rtype: str
-        """
-        if self._cached_name is None:
-            try:
-                if self.fim_interface:
-                    self._cached_name = self.fim_interface.name
-                else:
-                    self._cached_name = ""
-            except Exception:
-                self._cached_name = ""
-        return self._cached_name
-
     def get_mac(self) -> str:
         """
         Gets the MAC address of the interface.
@@ -682,12 +687,8 @@ class Interface(TemplateMixin):
                     )
                     if label_allocations:
                         self._cached_mac = label_allocations.mac
-                    else:
-                        self._cached_mac = ""
-                else:
-                    self._cached_mac = ""
             except Exception:
-                self._cached_mac = ""
+                self._cached_mac = None
         return self._cached_mac if self._cached_mac else ""
 
     def get_vlan(self) -> str:
@@ -707,13 +708,9 @@ class Interface(TemplateMixin):
                     )
                     if label_allocations and label_allocations.vlan:
                         self._cached_vlan = str(label_allocations.vlan)
-                    else:
-                        self._cached_vlan = ""
-                else:
-                    self._cached_vlan = ""
             except Exception:
-                self._cached_vlan = ""
-        return self._cached_vlan
+                self._cached_vlan = None
+        return self._cached_vlan if self._cached_vlan else ""
 
     def get_bandwidth(self) -> int:
         """
@@ -766,11 +763,9 @@ class Interface(TemplateMixin):
             try:
                 if self.get_node():
                     self._cached_site = self.get_node().get_site()
-                else:
-                    self._cached_site = ""
             except Exception:
-                self._cached_site = ""
-        return self._cached_site
+                self._cached_site = None
+        return self._cached_site if self._cached_site else ""
 
     def get_physical_os_interface_name(self) -> str:
         """
@@ -789,13 +784,9 @@ class Interface(TemplateMixin):
                     )
                     if label_allocations and label_allocations.local_name:
                         self._cached_physical_os_interface = label_allocations.local_name
-                    else:
-                        self._cached_physical_os_interface = ""
-                else:
-                    self._cached_physical_os_interface = ""
             except Exception:
-                self._cached_physical_os_interface = ""
-        return self._cached_physical_os_interface
+                self._cached_physical_os_interface = None
+        return self._cached_physical_os_interface if self._cached_physical_os_interface else ""
 
     def get_component(self) -> Component:
         """
@@ -939,7 +930,6 @@ class Interface(TemplateMixin):
             addrs = json.loads(stdout)
 
             dev = self.get_device_name()
-            # print(f"dev: {dev}")
 
             if dev is None:
                 return addrs
@@ -1259,7 +1249,8 @@ class Interface(TemplateMixin):
     def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
         Set subnet for the interface.
-        Used only for interfaces connected to L3VPN service where each interface could be connected to multiple subnets
+        Used only for interfaces connected to L3VPN service where each interface
+        could be connected to multiple subnets
 
         :param ipv4_subnet: ipv4 subnet
         :type ipv4_subnet: str
@@ -1292,11 +1283,13 @@ class Interface(TemplateMixin):
         :return: ipv4/ipv6 subnet associated with the interface
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().labels:
-            if self.get_fim().labels.ipv4_subnet:
-                return self.get_fim().labels.ipv4_subnet
-            if self.get_fim().labels.ipv6_subnet:
-                return self.get_fim().labels.ipv6_subnet
+        if self._cached_subnet is None:
+            if self.get_fim() and self.get_fim().labels:
+                if self.get_fim().labels.ipv4_subnet:
+                    self._cached_subnet = self.get_fim().labels.ipv4_subnet
+                if self.get_fim().labels.ipv6_subnet:
+                    self._cached_subnet = self.get_fim().labels.ipv6_subnet
+        return self._cached_subnet
 
     def get_peer_subnet(self):
         """
@@ -1305,11 +1298,13 @@ class Interface(TemplateMixin):
         :return: peer ipv4/ipv6 subnet associated with the interface
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            if self.get_fim().peer_labels.ipv4_subnet:
-                return self.get_fim().peer_labels.ipv4_subnet
-            if self.get_fim().peer_labels.ipv6_subnet:
-                return self.get_fim().peer_labels.ipv6_subnet
+        if self._cached_peer_subnet is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                if self.get_fim().peer_labels.ipv4_subnet:
+                    self._cached_peer_subnet = self.get_fim().peer_labels.ipv4_subnet
+                if self.get_fim().peer_labels.ipv6_subnet:
+                    self._cached_peer_subnet = self.get_fim().peer_labels.ipv6_subnet
+        return self._cached_peer_subnet
 
     def get_peer_asn(self):
         """
@@ -1318,8 +1313,10 @@ class Interface(TemplateMixin):
         :return: peer asn
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            return self.get_fim().peer_labels.asn
+        if self._cached_peer_asn is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                self._cached_peer_asn = self.get_fim().peer_labels.asn
+        return self._cached_peer_asn
 
     def get_peer_bgp_key(self):
         """
@@ -1328,8 +1325,10 @@ class Interface(TemplateMixin):
         :return: peer BGP Key
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            return self.get_fim().peer_labels.bgp_key
+        if self._cached_peer_bgp_key is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                self._cached_peer_bgp_key = self.get_fim().peer_labels.bgp_key
+        return self._cached_peer_bgp_key
 
     def get_peer_account_id(self):
         """
@@ -1338,8 +1337,10 @@ class Interface(TemplateMixin):
         :return: peer account id associated with the interface (Used when interface is peered to AWS via AL2S)
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            return self.get_fim().peer_labels.account_id
+        if self._cached_peer_account_id is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                self._cached_peer_account_id = self.get_fim().peer_labels.account_id
+        return self._cached_peer_account_id
 
     def get_interfaces(
         self, refresh: bool = False, output: str = "list"
@@ -1357,8 +1358,13 @@ class Interface(TemplateMixin):
         :rtype: Union[dict[str, Interface], list[Interface]]
         """
 
-        if len(self.interfaces) == 0 or refresh:
-            self.interfaces = {}
+        if self.interfaces and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self.interfaces
+            return list(self.interfaces.values())
+
+        self.interfaces = {}
+        if self.get_fim().interface_list:
             for fim_interface in self.get_fim().interface_list:
                 ch_iface = Interface(
                     component=self.get_component(),
@@ -1430,11 +1436,12 @@ class Interface(TemplateMixin):
         :return: get interface type
         :rtype: String
         """
-        if self.get_fim():
-            return str(self.get_fim().type)
-        return None
+        if self._cached_fim_type is None:
+            if self.get_fim():
+                self._cached_fim_type = str(self.get_fim().type)
+        return self._cached_fim_type
 
     def __is_shared_nic(self) -> bool:
-        if self.get_fim() and str(self.get_fim().type) == "SharedPort":
+        if self.get_type() == "SharedPort":
             return True
         return False

@@ -719,6 +719,7 @@ class NetworkService(TemplateMixin):
         self.slice = slice
 
         self.interfaces = None
+        self.sliver = None
 
         try:
             if self.slice.isStable():
@@ -728,28 +729,25 @@ class NetworkService(TemplateMixin):
         except:
             pass
 
-        self.sliver = None
         self.lock = threading.Lock()
 
         # Caching support
-        self._fim_dirty: bool = True
-        self._cached_name: Optional[str] = name
         self._cached_type: Optional[str] = None
         self._cached_layer: Optional[str] = None
         self._cached_subnet: Optional[Union[IPv4Network, IPv6Network]] = None
         self._cached_gateway: Optional[Union[IPv4Address, IPv6Address]] = None
-        self._cached_reservation_id: Optional[str] = None
+
         self._interfaces_cache: Dict[str, Interface] = {}
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        self._fim_dirty = True
-        self._cached_name = None
+        super(NetworkService, self)._invalidate_cache()
+
         self._cached_type = None
         self._cached_layer = None
         self._cached_subnet = None
         self._cached_gateway = None
-        self._cached_reservation_id = None
+
         self._interfaces_cache = {}
 
     def update(self, fim_network_service: FimNetworkService = None):
@@ -855,8 +853,6 @@ class NetworkService(TemplateMixin):
     def generate_template_context(self):
         context = self.toDict()
         context["interfaces"] = []
-        # for interface in self.get_interfaces():
-        #    context["interfaces"].append(interface.get_name())
 
         return context
 
@@ -934,11 +930,9 @@ class NetworkService(TemplateMixin):
         """
         Gets site name on network service.
         """
-        try:
-            return self.get_sliver().sliver.get('Site')
-        except Exception as e:
-            log.warning(f"Failed to get site: {e}")
-
+        if self.get_sliver():
+            return self.get_sliver().site
+        else:
             return None
 
     def get_layer(self) -> Optional[str]:
@@ -952,8 +946,8 @@ class NetworkService(TemplateMixin):
         """
         if self._cached_layer is None:
             try:
-                if self.fim_network_service:
-                    layer = self.fim_network_service.get_property(pname="layer")
+                if self.get_fim():
+                    layer = self.get_fim().get_property(pname="layer")
                     self._cached_layer = layer if layer else None
                 else:
                     self._cached_layer = None
@@ -973,8 +967,8 @@ class NetworkService(TemplateMixin):
         """
         if self._cached_type is None:
             try:
-                if self.fim_network_service:
-                    ns_type = self.fim_network_service.get_property("type")
+                if self.get_fim():
+                    ns_type = self.get_fim().get_property("type")
                     self._cached_type = ns_type if ns_type else None
                 else:
                     self._cached_type = None
@@ -992,33 +986,6 @@ class NetworkService(TemplateMixin):
                 reservation_id=self.get_reservation_id()
             )
         return self.sliver
-
-    def get_fim_network_service(self) -> FimNetworkService:
-        """
-        Not recommended for most users.
-
-        Gets the FABRIC network service this instance represents.
-
-        :return: the FIM network service
-        :rtype: FIMNetworkService
-        """
-        return self.fim_network_service
-
-    def get_error_message(self) -> str:
-        """
-        Gets the error messages
-
-        :return: network service types
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_network_service()
-                .get_property(pname="reservation_info")
-                .error_message
-            )
-        except:
-            return ""
 
     def get_gateway(self) -> Optional[Union[IPv4Address, IPv6Address]]:
         """
@@ -1090,15 +1057,15 @@ class NetworkService(TemplateMixin):
         :return: List of Public IPs
         :rtype: List[IPv4Address] or List[IPv6Address] or None
         """
-        if self.get_fim_network_service().labels is not None:
-            if self.get_fim_network_service().labels.ipv4 is not None:
+        if self.get_fim().labels is not None:
+            if self.get_fim().labels.ipv4 is not None:
                 result = []
-                for x in self.get_fim_network_service().labels.ipv4:
+                for x in self.get_fim().labels.ipv4:
                     result.append(IPv4Address(x))
                 return result
-            elif self.get_fim_network_service().labels.ipv6 is not None:
+            elif self.get_fim().labels.ipv6 is not None:
                 result = []
-                for x in self.get_fim_network_service().labels.ipv6:
+                for x in self.get_fim().labels.ipv6:
                     result.append(IPv6Address(x))
                 return result
         return None
@@ -1148,70 +1115,6 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to get subnet: {e}")
 
-    def get_reservation_id(self) -> Optional[str]:
-        """
-        Gets the reservation id of the network.
-
-        Results are cached for performance.
-
-        :return: reservation ID
-        :rtype: String
-        """
-        if self._cached_reservation_id is None:
-            try:
-                if self.fim_network_service:
-                    res_info = self.fim_network_service.get_property(
-                        pname="reservation_info"
-                    )
-                    if res_info and res_info.reservation_id:
-                        self._cached_reservation_id = str(
-                            res_info.reservation_id
-                        )
-                    else:
-                        self._cached_reservation_id = None
-                else:
-                    self._cached_reservation_id = None
-            except Exception as e:
-                log.debug(f"Failed to get reservation_id: {e}")
-                self._cached_reservation_id = None
-        return self._cached_reservation_id
-
-    def get_reservation_state(self) -> Optional[str]:
-        """
-        Gets the reservation state of the network
-
-        :return: reservation state
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_network_service()
-                .get_property(pname="reservation_info")
-                .reservation_state
-            )
-        except Exception as e:
-            log.warning(f"Failed to get reservation_state: {e}")
-            return None
-
-    def get_name(self) -> str:
-        """
-        Gets the name of this network service.
-
-        Results are cached for performance.
-
-        :return: the name of this network service
-        :rtype: String
-        """
-        if self._cached_name is None:
-            try:
-                if self.fim_network_service:
-                    self._cached_name = self.fim_network_service.name
-                else:
-                    self._cached_name = ""
-            except Exception:
-                self._cached_name = ""
-        return self._cached_name
-
     def get_interfaces(self, refresh: bool = False) -> List[Interface]:
         """
         Gets the interfaces on this network service.
@@ -1229,7 +1132,7 @@ class NetworkService(TemplateMixin):
         self._interfaces_cache = {}
         self.interfaces = []
 
-        for interface in self.get_fim_network_service().interface_list:
+        for interface in self.get_fim().interface_list:
             log.debug(f"interface: {interface}")
 
             try:
@@ -1276,7 +1179,7 @@ class NetworkService(TemplateMixin):
         :return: whether this network service has interface
         :rtype: bool
         """
-        for fim_interface in self.get_fim_network_service().interface_list:
+        for fim_interface in self.get_fim().interface_list:
             if fim_interface.name.endswith(interface.get_name()):
                 return True
 
@@ -1286,7 +1189,7 @@ class NetworkService(TemplateMixin):
         """
         Gets the FABRIC information model (FIM) object.
         """
-        return self.get_fim_network_service()
+        return self.fim_network_service
 
     def set_user_data(self, user_data: dict):
         """
@@ -1531,7 +1434,7 @@ class NetworkService(TemplateMixin):
         """
         Mark a list of IPs as publicly routable.
         """
-        labels = self.fim_network_service.labels
+        labels = self.get_fim().labels
         if labels is None:
             labels = Labels()
         if self.fim_network_service.type == ServiceType.FABNetv4Ext:

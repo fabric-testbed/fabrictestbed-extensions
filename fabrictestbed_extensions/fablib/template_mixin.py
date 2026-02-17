@@ -21,6 +21,33 @@ class TemplateMixin:
 
     _default_skip: Optional[List[str]] = None
 
+    def __init__(self, **kwargs):
+        # V2 specific: dirty flag for caching
+        self._fim_dirty: bool = True
+
+        self._cached_reservation_id: Optional[str] = None
+        self._cached_reservation_state: Optional[str] = None
+        self._cached_error_message: Optional[str] = None
+        self._cached_name: Optional[str] = None
+
+    def _invalidate_cache(self):
+        """
+        Invalidate all cached properties.
+
+        Called when the FIM node is updated.
+        """
+        self._fim_dirty = True
+        self._cached_reservation_id = None
+        self._cached_reservation_state = None
+        self._cached_error_message = None
+        self._cached_name = None
+
+    @abstractmethod
+    def get_fim(self):
+        """
+        Returns fim of the template.
+        """
+
     @abstractmethod
     def toDict(self):
         """
@@ -73,3 +100,74 @@ class TemplateMixin:
         self._configure_template_environment(environment)
         template = environment.from_string(input_string)
         return template.render(self.get_template_context(skip=skip))
+
+    def get_error_message(self) -> str:
+        """
+        Gets the error messages
+
+        :return: network service types
+        :rtype: String
+        """
+        if self._cached_error_message is None:
+            try:
+                self._cached_error_message = str(
+                    self.get_fim().get_property(pname="reservation_info").error_message
+                )
+            except Exception:
+                self._cached_error_message = None
+        return self._cached_error_message
+
+    def get_reservation_id(self) -> Optional[str]:
+        """
+        Gets the reservation ID of the node.
+
+        Results are cached for performance.
+
+        :return: reservation ID
+        :rtype: String
+        """
+        if self._cached_reservation_id is None:
+            try:
+                self._cached_reservation_id = str(
+                    self.get_fim().get_property(pname="reservation_info").reservation_id
+                )
+            except Exception:
+                self._cached_reservation_id = None
+        return self._cached_reservation_id
+
+
+    def get_reservation_state(self) -> Optional[str]:
+        """
+        Gets the reservation state on the FABRIC node.
+
+        :return: the reservation state on the node
+        :rtype: String
+        """
+        if self._cached_reservation_state is None:
+            try:
+                self._cached_reservation_state = str(
+                    self.get_fim().get_property(pname="reservation_info").reservation_state
+                )
+            except Exception:
+                self._cached_reservation_state = None
+        return self._cached_reservation_state
+
+
+    def get_name(self) -> str:
+        """
+        Gets the name of this network service.
+
+        Results are cached for performance.
+
+        :return: the name of this network service
+        :rtype: String
+        """
+        if self._cached_name is None:
+            try:
+                if self.get_fim():
+                    self._cached_name = self.get_fim().name
+                else:
+                    self._cached_name = None
+            except Exception:
+                self._cached_name = None
+        return self._cached_name

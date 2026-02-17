@@ -70,7 +70,6 @@ from fabrictestbed_extensions.fablib.network_service import NetworkService
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
-    from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
@@ -131,6 +130,7 @@ class Node(TemplateMixin):
         self.node_type = NodeType.VM
         self.components = {}
         self.interfaces = {}
+        self.sliver = None
 
         # Try to set the username.
         try:
@@ -144,16 +144,18 @@ class Node(TemplateMixin):
         except:
             pass
 
-        self.sliver = None
-
-        # V2 specific: dirty flag for caching
-        self._fim_dirty: bool = True
-
         # V2 specific: cached FIM properties (None means not yet cached)
-        self._cached_name: Optional[str] = None
         self._cached_site: Optional[str] = None
         self._cached_management_ip: Optional[str] = None
-        self._cached_reservation_id: Optional[str] = None
+        self._cached_image_type: Optional[str] = None
+        self._cached_image_ref: Optional[str] = None
+        self._cached_requested_disk: Optional[int] = None
+        self._cached_allocated_disk: Optional[int] = None
+        self._cached_requested_ram: Optional[int] = None
+        self._cached_allocated_ram: Optional[int] = None
+        self._cached_requested_cores: Optional[int] = None
+        self._cached_allocated_cores: Optional[int] = None
+        self._cached_instance_name: Optional[str] = None
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
@@ -163,11 +165,19 @@ class Node(TemplateMixin):
 
         Called when the FIM node is updated.
         """
-        self._fim_dirty = True
-        self._cached_name = None
+        super(Node, self)._invalidate_cache()
+
         self._cached_site = None
         self._cached_management_ip = None
-        self._cached_reservation_id = None
+        self._cached_image_type = None
+        self._cached_image_ref = None
+        self._cached_requested_disk = None
+        self._cached_allocated_disk = None
+        self._cached_requested_ram = None
+        self._cached_allocated_ram = None
+        self._cached_requested_cores = None
+        self._cached_allocated_cores = None
+        self._cached_instance_name = None
 
     def get_fablib_manager(self):
         """
@@ -455,7 +465,7 @@ class Node(TemplateMixin):
             )
             table.applymap(state_color)
 
-            if quiet == False:
+            if quiet is False:
                 display(table)
         else:
             table = Utils.show_table(
@@ -627,12 +637,6 @@ class Node(TemplateMixin):
 
             return False
 
-        # name_filter = lambda s: s['Name'] in set(ifaces)
-        # if filter_function != None:
-        #    filter_function = lambda x: filter_function(x) + name_filter(x)
-        # else:
-        #    filter_function = name_filter
-
         return self.get_slice().list_interfaces(
             fields=fields,
             output=output,
@@ -737,18 +741,6 @@ class Node(TemplateMixin):
 
         return networks
 
-    def get_fim_node(self) -> FimNode:
-        """
-        Not recommended for most users.
-
-        Gets the node's FABRIC Information Model (fim) object. This method
-        is used to access data at a lower level than FABlib.
-
-        :return: the FABRIC model node
-        :rtype: FIMNode
-        """
-        return self.fim_node
-
     def set_capacities(self, cores: int = 2, ram: int = 2, disk: int = 10):
         """
         Sets the capacities of the FABRIC node.
@@ -767,7 +759,7 @@ class Node(TemplateMixin):
         disk = int(disk)
 
         cap = Capacities(core=cores, ram=ram, disk=disk)
-        self.get_fim_node().set_properties(capacities=cap)
+        self.get_fim().set_properties(capacities=cap)
 
     def set_instance_type(self, instance_type: str):
         """
@@ -776,7 +768,7 @@ class Node(TemplateMixin):
         :param instance_type: the name of the instance type to set
         :type instance_type: String
         """
-        self.get_fim_node().set_properties(
+        self.get_fim().set_properties(
             capacity_hints=CapacityHints(instance_type=instance_type)
         )
 
@@ -789,7 +781,7 @@ class Node(TemplateMixin):
         :param username: Optional username parameter.  The username
             likely should be picked to match the image type.
         """
-        if self.get_fim_node().type == NodeType.Switch and not username:
+        if self.get_fim().type == NodeType.Switch and not username:
             self.username = Constants.FABRIC_USER
             return
         username = (
@@ -840,7 +832,7 @@ class Node(TemplateMixin):
         :param image_type: the image type to set
         :type image_type: String
         """
-        self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
+        self.get_fim().set_properties(image_type=image_type, image_ref=image)
         self.set_username(username=username)
 
     def set_host(self, host_name: str = None):
@@ -854,7 +846,7 @@ class Node(TemplateMixin):
         # example: host_name='renc-w2.fabric-testbed.net'
         labels = Labels()
         labels.instance_parent = host_name
-        self.get_fim_node().set_properties(labels=labels)
+        self.get_fim().set_properties(labels=labels)
 
         # set an attribute used to get host before Submit
         self.host = host_name
@@ -867,7 +859,7 @@ class Node(TemplateMixin):
         :type host_name: String
         """
         # example: host_name='renc-w2.fabric-testbed.net'
-        self.get_fim_node().site = site
+        self.get_fim().site = site
 
     def get_slice(self) -> Slice:
         """
@@ -878,131 +870,161 @@ class Node(TemplateMixin):
         """
         return self.slice
 
-    def get_name(self) -> str:
-        """
-        Gets the name of the FABRIC node.
-
-        Results are cached for performance.
-
-        :return: the name of the node
-        :rtype: String
-        """
-        if self._cached_name is None:
-            try:
-                self._cached_name = self.fim_node.name
-            except Exception:
-                self._cached_name = ""
-        return self._cached_name
-
-    def get_instance_name(self) -> str or None:
+    def get_instance_name(self) -> Optional[str]:
         """
         Gets the instance name of the FABRIC node.
 
         :return: the instance name of the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().get_property(pname="label_allocations").instance
-        except:
-            return None
+        if self._cached_instance_name is None:
+            try:
+                if self.get_fim():
+                    labels = self.get_fim().get_property(pname="instance")
+                    if labels:
+                        self._cached_instance_name = self.get_fim().get_property(pname="label_allocations").instance
+            except Exception:
+                self._cached_instance_name = None
+        return self._cached_instance_name
 
-    def get_cores(self) -> int or None:
+    def get_cores(self) -> Optional[int]:
         """
         Gets the number of cores on the FABRIC node.
 
         :return: the number of cores on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacity_allocations").core
-        except:
-            return None
+        if self._cached_allocated_cores is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacity_allocations")
+                    if capacities:
+                        self._cached_allocated_cores = self.get_fim().get_property(pname="capacity_allocations").core
+            except Exception:
+                self._cached_allocated_cores = None
+        return self._cached_allocated_cores if self._cached_allocated_cores else 0
 
-    def get_requested_cores(self) -> int or None:
+    def get_requested_cores(self) -> Optional[int]:
         """
         Gets the requested number of cores on the FABRIC node.
 
         :return: the requested number of cores on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacities").core
-        except:
-            return 0
+        if self._cached_requested_cores is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacities")
+                    if capacities:
+                        self._cached_requested_cores = self.get_fim().get_property(pname="capacities").ram
+            except Exception:
+                self._cached_requested_cores = None
+        return self._cached_requested_cores if self._cached_requested_cores else 0
 
-    def get_ram(self) -> int or None:
+    def get_ram(self) -> Optional[int]:
         """
         Gets the amount of RAM on the FABRIC node.
 
         :return: the amount of RAM on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacity_allocations").ram
-        except:
-            return None
+        if self._cached_allocated_ram is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacity_allocations")
+                    if capacities:
+                        self._cached_allocated_ram = self.get_fim().get_property(pname="capacity_allocations").ram
+            except Exception:
+                self._cached_allocated_ram = None
+        return self._cached_allocated_ram if self._cached_allocated_ram else 0
 
-    def get_requested_ram(self) -> int or None:
+
+    def get_requested_ram(self) -> Optional[int]:
         """
         Gets the requested amount of RAM on the FABRIC node.
 
         :return: the requested amount of RAM on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacities").ram
-        except:
-            return 0
+        if self._cached_requested_ram is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacities")
+                    if capacities:
+                        self._cached_requested_ram = self.get_fim().get_property(pname="capacities").ram
+            except Exception:
+                self._cached_requested_ram = None
+        return self._cached_requested_ram if self._cached_requested_ram else 0
 
-    def get_disk(self) -> int or None:
+    def get_disk(self) -> Optional[int]:
         """
         Gets the amount of disk space on the FABRIC node.
 
         :return: the amount of disk space on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacity_allocations").disk
-        except:
-            return None
+        if self._cached_allocated_disk is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacity_allocations")
+                    if capacities:
+                        self._cached_allocated_disk = self.get_fim().get_property(pname="capacity_allocations").disk
+            except Exception:
+                self._cached_allocated_disk = None
+        return self._cached_allocated_disk if self._cached_allocated_disk else 0
 
-    def get_requested_disk(self) -> int or None:
+    def get_requested_disk(self) -> Optional[int]:
         """
         Gets the amount of disk space on the FABRIC node.
 
         :return: the amount of disk space on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacities").disk
-        except:
-            return 0
+        if self._cached_requested_disk is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacities")
+                    if capacities:
+                        self._cached_requested_disk = self.get_fim().get_property(pname="capacities").disk
+            except Exception:
+                self._cached_requested_disk = None
+        return self._cached_requested_disk if self._cached_requested_disk else 0
 
-    def get_image(self) -> str or None:
+    def get_image(self) -> Optional[str]:
         """
         Gets the image reference on the FABRIC node.
 
         :return: the image reference on the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().image_ref
-        except:
-            return None
+        if self._cached_image_ref is None:
+            try:
+                if self.get_fim():
+                    self._cached_image_ref = self.get_fim().image_ref
+                else:
+                    self._cached_image_ref = None
+            except Exception:
+                self._cached_image_ref = None
+        return self._cached_image_ref
 
-    def get_image_type(self) -> str or None:
+    def get_image_type(self) -> Optional[str]:
         """
         Gets the image type on the FABRIC node.
 
         :return: the image type on the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().image_type
-        except:
-            return None
+        if self._cached_image_type is None:
+            try:
+                if self.get_fim():
+                    self._cached_image_type = self.get_fim().image_type
+                else:
+                    self._cached_image_type = None
+            except Exception:
+                self._cached_image_type = None
+        return self._cached_image_type
 
-    def get_host(self) -> str or None:
+    def get_host(self) -> Optional[str]:
         """
         Gets the hostname on the FABRIC node.
 
@@ -1012,10 +1034,10 @@ class Node(TemplateMixin):
         try:
             if self.host is not None:
                 return self.host
-            label_allocations = self.get_fim_node().get_property(
+            label_allocations = self.get_fim().get_property(
                 pname="label_allocations"
             )
-            labels = self.get_fim_node().get_property(pname="labels")
+            labels = self.get_fim().get_property(pname="labels")
             if label_allocations:
                 return label_allocations.instance_parent
             if labels:
@@ -1036,8 +1058,8 @@ class Node(TemplateMixin):
             try:
                 self._cached_site = self.fim_node.site
             except Exception:
-                self._cached_site = ""
-        return self._cached_site
+                self._cached_site = None
+        return self._cached_site if self._cached_site is not None else ""
 
     def get_management_ip(self) -> str:
         """
@@ -1052,57 +1074,8 @@ class Node(TemplateMixin):
             try:
                 self._cached_management_ip = str(self.fim_node.management_ip)
             except Exception:
-                self._cached_management_ip = ""
-        return self._cached_management_ip
-
-    def get_reservation_id(self) -> str:
-        """
-        Gets the reservation ID of the node.
-
-        Results are cached for performance.
-
-        :return: reservation ID
-        :rtype: String
-        """
-        if self._cached_reservation_id is None:
-            try:
-                self._cached_reservation_id = str(
-                    self.fim_node.get_property(pname="reservation_info").reservation_id
-                )
-            except Exception:
-                self._cached_reservation_id = ""
-        return self._cached_reservation_id
-
-
-    def get_reservation_state(self) -> str or None:
-        """
-        Gets the reservation state on the FABRIC node.
-
-        :return: the reservation state on the node
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_node()
-                .get_property(pname="reservation_info")
-                .reservation_state
-            )
-        except:
-            return None
-
-    def get_error_message(self) -> str or None:
-        """
-        Gets the error message on the FABRIC node.
-
-        :return: the error message on the node
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_node().get_property(pname="reservation_info").error_message
-            )
-        except:
-            return ""
+                self._cached_management_ip = None
+        return self._cached_management_ip if self._cached_management_ip is not None else ""
 
     def get_username(self) -> str:
         """
@@ -1855,7 +1828,7 @@ class Node(TemplateMixin):
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        management_ip = str(self.get_management_ip())
         if self.validIPAddress(management_ip) == "IPv4":
             src_addr = ("0.0.0.0", 22)
         elif self.validIPAddress(management_ip) == "IPv6":
@@ -2020,7 +1993,7 @@ class Node(TemplateMixin):
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        management_ip = str(self.get_fim().get_property(pname="management_ip"))
         if self.validIPAddress(management_ip) == "IPv4":
             src_addr = ("0.0.0.0", 22)
 
@@ -2980,7 +2953,7 @@ class Node(TemplateMixin):
         :rtype: Component
         """
         try:
-            return Component(self, self.get_fim_node().components[name])
+            return Component(self, self.get_fim().components[name])
         except Exception as e:
             log.error(e, exc_info=True)
             raise Exception(f"Storage not found: {name}")
@@ -3002,7 +2975,7 @@ class Node(TemplateMixin):
         """
         Get FABRIC Information Model (fim) object for the node.
         """
-        return self.get_fim_node()
+        return self.fim_node
 
     def set_user_data(self, user_data: dict):
         """
@@ -3064,8 +3037,8 @@ class Node(TemplateMixin):
 
     def add_route(
         self,
-        subnet: IPv4Network or IPv6Network,
-        next_hop: IPv4Address or IPv6Address or NetworkService,
+        subnet: Union[IPv4Network, IPv6Network],
+        next_hop: Union[IPv4Address, IPv6Address, NetworkService],
     ):
         """
         Add a route.
@@ -3197,20 +3170,15 @@ class Node(TemplateMixin):
                 next_hop = ipaddress.ip_address(route["next_hop"])
             except Exception as e:
                 net_name = route["next_hop"].split(".")[0]
-                # funct = getattr(NetworkService,funct_name)
-                # next_hop = funct(self.get_slice().get_network(net_name))
                 next_hop = (
                     self.get_slice().get_network(name=str(net_name)).get_gateway()
                 )
-                # next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
 
             try:
                 subnet = ipaddress.ip_network(route["subnet"])
             except Exception as e:
                 net_name = route["subnet"].split(".")[0]
                 subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
-
-            # print(f"subnet: {subnet} ({type(subnet)}, next_hop: {next_hop} ({type(next_hop)}")
 
             self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
 
@@ -3370,7 +3338,7 @@ class Node(TemplateMixin):
         net_type="IPv4",
         nic_type="NIC_Basic",
         routes=None,
-        subnet: ipaddress.ip_network = None,
+        subnet: Optional[ipaddress.ip_network] = None,
     ):
         """
         Add a simple layer 3 network to this node.

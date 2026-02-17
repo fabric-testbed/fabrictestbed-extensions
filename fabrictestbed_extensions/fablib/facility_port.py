@@ -71,12 +71,7 @@ class FacilityPort(TemplateMixin):
         self.fim_object: FimNode = fim_object
         self.slice: Slice = slice
         self.interfaces: Dict[str, Interface] = {}
-        
-        # V2 specific: dirty flag for caching
-        self._fim_dirty: bool = True
 
-        # V2 specific: cached FIM properties
-        self._cached_name: Optional[str] = None
         self._cached_site: Optional[str] = None
 
         # V2 specific: cached interfaces
@@ -84,8 +79,8 @@ class FacilityPort(TemplateMixin):
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        self._fim_dirty = True
-        self._cached_name = None
+        super(FacilityPort, self)._invalidate_cache()
+
         self._cached_site = None
         self._interfaces_cache = {}
 
@@ -169,25 +164,6 @@ class FacilityPort(TemplateMixin):
         Get fablib model name for the facility port.
         """
         return "Facility_Port"
-
-    def get_name(self) -> str:
-        """
-        Gets the name of the facility port.
-
-        Results are cached for performance.
-
-        :return: the facility port name
-        :rtype: str
-        """
-        if self._cached_name is None:
-            try:
-                if self.fim_object:
-                    self._cached_name = self.fim_object.name
-                else:
-                    self._cached_name = ""
-            except Exception:
-                self._cached_name = ""
-        return self._cached_name
 
     def get_site(self) -> str:
         """
