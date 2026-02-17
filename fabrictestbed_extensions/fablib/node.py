@@ -131,12 +131,8 @@ class Node(TemplateMixin):
         self.components = {}
         self.interfaces = {}
         self.sliver = None
-
-        # Try to set the username.
-        try:
-            self.set_username()
-        except:
-            self.username = None
+        self.username = None
+        self.set_username()
 
         try:
             if slice.isStable():
@@ -781,40 +777,46 @@ class Node(TemplateMixin):
         :param username: Optional username parameter.  The username
             likely should be picked to match the image type.
         """
-        if self.get_fim().type == NodeType.Switch and not username:
-            self.username = Constants.FABRIC_USER
-            return
-        username = (
-            self.get_fablib_manager()
-            .get_os_images()
-            .get(self.get_image(), {})
-            .get("default_user")
-        )
-        if username is not None:
-            self.username = username
-        elif "default_centos10_stream" == self.get_image():
-            self.username = "cloud-user"
-        elif "default_centos9_stream" == self.get_image():
-            self.username = "cloud-user"
-        elif "centos" in self.get_image():
-            self.username = "centos"
-        elif "ubuntu" in self.get_image():
-            self.username = "ubuntu"
-        elif "rocky" in self.get_image():
-            self.username = "rocky"
-        elif "fedora" in self.get_image():
-            self.username = "fedora"
-        elif "cirros" in self.get_image():
-            self.username = "cirros"
-        elif "debian" in self.get_image():
-            self.username = "debian"
-        elif "freebsd" in self.get_image():
-            self.username = "freebsd"
-        elif "openbsd" in self.get_image():
-            self.username = "openbsd"
-        elif "kali" in self.get_image():
-            self.username = "kali"
-        else:
+        try:
+            if self.username is not None:
+                return
+            if self.get_fim().type == NodeType.Switch and not username:
+                self.username = Constants.FABRIC_USER
+                return
+            username = (
+                self.get_fablib_manager()
+                .get_os_images()
+                .get(self.get_image(), {})
+                .get("default_user")
+            )
+            if username is not None:
+                self.username = username
+            elif "default_centos10_stream" == self.get_image():
+                self.username = "cloud-user"
+            elif "default_centos9_stream" == self.get_image():
+                self.username = "cloud-user"
+            elif "centos" in self.get_image():
+                self.username = "centos"
+            elif "ubuntu" in self.get_image():
+                self.username = "ubuntu"
+            elif "rocky" in self.get_image():
+                self.username = "rocky"
+            elif "fedora" in self.get_image():
+                self.username = "fedora"
+            elif "cirros" in self.get_image():
+                self.username = "cirros"
+            elif "debian" in self.get_image():
+                self.username = "debian"
+            elif "freebsd" in self.get_image():
+                self.username = "freebsd"
+            elif "openbsd" in self.get_image():
+                self.username = "openbsd"
+            elif "kali" in self.get_image():
+                self.username = "kali"
+            else:
+                self.username = None
+        except Exception as e:
+            log.error("Failed to set username parameter: %s", e)
             self.username = None
 
     def set_image(self, image: str, username: str = None, image_type: str = "qcow2"):
@@ -1084,8 +1086,6 @@ class Node(TemplateMixin):
         :return: the username on this node
         :rtype: String
         """
-        if self.username is None:
-            self.set_username()
         return self.username
 
     def get_public_key(self) -> str:
