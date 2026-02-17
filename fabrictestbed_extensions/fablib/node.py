@@ -1084,6 +1084,8 @@ class Node(TemplateMixin):
         :return: the username on this node
         :rtype: String
         """
+        if self.username is None:
+            self.set_username()
         return self.username
 
     def get_public_key(self) -> str:
