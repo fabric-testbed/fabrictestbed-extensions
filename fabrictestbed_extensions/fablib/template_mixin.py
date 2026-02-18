@@ -49,7 +49,7 @@ class TemplateMixin:
         """
 
     @abstractmethod
-    def toDict(self):
+    def toDict(self, skip: Optional[List[str]]):
         """
         Returns the attributes as a dictionary
 
@@ -57,12 +57,12 @@ class TemplateMixin:
         :rtype: dict
         """
 
-    def generate_template_context(self):
+    def generate_template_context(self, skip: Optional[List[str]] = None):
         """Return a dict representing this object for template rendering.
 
         The default implementation delegates to ``self.toDict()``.
         """
-        return self.toDict()
+        return self.toDict(skip=skip)
 
     def _configure_template_environment(self, environment: jinja2.Environment):
         """Hook to customise the Jinja2 environment before rendering."""

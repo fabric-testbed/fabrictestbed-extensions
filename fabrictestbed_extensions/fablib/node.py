@@ -325,13 +325,15 @@ class Node(TemplateMixin):
             "private_ssh_key_file": "Private SSH Key File",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: Optional[List[str]]):
         """
         Returns the node attributes as a dictionary
 
         :return: slice attributes as  dictionary
         :rtype: dict
         """
+        if skip is None:
+            skip = []
         rtn_dict = {}
 
         if "id" not in skip:
@@ -377,14 +379,13 @@ class Node(TemplateMixin):
 
         return rtn_dict
 
-    def generate_template_context(self):
-        context = self.toDict(skip=["ssh_command"])
+    def generate_template_context(self, skip: List[str] = None):
+        if skip is None:
+            skip = []
+        if "ssh_command" not in skip:
+            skip.append("ssh_command")
+        context = self.toDict(skip=skip)
         context["components"] = []
-        # for component in self.get_components():
-        #    context["components"].append(component.get_name())
-
-        #    context["components"].append(component.generate_template_context())
-
         return context
 
     def show(
