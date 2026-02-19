@@ -123,7 +123,6 @@ class Node(TemplateMixin):
         super().__init__()
         self.fim_node = node
         self.slice = slice
-        self.host = None
         self.ip_addr_list_json = None
         self.validate = validate
         self.raise_exception = raise_exception
@@ -132,7 +131,20 @@ class Node(TemplateMixin):
         self.interfaces = {}
         self.sliver = None
         self.username = None
-        self.set_username()
+        self.reservation_id = None
+        self.cores = None
+        self.ram = None
+        self.disk = None
+        self.image = None
+        self.image_type = None
+        self.host = None
+        self.site = None
+        self.management_ip = None
+
+        try:
+            self.set_username()
+        except:
+            self.username = None
 
         try:
             if slice.isStable():
@@ -1034,19 +1046,20 @@ class Node(TemplateMixin):
         :return: the hostname on the node
         :rtype: String
         """
-        try:
-            if self.host is not None:
-                return self.host
-            label_allocations = self.get_fim().get_property(
-                pname="label_allocations"
-            )
-            labels = self.get_fim().get_property(pname="labels")
-            if label_allocations:
-                return label_allocations.instance_parent
-            if labels:
-                return labels.instance_parent
-        except:
-            return None
+        if not self.host:
+            try:
+                label_allocations = self.get_fim().get_property(
+                    pname="label_allocations"
+                )
+                if label_allocations:
+                    self.host = label_allocations.instance_parent
+                else:
+                    labels = self.get_fim().get_property(pname="labels")
+                    if labels:
+                        self.host = labels.instance_parent
+            except:
+                return None
+        return self.host
 
     def get_site(self) -> str:
         """
@@ -1079,6 +1092,80 @@ class Node(TemplateMixin):
             except Exception:
                 self._cached_management_ip = None
         return self._cached_management_ip if self._cached_management_ip is not None else ""
+
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[dict[str, Interface], list[Interface]]:
+        """
+        Gets a list of the interfaces associated with the FABRIC node.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
+        :param output: Specify how the return type is expected; Possible values: list or dict
+        :type output: str
+
+        :return: a list or dict of interfaces on the node
+        :rtype: Union[dict[str, Interface], list[Interface]]
+        """
+        if self.interfaces and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self.interfaces
+            return list(self.interfaces.values())
+
+        self.interfaces = {}
+        for component in self.get_components(refresh=refresh):
+            c_interfaces = component.get_interfaces(
+                include_subs=include_subs, refresh=refresh, output="dict"
+            )
+            self.interfaces.update(c_interfaces)
+
+        if output == "dict":
+            return self.interfaces
+        return list(self.interfaces.values())
+
+    def get_interface(
+        self, name: str = None, network_name: str = None, refresh: bool = False
+    ) -> Interface or None:
+        """
+        Gets a particular interface associated with a FABRIC node.
+        Accepts either the interface name or a network_name.  If a
+        network name is used this method will return the interface on
+        the node that is connected to the network specified.  If a
+        name and network_name are both used, the interface name will
+        take precedence.
+
+        :param name: interface name to search for
+        :type name: str
+
+        :param network_name: network name to search for
+        :type name: str
+
+        :param refresh: Refresh the interface object with latest Fim info
+        :type refresh: bool
+
+        :raise Exception: if interface is not found
+
+        :return: an interface on the node
+        :rtype: Interface
+        """
+        if name is not None:
+            interface = self.get_interfaces(refresh=refresh, output="dict").get(name)
+            if interface is not None:
+                return interface
+        elif network_name is not None:
+            for interface in self.get_interfaces(refresh=refresh):
+                if (
+                    interface is not None
+                    and interface.get_network() is not None
+                    and interface.get_network().get_name() == network_name
+                ):
+                    return interface
+
+        raise Exception("Interface not found: {}".format(name))
 
     def get_username(self) -> str:
         """
@@ -1361,7 +1448,14 @@ class Node(TemplateMixin):
         try:
             return self.render_template(
                 self.get_fablib_manager().get_ssh_command_line(),
-                skip=["ssh_command", "interfaces"],
+                skip=[
+                    "ssh_command",
+                    "interfaces",
+                    "state",
+                    "error",
+                    "components",
+                    "networks",
+                ],
             )
         except:
             return self.get_fablib_manager().get_ssh_command_line()

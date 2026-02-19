@@ -53,7 +53,6 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
-    from fabrictestbed_extensions.fablib.interface import Interface
 
 import logging
 from typing import List
@@ -175,19 +174,18 @@ class Component(TemplateMixin):
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {
-            "name": str(self.get_name()),
-            "short_name": str(self.get_short_name()),
-            "details": str(self.get_details()),
-            "disk": str(self.get_disk()),
-            "units": str(self.get_unit()),
-            "pci_address": str(self.get_pci_addr()),
-            "model": str(self.get_model()),
-            "type": str(self.get_type()),
-            "dev": str(self.get_device_name()),
-            "node": str(self.get_node().get_name()),
-            "numa": str(self.get_numa_node()),
-        }
+        self.dict["name"] = str(self.get_name())
+        self.dict["short_name"] = str(self.get_short_name())
+        self.dict["details"] = str(self.get_details())
+        self.dict["disk"] = str(self.get_disk())
+        self.dict["units"] = str(self.get_unit())
+        self.dict["pci_address"] = str(self.get_pci_addr())
+        self.dict["model"] = str(self.get_model())
+        self.dict["type"] = str(self.get_type())
+        self.dict["dev"] = str(self.get_device_name())
+        self.dict["node"] = str(self.get_node().get_name()) if self.get_node() else ""
+        self.dict["numa"] = str(self.get_numa_node())
+        return self.dict
 
     def generate_template_context(self):
         """
@@ -366,8 +364,24 @@ class Component(TemplateMixin):
         """
         super().__init__()
         self.fim_component = fim_component
+        self.fim_model = None
         self.node = node
         self.interfaces = {}
+
+        # Dict for toDict() / template rendering
+        self.dict = {
+            "name": "",
+            "short_name": "",
+            "details": "",
+            "disk": "",
+            "units": "",
+            "pci_address": "",
+            "model": "",
+            "type": "",
+            "dev": "",
+            "node": "",
+            "numa": "",
+        }
 
         # V2 specific: cached FIM properties
         self._cached_details: Optional[str] = None
@@ -392,6 +406,19 @@ class Component(TemplateMixin):
         self._cached_fim_type = None
         self._cached_device_name = None
         self.interfaces = {}
+        self.dict = {
+            "name": "",
+            "short_name": "",
+            "details": "",
+            "disk": "",
+            "units": "",
+            "pci_address": "",
+            "model": "",
+            "type": "",
+            "dev": "",
+            "node": self.get_node().get_name() if self.get_node() else "",
+            "numa": "",
+        }
 
     def update(self, fim_component: Optional[FimComponent] = None):
         """
@@ -520,7 +547,11 @@ class Component(TemplateMixin):
         Gets the short name of the component.
         """
         # strip of the extra parts of the name added by fim
-        return self.get_name()[len(f"{self.get_node().get_name()}-") :]
+        if not self.dict["short_name"]:
+            self.dict["short_name"] = self.get_name()[
+                len(f"{self.get_node().get_name()}-") :
+            ]
+        return self.dict["short_name"]
 
     def get_details(self) -> str:
         """
@@ -530,6 +561,7 @@ class Component(TemplateMixin):
             try:
                 if self.get_fim():
                     self._cached_details = self.get_fim().details
+                    self.dict["details"] = self._cached_details
             except Exception:
                 self._cached_details = None
         return self._cached_details
@@ -548,8 +580,10 @@ class Component(TemplateMixin):
                         if label_allocations.numa:
                             if isinstance(label_allocations.numa, str):
                                 self._cached_numa_node = label_allocations.numa
+                                self.dict["numa"] = self._cached_numa_node
                             elif isinstance(label_allocations.numa, list):
                                 self._cached_numa_node = label_allocations.numa[0]
+                                self.dict["numa"] = self._cached_numa_node
             except Exception:
                 self._cached_numa_node = None
         return self._cached_numa_node if self._cached_numa_node else ""
@@ -570,6 +604,7 @@ class Component(TemplateMixin):
                     if label_allocations:
                         if label_allocations.disk:
                             self._cached_disk = label_allocations.disk
+                            self.dict["disk"] = self._cached_disk
             except Exception:
                 self._cached_disk = None
         return self._cached_disk if self._cached_disk else 0

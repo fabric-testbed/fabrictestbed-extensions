@@ -611,7 +611,7 @@ class Interface(TemplateMixin):
 
         return self
 
-    def get_reservation_id(self) -> Optional[str]:
+    def get_reservation_id(self) -> str or None:
         """
         Gets the reservation id
 

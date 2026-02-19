@@ -653,27 +653,32 @@ class NetworkService(TemplateMixin):
         raise Exception(f"Network not found. Slice {slice.slice_name}, network {name}")
 
     @staticmethod
-    def get_network_services(slice: Slice = None) -> list:
+    def get_network_services(
+        slice: Slice = None, output: str = "list"
+    ) -> dict[str, NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice
 
-        :return: List of all network services in this slice
-        :rtype: List[NetworkService]
+        :return: Dict of all network services in this slice
+        :rtype: dict[str, NetworkService]
         """
 
         topology = slice.get_fim_topology()
 
-        rtn_network_services = []
+        rtn_network_services = {}
         for net_name, net in topology.network_services.items():
             if (
                 str(net.get_property("type"))
                 in NetworkService.get_fim_network_service_types()
             ):
-                rtn_network_services.append(
-                    NetworkService(slice=slice, fim_network_service=net)
+                rtn_network_services[net_name] = NetworkService(
+                    slice=slice, fim_network_service=net
                 )
 
-        return rtn_network_services
+        if output == "dict":
+            return rtn_network_services
+        else:
+            return list(rtn_network_services.values())
 
     @staticmethod
     def get_network_service(slice: Slice = None, name: str = None):
@@ -749,6 +754,7 @@ class NetworkService(TemplateMixin):
         self._cached_gateway = None
 
         self._interfaces_cache = {}
+        self.interfaces = None
 
     def update(self, fim_network_service: FimNetworkService = None):
         """

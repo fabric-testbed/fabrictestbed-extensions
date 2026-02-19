@@ -6,11 +6,13 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.9.5
 ## 1.9.7
 
 ### Changed
 - Fix for when reporting management interface from OS for IPv6 on rocky nodes (Issue [#471] PR [#470](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/470)
 - Missed tab spaces from PR#470. This is resolved using PR [#472]
+- Improve the performance of several get_ calls through caching (Issue [#453](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/453))
 
 
 ## 1.9.6
