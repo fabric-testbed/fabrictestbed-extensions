@@ -566,7 +566,7 @@ V1Switch(
 
         result = True
 
-        (out, _) = self.execute("sudo sysctl net.ipv4.ip_forward", quiet=True)
+        out, _ = self.execute("sudo sysctl net.ipv4.ip_forward", quiet=True)
         check = out == "net.ipv4.ip_forward = 1\n"
         if not check:
             log.error(f"Attestable Switch {self.get_name()}: failed check 1")
@@ -575,7 +575,7 @@ V1Switch(
 
         result = result and check
 
-        (out, _) = self.execute(
+        out, _ = self.execute(
             f"ls -s {Attestable_Switch.crease_path_prefix}nothing.p4", quiet=True
         )
         check = out == f"4 {Attestable_Switch.crease_path_prefix}nothing.p4\n"
@@ -706,13 +706,13 @@ V1Switch(
             for command in commands:
                 print(command)
         else:
-            (out, err) = self.execute(commands[0], quiet=quiet)
+            out, err = self.execute(commands[0], quiet=quiet)
             stdout.append(out)
             stderr.append(err)
             job = self.execute_thread(commands[1])
             time.sleep(timeout)
             if not job.running() and not quiet:
-                (out, err) = job.result()
+                out, err = job.result()
                 stdout.append(out)
                 stderr.append(err)
 
@@ -753,7 +753,7 @@ V1Switch(
         if dry:
             print(command)
         else:
-            (out, err) = self.execute(command, quiet=quiet)
+            out, err = self.execute(command, quiet=quiet)
             stdout.append(out)
             stderr.append(err)
 
@@ -796,7 +796,7 @@ V1Switch(
         else:
             self.upload_file(filename, os.path.basename(filename), retry=1)
             for command in commands:
-                (out, err) = self.execute(command, quiet=quiet)
+                out, err = self.execute(command, quiet=quiet)
                 stdout.append(out)
                 stderr.append(err)
 
@@ -820,7 +820,7 @@ V1Switch(
         if dry:
             print(command)
         else:
-            (out, err) = self.execute(command, quiet=quiet)
+            out, err = self.execute(command, quiet=quiet)
             stdout.append(out)
             stderr.append(err)
 
@@ -882,7 +882,7 @@ V1Switch(
         stderr = []
 
         for command in commands:
-            (out, err) = self.execute(command, quiet=False)
+            out, err = self.execute(command, quiet=False)
             stdout.append(out)
             stderr.append(err)
 

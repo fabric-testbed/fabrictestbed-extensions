@@ -28,6 +28,7 @@ This module provides the Switch class for working with P4-programmable
 network switches in FABRIC. Switches extend the Node class with specialized
 functionality for programmable data planes.
 """
+
 from __future__ import annotations
 
 import json
