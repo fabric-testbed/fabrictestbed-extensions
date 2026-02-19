@@ -56,6 +56,8 @@ class FacilityPort(TemplateMixin):
     A class for working with FABRIC facility ports.
     """
 
+    _show_title = "Facility Port"
+
     fim_object = None
     slice = None
 
@@ -96,12 +98,6 @@ class FacilityPort(TemplateMixin):
 
         return tabulate(table)
 
-    def toJson(self):
-        """
-        Return a JSON representation of the facility port.
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -111,44 +107,27 @@ class FacilityPort(TemplateMixin):
             "name": "Name",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: list = None):
         """
         Return a Python `dict` representation of the facility port.
+
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: list
         """
-        return {"name": str(self.get_name())}
+        if skip is None:
+            skip = []
 
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Get a human-readable representation of the facility port.
-        """
-        data = self.toDict()
+        if self._cached_dict is None:
+            d = {}
+            d["name"] = str(self.get_name())
+            self._cached_dict = d
 
-        # fields = ["Name",
-        #         ]
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        table = Utils.show_table(
-            data,
-            fields=fields,
-            title="Facility Port",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return table
-
-    def get_fablib_manager(self) -> Optional[FablibManager]:
-        """
-        Get a reference to :py:class:`.FablibManager`.
-        """
-        return self.slice.get_fablib_manager() if self.slice is not None else None
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def get_fim(self):
         """

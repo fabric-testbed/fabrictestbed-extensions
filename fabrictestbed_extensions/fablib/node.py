@@ -91,6 +91,7 @@ class Node(TemplateMixin):
     """
 
     _default_skip = ["ssh_command"]
+    _show_title = "Node"
 
     default_cores = 2
     default_ram = 8
@@ -186,12 +187,6 @@ class Node(TemplateMixin):
         self._cached_requested_cores = None
         self._cached_allocated_cores = None
         self._cached_instance_name = None
-
-    def get_fablib_manager(self):
-        """
-        Get a reference to :py:class:`.FablibManager`.
-        """
-        return self.slice.get_fablib_manager()
 
     def __str__(self):
         """
@@ -302,15 +297,6 @@ class Node(TemplateMixin):
         """
         return Node(slice=slice, node=node)
 
-    def toJson(self):
-        """
-        Returns the node attributes as a JSON string
-
-        :return: slice attributes as JSON string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -337,59 +323,52 @@ class Node(TemplateMixin):
             "private_ssh_key_file": "Private SSH Key File",
         }
 
-    def toDict(self, skip: Optional[List[str]]):
+    def toDict(self, skip: Optional[List[str]] = None):
         """
-        Returns the node attributes as a dictionary
+        Returns the node attributes as a dictionary.
 
-        :return: slice attributes as  dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: List[str]
+        :return: node attributes as dictionary
         :rtype: dict
         """
         if skip is None:
             skip = []
-        rtn_dict = {}
 
-        if "id" not in skip:
-            rtn_dict["id"] = str(self.get_reservation_id())
-        if "name" not in skip:
-            rtn_dict["name"] = str(self.get_name())
-        if "cores" not in skip:
-            rtn_dict["cores"] = str(self.get_cores())
-        if "ram" not in skip:
-            rtn_dict["ram"] = str(self.get_ram())
-        if "disk" not in skip:
-            rtn_dict["disk"] = str(self.get_disk())
-        if "image" not in skip:
-            rtn_dict["image"] = str(self.get_image())
-        if "image_type" not in skip:
-            rtn_dict["image_type"] = str(self.get_image_type())
-        if "host" not in skip:
-            rtn_dict["host"] = str(self.get_host())
-        if "site" not in skip:
-            rtn_dict["site"] = str(self.get_site())
-        if "username" not in skip:
-            rtn_dict["username"] = str(self.get_username())
-        if "management_ip" not in skip:
-            rtn_dict["management_ip"] = (
+        if self._cached_dict is None:
+            d = {}
+            d["id"] = str(self.get_reservation_id())
+            d["name"] = str(self.get_name())
+            d["cores"] = str(self.get_cores())
+            d["ram"] = str(self.get_ram())
+            d["disk"] = str(self.get_disk())
+            d["image"] = str(self.get_image())
+            d["image_type"] = str(self.get_image_type())
+            d["host"] = str(self.get_host())
+            d["site"] = str(self.get_site())
+            d["username"] = str(self.get_username())
+            d["management_ip"] = (
                 str(self.get_management_ip()).strip()
                 if str(self.get_reservation_state()) == "Active"
                 and self.get_management_ip()
                 else ""
-            )  # str(self.get_management_ip())
-        if "state" not in skip:
-            rtn_dict["state"] = str(self.get_reservation_state())
-        if "error" not in skip:
-            rtn_dict["error"] = str(self.get_error_message())
-        if "ssh_command" not in skip:
+            )
+            d["state"] = str(self.get_reservation_state())
+            d["error"] = str(self.get_error_message())
             if str(self.get_reservation_state()) == "Active":
-                rtn_dict["ssh_command"] = str(self.get_ssh_command())
+                d["ssh_command"] = str(self.get_ssh_command())
             else:
-                rtn_dict["ssh_command"] = ""
-        if "public_ssh_key_file" not in skip:
-            rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
-        if "private_ssh_key_file" not in skip:
-            rtn_dict["private_ssh_key_file"] = str(self.get_private_key_file())
+                d["ssh_command"] = ""
+            d["public_ssh_key_file"] = str(self.get_public_key_file())
+            d["private_ssh_key_file"] = str(self.get_private_key_file())
+            self._cached_dict = d
 
-        return rtn_dict
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def generate_template_context(self, skip: List[str] = None):
         if skip is None:
@@ -467,7 +446,7 @@ class Node(TemplateMixin):
             table = Utils.show_table(
                 data,
                 fields=fields,
-                title="Node",
+                title=self._show_title,
                 output="pandas",
                 quiet=True,
                 pretty_names_dict=pretty_names_dict,
@@ -480,7 +459,7 @@ class Node(TemplateMixin):
             table = Utils.show_table(
                 data,
                 fields=fields,
-                title="Node",
+                title=self._show_title,
                 output=output,
                 quiet=quiet,
                 pretty_names_dict=pretty_names_dict,
@@ -3074,25 +3053,6 @@ class Node(TemplateMixin):
         """
         return self.fim_node
 
-    def set_user_data(self, user_data: dict):
-        """
-        Set user data.
-
-        :param user_data: a `dict`.
-        """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self):
-        """
-        Get user data.
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except:
-            return {}
-
     def delete(self):
         """
         Remove the node from the slice. All components and interfaces associated with
@@ -3114,23 +3074,6 @@ class Node(TemplateMixin):
             "post_update_commands": [],
         }
         self.set_fablib_data(fablib_data)
-
-    def get_fablib_data(self):
-        """
-        Get fablib data. Usually used internally.
-        """
-        try:
-            return self.get_user_data()["fablib_data"]
-        except:
-            return {}
-
-    def set_fablib_data(self, fablib_data: dict):
-        """
-        Set fablib data. Usually used internally.
-        """
-        user_data = self.get_user_data()
-        user_data["fablib_data"] = fablib_data
-        self.set_user_data(user_data)
 
     def add_route(
         self,

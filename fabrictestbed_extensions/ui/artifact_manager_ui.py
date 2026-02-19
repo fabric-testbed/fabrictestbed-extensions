@@ -129,6 +129,8 @@ class ArtifactManagerUI:
                         print(
                             f"Artifact '{artifact_title}' version: '{version}' extracted to {extract_path} successfully!"
                         )
+                    os.remove(location)
+                    print(f"Removed tar file: {location}")
                 else:
                     print(f"Downloaded file '{location}' is not a valid tar file.")
 

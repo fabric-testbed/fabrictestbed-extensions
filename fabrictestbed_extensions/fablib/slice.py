@@ -124,15 +124,6 @@ class Slice:
         self.user_only: bool = user_only
         # Flag to track if cached objects need refresh after topology update
         self._topology_dirty: bool = True
-        self.nodes = {}
-        self.facilities = {}
-        self.interfaces = {}
-        self.network_services = {}
-        self.update_topology_count = 0
-        self.update_slivers_count = 0
-        self.update_slice_count = 0
-        self.update_count = 0
-        self.user_only = user_only
 
     def get_fablib_manager(self) -> FablibManagerV2:
         return self.fablib_manager
@@ -526,34 +517,52 @@ class Slice:
             "user_id": "UserId",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: list = None):
         """
         Returns the slice attributes as a dictionary
 
+        :param skip: list of keys to exclude
+        :type skip: list
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        return {
-            "id": str(self.get_slice_id()),
-            "name": str(self.get_name()),
-            "lease_end": str(self.get_lease_end()),
-            "lease_start": str(self.get_lease_start()),
-            "project_id": str(self.get_project_id()),
-            "state": str(self.get_state()),
-            "email": str(self.get_email()),
-            "user_id": str(self.get_user_id()),
-        }
+        if skip is None:
+            skip = []
 
-    def get_template_context(self, base_object=None, skip=[]):
+        rtn_dict = {}
+
+        if "id" not in skip:
+            rtn_dict["id"] = str(self.get_slice_id())
+        if "name" not in skip:
+            rtn_dict["name"] = str(self.get_name())
+        if "lease_end" not in skip:
+            rtn_dict["lease_end"] = str(self.get_lease_end())
+        if "lease_start" not in skip:
+            rtn_dict["lease_start"] = str(self.get_lease_start())
+        if "project_id" not in skip:
+            rtn_dict["project_id"] = str(self.get_project_id())
+        if "state" not in skip:
+            rtn_dict["state"] = str(self.get_state())
+        if "email" not in skip:
+            rtn_dict["email"] = str(self.get_email())
+        if "user_id" not in skip:
+            rtn_dict["user_id"] = str(self.get_user_id())
+
+        return rtn_dict
+
+    def get_template_context(self, base_object=None, skip=None):
+        if skip is None:
+            skip = []
+
         context = {}
 
         if base_object:
-            context["_self_"] = base_object.generate_template_context()
+            context["_self_"] = base_object.generate_template_context(skip=skip)
         else:
             context["_self_"] = {}
 
         context["config"] = self.get_fablib_manager().get_config()
-        context["slice"] = self.toDict()
+        context["slice"] = self.toDict(skip=skip)
         nodes = None
 
         if "nodes" not in skip or "components" not in skip:
@@ -571,19 +580,19 @@ class Slice:
                 for component in node.get_components():
                     context["components"][
                         component.get_name()
-                    ] = component.generate_template_context()
+                    ] = component.generate_template_context(skip=skip)
 
         context["interfaces"] = {}
         if "interfaces" not in skip:
             for interface in self.get_interfaces():
-                context["interfaces"][interface.get_name()] = interface.toDict()
+                context["interfaces"][interface.get_name()] = interface.toDict(skip=skip)
 
         context["networks"] = {}
         if "networks" not in skip:
             for network in self.get_networks():
                 context["networks"][
                     network.get_name()
-                ] = network.generate_template_context()
+                ] = network.generate_template_context(skip=skip)
 
         return context
 
@@ -1823,11 +1832,13 @@ class Slice:
         :return: a list of interfaces on this slice
         :rtype: Union[dict[str, Interface], list[Interface]]
         """
-        if len(self.interfaces) == 0 or refresh:
+        if self.interfaces and not refresh and not self._topology_dirty:
+            pass
+        else:
+            self.interfaces = {}
             for node in self.get_nodes(refresh=refresh):
                 logging.debug(f"Getting interfaces for node {node.get_name()}")
-                # get_nodes will already refresh interfaces if needed
-                n_ifaces = node.get_interfaces(include_subs=include_subs, output="dict")
+                n_ifaces = node.get_interfaces(include_subs=include_subs, refresh=refresh, output="dict")
                 self.interfaces.update(n_ifaces)
             for fac in self.get_facilities(refresh=refresh):
                 logging.debug(f"Getting interfaces for facility {fac.get_name()}")
@@ -1972,7 +1983,7 @@ class Slice:
         :return: List of all network services in this slice
         :rtype: List[NetworkService]
         """
-        if len(self.network_services) == 0 or refresh:
+        if not self.network_services or refresh or self._topology_dirty:
             try:
                 self.network_services = NetworkService.get_network_services(
                     self, output="dict"

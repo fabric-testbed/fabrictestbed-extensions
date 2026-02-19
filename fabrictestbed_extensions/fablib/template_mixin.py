@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
 from abc import abstractmethod
 from typing import List, Optional
 
 import jinja2
+from fabrictestbed.slice_editor import UserData
+
+from fabrictestbed_extensions.utils.utils import Utils
 
 
 class TemplateMixin:
@@ -20,6 +24,7 @@ class TemplateMixin:
     """
 
     _default_skip: Optional[List[str]] = None
+    _show_title: str = ""
 
     def __init__(self, **kwargs):
         # V2 specific: dirty flag for caching
@@ -29,6 +34,7 @@ class TemplateMixin:
         self._cached_reservation_state: Optional[str] = None
         self._cached_error_message: Optional[str] = None
         self._cached_name: Optional[str] = None
+        self._cached_dict: Optional[dict] = None
 
     def _invalidate_cache(self):
         """
@@ -41,6 +47,7 @@ class TemplateMixin:
         self._cached_reservation_state = None
         self._cached_error_message = None
         self._cached_name = None
+        self._cached_dict = None
 
     @abstractmethod
     def get_fim(self):
@@ -171,3 +178,118 @@ class TemplateMixin:
             except Exception:
                 self._cached_name = None
         return self._cached_name
+
+    def toJson(self):
+        """
+        Returns the attributes as a JSON string.
+
+        :return: attributes as JSON string
+        :rtype: str
+        """
+        return json.dumps(self.toDict(), indent=4)
+
+    def get_fablib_manager(self):
+        """
+        Get a reference to :py:class:`.FablibManager`.
+        """
+        s = self.get_slice()
+        return s.get_fablib_manager() if s is not None else None
+
+    @staticmethod
+    def get_pretty_name_dict():
+        """
+        Return a mapping of internal field names to display names.
+
+        Subclasses should override this to provide their own mappings.
+
+        :return: pretty name mapping
+        :rtype: dict
+        """
+        return {}
+
+    def show(
+        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
+    ):
+        """
+        Show a table containing the current attributes.
+
+        There are several output options: ``"text"``, ``"pandas"``,
+        and ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
+
+        :param output: output format
+        :type output: str
+        :param fields: list of fields to show
+        :type fields: List[str]
+        :param quiet: True to specify printing/display
+        :type quiet: bool
+        :param colors: True to specify state colors for pandas output
+        :type colors: bool
+        :param pretty_names: Display pretty names
+        :type pretty_names: bool
+        :return: table in format specified by output parameter
+        :rtype: Object
+        """
+        data = self.toDict()
+
+        if pretty_names:
+            pretty_names_dict = self.get_pretty_name_dict()
+        else:
+            pretty_names_dict = {}
+
+        table = Utils.show_table(
+            data,
+            fields=fields,
+            title=self._show_title,
+            output=output,
+            quiet=quiet,
+            pretty_names_dict=pretty_names_dict,
+        )
+
+        return table
+
+    def set_user_data(self, user_data: dict):
+        """
+        Set user data.
+
+        :param user_data: a ``dict``.
+        :type user_data: dict
+        """
+        self.get_fim().set_property(
+            pname="user_data", pval=UserData(json.dumps(user_data))
+        )
+
+    def get_user_data(self) -> dict:
+        """
+        Get user data.
+
+        :return: user data dictionary
+        :rtype: dict
+        """
+        try:
+            return json.loads(str(self.get_fim().get_property(pname="user_data")))
+        except Exception:
+            return {}
+
+    def get_fablib_data(self) -> dict:
+        """
+        Get fablib data. Usually used internally.
+
+        :return: fablib data dictionary
+        :rtype: dict
+        """
+        try:
+            return self.get_user_data()["fablib_data"]
+        except Exception:
+            return {}
+
+    def set_fablib_data(self, fablib_data: dict):
+        """
+        Set fablib data. Usually used internally.
+
+        :param fablib_data: fablib data dictionary
+        :type fablib_data: dict
+        """
+        user_data = self.get_user_data()
+        user_data["fablib_data"] = fablib_data
+        self.set_user_data(user_data)

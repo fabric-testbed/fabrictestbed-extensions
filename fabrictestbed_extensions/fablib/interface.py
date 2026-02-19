@@ -59,6 +59,8 @@ log = logging.getLogger("fablib")
 
 
 class Interface(TemplateMixin):
+    _show_title = "Interface"
+
     CONFIGURED = "configured"
     MODE = "mode"
     AUTO = "auto"
@@ -150,12 +152,6 @@ class Interface(TemplateMixin):
             self._invalidate_cache()
             self._fim_dirty = False
 
-    def get_fablib_manager(self):
-        """
-        Get a reference to :py:class:`.FablibManager` instance.
-        """
-        return self.get_slice().get_fablib_manager()
-
     def __str__(self):
         """
         Creates a tabulated string describing the properties of the interface.
@@ -205,15 +201,6 @@ class Interface(TemplateMixin):
 
         return tabulate(table)
 
-    def toJson(self) -> str:
-        """
-        Returns the interface attributes as a json string
-
-        :return: slice attributes as json string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict() -> dict[str, str]:
         """
@@ -235,63 +222,76 @@ class Interface(TemplateMixin):
             "switch_port": "Switch Port",
         }
 
-    def toDict(self, skip=[]) -> dict[str, str]:
+    def toDict(self, skip: Optional[List[str]] = None) -> dict[str, str]:
         """
-        Returns the interface attributes as a dictionary
+        Returns the interface attributes as a dictionary.
 
-        :return: slice attributes as dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: List[str]
+        :return: interface attributes as dictionary
         :rtype: dict
         """
-        if self.get_network():
-            log.info(
-                f"Getting results from get network name thread for iface {self.get_name()} "
-            )
-            network_name = self.get_network().get_name()
-        else:
-            network_name = None
+        if skip is None:
+            skip = []
 
-        if self.get_node():
-            log.info(
-                f"Getting results from get node name thread for iface {self.get_name()} "
-            )
-            node_name = self.get_node().get_name()
-        else:
-            node_name = None
+        if self._cached_dict is None:
+            if self.get_network():
+                log.info(
+                    f"Getting results from get network name thread for iface {self.get_name()} "
+                )
+                network_name = self.get_network().get_name()
+            else:
+                network_name = None
 
-        from fabrictestbed_extensions.fablib.node import Node
+            if self.get_node():
+                log.info(
+                    f"Getting results from get node name thread for iface {self.get_name()} "
+                )
+                node_name = self.get_node().get_name()
+            else:
+                node_name = None
 
-        if (
-            self.get_node()
-            and isinstance(self.get_node(), Node)
-            and str(self.get_node().get_reservation_state()) == "Active"
-        ):
-            mac = str(self.get_mac())
-            physical_dev = str(self.get_physical_os_interface_name())
-            dev = str(self.get_device_name())
-            ip_addr = str(self.get_ip_addr())
-            numa = str(self.get_numa_node())
-        else:
-            mac = ""
-            physical_dev = ""
-            dev = ""
-            ip_addr = ""
-            numa = ""
+            from fabrictestbed_extensions.fablib.node import Node
 
-        return {
-            "name": str(self.get_name()),
-            "short_name": str(self.get_short_name()),
-            "node": str(node_name),
-            "network": str(network_name),
-            "bandwidth": str(self.get_bandwidth()),
-            "mode": str(self.get_mode()),
-            "vlan": (str(self.get_vlan()) if self.get_vlan() else ""),
-            "mac": mac,
-            "physical_dev": physical_dev,
-            "dev": dev,
-            "ip_addr": ip_addr,
-            "numa": numa,
-            "switch_port": str(self.get_switch_port()),
-        }
+            if (
+                self.get_node()
+                and isinstance(self.get_node(), Node)
+                and str(self.get_node().get_reservation_state()) == "Active"
+            ):
+                mac = str(self.get_mac())
+                physical_dev = str(self.get_physical_os_interface_name())
+                dev = str(self.get_device_name())
+                ip_addr = str(self.get_ip_addr())
+                numa = str(self.get_numa_node())
+            else:
+                mac = ""
+                physical_dev = ""
+                dev = ""
+                ip_addr = ""
+                numa = ""
+
+            d = {}
+            d["name"] = str(self.get_name())
+            d["short_name"] = str(self.get_short_name())
+            d["node"] = str(node_name)
+            d["network"] = str(network_name)
+            d["bandwidth"] = str(self.get_bandwidth())
+            d["mode"] = str(self.get_mode())
+            d["vlan"] = (str(self.get_vlan()) if self.get_vlan() else "")
+            d["mac"] = mac
+            d["physical_dev"] = physical_dev
+            d["dev"] = dev
+            d["ip_addr"] = ip_addr
+            d["numa"] = numa
+            d["switch_port"] = str(self.get_switch_port())
+            self._cached_dict = d
+
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def get_switch_port(self) -> Optional[str]:
         """
@@ -322,60 +322,6 @@ class Interface(TemplateMixin):
         if self.get_component() is not None:
             return self.get_component().get_numa_node()
         return None
-
-    def show(
-        self,
-        fields=None,
-        output: str = None,
-        quiet: bool = False,
-        colors: bool = False,
-        pretty_names: bool = True,
-    ):
-        """
-        Show a table containing the current interface attributes.
-
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
-
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
-
-        fields: json output will include all available fields.
-
-        Example: fields=['Name','MAC']
-
-        :param output: output format
-        :type output: str
-        :param fields: list of fields to show
-        :type fields: List[str]
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-        :param pretty_names: Display pretty names
-        :type pretty_names: bool
-        :return: table in format specified by output parameter
-        :rtype: Object
-        """
-
-        data = self.toDict()
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        table = Utils.show_table(
-            data,
-            fields=fields,
-            title="Interface",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return table
 
     def set_auto_config(self):
         """
@@ -977,68 +923,6 @@ class Interface(TemplateMixin):
         :rtype: fim interface
         """
         return self.fim_interface
-
-    def set_user_data(self, user_data: dict):
-        """
-        Set the user data for the interface.
-
-        This method stores the given user data dictionary as a JSON string
-        in the FIM object associated with the interface.
-
-        :param user_data: The user data to be set.
-        :type user_data: dict
-        :return: None
-        """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self):
-        """
-        Retrieve the user data for the interface.
-
-        This method fetches the user data stored in the FIM object associated
-        with the interface and returns it as a dictionary. If an error occurs,
-        it returns an empty dictionary.
-
-        :return: The user data dictionary.
-        :rtype: dict
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except Exception as e:
-            return {}
-
-    def get_fablib_data(self):
-        """
-        Retrieve the 'fablib_data' from the user data.
-
-        This method extracts and returns the 'fablib_data' field from the
-        user data dictionary. If an error occurs or the field is not present,
-        it returns an empty dictionary.
-
-        :return: The 'fablib_data' dictionary.
-        :rtype: dict
-        """
-        try:
-            return self.get_user_data()["fablib_data"]
-        except:
-            return {}
-
-    def set_fablib_data(self, fablib_data: dict):
-        """
-        Set the 'fablib_data' in the user data.
-
-        This method updates the 'fablib_data' field in the user data dictionary
-        and stores the updated user data back in the FIM.
-
-        :param fablib_data: The 'fablib_data' to be set.
-        :type fablib_data: dict
-        :return: None
-        """
-        user_data = self.get_user_data()
-        user_data["fablib_data"] = fablib_data
-        self.set_user_data(user_data)
 
     def set_network(self, network: NetworkService):
         """

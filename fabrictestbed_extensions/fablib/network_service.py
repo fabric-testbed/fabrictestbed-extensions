@@ -65,6 +65,8 @@ class NetworkService(TemplateMixin):
     A class for working with FABRIC network services.
     """
 
+    _show_title = "Network"
+
     network_service_map = {
         "L2Bridge": ServiceType.L2Bridge,
         "L2PTP": ServiceType.L2PTP,
@@ -791,15 +793,6 @@ class NetworkService(TemplateMixin):
 
         return tabulate(table)  # , headers=["Property", "Value"])
 
-    def toJson(self):
-        """
-        Returns the network attributes as a json string
-
-        :return: network attributes as json string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -823,7 +816,8 @@ class NetworkService(TemplateMixin):
         """
         Returns the network attributes as a dictionary.
 
-        Uses cached values where available for better performance.
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
 
         :param skip: list of keys to skip
         :type skip: List[str]
@@ -833,89 +827,31 @@ class NetworkService(TemplateMixin):
         if skip is None:
             skip = []
 
-        rtn_dict = {}
+        if self._cached_dict is None:
+            d = {}
+            d["id"] = str(self.get_reservation_id())
+            d["name"] = str(self.get_name())
+            d["layer"] = str(self.get_layer())
+            d["type"] = str(self.get_type())
+            d["site"] = str(self.get_site())
+            d["subnet"] = str(self.get_subnet())
+            d["gateway"] = str(self.get_gateway())
+            d["state"] = str(self.get_reservation_state())
+            d["error"] = str(self.get_error_message())
+            self._cached_dict = d
 
-        if "id" not in skip:
-            rtn_dict["id"] = str(self.get_reservation_id())
-        if "name" not in skip:
-            rtn_dict["name"] = str(self.get_name())
-        if "layer" not in skip:
-            rtn_dict["layer"] = str(self.get_layer())
-        if "type" not in skip:
-            rtn_dict["type"] = str(self.get_type())
-        if "site" not in skip:
-            rtn_dict["site"] = str(self.get_site())
-        if "subnet" not in skip:
-            rtn_dict["subnet"] = str(self.get_subnet())
-        if "gateway" not in skip:
-            rtn_dict["gateway"] = str(self.get_gateway())
-        if "state" not in skip:
-            rtn_dict["state"] = str(self.get_reservation_state())
-        if "error" not in skip:
-            rtn_dict["error"] = str(self.get_error_message())
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-        return rtn_dict
-
-    def generate_template_context(self):
-        context = self.toDict()
+    def generate_template_context(self, skip: List[str] = None):
+        context = self.toDict(skip=skip)
         context["interfaces"] = []
 
         return context
 
     def _configure_template_environment(self, environment):
         environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Show a table containing the current network attributes.
-
-        There are several output options: "text", "pandas", and "json"
-        that determine the format of the output that is returned and
-        (optionally) displayed/printed.  This is controlled by the
-        parameter ``output``, which can be one of:
-
-        - ``"text"``: string formatted with tabular
-        - ``"pandas"``: pandas dataframe
-        - ``"json"``: string in json format
-
-        :param output: Output format (``"text"``, ``"pandas"``, or
-            ``"json"``)
-        :type output: str
-
-        :param fields: List of fields to show.  JSON output will
-            include all available fields.  Example:
-            ``fields=['Name','State']``
-        :type fields: List[str]
-
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-
-        :return: table in format specified by output parameter
-        :rtype: Object
-        """
-
-        data = self.toDict()
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        node_table = Utils.show_table(
-            data,
-            fields=fields,
-            title="Network",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return node_table
 
     def get_slice(self) -> Slice:
         """
@@ -925,12 +861,6 @@ class NetworkService(TemplateMixin):
         :rtype: Slice
         """
         return self.slice
-
-    def get_fablib_manager(self):
-        """
-        Get a reference to :py:class:`.FablibManager`.
-        """
-        return self.get_slice().get_fablib_manager()
 
     def get_site(self) -> Optional[str]:
         """
@@ -1197,25 +1127,6 @@ class NetworkService(TemplateMixin):
         """
         return self.fim_network_service
 
-    def set_user_data(self, user_data: dict):
-        """
-        Set user data.
-
-        :param user_data: a `dict`.
-        """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self):
-        """
-        Get user data.
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except:
-            return {}
-
     def __replace_network_service(self, nstype: ServiceType):
         fim_interfaces = []
         name = self.get_name()
@@ -1316,23 +1227,6 @@ class NetworkService(TemplateMixin):
             ifs.network = None
 
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
-
-    def get_fablib_data(self):
-        """
-        Get value associated with `fablib_data` key of user data.
-        """
-        try:
-            return self.get_user_data()["fablib_data"]
-        except:
-            return {}
-
-    def set_fablib_data(self, fablib_data: dict):
-        """
-        Set value associated with `fablib_data` key of user data.
-        """
-        user_data = self.get_user_data()
-        user_data["fablib_data"] = fablib_data
-        self.set_user_data(user_data)
 
     def set_subnet(self, subnet: Union[IPv4Network, IPv6Network]):
         """

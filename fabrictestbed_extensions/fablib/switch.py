@@ -52,6 +52,8 @@ log = logging.getLogger("fablib")
 
 
 class Switch(Node):
+    _show_title = "Switch"
+
     """Represents a P4-programmable network switch in FABRIC.
 
     Switch extends :class:`~fabrictestbed_extensions.fablib.node.Node` to model
@@ -202,15 +204,6 @@ class Switch(Node):
         return switch
 
 
-    def toJson(self):
-        """
-        Returns the node attributes as a JSON string
-
-        :return: slice attributes as JSON string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -237,141 +230,64 @@ class Switch(Node):
 
     def toDict(self, skip: list = None):
         """
-        Returns the node attributes as a dictionary
+        Returns the node attributes as a dictionary.
 
-        :return: slice attributes as  dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: list
+        :return: switch attributes as dictionary
         :rtype: dict
         """
-        if not skip:
+        if skip is None:
             skip = []
 
-        rtn_dict = {}
-
-        if "id" not in skip:
-            rtn_dict["id"] = str(self.get_reservation_id())
-        if "name" not in skip:
-            rtn_dict["name"] = str(self.get_name())
-        if "site" not in skip:
-            rtn_dict["site"] = str(self.get_site())
-        if "username" not in skip:
-            rtn_dict["username"] = str(self.get_username())
-        if "management_ip" not in skip:
-            rtn_dict["management_ip"] = (
+        if self._cached_dict is None:
+            d = {}
+            d["id"] = str(self.get_reservation_id())
+            d["name"] = str(self.get_name())
+            d["site"] = str(self.get_site())
+            d["username"] = str(self.get_username())
+            d["management_ip"] = (
                 str(self.get_management_ip()).strip()
                 if str(self.get_reservation_state()) == "Active"
                 and self.get_management_ip()
                 else ""
-            )  # str(self.get_management_ip())
-        if "state" not in skip:
-            rtn_dict["state"] = str(self.get_reservation_state())
-        if "error" not in skip:
-            rtn_dict["error"] = str(self.get_error_message())
-        if "ssh_command" not in skip:
+            )
+            d["state"] = str(self.get_reservation_state())
+            d["error"] = str(self.get_error_message())
             if str(self.get_reservation_state()) == "Active":
-                rtn_dict["ssh_command"] = str(self.get_ssh_command())
+                d["ssh_command"] = str(self.get_ssh_command())
             else:
-                rtn_dict["ssh_command"] = ""
-        if "public_ssh_key_file" not in skip:
-            rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
-        if "private_ssh_key_file" not in skip:
-            rtn_dict["private_ssh_key_file"] = str(self.get_private_key_file())
+                d["ssh_command"] = ""
+            d["public_ssh_key_file"] = str(self.get_public_key_file())
+            d["private_ssh_key_file"] = str(self.get_private_key_file())
+            self._cached_dict = d
 
-        return rtn_dict
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def generate_template_context(self):
+    def generate_template_context(self, skip: list = None):
         """
         Generate the base template context for this switch.
 
         Creates a dictionary context suitable for Jinja2 template rendering,
         excluding the SSH command and setting an empty components list.
 
+        :param skip: list of keys to exclude
+        :type skip: list
         :return: Template context dictionary with switch attributes
         :rtype: dict
         """
-        context = self.toDict(skip=["ssh_command"])
+        if skip is None:
+            skip = []
+        if "ssh_command" not in skip:
+            skip.append("ssh_command")
+        context = self.toDict(skip=skip)
         context["components"] = []
         return context
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Show a table containing the current node attributes.
-
-        There are several output options: ``"text"``, ``"pandas"``,
-        and ``"json"`` that determine the format of the output that is
-        returned and (optionally) displayed/printed.
-
-        :param output: output format.  Options are:
-
-                - ``"text"``: string formatted with tabular
-
-                - ``"pandas"``: pandas dataframe
-
-                - ``"json"``: string in json format
-
-        :type output: str
-
-        :param fields: List of fields to show.  JSON output will
-            include all available fields.
-        :type fields: List[str]
-
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-
-        :return: table in format specified by output parameter
-        :rtype: Object
-
-        Here's an example of ``fields``::
-
-            fields=['Name','State']
-        """
-
-        data = self.toDict()
-
-        def state_color(val):
-            if val == "Active":
-                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
-            elif val == "Configuring":
-                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
-            elif val == "Closed":
-                color = f"{Constants.ERROR_LIGHT_COLOR}"
-            else:
-                color = ""
-            return "background-color: %s" % color
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        if colors and Utils.is_jupyter_notebook():
-            table = Utils.show_table(
-                data,
-                fields=fields,
-                title="Switch",
-                output="pandas",
-                quiet=True,
-                pretty_names_dict=pretty_names_dict,
-            )
-            table.applymap(state_color)
-
-            if not quiet:
-                display(table)
-        else:
-            table = Utils.show_table(
-                data,
-                fields=fields,
-                title="Switch",
-                output=output,
-                quiet=quiet,
-                pretty_names_dict=pretty_names_dict,
-            )
-
-        return table
 
     def get_fim(self) -> FimNode:
         """

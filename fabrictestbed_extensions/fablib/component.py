@@ -76,6 +76,8 @@ class Component(TemplateMixin):
     :cvar dict component_configure_commands: Component-specific configuration commands.
     """
 
+    _show_title = "Component"
+
     component_model_map = {
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
         Constants.CMP_NIC_BlueField2_ConnectX_6: ComponentModelType.SmartNIC_BlueField_2_ConnectX_6,
@@ -133,21 +135,6 @@ class Component(TemplateMixin):
 
         return tabulate(table)
 
-    def get_fablib_manager(self):
-        """
-        Get the Fabric library manager associated with the component.
-        """
-        return self.get_slice().get_fablib_manager()
-
-    def toJson(self):
-        """
-        Returns the component attributes as a json string
-
-        :return: slice attributes as json string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -167,89 +154,55 @@ class Component(TemplateMixin):
             "numa": "Numa Node",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: Optional[List[str]] = None):
         """
-        Returns the component attributes as a dictionary
+        Returns the component attributes as a dictionary.
 
-        :return: slice attributes as dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: List[str]
+        :return: component attributes as dictionary
         :rtype: dict
         """
-        self.dict["name"] = str(self.get_name())
-        self.dict["short_name"] = str(self.get_short_name())
-        self.dict["details"] = str(self.get_details())
-        self.dict["disk"] = str(self.get_disk())
-        self.dict["units"] = str(self.get_unit())
-        self.dict["pci_address"] = str(self.get_pci_addr())
-        self.dict["model"] = str(self.get_model())
-        self.dict["type"] = str(self.get_type())
-        self.dict["dev"] = str(self.get_device_name())
-        self.dict["node"] = str(self.get_node().get_name()) if self.get_node() else ""
-        self.dict["numa"] = str(self.get_numa_node())
-        return self.dict
+        if skip is None:
+            skip = []
 
-    def generate_template_context(self):
+        if self._cached_dict is None:
+            d = {}
+            d["name"] = str(self.get_name())
+            d["short_name"] = str(self.get_short_name())
+            d["details"] = str(self.get_details())
+            d["disk"] = str(self.get_disk())
+            d["units"] = str(self.get_unit())
+            d["pci_address"] = str(self.get_pci_addr())
+            d["model"] = str(self.get_model())
+            d["type"] = str(self.get_type())
+            d["dev"] = str(self.get_device_name())
+            d["node"] = str(self.get_node().get_name()) if self.get_node() else ""
+            d["numa"] = str(self.get_numa_node())
+            self._cached_dict = d
+
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
+
+    def generate_template_context(self, skip: Optional[List[str]] = None):
         """
         Generate the base template context for this component.
 
         Creates a dictionary context suitable for Jinja2 template rendering,
         including component attributes and an empty interfaces list.
 
+        :param skip: list of keys to exclude
+        :type skip: List[str]
         :return: Template context dictionary with component attributes
         :rtype: dict
         """
-        context = self.toDict()
+        context = self.toDict(skip=skip)
         context["interfaces"] = []
         return context
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Show a table containing the current component attributes.
-
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
-
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
-
-        fields: json output will include all available fields.
-
-        Example: fields=['Name','PCI Address']
-
-        :param output: output format
-        :type output: str
-        :param fields: list of fields to show
-        :type fields: List[str]
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-        :return: table in format specified by output parameter
-        :rtype: Object
-        """
-        data = self.toDict()
-
-        # fields = ["Name", "Details", "Disk", "Units", "PCI Address",
-        #        "Model", "Type"
-        #         ]
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        table = Utils.show_table(
-            data,
-            fields=fields,
-            title="Component",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return table
 
     def list_interfaces(
         self,
@@ -876,36 +829,6 @@ class Component(TemplateMixin):
         FABlib.
         """
         return self.fim_component
-
-    def set_user_data(self, user_data: dict):
-        """
-        Set the user data for the component.
-
-        This method stores the given user data dictionary as a JSON
-        string in the FIM object associated with the component.
-
-        :param user_data: The user data to be set.
-        :type user_data: dict
-        """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self) -> dict:
-        """
-        Retrieve the user data for the component.
-
-        This method fetches the user data stored in the FIM object
-        associated with the component and returns it as a dictionary.
-        If an error occurs, it returns an empty dictionary.
-
-        :return: The user data dictionary.
-        :rtype: dict
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except:
-            return {}
 
     def delete(self):
         """
