@@ -142,18 +142,8 @@ class Node(TemplateMixin):
         self.site = None
         self.management_ip = None
 
-        try:
-            self.set_username()
-        except:
-            self.username = None
-
-        try:
-            if slice.isStable():
-                self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
-        except:
-            pass
-
         # V2 specific: cached FIM properties (None means not yet cached)
+        # Must be initialized before set_username() which calls get_image()
         self._cached_site: Optional[str] = None
         self._cached_management_ip: Optional[str] = None
         self._cached_image_type: Optional[str] = None
@@ -165,6 +155,17 @@ class Node(TemplateMixin):
         self._cached_requested_cores: Optional[int] = None
         self._cached_allocated_cores: Optional[int] = None
         self._cached_instance_name: Optional[str] = None
+
+        try:
+            self.set_username()
+        except:
+            self.username = None
+
+        try:
+            if slice.isStable():
+                self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
+        except:
+            pass
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 

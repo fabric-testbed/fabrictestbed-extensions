@@ -1027,9 +1027,11 @@ class NetworkService(TemplateMixin):
                         subnet_key = "ipv4_subnet"
                     else:
                         subnet_key = "ipv6_subnet"
-                    subnet = ipaddress.ip_network(
-                        self.get_sliver().sliver.get('gateway', {}).get(subnet_key)
-                    )
+                    gateway = self.get_sliver().gateway
+                    if gateway:
+                        subnet_str = gateway.get(subnet_key)
+                        if subnet_str:
+                            subnet = ipaddress.ip_network(subnet_str)
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
