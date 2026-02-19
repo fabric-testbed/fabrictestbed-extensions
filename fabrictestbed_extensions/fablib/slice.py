@@ -1568,7 +1568,7 @@ class Slice:
         :raises: Logs an exception if an error occurs during initialization.
         """
         # Skip if cache is valid and not forcing refresh
-        if self.nodes and not self._topology_dirty and not force_refresh:
+        if self.nodes and not self._topology_dirty and not refresh:
             return
 
         # Initialize nodes dictionary if not already present
@@ -1588,9 +1588,6 @@ class Slice:
                         # Add new node to the dictionary if it doesn't exist
                         node_obj = Node.get_node(self, fim_node)
                     self.nodes[node_name] = node_obj
-                else:
-                        node = Node.get_node(self, node)
-                    self.nodes[node_name] = node
                 elif refresh:
                     # Update existing node's fim_node reference
                     self.nodes[node_name].update(fim_node=fim_node)
@@ -1686,12 +1683,12 @@ class Slice:
 
         https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380
 
-        :param force_refresh: Force refresh even if cache is valid
-        :type force_refresh: bool
+        :param refresh: Force refresh even if cache is valid
+        :type refresh: bool
         :raises: Logs an exception if an error occurs during initialization.
         """
         # Skip if cache is valid and not forcing refresh
-        if self.facilities and not self._topology_dirty and not force_refresh:
+        if self.facilities and not self._topology_dirty and not refresh:
             return
 
         # Initialize facilities dictionary if not already present
