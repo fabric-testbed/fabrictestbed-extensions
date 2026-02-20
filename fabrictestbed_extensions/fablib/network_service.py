@@ -1143,6 +1143,7 @@ class NetworkService(TemplateMixin):
         self.fim_network_service = self.get_slice().topology.add_network_service(
             name=name, nstype=nstype, interfaces=fim_interfaces
         )
+        self._invalidate_cache()
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
