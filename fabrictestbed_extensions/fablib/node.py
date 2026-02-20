@@ -753,6 +753,7 @@ class Node(TemplateMixin):
 
         cap = Capacities(core=cores, ram=ram, disk=disk)
         self.get_fim().set_properties(capacities=cap)
+        self._invalidate_cache()
 
     def set_instance_type(self, instance_type: str):
         """
@@ -764,6 +765,7 @@ class Node(TemplateMixin):
         self.get_fim().set_properties(
             capacity_hints=CapacityHints(instance_type=instance_type)
         )
+        self._invalidate_cache()
 
     def set_username(self, username: str = None):
         """
@@ -833,6 +835,7 @@ class Node(TemplateMixin):
         :type image_type: String
         """
         self.get_fim().set_properties(image_type=image_type, image_ref=image)
+        self._invalidate_cache()
         self.set_username(username=username)
 
     def set_host(self, host_name: str = None):
@@ -847,6 +850,7 @@ class Node(TemplateMixin):
         labels = Labels()
         labels.instance_parent = host_name
         self.get_fim().set_properties(labels=labels)
+        self._invalidate_cache()
 
         # set an attribute used to get host before Submit
         self.host = host_name
@@ -860,6 +864,7 @@ class Node(TemplateMixin):
         """
         # example: host_name='renc-w2.fabric-testbed.net'
         self.get_fim().site = site
+        self._invalidate_cache()
 
     def get_slice(self) -> Slice:
         """

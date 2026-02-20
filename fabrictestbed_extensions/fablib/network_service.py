@@ -1347,6 +1347,7 @@ class NetworkService(TemplateMixin):
             labels = Labels.update(labels, ipv6=ipv6)
 
         self.fim_network_service.set_properties(labels=labels)
+        self._invalidate_cache()
 
     def init_fablib_data(self):
         """
@@ -1471,6 +1472,7 @@ class NetworkService(TemplateMixin):
 
         ns_type = self.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=True)
         self.get_fim().set_properties(type=ns_type, ero=ero)
+        self._invalidate_cache()
 
     def set_bandwidth(self, bw: int):
         """
@@ -1486,6 +1488,7 @@ class NetworkService(TemplateMixin):
 
         fim = self.get_fim()
         fim.capacities = Capacities(bw=bw)
+        self._invalidate_cache()
 
         for interface in self.get_interfaces():
             interface.set_bandwidth(bw=bw)

@@ -529,6 +529,7 @@ class Interface(TemplateMixin):
         if_labels = self.get_fim().get_property(pname="labels")
         if_labels.vlan = str(vlan)
         self.get_fim().set_properties(labels=if_labels)
+        self._invalidate_cache()
 
         return self
 
@@ -545,6 +546,7 @@ class Interface(TemplateMixin):
         if_capacities = self.get_fim().get_property(pname="capacities")
         if_capacities.bw = int(bw)
         self.get_fim().set_properties(capacities=if_capacities)
+        self._invalidate_cache()
 
         if (
             self.get_fim().get_peers()
@@ -1159,6 +1161,7 @@ class Interface(TemplateMixin):
                 labels = Labels.update(labels, ipv6_subnet=ipv6_subnet)
 
             self.get_fim().set_property("labels", labels)
+            self._invalidate_cache()
         except Exception as e:
             log.error(f"Failed to set the ip subnet e: {e}")
             raise e
