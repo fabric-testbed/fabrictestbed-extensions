@@ -42,7 +42,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology
-from fabrictestbed.slice_manager import Status
+
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.site import ResourceConstants
@@ -352,7 +352,7 @@ class ResourcesV2:
         log.info("ResourcesV2Wrapper: lazily loading FIM topology for ERO validation")
         manager = self.fablib_manager.get_manager()
         p = self._lazy_params
-        return_status, topology = manager.resources(
+        self._topology = manager.resources(
             force_refresh=p.get("force_refresh", False),
             level=2,
             start_date=p.get("start_date"),
@@ -360,11 +360,6 @@ class ResourcesV2:
             excludes=p.get("avoid"),
             includes=p.get("includes"),
         )
-        if return_status != Status.OK:
-            raise Exception(
-                f"Failed to get advertised_topology: {return_status}, {topology}"
-            )
-        self._topology = topology
 
     # ----------------------------------------------------------
     # Accessors
