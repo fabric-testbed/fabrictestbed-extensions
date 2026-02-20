@@ -2272,13 +2272,23 @@ class Slice:
                 log.error(f"Interface: {interface.get_name()} failed to config")
                 log.error(e, exc_info=True)
 
+        # Track which nodes have already had their management interface
+        # set to unmanaged (to avoid duplicate SSH calls per node).
+        nmcli_mgmt_done = set()
         for interface in self.get_interfaces():
             try:
                 node = interface.get_node()
-                # Skip unmanaging when using nmcli backend — NM will manage
-                # the interface persistently
                 backend = node._get_effective_backend()
-                if backend != "nmcli":
+                if backend == "nmcli":
+                    # NM manages dataplane interfaces persistently, but
+                    # the management interface should be left alone.
+                    node_name = node.get_name()
+                    if node_name not in nmcli_mgmt_done:
+                        node._unmanage_mgmt_interface()
+                        nmcli_mgmt_done.add(node_name)
+                else:
+                    # Legacy path: mark dataplane interfaces as unmanaged
+                    # so raw ip commands can configure them.
                     node.execute(
                         f"sudo nmcli device set {interface.get_device_name()} managed no",
                         quiet=True,

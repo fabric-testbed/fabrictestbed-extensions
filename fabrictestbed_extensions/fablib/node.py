@@ -2500,6 +2500,45 @@ class Node(TemplateMixin):
             return "ip"
         return self._detect_net_config_backend()
 
+    def _unmanage_mgmt_interface(self):
+        """
+        When using nmcli backend, find the management interface and set it
+        to unmanaged so NetworkManager does not interfere with it.
+
+        The management interface is identified by looking up which device
+        carries the node's management IP address.
+        """
+        mgmt_ip = self.get_management_ip()
+        if not mgmt_ip:
+            log.warning(f"{self.get_name()}: no management IP, skipping unmanage")
+            return
+
+        try:
+            # Find the device that carries the management IP
+            stdout, stderr = self.execute(
+                f"ip -o addr show | grep '{mgmt_ip}/' | awk '{{print $2}}' | head -1",
+                quiet=True,
+            )
+            if stdout and stdout.strip():
+                mgmt_dev = stdout.strip()
+                self.execute(
+                    f"sudo nmcli device set {mgmt_dev} managed no",
+                    quiet=True,
+                )
+                log.info(
+                    f"{self.get_name()}: set management interface "
+                    f"{mgmt_dev} ({mgmt_ip}) to unmanaged"
+                )
+            else:
+                log.warning(
+                    f"{self.get_name()}: could not find device for "
+                    f"management IP {mgmt_ip}"
+                )
+        except Exception as e:
+            log.warning(
+                f"{self.get_name()}: failed to unmanage management interface: {e}"
+            )
+
     @staticmethod
     def _nm_conn_name(device_name: str) -> str:
         """
