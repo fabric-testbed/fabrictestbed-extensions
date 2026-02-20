@@ -108,7 +108,7 @@ from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fim.user import Node as FimNode
 
 from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
-from fabrictestbed_extensions.fablib.slice import Slice
+from fabrictestbed_extensions.fablib.slice_old import Slice
 
 log = logging.getLogger("fablib")
 

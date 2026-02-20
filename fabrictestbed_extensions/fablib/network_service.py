@@ -952,8 +952,8 @@ class NetworkService(TemplateMixin):
                         gateway = ipaddress.ip_address(fablib_data["subnet"]["gateway"])
                     except Exception as e:
                         gateway = None
-            #else:
-            #    gateway = f"{self.get_name()}.gateway"
+            else:
+                gateway = f"{self.get_name()}.gateway"
 
             if gateway is not None:
                 self._cached_gateway = gateway
