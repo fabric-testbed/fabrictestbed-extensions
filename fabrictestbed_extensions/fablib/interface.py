@@ -426,6 +426,22 @@ class Interface(TemplateMixin):
         except Exception as e:
             log.error(f"get_device_name: error occurred - e: {e}")
 
+    def get_os_interface(self) -> str:
+        """
+        Gets a name of the interface the operating system uses for this
+        FABLib interface.
+
+        If the interface requires a FABRIC VLAN tag, the interface name returned
+        will be the VLAN tagged.
+
+        :return: OS interface name
+        :rtype: String
+
+        .. deprecated:: 1.6.5
+           Use `get_device_name()` instead.
+        """
+        return self.get_device_name()
+
     def get_os_dev(self) -> Optional[dict[str, str]]:
         """
         Gets json output of 'ip addr list' for the interface.
