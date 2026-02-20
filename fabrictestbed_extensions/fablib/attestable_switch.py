@@ -296,7 +296,7 @@ class Attestable_Switch(Node):
             result = as_name_prefix + orig_name
         return result
 
-    def get_name(self) -> Optional[None]:
+    def get_name(self) -> Optional[str]:
         """
         Gets the name of the FABRIC node.
 

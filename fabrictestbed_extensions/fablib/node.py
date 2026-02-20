@@ -771,8 +771,6 @@ class Node(TemplateMixin):
             likely should be picked to match the image type.
         """
         try:
-            if self.username is not None:
-                return
             if self.get_fim().type == NodeType.Switch and not username:
                 self.username = Constants.FABRIC_USER
                 return
@@ -875,9 +873,9 @@ class Node(TemplateMixin):
         if self._cached_instance_name is None:
             try:
                 if self.get_fim():
-                    labels = self.get_fim().get_property(pname="instance")
-                    if labels:
-                        self._cached_instance_name = self.get_fim().get_property(pname="label_allocations").instance
+                    label_allocations = self.get_fim().get_property(pname="label_allocations")
+                    if label_allocations:
+                        self._cached_instance_name = label_allocations.instance
             except Exception:
                 self._cached_instance_name = None
         return self._cached_instance_name
@@ -911,7 +909,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_cores = self.get_fim().get_property(pname="capacities").ram
+                        self._cached_requested_cores = self.get_fim().get_property(pname="capacities").core
             except Exception:
                 self._cached_requested_cores = None
         return self._cached_requested_cores if self._cached_requested_cores else 0
@@ -1071,81 +1069,7 @@ class Node(TemplateMixin):
                 self._cached_management_ip = str(self.fim_node.management_ip)
             except Exception:
                 self._cached_management_ip = None
-        return self._cached_management_ip if self._cached_management_ip is not None else ""
-
-    def get_interfaces(
-        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
-        """
-        Gets a list of the interfaces associated with the FABRIC node.
-
-        :param include_subs: Flag indicating if sub interfaces should be included
-        :type include_subs: bool
-
-        :param refresh: Refresh the interface object with latest Fim info
-        :type refresh: bool
-
-        :param output: Specify how the return type is expected; Possible values: list or dict
-        :type output: str
-
-        :return: a list or dict of interfaces on the node
-        :rtype: Union[dict[str, Interface], list[Interface]]
-        """
-        if self.interfaces and not refresh and not self._fim_dirty:
-            if output == "dict":
-                return self.interfaces
-            return list(self.interfaces.values())
-
-        self.interfaces = {}
-        for component in self.get_components(refresh=refresh):
-            c_interfaces = component.get_interfaces(
-                include_subs=include_subs, refresh=refresh, output="dict"
-            )
-            self.interfaces.update(c_interfaces)
-
-        if output == "dict":
-            return self.interfaces
-        return list(self.interfaces.values())
-
-    def get_interface(
-        self, name: str = None, network_name: str = None, refresh: bool = False
-    ) -> Interface or None:
-        """
-        Gets a particular interface associated with a FABRIC node.
-        Accepts either the interface name or a network_name.  If a
-        network name is used this method will return the interface on
-        the node that is connected to the network specified.  If a
-        name and network_name are both used, the interface name will
-        take precedence.
-
-        :param name: interface name to search for
-        :type name: str
-
-        :param network_name: network name to search for
-        :type name: str
-
-        :param refresh: Refresh the interface object with latest Fim info
-        :type refresh: bool
-
-        :raise Exception: if interface is not found
-
-        :return: an interface on the node
-        :rtype: Interface
-        """
-        if name is not None:
-            interface = self.get_interfaces(refresh=refresh, output="dict").get(name)
-            if interface is not None:
-                return interface
-        elif network_name is not None:
-            for interface in self.get_interfaces(refresh=refresh):
-                if (
-                    interface is not None
-                    and interface.get_network() is not None
-                    and interface.get_network().get_name() == network_name
-                ):
-                    return interface
-
-        raise Exception("Interface not found: {}".format(name))
+        return self._cached_management_ip if self._cached_management_ip is not None else None
 
     def get_username(self) -> str:
         """
@@ -2070,7 +1994,7 @@ class Node(TemplateMixin):
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim().get_property(pname="management_ip"))
+        management_ip = str(self.get_management_ip())
         if self.validIPAddress(management_ip) == "IPv4":
             src_addr = ("0.0.0.0", 22)
 
@@ -3054,6 +2978,14 @@ class Node(TemplateMixin):
         """
         return self.fim_node
 
+    def get_fim_node(self):
+        """
+        Get FABRIC Information Model (fim) node object.
+
+        Alias for :meth:`get_fim` for backward compatibility.
+        """
+        return self.fim_node
+
     def delete(self):
         """
         Remove the node from the slice. All components and interfaces associated with
@@ -3803,7 +3735,7 @@ class Node(TemplateMixin):
                 log.info(f"Numa tune complete for node: {self.get_name()}")
         except Exception as e:
             log.error(traceback.format_exc())
-            logging.error(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
+            log.error(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
 
     def add_public_key(

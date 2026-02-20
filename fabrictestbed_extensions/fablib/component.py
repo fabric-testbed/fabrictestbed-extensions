@@ -551,12 +551,12 @@ class Component(TemplateMixin):
         if self._cached_disk is None:
             try:
                 if self.fim_component:
-                    label_allocations = self.fim_component.get_property(
-                        pname="label_allocations"
+                    capacity_allocations = self.fim_component.get_property(
+                        pname="capacity_allocations"
                     )
-                    if label_allocations:
-                        if label_allocations.disk:
-                            self._cached_disk = label_allocations.disk
+                    if capacity_allocations:
+                        if capacity_allocations.disk:
+                            self._cached_disk = capacity_allocations.disk
                             self.dict["disk"] = self._cached_disk
             except Exception:
                 self._cached_disk = None
@@ -572,12 +572,12 @@ class Component(TemplateMixin):
         if self._cached_unit is None:
             try:
                 if self.fim_component:
-                    label_allocations = self.fim_component.get_property(
-                        pname="label_allocations"
+                    capacity_allocations = self.fim_component.get_property(
+                        pname="capacity_allocations"
                     )
-                    if label_allocations:
-                        if label_allocations.unit:
-                            self._cached_unit = label_allocations.unit
+                    if capacity_allocations:
+                        if capacity_allocations.unit:
+                            self._cached_unit = capacity_allocations.unit
             except Exception:
                 self._cached_unit = None
         return self._cached_unit if self._cached_unit else 0

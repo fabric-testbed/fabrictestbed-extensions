@@ -106,7 +106,7 @@ class Slice:
         self.fablib_manager:FablibManagerV2 = fablib_manager
         self.network_iface_map = None
         self.sm_slice: Optional[SliceDTO] = sm_slice
-        self.slice_name = sm_slice.slice_id if sm_slice else name
+        self.slice_name = sm_slice.name if sm_slice else name
         self.slice_id: Optional[str] = sm_slice.slice_id if sm_slice else None
         self.topology: Optional[ExperimentTopology] = ExperimentTopology()
         if self.sm_slice and self.sm_slice.model and len(self.sm_slice.model) > 0:
@@ -683,6 +683,7 @@ class Slice:
         self.get_facilities()
         self.get_network_services()
         self.get_interfaces(refresh=True)
+        self._topology_dirty = False
 
     def update_slivers(self):
         """
@@ -1597,7 +1598,7 @@ class Slice:
                         # Add new node to the dictionary if it doesn't exist
                         node_obj = Node.get_node(self, fim_node)
                     self.nodes[node_name] = node_obj
-                elif refresh:
+                else:
                     # Update existing node's fim_node reference
                     self.nodes[node_name].update(fim_node=fim_node)
 
@@ -1714,7 +1715,7 @@ class Slice:
                     self.facilities[fac_name] = FacilityPort.get_facility_port(
                         self, facility
                     )
-                elif refresh:
+                else:
                     # Update existing facility's fim_node reference
                     self.facilities[fac_name].update(fim_node=facility)
 
@@ -1837,11 +1838,11 @@ class Slice:
         else:
             self.interfaces = {}
             for node in self.get_nodes(refresh=refresh):
-                logging.debug(f"Getting interfaces for node {node.get_name()}")
+                log.debug(f"Getting interfaces for node {node.get_name()}")
                 n_ifaces = node.get_interfaces(include_subs=include_subs, refresh=refresh, output="dict")
                 self.interfaces.update(n_ifaces)
             for fac in self.get_facilities(refresh=refresh):
-                logging.debug(f"Getting interfaces for facility {fac.get_name()}")
+                log.debug(f"Getting interfaces for facility {fac.get_name()}")
                 fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
                 self.interfaces.update(fac_ifaces)
 
@@ -3323,9 +3324,15 @@ class Slice:
         Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
-        self.topology = self.fablib_manager.get_manager().accept_modify(
+        result = self.fablib_manager.get_manager().accept_modify(
             slice_id=self.slice_id
         )
+        if isinstance(result, dict) and result.get("model"):
+            self.topology = ExperimentTopology()
+            self.topology.load(graph_string=result["model"])
+        elif hasattr(result, 'model') and result.model:
+            self.topology = ExperimentTopology()
+            self.topology.load(graph_string=result.model)
         log.debug(f"modified topology: {self.topology}")
 
         self.update_slice()

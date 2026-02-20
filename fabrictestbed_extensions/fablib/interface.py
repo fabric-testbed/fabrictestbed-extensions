@@ -627,7 +627,9 @@ class Interface(TemplateMixin):
         """
         if self._cached_mac is None:
             try:
-                if self.fim_interface:
+                if self.parent:
+                    self._cached_mac = self.parent.get_mac()
+                elif self.fim_interface:
                     label_allocations = self.fim_interface.get_property(
                         pname="label_allocations"
                     )
@@ -649,11 +651,11 @@ class Interface(TemplateMixin):
         if self._cached_vlan is None:
             try:
                 if self.fim_interface:
-                    label_allocations = self.fim_interface.get_property(
-                        pname="label_allocations"
+                    labels = self.fim_interface.get_property(
+                        pname="labels"
                     )
-                    if label_allocations and label_allocations.vlan:
-                        self._cached_vlan = str(label_allocations.vlan)
+                    if labels and labels.vlan:
+                        self._cached_vlan = str(labels.vlan)
             except Exception:
                 self._cached_vlan = None
         return self._cached_vlan if self._cached_vlan else ""
@@ -715,21 +717,22 @@ class Interface(TemplateMixin):
 
     def get_physical_os_interface_name(self) -> str:
         """
-        Gets the physical OS interface name.
+        Gets a name of the physical interface the operating system uses for this
+        FABLib interface.
+
+        If the interface requires a FABRIC VLAN tag, the base interface name
+        will be returned (i.e. not the VLAN tagged interface)
 
         Results are cached for performance.
 
-        :return: the physical OS interface name
+        :return: physical OS interface name
         :rtype: str
         """
         if self._cached_physical_os_interface is None:
             try:
-                if self.fim_interface:
-                    label_allocations = self.fim_interface.get_property(
-                        pname="label_allocations"
-                    )
-                    if label_allocations and label_allocations.local_name:
-                        self._cached_physical_os_interface = label_allocations.local_name
+                os_dev = self.get_os_dev()
+                if os_dev:
+                    self._cached_physical_os_interface = os_dev.get("ifname")
             except Exception:
                 self._cached_physical_os_interface = None
         return self._cached_physical_os_interface if self._cached_physical_os_interface else ""

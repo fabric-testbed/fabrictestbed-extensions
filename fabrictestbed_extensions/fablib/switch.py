@@ -31,12 +31,9 @@ functionality for programmable data planes.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-from IPython.core.display_functions import display
-from fabrictestbed_extensions.utils.utils import Utils
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -53,8 +50,6 @@ log = logging.getLogger("fablib")
 
 
 class Switch(Node):
-    _show_title = "Switch"
-
     """Represents a P4-programmable network switch in FABRIC.
 
     Switch extends :class:`~fabrictestbed_extensions.fablib.node.Node` to model
@@ -64,6 +59,8 @@ class Switch(Node):
     :ivar str username: Set to :data:`~fabrictestbed_extensions.fablib.constants.Constants.FABRIC_USER`
         for system-level access.
     """
+
+    _show_title = "Switch"
 
     def __init__(
         self,
@@ -139,14 +136,14 @@ class Switch(Node):
     @staticmethod
     def get_switch(slice: Slice, node: FimNode) -> Switch:
         """
-        Factory method to create a SwitchV2 from a FIM node.
+        Factory method to create a Switch from a FIM node.
 
         :param slice: the slice this switch belongs to
-        :type slice: SliceV2
+        :type slice: Slice
         :param node: the FIM node
         :type node: FimNode
-        :return: a SwitchV2 instance
-        :rtype: SwitchV2
+        :return: a Switch instance
+        :rtype: Switch
         """
         switch = Switch(slice=slice, node=node)
         switch.get_interfaces()
@@ -167,7 +164,7 @@ class Switch(Node):
         Not intended for API use. Use slice.add_switch() instead.
 
         :param slice: the fablib slice to build the new switch on
-        :type slice: SliceV2
+        :type slice: Slice
         :param name: the name of the new switch
         :type name: str
         :param site: the name of the site to build the switch on
@@ -188,8 +185,6 @@ class Switch(Node):
             [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
         log.info(f"Adding switch: {name}, slice: {slice.get_name()}, site: {site}")
-
-        from fabrictestbed.slice_editor import Capacities
 
         switch = Switch(
             slice,
@@ -283,9 +278,11 @@ class Switch(Node):
         :rtype: dict
         """
         if skip is None:
-            skip = []
-        if "ssh_command" not in skip:
-            skip.append("ssh_command")
+            skip = ["ssh_command"]
+        else:
+            skip = list(skip)
+            if "ssh_command" not in skip:
+                skip.append("ssh_command")
         context = self.toDict(skip=skip)
         context["components"] = []
         return context

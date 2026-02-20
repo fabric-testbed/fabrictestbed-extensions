@@ -261,6 +261,8 @@ class Config:
         if data_dir is not None:
             self.set_data_dir(data_dir=data_dir)
 
+        self.log = logging.getLogger("fablib")
+
         self.required_check(partial=True)
 
         # Verify that Token file exists; any other checks cannot be done without this.
@@ -273,8 +275,6 @@ class Config:
                 raise ConfigException(
                     f"Token file does not exist, please provide the token at location: {token_location}!"
                 )
-
-        self.log = logging.getLogger("fablib")
 
     def __load_configuration(self, file_path, **kwargs):
         """

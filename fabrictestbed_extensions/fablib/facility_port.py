@@ -37,7 +37,6 @@ from typing import TYPE_CHECKING, List, Union, Optional, Dict
 
 from fabrictestbed.slice_editor import Capacities, Labels
 
-from fabrictestbed_extensions.utils.utils import Utils
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.interface import Interface
@@ -45,7 +44,6 @@ from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 if TYPE_CHECKING:
     from fim.user.node import Node as FimNode
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
     from fabrictestbed_extensions.fablib.slice import Slice
 
 log = logging.getLogger("fablib")
@@ -155,13 +153,11 @@ class FacilityPort(TemplateMixin):
         """
         if self._cached_site is None:
             try:
-                if self.fim_object:
+                if self.fim_object and self.fim_object.site:
                     self._cached_site = self.fim_object.site
-                else:
-                    self._cached_site = ""
             except Exception:
-                self._cached_site = ""
-        return self._cached_site
+                pass
+        return self._cached_site if self._cached_site else ""
 
     @staticmethod
     def new_facility_port(

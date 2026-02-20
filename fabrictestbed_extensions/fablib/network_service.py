@@ -941,10 +941,10 @@ class NetworkService(TemplateMixin):
 
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
-                    if self.get_sliver().sliver.get('Type') == "FABNetv4":
+                    if self.get_sliver().sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
                         gateway = IPv4Address(self.get_sliver().gateway.get("ipv4"))
                     else:
-                        gateway = IPv4Address(self.get_sliver().gateway.get("ipv6"))
+                        gateway = IPv6Address(self.get_sliver().gateway.get("ipv6"))
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
@@ -1023,7 +1023,7 @@ class NetworkService(TemplateMixin):
             subnet = None
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
-                    if self.get_sliver().sliver.get('Type') == "FABNetv4":
+                    if self.get_sliver().sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
                         subnet_key = "ipv4_subnet"
                     else:
                         subnet_key = "ipv6_subnet"
