@@ -159,12 +159,13 @@ class ResourceConstants:
                 f"{pretty_name} {Constants.CAPACITY}"
             )
 
-    pretty_names_hosts = {
-        k: v for k, v in pretty_names.items()
-        if k not in (Constants.HOSTS.lower(),
-                     Constants.CPUS.lower(),
-                     Constants.P4_SWITCH.lower())
-    }
+    _hosts_remove_exact = {Constants.HOSTS.lower(), Constants.CPUS.lower()}
+    _hosts_remove_prefix = Constants.P4_SWITCH.lower()
+    pretty_names_hosts = {}
+    for _k, _v in pretty_names.items():
+        if _k in _hosts_remove_exact or _k.startswith(_hosts_remove_prefix):
+            continue
+        pretty_names_hosts[_k] = _v
 
 
 class Switch:
