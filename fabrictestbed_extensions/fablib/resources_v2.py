@@ -546,7 +546,7 @@ class ResourcesV2:
             output=output,
             quiet=quiet,
             filter_function=filter_function,
-            pretty_names_dict=ResourceConstants.pretty_names if pretty_names else {},
+            pretty_names_dict=ResourceConstants.pretty_names_hosts if pretty_names else {},
         )
 
     def show_host(
@@ -566,7 +566,7 @@ class ResourcesV2:
                     title=f"Host: {host_name}",
                     output=output,
                     quiet=quiet,
-                    pretty_names_dict=ResourceConstants.pretty_names if pretty_names else {},
+                    pretty_names_dict=ResourceConstants.pretty_names_hosts if pretty_names else {},
                 )
         return f"Host '{host_name}' not found."
 

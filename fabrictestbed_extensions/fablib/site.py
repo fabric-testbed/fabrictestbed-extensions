@@ -159,6 +159,14 @@ class ResourceConstants:
                 f"{pretty_name} {Constants.CAPACITY}"
             )
 
+    pretty_names_hosts = pretty_names.copy()
+    pretty_names_to_be_removed = [Constants.HOSTS.lower(),
+                                  Constants.CPUS.lower(),
+                                  Constants.P4_SWITCH.lower()]
+    for attribute, names in pretty_names_hosts.items():
+        if attribute in pretty_names_to_be_removed:
+            pretty_names_hosts.pop(attribute)
+
 
 class Switch:
     def __init__(self, switch: node.Node, fablib_manager):
