@@ -1138,17 +1138,29 @@ class NetworkService(TemplateMixin):
         fim_interfaces = []
         name = self.get_name()
 
-        for interface in self.get_interfaces():
+        # Use cache if available — get_interfaces() may fail to resolve
+        # FIM connection-point names back to fablib Interface objects for
+        # pre-submit networks (e.g. facility ports).
+        if self._interfaces_cache:
+            current_interfaces = list(self._interfaces_cache.values())
+        else:
+            current_interfaces = self.get_interfaces()
+
+        for interface in current_interfaces:
             fim_interfaces.append(interface.get_fim())
             self.get_fim().disconnect_interface(interface=interface.get_fim())
 
         user_data = self.get_user_data()
+        saved_cache = dict(self._interfaces_cache) if self._interfaces_cache else {}
         self.get_slice().topology.remove_network_service(name=self.get_name())
 
         self.fim_network_service = self.get_slice().topology.add_network_service(
             name=name, nstype=nstype, interfaces=fim_interfaces
         )
-        self._invalidate_cache()
+        # Restore the interface cache so that subsequent add_interface()
+        # calls still see all previously connected interfaces
+        self._interfaces_cache = saved_cache
+        self.interfaces = current_interfaces
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
@@ -1163,8 +1175,18 @@ class NetworkService(TemplateMixin):
 
         iface_fablib_data = interface.get_fablib_data()
 
-        new_interfaces = self.get_interfaces(refresh=True)
-        new_interfaces.append(interface)
+        # Build new_interfaces from cache if populated (reliable for
+        # pre-submit), falling back to FIM-based resolution.  The FIM
+        # resolution path (get_interfaces) can silently lose interfaces
+        # whose FIM connection-point names don't match fablib names
+        # (e.g. facility ports), so the cache is the source of truth
+        # when available.
+        if self._interfaces_cache:
+            new_interfaces = list(self._interfaces_cache.values())
+        else:
+            new_interfaces = self.get_interfaces()
+        if interface not in new_interfaces:
+            new_interfaces.append(interface)
 
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
@@ -1175,9 +1197,9 @@ class NetworkService(TemplateMixin):
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
             self.get_fim().connect_interface(interface=interface.get_fim())
-            # Invalidate cache so subsequent add_interface calls see
-            # the updated interface list from FIM
-            self._interfaces_cache = {}
+            # Add to cache so subsequent add_interface calls see all
+            # previously connected interfaces
+            self._interfaces_cache[interface.get_name()] = interface
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
@@ -1202,8 +1224,8 @@ class NetworkService(TemplateMixin):
 
         if self.get_layer() == NSLayer.L3:
             self.get_fim().connect_interface(interface=interface.get_fim())
-            # Invalidate cache after L3 connect as well
-            self._interfaces_cache = {}
+            # Add to cache after L3 connect as well
+            self._interfaces_cache[interface.get_name()] = interface
 
     def remove_interface(self, interface: Interface):
         """
@@ -1213,7 +1235,11 @@ class NetworkService(TemplateMixin):
 
         self.free_ip(interface.get_ip_addr())
 
-        interfaces = self.get_interfaces(refresh=True)
+        # Use cache if available for accurate interface tracking
+        if self._interfaces_cache:
+            interfaces = list(self._interfaces_cache.values())
+        else:
+            interfaces = self.get_interfaces()
 
         if interface in interfaces:
             interfaces.remove(interface)
@@ -1230,9 +1256,13 @@ class NetworkService(TemplateMixin):
         interface.set_fablib_data(iface_fablib_data)
 
         self.get_fim().disconnect_interface(interface=interface.get_fim())
-        # Invalidate cache so subsequent get_interfaces calls see
-        # the updated interface list from FIM
-        self._interfaces_cache = {}
+        # Remove from cache instead of clearing entirely
+        iface_name = interface.get_name()
+        self._interfaces_cache.pop(iface_name, None)
+        # Also remove by iterating in case the key doesn't match exactly
+        self._interfaces_cache = {
+            k: v for k, v in self._interfaces_cache.items() if v is not interface
+        }
 
     def delete(self):
         """
