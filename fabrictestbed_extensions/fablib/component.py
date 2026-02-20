@@ -841,3 +841,7 @@ class Component(TemplateMixin):
         self.get_slice().get_fim_topology().nodes[
             self.get_node().get_name()
         ].remove_component(name=self.get_name())
+        # Invalidate parent node's component cache so subsequent
+        # get_components() calls don't return the deleted component
+        self.get_node().components = {}
+        self.get_node()._fim_dirty = True

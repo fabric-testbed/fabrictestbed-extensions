@@ -1213,7 +1213,7 @@ class NetworkService(TemplateMixin):
 
         self.free_ip(interface.get_ip_addr())
 
-        interfaces = self.get_interfaces()
+        interfaces = self.get_interfaces(refresh=True)
 
         if interface in interfaces:
             interfaces.remove(interface)
@@ -1230,6 +1230,9 @@ class NetworkService(TemplateMixin):
         interface.set_fablib_data(iface_fablib_data)
 
         self.get_fim().disconnect_interface(interface=interface.get_fim())
+        # Invalidate cache so subsequent get_interfaces calls see
+        # the updated interface list from FIM
+        self._interfaces_cache = {}
 
     def delete(self):
         """
@@ -1239,6 +1242,9 @@ class NetworkService(TemplateMixin):
             ifs.network = None
 
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
+        # Mark slice topology as dirty so cached network/interface lists
+        # get refreshed on next access
+        self.get_slice()._topology_dirty = True
 
     def set_subnet(self, subnet: Union[IPv4Network, IPv6Network]):
         """

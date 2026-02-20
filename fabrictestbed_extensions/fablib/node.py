@@ -3687,6 +3687,9 @@ class Node(TemplateMixin):
             component.delete()
 
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
+        # Mark slice topology as dirty so cached node/interface lists
+        # get refreshed on next access
+        self.get_slice()._topology_dirty = True
 
     def init_fablib_data(self):
         """
