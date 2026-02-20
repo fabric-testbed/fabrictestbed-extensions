@@ -64,7 +64,6 @@ complete code samples.
 from __future__ import annotations
 
 import datetime
-import json
 import logging
 import os
 import random
@@ -72,531 +71,37 @@ import shutil
 import sys
 import tarfile
 import threading
-import traceback
 import warnings
 
-from fabric_ceph_client.fabric_ceph_client import CephManagerClient
 from fabrictestbed.external_api.artifact_manager import Visibility
-from fabrictestbed.fabric_manager import FabricManager
+from fabrictestbed.fabric_manager_v2 import FabricManagerV2
 from fss_utils.sshkey import FABRICSSHKey
 
 from fabrictestbed_extensions.fablib.artifact import Artifact
-from fabrictestbed_extensions.fablib.site import Host, Site
 from fabrictestbed_extensions.utils.ceph_fs_utils import CephFsUtils
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Tuple, Union
+from typing import TYPE_CHECKING, List, Tuple, Optional
 
-import pandas as pd
 import paramiko
-from IPython import get_ipython
-from IPython.core.display_functions import display
-from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabric_cf.orchestrator.swagger_client import Slice as OrchestratorSlice
     from fabrictestbed_extensions.fablib.node import Node
 
-from fabrictestbed.slice_manager import SliceManager, SliceState, Status
-from fim.user import Node as FimNode
+from fabrictestbed.slice_manager import SliceState
 
-from fabrictestbed_extensions.fablib.resources import FacilityPorts, Links, Resources
-from fabrictestbed_extensions.fablib.slice_old import Slice
+from fabrictestbed_extensions.fablib.resources_v2 import ResourcesV2
+from fabrictestbed_extensions.fablib.slice import Slice
 
 log = logging.getLogger("fablib")
 
-
-class fablib:
-    """
-    Convenience static methods to work with FABRIC testbed.
-    """
-
-    default_fablib_manager = None
-
-    @staticmethod
-    def get_default_fablib_manager():
-        """
-        Get or create an internal :py:class:`FablibManager` instance.
-        """
-        if fablib.default_fablib_manager is None:
-            fablib.default_fablib_manager = FablibManager()
-
-        return fablib.default_fablib_manager
-
-    @staticmethod
-    def get_image_names() -> dict[str, dict]:
-        """
-        Gets a list of available image names.
-
-        :return: Dictionary of images with default user and description
-        :rtype: dict[str, dict]
-        """
-        return fablib.get_default_fablib_manager().get_image_names()
-
-    @staticmethod
-    def get_site_names() -> List[str]:
-        """
-        Gets a list of all available site names.
-
-        :return: list of site names as strings
-        :rtype: list[str]
-        """
-        return fablib.get_default_fablib_manager().get_site_names()
-
-    @staticmethod
-    def list_sites(latlon: bool = True) -> object:
-        """
-        Get a string used to print a tabular list of sites with state
-
-        :return: tabulated string of site state
-        :rtype: str
-        """
-        return fablib.get_default_fablib_manager().list_sites(latlon=latlon)
-
-    @staticmethod
-    def list_hosts() -> object:
-        """
-        Get a string used to print a tabular list of sites with state
-
-        :return: tabulated string of site state
-        :rtype: str
-        """
-        return fablib.get_default_fablib_manager().list_hosts()
-
-    @staticmethod
-    def list_links() -> object:
-        """
-        Print the links in pretty format
-
-        :return: Formatted list of links
-        :rtype: object
-        """
-        return fablib.get_default_fablib_manager().list_links()
-
-    @staticmethod
-    def get_links() -> Links:
-        """
-        Get a string used to print a tabular list of links
-
-        :return: tabulated string of links
-        :rtype: str
-        """
-        return fablib.get_default_fablib_manager().get_links()
-
-    @staticmethod
-    def list_facility_ports() -> object:
-        """
-        Print the facility ports in pretty format
-
-        :return: Formatted list of facility ports
-        :rtype: object
-        """
-        return fablib.get_default_fablib_manager().list_facility_ports()
-
-    @staticmethod
-    def get_facility_ports() -> FacilityPorts:
-        """
-        Get a string used to print a tabular list of facility ports
-
-        :return: tabulated string of facility ports
-        :rtype: str
-        """
-        return fablib.get_default_fablib_manager().get_facility_ports()
-
-    @staticmethod
-    def show_site(site_name: str):
-        """
-        Get a string used to print tabular info about a site
-
-        :param site_name: the name of a site
-        :type site_name: String
-        :return: tabulated string of site state
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().show_site(site_name)
-
-    @staticmethod
-    def get_resources() -> Resources:
-        """
-        Get a reference to the resources object. The resources object
-        is used to query for available resources and capacities.
-
-        :return: the resources object
-        :rtype: Resources
-        """
-        return fablib.get_default_fablib_manager().get_resources()
-
-    @staticmethod
-    def get_random_site(avoid: List[str] = []) -> str:
-        """
-        Get a random site.
-
-        :param avoid: list of site names to avoid choosing
-        :type avoid: List[String]
-        :return: one site name
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_random_site(avoid=avoid)
-
-    @staticmethod
-    def get_random_sites(count: int = 1, avoid: List[str] = []) -> List[str]:
-        """
-        Get a list of random sites names. Each site will be included at most once.
-
-        :param count: number of sites to return.
-        :type count: int
-        :param avoid: list of site names to avoid choosing
-        :type avoid: List[String]
-        :return: list of random site names.
-        :rtype: List[Sting]
-        """
-        return fablib.get_default_fablib_manager().get_random_sites(
-            count=count, avoid=avoid
-        )
-
-    @staticmethod
-    def init_fablib():
-        """
-        Not intended to be called by the user.
-
-        Static initializer for the fablib object.
-        """
-        return fablib.get_default_fablib_manager().init_fablib()
-
-    @staticmethod
-    def get_default_slice_key() -> Dict[str, str]:
-        """
-        Gets the current default_slice_keys as a dictionary containing the
-        public and private slice keys.
-
-        Important! Slice key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: default_slice_key dictionary from superclass
-        :rtype: Dict[String, String]
-        """
-        return fablib.get_default_fablib_manager().get_default_slice_key()
-
-    @staticmethod
-    def show_config():
-        """
-        Show current FABlib configuration parameters.
-        """
-        return fablib.get_default_fablib_manager().show_config()
-
-    @staticmethod
-    def get_config() -> Dict[str, str]:
-        """
-        Gets a dictionary mapping keywords to configured FABRIC environment
-        variable values values.
-
-        :return: dictionary mapping keywords to FABRIC values
-        :rtype: Dict[String, String]
-        """
-        return fablib.get_default_fablib_manager().get_config()
-
-    @staticmethod
-    def get_default_slice_public_key() -> str:
-        """
-        Gets the default slice public key.
-
-        Important! Slice key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: the slice public key on this fablib object
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_default_slice_public_key()
-
-    @staticmethod
-    def get_default_slice_public_key_file() -> str:
-        """
-        Gets the path to the default slice public key file.
-
-        Important! Slice key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: the path to the slice public key on this fablib object
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_default_slice_public_key_file()
-
-    @staticmethod
-    def get_default_slice_private_key_file() -> str:
-        """
-        Gets the path to the default slice private key file.
-
-        Important! Slices key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: the path to the slice private key on this fablib object
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_default_slice_private_key_file()
-
-    @staticmethod
-    def get_default_slice_private_key_passphrase() -> str:
-        """
-        Gets the passphrase to the default slice private key.
-
-        Important! Slices key management is underdevelopment and this
-        functionality will likely change going forward.
-
-        :return: the passphrase to the slice private key on this fablib object
-        :rtype: String
-        """
-        return (
-            fablib.get_default_fablib_manager().get_default_slice_private_key_passphrase()
-        )
-
-    @staticmethod
-    def get_credmgr_host() -> str:
-        """
-        Gets the credential manager host site value.
-
-        :return: the credential manager host site
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_credmgr_host()
-
-    @staticmethod
-    def get_orchestrator_host() -> str:
-        """
-        Gets the orchestrator host site value.
-
-        :return: the orchestrator host site
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_orchestrator_host()
-
-    @staticmethod
-    def get_fabric_token() -> str:
-        """
-        Gets the FABRIC token location.
-
-        :return: FABRIC token location
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_token_location()
-
-    @staticmethod
-    def get_bastion_username() -> str:
-        """
-        Gets the FABRIC Bastion username.
-
-        :return: FABRIC Bastion username
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_bastion_username()
-
-    @staticmethod
-    def get_bastion_key_filename() -> str:
-        """
-        Gets the FABRIC Bastion key filename.
-
-        :return: FABRIC Bastion key filename
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_bastion_key_location()
-
-    @staticmethod
-    def get_bastion_host() -> str:
-        """
-        Gets the FABRIC Bastion host address.
-
-        :return: Bastion host public address
-        :rtype: String
-        """
-        return fablib.get_default_fablib_manager().get_bastion_host()
-
-    @staticmethod
-    def get_slice_manager() -> SliceManager:
-        """
-        Not intended as API call
-
-
-        Gets the slice manager of this fablib object.
-
-        :return: the slice manager on this fablib object
-        :rtype: SliceManager
-        """
-        return fablib.get_default_fablib_manager().get_manager()
-
-    @staticmethod
-    def new_slice(name: str) -> Slice:
-        """
-        Creates a new slice with the given name.
-
-        :param name: the name to give the slice
-        :type name: String
-        :return: a new slice
-        :rtype: Slice
-        """
-        return fablib.get_default_fablib_manager().new_slice(name)
-
-    @staticmethod
-    def get_site_advertisement(site: str) -> FimNode:
-        """
-        Not intended for API use.
-
-        Given a site name, gets fim topology object for this site.
-
-        :param site: a site name
-        :type site: String
-        :return: fim object for this site
-        :rtype: Node
-        """
-        return fablib.get_default_fablib_manager().get_site_advertisement(site)
-
-    @staticmethod
-    def get_available_resources(update: bool = False) -> Resources:
-        """
-        Get the available resources.
-
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
-
-        :param update: update
-        :type update: Bool
-        :return: Available Resources object
-        :rtype: Resources
-        """
-        return fablib.get_default_fablib_manager().get_available_resources(
-            update=update
-        )
-
-    @staticmethod
-    def get_fim_slice(
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-        user_only: bool = True,
-    ) -> List[OrchestratorSlice]:
-        """
-        Not intended for API use.
-
-        Gets a list of fim slices from the slice manager.
-
-        By default this method ignores Dead and Closing slices. Optional,
-        parameter allows excluding a different list of slice states.  Pass
-        an empty list (i.e. excludes=[]) to get a list of all slices.
-
-        :param excludes: A list of slice states to exclude from the output list
-        :type excludes: List[SliceState]
-        :param user_only: True indicates return own slices; False indicates return project slices
-        :type user_only: bool
-
-        :return: a list of slices
-        :rtype: List[Slice]
-        """
-        return fablib.get_default_fablib_manager().get_fim_slice(
-            excludes=excludes, user_only=user_only
-        )
-
-    @staticmethod
-    def get_slices(
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-        user_only: bool = True,
-    ) -> List[Slice]:
-        """
-        Gets a list of slices from the slice manager.
-
-        By default this method ignores Dead and Closing slices. Optional,
-        parameter allows excluding a different list of slice states.  Pass
-        an empty list (i.e. excludes=[]) to get a list of all slices.
-
-        :param excludes: A list of slice states to exclude from the output list
-        :type excludes: List[SliceState]
-        :param user_only: True indicates return own slices; False indicates return project slices
-        :type user_only: bool
-
-        :return: a list of slices
-        :rtype: List[Slice]
-        """
-        return fablib.get_default_fablib_manager().get_slices(
-            excludes=excludes, user_only=user_only
-        )
-
-    @staticmethod
-    def get_slice(
-        name: str = None, slice_id: str = None, user_only: bool = True
-    ) -> Slice:
-        """
-        Gets a slice by name or slice_id. Dead and Closing slices may have
-        non-unique names and must be queried by slice_id.  Slices in all other
-        states are guaranteed to have unique names and can be queried by name.
-
-        If both a name and slice_id are provided, the slice matching the
-        slice_id will be returned.
-
-        :param name: The name of the desired slice
-        :type name: String
-        :param slice_id: The ID of the desired slice
-        :type slice_id: String
-        :param user_only: True indicates return own slices; False indicates return project slices
-        :type user_only: bool
-        :raises: Exception: if slice name or slice id are not inputted
-        :return: the slice, if found
-        :rtype: Slice
-        """
-        return fablib.get_default_fablib_manager().get_slice(
-            name=name, slice_id=slice_id, user_only=user_only
-        )
-
-    @staticmethod
-    def delete_slice(slice_name: str = None):
-        """
-        Deletes a slice by name.
-
-        :param slice_name: the name of the slice to delete
-        :type slice_name: String
-        """
-        return fablib.get_default_fablib_manager().delete_slice(slice_name=slice_name)
-
-    @staticmethod
-    def delete_all(progress: bool = True):
-        """
-        Deletes all slices on the slice manager.
-
-        :param progress: optional progress printing to stdout
-        :type progress: Bool
-        """
-        return fablib.get_default_fablib_manager().delete_all(progress=progress)
-
-    @staticmethod
-    def get_log_level():
-        """
-        Gets the current log level for logging
-        """
-        return fablib.get_default_fablib_manager().get_log_level()
-
-    @staticmethod
-    def set_log_level(log_level: str):
-        """
-        Sets the current log level for logging
-
-        Options:  logging.DEBUG
-                  logging.INFO
-                  logging.WARNING
-                  logging.ERROR
-                  logging.CRITICAL
-
-        :param log_level: new log level
-        :type log_level: Level
-        """
-        return fablib.get_default_fablib_manager().set_log_level(log_level)
-
-    @staticmethod
-    def is_jupyter_notebook() -> bool:
-        """
-        Check if we're running inside a Jupyter notebook.
-        """
-        return Utils.is_jupyter_notebook()
 
 
 class FablibManager(Config):
@@ -620,6 +125,7 @@ class FablibManager(Config):
         am_host: str = None,
         ceph_mgr_host: str = None,
         token_location: str = None,
+        id_token: str = None,
         project_id: str = None,
         bastion_username: str = None,
         bastion_key_location: str = None,
@@ -627,7 +133,6 @@ class FablibManager(Config):
         log_file: str = Constants.DEFAULT_LOG_FILE,
         log_propagate: bool = Constants.DEFAULT_LOG_PROPAGATE,
         data_dir: str = Constants.DEFAULT_DATA_DIR,
-        output: str = None,
         execute_thread_pool_size: int = 64,
         offline: bool = False,
         auto_token_refresh: bool = True,
@@ -642,20 +147,22 @@ class FablibManager(Config):
         keys in nodes in slices and FABRIC's bastion host, etc.  This
         requires some configuration, which is gathered from:
 
-            - constructor parameters (high priority)
+            - constructor parameters (highest priority)
 
-            - a configuration file (medium priority)
+            - a configuration file (medium priority, optional)
 
             - environment variables (low priority)
 
-            - defaults (if needed, and when possible)
+            - defaults (lowest priority, if needed and when possible)
 
-        Typically you would use the configuration file located at
-        ``"${HOME}/work/fabric_config/fabric_rc"``, and/or environment
-        variables.
+        The configuration file is optional. You can provide configuration
+        entirely through constructor parameters and/or environment variables.
+        If using a config file, it typically would be located at
+        ``"${HOME}/work/fabric_config/fabric_rc"``.
 
-        :param fabric_rc: Path to fablib configuration file.  Defaults
-            to ``"${HOME}/work/fabric_config/fabric_rc"``.
+        :param fabric_rc: Path to fablib configuration file. Optional.
+            Defaults to ``"${HOME}/work/fabric_config/fabric_rc"``, but
+            the file doesn't need to exist.
         :param credmgr_host: Name of credential manager host.
         :param orchestrator_host: Name of FABRIC orchestrator host.
         :param core_api_host: Name of Core API host.
@@ -663,6 +170,9 @@ class FablibManager(Config):
         :param ceph_mgr_host: Name of ceph manager host.
         :param token_location: Path to the file that contains your
             FABRIC auth token.
+        :param id_token: ID token string to use directly (optional).
+            If provided, token_location file check is skipped and
+            auto_token_refresh is automatically disabled.
         :param project_id: Your FABRIC project ID, obtained from
             https://cm.fabric-testbed.net/, usually via FABRIC portal.
         :param bastion_username: Your username on FABRIC bastion host,
@@ -686,9 +196,13 @@ class FablibManager(Config):
         :param offline: Avoid using FABRIC services when initializing.
             This is ``False`` by default, and set to ``True`` only in
             some unit tests.
-        :param auto_token_refresh: Auto refresh tokens
+        :param auto_token_refresh: Auto refresh tokens (automatically disabled if id_token is provided)
         :param validate_config: Whether to verify and persist configuration during initialization.
         """
+        # If id_token is provided, disable auto_token_refresh
+        if id_token is not None:
+            auto_token_refresh = False
+
         super().__init__(
             fabric_rc=fabric_rc,
             credmgr_host=credmgr_host,
@@ -697,6 +211,7 @@ class FablibManager(Config):
             am_host=am_host,
             ceph_mgr_host=ceph_mgr_host,
             token_location=token_location,
+            id_token=id_token,
             project_id=project_id,
             bastion_username=bastion_username,
             bastion_key_location=bastion_key_location,
@@ -707,19 +222,8 @@ class FablibManager(Config):
             offline=offline,
             **kwargs,
         )
-
-        if output is not None:
-            self.output = output
-        else:
-            if Utils.is_jupyter_notebook():
-                self.output = "pandas"
-            else:
-                self.output = "text"
-
         self.manager = None
         self.resources = None
-        self.links = None
-        self.facility_ports = None
         self.auto_token_refresh = auto_token_refresh
         self.last_resources_filtered_by_time = False
 
@@ -746,13 +250,41 @@ class FablibManager(Config):
         Adds the given slice object to both the `__slices_by_name` and `__slices_by_id`
         dictionaries for quick retrieval based on either its name or its ID.
 
+        If a slice with the same name already exists in cache, it will be replaced.
+        This ensures that the cache always contains the most recent slice object.
+
         :param slice_object: The Slice object to be cached.
         :type slice_object: Slice
         """
         with self.lock:
-            self.__slices_by_name[slice_object.get_name()] = slice_object
-            if slice_object.get_slice_id():
-                self.__slices_by_id[slice_object.get_slice_id()] = slice_object
+            name = slice_object.get_name()
+            slice_id = slice_object.get_slice_id()
+
+            # Check if there's an existing entry with this name but different ID
+            # and clean up the old ID mapping
+            if name in self.__slices_by_name:
+                old_slice = self.__slices_by_name[name]
+                old_id = old_slice.get_slice_id()
+                if old_id and old_id != slice_id and old_id in self.__slices_by_id:
+                    del self.__slices_by_id[old_id]
+
+            self.__slices_by_name[name] = slice_object
+            if slice_id:
+                self.__slices_by_id[slice_id] = slice_object
+
+    def update_slice_cache_id(self, slice_object: Slice):
+        """
+        Updates the cache when a slice gets a new ID (e.g., after submit).
+
+        This should be called after a slice is submitted and receives its slice_id.
+
+        :param slice_object: The Slice object whose ID was updated.
+        :type slice_object: Slice
+        """
+        with self.lock:
+            slice_id = slice_object.get_slice_id()
+            if slice_id and slice_id not in self.__slices_by_id:
+                self.__slices_by_id[slice_id] = slice_object
 
     def remove_slice_from_cache(self, slice_object: Slice):
         """
@@ -777,7 +309,7 @@ class FablibManager(Config):
 
     def _get_slice_from_cache(
         self, slice_id: str = None, slice_name: str = None
-    ) -> Slice:
+    ) -> Optional[Slice]:
         """
         Retrieves a Slice object from the cache by its ID or name.
 
@@ -793,6 +325,57 @@ class FablibManager(Config):
                 return self.__slices_by_id.get(slice_id)
             elif slice_name:
                 return self.__slices_by_name.get(slice_name)
+
+    def close(self):
+        """
+        Clean up resources including the SSH thread pool executor.
+
+        Call this when done using the FablibManagerV2 instance, or use
+        the context manager protocol instead::
+
+            with FablibManagerV2() as fablib:
+                # use fablib
+            # resources automatically cleaned up
+        """
+        if self.ssh_thread_pool_executor:
+            self.ssh_thread_pool_executor.shutdown(wait=False)
+            self.ssh_thread_pool_executor = None
+
+    def __enter__(self):
+        """Context manager entry point."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit point - cleans up resources."""
+        self.close()
+        return False
+
+    def get_image_names(self) -> dict[str, dict]:
+        """
+        Gets a list of available image names.
+
+        :return: Dictionary of images with default user and description
+        :rtype: dict[str, dict]
+        """
+        return Config.get_image_names()
+
+    def get_default_slice_key(self) -> dict[str, str]:
+        """
+        Gets the current default_slice_keys as a dictionary containing the
+        public and private slice keys.
+
+        Important! Slice key management is under development and this
+        functionality will likely change going forward.
+
+        :return: default_slice_key dictionary
+        :rtype: dict[str, str]
+        """
+        return {
+            "slice_public_key": self.get_default_slice_public_key(),
+            "slice_private_key": self.get_default_slice_private_key(),
+            "slice_public_key_file": self.get_default_slice_public_key_file(),
+            "slice_private_key_file": self.get_default_slice_private_key_file(),
+        }
 
     def validate_config(self):
         """
@@ -887,8 +470,8 @@ class FablibManager(Config):
             raise Exception("Bastion User name is not specified")
 
         if self.get_project_id() is None:
-            log.info("Project is not specified")
-            raise Exception("Bastion User name is not specified")
+            log.info("Project ID is not specified")
+            raise Exception("Project ID is not specified")
 
         print("Configuration is valid")
         if not validate_only:
@@ -1274,14 +857,14 @@ Host * !bastion.fabric-testbed.net
         """
         return self.ssh_thread_pool_executor
 
-    def __build_manager(self) -> FabricManager:
+    def __build_manager(self) -> FabricManagerV2:
         """
         Not a user facing API call.
 
-        Creates a new FabricManager object.
+        Creates a new FabricManagerV2 object.
 
-        :return: a new FabricManager
-        :rtype: FabricManager
+        :return: a new FabricManagerV2
+        :rtype: FabricManagerV2
         """
         try:
             log.info(
@@ -1298,21 +881,29 @@ Host * !bastion.fabric-testbed.net
             Utils.is_reachable(hostname=self.get_orchestrator_host())
             Utils.is_reachable(hostname=self.get_core_api_host())
 
-            self.manager = FabricManager(
-                oc_host=self.get_orchestrator_host(),
-                cm_host=self.get_credmgr_host(),
-                core_api_host=self.get_core_api_host(),
-                am_host=self.get_am_host(),
-                project_id=self.get_project_id(),
-                token_location=self.get_token_location(),
-                initialize=True,
-                scope="all",
-                auto_refresh=self.auto_token_refresh,
-            )
-            self.manager.initialize()
+            # Use id_token if provided, otherwise use token_location
+            if self.get_id_token():
+                self.manager = FabricManagerV2(
+                    credmgr_host=self.get_credmgr_host(),
+                    orchestrator_host=self.get_orchestrator_host(),
+                    core_api_host=self.get_core_api_host(),
+                    id_token=self.get_id_token(),
+                    project_id=self.get_project_id(),
+                    auto_refresh=False,
+                    no_write=True,
+                )
+            else:
+                self.manager = FabricManagerV2(
+                    credmgr_host=self.get_credmgr_host(),
+                    orchestrator_host=self.get_orchestrator_host(),
+                    core_api_host=self.get_core_api_host(),
+                    token_location=self.get_token_location(),
+                    project_id=self.get_project_id(),
+                    auto_refresh=self.auto_token_refresh,
+                )
             log.debug("Fabric manager initialized!")
             # Update Project ID to be same as in Slice Manager
-            self.set_project_id(project_id=self.manager.project_id)
+            self.set_project_id(project_id=self.manager.get_project_id())
             self.runtime_config[Constants.PROJECT_NAME] = (
                 self.manager.get_project_name()
             )
@@ -1334,18 +925,17 @@ Host * !bastion.fabric-testbed.net
 
     def list_sites(
         self,
-        output: str = None,
-        fields: str = None,
-        quiet: bool = False,
+        output: Optional[str] = None,
+        fields: Optional[str] = None,
+        quiet: Optional[bool] = False,
         filter_function=None,
-        update: bool = False,
-        pretty_names: bool = True,
-        force_refresh: bool = False,
-        latlon: bool = True,
-        start: datetime = None,
-        end: datetime = None,
-        avoid: List[str] = None,
-        includes: List[str] = None,
+        update: Optional[bool] = False,
+        pretty_names: Optional[bool] = True,
+        force_refresh: Optional[bool] = False,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        avoid: Optional[List[str]] = None,
+        includes: Optional[List[str]] = None,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -1405,22 +995,21 @@ Host * !bastion.fabric-testbed.net
             quiet=quiet,
             filter_function=filter_function,
             pretty_names=pretty_names,
-            latlon=latlon,
         )
 
     def list_hosts(
         self,
-        output: str = None,
-        fields: str = None,
-        quiet: bool = False,
+        output: Optional[str] = None,
+        fields: Optional[str] = None,
+        quiet: Optional[bool] = False,
         filter_function=None,
-        update: bool = True,
-        pretty_names: bool = True,
-        force_refresh: bool = False,
-        start: datetime = None,
-        end: datetime = None,
-        avoid: List[str] = None,
-        includes: List[str] = None,
+        update: Optional[bool] = False,
+        pretty_names: Optional[bool] = True,
+        force_refresh: Optional[bool] = False,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        avoid: Optional[List[str]] = None,
+        includes: Optional[List[str]] = None,
     ) -> object:
         """
         Lists all the hosts and their attributes.
@@ -1482,12 +1071,12 @@ Host * !bastion.fabric-testbed.net
 
     def list_links(
         self,
-        output: str = None,
-        fields: str = None,
-        quiet: bool = False,
+        output: Optional[str] = None,
+        fields: Optional[str] = None,
+        quiet: Optional[bool] = False,
         filter_function=None,
-        update: bool = True,
-        pretty_names=True,
+        update: Optional[bool] = True,
+        pretty_names: Optional[bool] = True,
     ) -> object:
         """
         Lists all the links and their attributes.
@@ -1532,14 +1121,14 @@ Host * !bastion.fabric-testbed.net
 
     def list_facility_ports(
         self,
-        output: str = None,
-        fields: str = None,
-        quiet: bool = False,
+        output: Optional[str] = None,
+        fields: Optional[str] = None,
+        quiet: Optional[bool] = False,
         filter_function=None,
-        update: bool = False,
-        pretty_names=True,
-        start: datetime = None,
-        end: datetime = None,
+        update: Optional[bool] = False,
+        pretty_names: Optional[bool] =True,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
     ) -> object:
         """
         Lists all the facility ports and their attributes.
@@ -1598,10 +1187,10 @@ Host * !bastion.fabric-testbed.net
 
     def show_config(
         self,
-        output: str = None,
+        output: Optional[str] = None,
         fields: list[str] = None,
-        quiet: bool = False,
-        pretty_names=True,
+        quiet: Optional[bool] = False,
+        pretty_names: Optional[bool] = True,
     ):
         """
         Show a table containing the current FABlib configuration parameters.
@@ -1646,11 +1235,10 @@ Host * !bastion.fabric-testbed.net
     def show_site(
         self,
         site_name: str,
-        output: str = None,
-        fields: list[str] = None,
-        quiet: bool = False,
-        pretty_names=True,
-        latlon=True,
+        output: Optional[str] = None,
+        fields: Optional[list[str]] = None,
+        quiet: Optional[bool] = False,
+        pretty_names: Optional[bool] = True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1688,49 +1276,31 @@ Host * !bastion.fabric-testbed.net
                 output=output,
                 quiet=quiet,
                 pretty_names=pretty_names,
-                latlon=latlon,
             )
         )
 
-    def get_links(self, update: bool = True) -> Links:
+    def get_links(self, update: bool = True) -> ResourcesV2:
         """
-        Get the links.
+        Get the resources object (which includes links).
 
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
-
-        :param update:
-        :return: Links
+        :param update: whether to refresh resources
+        :return: ResourcesV2Wrapper
         """
-
-        if self.links is None:
-            self.links = Links(self)
-        elif update:
-            self.links.update()
-
-        return self.links
+        return self.get_resources(update=update)
 
     def get_facility_ports(
         self,
-        update: bool = False,
-        start: datetime = None,
-        end: datetime = None,
-    ) -> FacilityPorts:
+        update: Optional[bool] = False,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> ResourcesV2:
         """
-        Get the facility ports.
+        Get the resources object (which includes facility ports).
 
-        Optionally update the available resources by querying the FABRIC
-        services. Otherwise, this method returns the existing information.
-
-        :param update:
-
+        :param update: whether to refresh resources
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
-        :type: datetime
-
-        :param end: end time in UTC format:  %Y-%m-%d %H:%M:%S %z
-        :type: datetime
-
-        :return: Links
+        :param end: end time in UTC format: %Y-%m-%d %H:%M:%S %z
+        :return: ResourcesV2Wrapper
         """
         if not update:
             if start or end:
@@ -1740,22 +1310,17 @@ Host * !bastion.fabric-testbed.net
                 update = True
                 self.last_resources_filtered_by_time = False
 
-        if self.facility_ports is None:
-            self.facility_ports = FacilityPorts(self)
-        elif update:
-            self.facility_ports.update(start=start, end=end)
-
-        return self.facility_ports
+        return self.get_resources(update=update, start=start, end=end)
 
     def get_resources(
         self,
-        update: bool = False,
-        force_refresh: bool = False,
-        start: datetime = None,
-        end: datetime = None,
-        avoid: List[str] = None,
-        includes: List[str] = None,
-    ) -> Resources:
+        update: Optional[bool] = False,
+        force_refresh: Optional[bool] = False,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        avoid: Optional[List[str]] = None,
+        includes: Optional[List[str]] = None,
+    ) -> ResourcesV2:
         """
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
@@ -1779,7 +1344,7 @@ Host * !bastion.fabric-testbed.net
         :type: list of string
 
         :return: the resources object
-        :rtype: Resources
+        :rtype: ResourcesV2
         """
         if not update:
             if start or end:
@@ -1799,7 +1364,10 @@ Host * !bastion.fabric-testbed.net
         )
 
     def get_random_site(
-        self, avoid: List[str] = [], filter_function=None, update: bool = True
+            self,
+            avoid: Optional[List[str]] = None,
+            filter_function=None,
+            update: Optional[bool] = True
     ) -> str:
         """
         Get a random site.
@@ -1819,28 +1387,29 @@ Host * !bastion.fabric-testbed.net
 
     def get_random_sites(
         self,
-        count: int = 1,
-        avoid: List[str] = [],
+        count: Optional[int] = 1,
+        avoid: Optional[List[str]] = None,
         filter_function=None,
-        update: bool = True,
-        unique: bool = True,
+        update: Optional[bool] = True,
     ) -> List[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
         :param count: number of sites to return.
         :type count: int
-        :param avoid: list of site names to avoid chosing
+        :param avoid: list of site names to avoid choosing
         :type avoid: List[String]
         :param filter_function: filter_function
         :type filter_function:
         :param update: flag indicating if fetch latest availability information
         :type update: bool
-        :return: one site name
-        :param unique:
         :return: list of random site names.
-        :rtype: List[Sting]
+        :rtype: List[String]
         """
+        if avoid is None:
+            avoid = []
+        else:
+            avoid = list(avoid)  # Make a copy to avoid modifying the original
 
         def combined_filter_function(site):
             """
@@ -1872,7 +1441,6 @@ Host * !bastion.fabric-testbed.net
             filter_function=combined_filter_function,
             update=update,
             # if filter function is not specified, no need for latlon
-            latlon=True if filter_function else False,
         )
 
         sites = list(map(lambda x: x["name"], site_list))
@@ -1892,7 +1460,7 @@ Host * !bastion.fabric-testbed.net
                 rtn_sites.append(None)
         return rtn_sites
 
-    def probe_bastion_host(self) -> bool:
+    def probe_bastion_host(self) -> Optional[bool]:
         """
         See if bastion will admit us with our configuration.
 
@@ -1958,46 +1526,7 @@ Host * !bastion.fabric-testbed.net
         finally:
             bastion_client.close()
 
-    def set_slice_manager(self, slice_manager: FabricManager):
-        """
-        Not intended as API call
-
-        Sets the slice manager of this fablib object.
-
-        :param slice_manager: the slice manager to set
-        :type slice_manager: SliceManager
-
-        .. deprecated:: 1.7.3
-           Use `set_manager()` instead.
-        """
-        self.set_manager(manager=slice_manager)
-
-    def get_slice_manager(self) -> FabricManager:
-        """
-        Not intended as API call
-
-        Gets the slice manager of this fablib object.
-
-        :return: the slice manager on this fablib object
-        :rtype: SliceManager
-
-        .. deprecated:: 1.7.3
-           Use `get_manager()` instead.
-        """
-        return self.get_manager()
-
-    def set_manager(self, manager: FabricManager):
-        """
-        Not intended as API call
-
-        Sets the manager of this fablib object.
-
-        :param manager: the manager to set
-        :type manager: FabricManager
-        """
-        self.manager = manager
-
-    def get_manager(self) -> FabricManager:
+    def get_manager(self) -> FabricManagerV2:
         """
         Not intended as API call
 
@@ -2005,7 +1534,7 @@ Host * !bastion.fabric-testbed.net
         Gets the manager of this fablib object.
 
         :return: the manager on this fablib object
-        :rtype: FabricManager
+        :rtype: FabricManagerV2
         """
         return self.manager
 
@@ -2022,37 +1551,15 @@ Host * !bastion.fabric-testbed.net
         new_slice = Slice.new_slice(self, name=name)
         return new_slice
 
-    def get_site_advertisement(self, site: str) -> FimNode:
-        """
-        Not intended for API use.
-
-        Given a site name, gets fim topology object for this site.
-
-        :param site: a site name
-        :type site: String
-        :return: fim object for this site
-        :rtype: Node
-        """
-        log.info(f"Updating get_site_advertisement")
-        return_status, topology = self.get_manager().resources()
-        if return_status != Status.OK:
-            raise Exception(
-                "Failed to get advertised_topology: {}, {}".format(
-                    return_status, topology
-                )
-            )
-
-        return topology.sites[site]
-
     def get_available_resources(
         self,
-        update: bool = False,
-        force_refresh: bool = False,
-        start: datetime = None,
-        end: datetime = None,
-        avoid: List[str] = None,
-        includes: List[str] = None,
-    ) -> Resources:
+        update: Optional[bool] = False,
+        force_refresh: Optional[bool] = False,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        avoid: Optional[List[str]] = None,
+        includes: Optional[List[str]] = None,
+    ) -> ResourcesV2:
         """
         Get the available resources.
 
@@ -2078,15 +1585,13 @@ Host * !bastion.fabric-testbed.net
         :param includes: list of sites to include
         :type: list of string
 
-        :return: Available Resources object
+        :return: Available ResourcesV2Wrapper object
         """
         if start and end and (end - start) < datetime.timedelta(minutes=60):
             raise Exception("Time range should be at least 60 minutes long!")
 
-        from fabrictestbed_extensions.fablib.resources import Resources
-
         if self.resources is None:
-            self.resources = Resources(
+            self.resources = ResourcesV2(
                 self,
                 force_refresh=force_refresh,
                 start=start,
@@ -2105,50 +1610,16 @@ Host * !bastion.fabric-testbed.net
 
         return self.resources
 
-    def get_fim_slices(
-        self,
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-        user_only: bool = True,
-    ) -> List[OrchestratorSlice]:
-        """
-        Gets a list of fim slices from the slice manager.
-
-        This is not recommended for most users and should only be used to bypass fablib inorder
-        to create custom low-level functionality.
-
-        By default this method ignores Dead and Closing slices. Optional,
-        parameter allows excluding a different list of slice states.  Pass
-        an empty list (i.e. excludes=[]) to get a list of all slices.
-
-        :param excludes: A list of slice states to exclude from the output list
-        :type excludes: List[SliceState]
-        :param user_only: True indicates return own slices; False indicates return project slices
-        :type user_only: bool
-        :return: a list of fim models of slices
-        :rtype: List[Slice]
-        """
-        return_status, slices = self.get_manager().slices(
-            excludes=excludes, limit=200, as_self=user_only
-        )
-
-        return_slices = []
-        if return_status == Status.OK:
-            for slice in slices:
-                return_slices.append(slice)
-        else:
-            raise Exception(f"Failed to get slice list: {slices}")
-        return return_slices
-
     def list_slices(
         self,
-        excludes=[SliceState.Dead, SliceState.Closing],
-        output=None,
-        fields=None,
-        quiet=False,
+        excludes: Optional[list[SliceState]] = None,
+        output: Optional[str] = None,
+        fields: Optional[list[str]] = None,
+        quiet: Optional[bool] = False,
         filter_function=None,
-        pretty_names=True,
-        user_only: bool = True,
-        show_un_submitted: bool = False,
+        pretty_names: Optional[bool] = True,
+        user_only: Optional[bool] = True,
+        show_un_submitted: Optional[bool] = False,
     ):
         """
         Lists all the slices created by a user.
@@ -2168,8 +1639,8 @@ Host * !bastion.fabric-testbed.net
 
         Example: filter_function=lambda s: s['State'] == 'Configuring'
 
-        :param excludes: slice status to exclude
-        :type excludes: list[slice.state]
+        :param excludes: slice states to exclude. Defaults to [SliceState.Dead, SliceState.Closing].
+        :type excludes: list[SliceState]
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
@@ -2210,14 +1681,14 @@ Host * !bastion.fabric-testbed.net
 
     def show_slice(
         self,
-        name: str = None,
-        id: str = None,
-        output=None,
-        fields=None,
-        quiet=False,
-        pretty_names=True,
-        user_only: bool = True,
-        show_un_submitted: bool = False,
+        name: Optional[str] = None,
+        id: Optional[str] = None,
+        output: Optional[str] = None,
+        fields: Optional[list[str]] = None,
+        quiet: Optional[bool] = False,
+        pretty_names: Optional[bool] = True,
+        user_only: Optional[bool] = True,
+        show_un_submitted: Optional[bool] = False,
     ):
         """
         Show a table with all the properties of a specific site
@@ -2266,11 +1737,11 @@ Host * !bastion.fabric-testbed.net
 
     def get_slices(
         self,
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
-        slice_name: str = None,
-        slice_id: str = None,
-        user_only: bool = True,
-        show_un_submitted: bool = False,
+        excludes: Optional[List[SliceState]] = None,
+        slice_name: Optional[str] = None,
+        slice_id: Optional[str] = None,
+        user_only: Optional[bool] = True,
+        show_un_submitted: Optional[bool] = False,
     ) -> List[Slice]:
         """
         Gets a list of slices from the slice manager.
@@ -2279,19 +1750,26 @@ Host * !bastion.fabric-testbed.net
         parameter allows excluding a different list of slice states.  Pass
         an empty list (i.e. excludes=[]) to get a list of all slices.
 
-        :param excludes: A list of slice states to exclude from the output list
+        :param excludes: A list of slice states to exclude from the output list.
+            Defaults to [SliceState.Dead, SliceState.Closing].
         :type excludes: List[SliceState]
-        :param slice_name:
-        :param slice_id:
+        :param slice_name: Filter by slice name
+        :type slice_name: str
+        :param slice_id: Filter by slice ID
+        :type slice_id: str
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
-        :param show_un_submitted: Show unsubmitted slices;
+        :param show_un_submitted: Show unsubmitted slices
         :type show_un_submitted: bool
 
         :return: a list of slices
         :rtype: List[Slice]
         """
         import time
+
+        # Handle default for excludes (avoid mutable default argument)
+        if excludes is None:
+            excludes = [SliceState.Dead, SliceState.Closing]
 
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
@@ -2304,12 +1782,17 @@ Host * !bastion.fabric-testbed.net
             return_slices = [existing_slice]
             return return_slices
 
-        return_status, slices = self.get_manager().slices(
-            excludes=excludes,
+        excludes_states = []
+        for exclude in excludes:
+            excludes_states.append(str(exclude))
+
+        slices = self.get_manager().list_slices(
+            exclude_states=excludes_states,
             name=slice_name,
             slice_id=slice_id,
             limit=200,
             as_self=user_only,
+            return_fmt="dto"
         )
 
         if self.get_log_level() == logging.DEBUG:
@@ -2319,14 +1802,11 @@ Host * !bastion.fabric-testbed.net
             )
 
         return_slices = []
-        if return_status == Status.OK:
-            for slice in slices:
-                slice_object = Slice.get_slice(
-                    self, sm_slice=slice, user_only=user_only
-                )
-                return_slices.append(slice_object)
-        else:
-            raise Exception(f"Failed to get slices: {slices}")
+        for slice in slices:
+            slice_object = Slice.get_slice(
+                self, sm_slice=slice, user_only=user_only
+            )
+            return_slices.append(slice_object)
         return return_slices
 
     def get_slice(
@@ -2397,8 +1877,9 @@ Host * !bastion.fabric-testbed.net
         :param slice_name: the name of the slice to delete
         :type slice_name: String
         """
-        slice = self.get_slice(slice_name, show_un_submitted=True)
-        slice.delete()
+        slice_obj = self.get_slice(slice_name, show_un_submitted=True)
+        slice_obj.delete()
+        self.remove_slice_from_cache(slice_obj)
 
     def delete_all(self, progress: bool = True):
         """
@@ -2409,151 +1890,34 @@ Host * !bastion.fabric-testbed.net
         """
         slices = self.get_slices(show_un_submitted=True)
 
-        for slice in slices:
+        for slice_obj in slices:
             try:
                 if progress:
-                    print(f"Deleting slice {slice.get_name()}", end="")
-                slice.delete()
+                    print(f"Deleting slice {slice_obj.get_name()}", end="")
+                slice_obj.delete()
+                self.remove_slice_from_cache(slice_obj)
                 if progress:
-                    print(f", Success!")
+                    print(", Success!")
             except Exception as e:
                 if progress:
-                    print(f", Failed!")
-
-    @staticmethod
-    def __can_allocate_node_in_host(
-        host: Host, node: Node, allocated: dict, site: Site
-    ) -> Tuple[bool, str]:
-        """
-        Check if a node can be provisioned on a host node on a site w.r.t available resources on that site
-
-        :return: Tuple indicating status for validation and error message in case of failure
-        :rtype: Tuple[bool, str]
-        """
-        if host is None or site is None:
-            return (
-                True,
-                f"Ignoring validation: Host: {host}, Site: {site} not available.",
-            )
-
-        msg = f"Node can be allocated on the host: {host.get_name()}."
-
-        if host.get_state() != "Active":
-            msg = f"Node cannot be allocated on {host.get_name()}, {host.get_name()} is in {host.get_state()}!"
-            return False, msg
-
-        allocated_core = allocated.setdefault("core", 0)
-        allocated_ram = allocated.setdefault("ram", 0)
-        allocated_disk = allocated.setdefault("disk", 0)
-        available_cores = host.get_core_available()
-        available_ram = host.get_ram_available()
-        available_disk = host.get_disk_available()
-
-        if (
-            node.get_requested_cores() > available_cores
-            or node.get_requested_disk() > available_disk
-            or node.get_requested_ram() > available_ram
-        ):
-            msg = f"Insufficient Resources: Host: {host.get_name()} does not meet core/ram/disk requirements."
-            return False, msg
-
-        # Check if there are enough components available
-        for c in node.get_components():
-            comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
-            substrate_component = host.get_component(comp_model_type=comp_model_type)
-            if not substrate_component:
-                msg = f"Invalid Request: Host: {host.get_name()} does not have the requested component: {comp_model_type}."
-                return False, msg
-
-            allocated_comp_count = allocated.setdefault(comp_model_type, 0)
-            available_comps = (
-                substrate_component.capacities.unit
-                - (
-                    substrate_component.capacity_allocations.unit
-                    if substrate_component.capacity_allocations
-                    else 0
-                )
-                - allocated_comp_count
-            )
-            if available_comps <= 0:
-                msg = f"Insufficient Resources: Host: {host.get_name()} has reached the limit for component: {comp_model_type}."
-                return False, msg
-
-            allocated[comp_model_type] += 1
-
-        allocated["core"] += node.get_requested_cores()
-        allocated["ram"] += node.get_requested_ram()
-        allocated["disk"] += node.get_requested_disk()
-
-        return True, msg
+                    print(", Failed!")
 
     def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
         """
-        Validate a node w.r.t available resources on a site before submission
+        Validate a node w.r.t available resources on a site before submission.
+
+        Delegates to :class:`NodeValidatorV2` with pre-fetched resources.
+        This method must remain on ``FablibManagerV2`` because
+        ``Node.add_component()`` calls ``self.get_fablib_manager().validate_node()``.
 
         :return: Tuple indicating status for validation and error message in case of failure
         :rtype: Tuple[bool, str]
         """
-        try:
-            error = None
-            if allocated is None:
-                allocated = {}
-            site = self.get_resources().get_site(site_name=node.get_site())
+        from fabrictestbed_extensions.fablib.validator import NodeValidator
 
-            if not site:
-                log.warning(
-                    f"Ignoring validation: Site: {node.get_site()} not available in resources."
-                )
-                return (
-                    True,
-                    f"Ignoring validation: Site: {node.get_site()} not available in resources.",
-                )
-
-            site_state = site.get_state()
-            if site_state != "Active":
-                msg = f"Node cannot be allocated on {node.get_site()}, {node.get_site()} is in {site_state}."
-                log.error(msg)
-                return False, msg
-            hosts = site.get_hosts()
-            if not hosts:
-                msg = f"Node cannot be validated, host information not available for {site}."
-                log.error(msg)
-                return False, msg
-
-            if node.get_host():
-                if node.get_host() not in hosts:
-                    msg = f"Invalid Request: Requested Host {node.get_host()} does not exist on site: {node.get_site()}."
-                    log.error(msg)
-                    return False, msg
-
-                host = hosts.get(node.get_host())
-
-                allocated_comps = allocated.setdefault(node.get_host(), {})
-                status, error = self.__can_allocate_node_in_host(
-                    host=host, node=node, allocated=allocated_comps, site=site
-                )
-
-                if not status:
-                    log.error(error)
-                    return status, error
-
-            for host in hosts.values():
-                allocated_comps = allocated.setdefault(host.get_name(), {})
-                status, error = self.__can_allocate_node_in_host(
-                    host=host, node=node, allocated=allocated_comps, site=site
-                )
-                if status:
-                    return status, error
-
-            msg = f"Invalid Request: Requested Node cannot be accommodated by any of the hosts on site: {site.get_name()}."
-            if error:
-                msg += f" Details: {error}"
-            log.error(msg)
-            return False, msg
-        except Exception as e:
-            log.error(e)
-            log.error(traceback.format_exc())
-            return False, str(e)
+        return NodeValidator.validate_node(
+            node=node, resources=self.get_resources(), allocated=allocated
+        )
 
     def create_artifact(
         self,
@@ -2576,7 +1940,7 @@ Host * !bastion.fabric-testbed.net
         :param visibility: Visibility level of the artifact
         :param update_existing: Flag indicating whether to update an existing artifact
         :return: Dictionary containing the artifact details
-        :raises FabricManagerException: If there is an error in creating or updating the artifact.
+        :raises FabricManagerV2Exception: If there is an error in creating or updating the artifact.
         """
         artifact_info = self.get_manager().create_artifact(
             artifact_title=artifact_title,
@@ -2647,7 +2011,7 @@ Host * !bastion.fabric-testbed.net
         :param filter_function: Lambda function to filter data by field values
         :param pretty_names: Whether to use pretty names for fields
         :return: Table in format specified by output parameter
-        :raises FabricManagerException: If there is an error in listing the artifacts.
+        :raises FabricManagerV2Exception: If there is an error in listing the artifacts.
         """
         # Fetch the list of artifacts from the manager
         table = [a.to_dict() for a in self.get_artifacts()]
@@ -2676,11 +2040,18 @@ Host * !bastion.fabric-testbed.net
         :param artifact_id: The unique identifier of the artifact to be deleted.
         :param artifact_title: The title of the artifact to be deleted.
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the deletion process.
+        :raises FabricManagerV2Exception: If an error occurs during the deletion process.
         """
-        self.get_manager().delete_artifact(
-            artifact_id=artifact_id, artifact_title=artifact_title
-        )
+        if artifact_id:
+            self.get_manager().delete_artifact(artifact_id=artifact_id)
+        elif artifact_title:
+            artifacts = self.get_artifacts(artifact_title=artifact_title)
+            if len(artifacts) == 1:
+                self.get_manager().delete_artifact(artifact_id=artifacts[0].to_dict().get("uuid"))
+            else:
+                raise ValueError("More than one artifact found")
+        else:
+            raise ValueError("artifact_title or artifact_id must be provided")
 
     def get_tags(self):
         """
@@ -2690,7 +2061,7 @@ Host * !bastion.fabric-testbed.net
         Tags are useful for categorizing and searching for artifacts.
 
         :return: A list of tags.
-        :raises FabricManagerException: If an error occurs while retrieving the tags.
+        :raises FabricManagerV2Exception: If an error occurs while retrieving the tags.
         """
         return self.get_manager().get_tags()
 
@@ -2709,7 +2080,7 @@ Host * !bastion.fabric-testbed.net
         :param artifact_title: The title of the artifact to which the file will be uploaded.
         :return: A dictionary containing the details of the uploaded file.
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the upload process.
+        :raises FabricManagerV2Exception: If an error occurs during the upload process.
         """
         return self.get_manager().upload_file_to_artifact(
             file_to_upload=file_to_upload,
@@ -2739,7 +2110,7 @@ Host * !bastion.fabric-testbed.net
         :param version_urn: Version urn for the artifact
         :return: The path to the downloaded artifact.
         :raises ValueError: If neither `artifact_id` nor `artifact_title` is provided.
-        :raises FabricManagerException: If an error occurs during the download process.
+        :raises FabricManagerV2Exception: If an error occurs during the download process.
         """
         return self.get_manager().download_artifact(
             download_dir=download_dir,
@@ -2748,6 +2119,101 @@ Host * !bastion.fabric-testbed.net
             version=version,
             version_urn=version_urn,
         )
+
+    def _fetch_all_pages(
+        self,
+        fetch_func,
+        offset: int = 0,
+        limit: int = 200,
+    ) -> List:
+        """
+        Generic paginated fetch helper.
+
+        Fetches all pages from a paginated API endpoint.
+
+        :param fetch_func: Function that takes offset and limit kwargs and returns a list
+        :param offset: Starting offset (default: 0)
+        :param limit: Page size (default: 200)
+        :return: Combined list of all results
+        :rtype: List
+        """
+        results = []
+        current_offset = offset
+
+        while True:
+            page_data = fetch_func(offset=current_offset, limit=limit)
+
+            if not page_data:
+                break
+
+            results.extend(page_data)
+
+            # Check if we got fewer items than requested, meaning we've reached the end
+            if len(page_data) < limit:
+                break
+
+            current_offset += len(page_data)
+
+        return results
+
+    def list_storage(
+        self,
+        offset: int = 0,
+        limit: int = 200,
+        fetch_all: bool = False,
+        output=None,
+        fields=None,
+        quiet=False,
+        filter_function=None,
+    ) -> object:
+        """
+        List storage volumes available for the project.
+
+        :param offset: Pagination offset (default: 0).
+        :type offset: int
+        :param limit: Maximum number of records to fetch per page (default: 200).
+        :type limit: int
+        :param fetch_all: If True, automatically fetch all storage volumes across all pages (default: False).
+        :type fetch_all: bool
+        :param output: Output format - 'text', 'pandas', 'json'
+        :param fields: List of fields (table columns) to show
+        :param quiet: True to suppress printing/display
+        :param filter_function: Lambda function to filter data by field values
+        :return: Table in format specified by output parameter
+        :raises FabricManagerV2Exception: If there is an error in listing storage volumes.
+        """
+        if fetch_all:
+            storage_list = self._fetch_all_pages(
+                self.get_manager().list_storage,
+                offset=offset,
+                limit=limit,
+            )
+        else:
+            storage_list = self.get_manager().list_storage(offset=offset, limit=limit)
+
+        # Use the existing list_table function for output formatting
+        table = Utils.list_table(
+            storage_list,
+            fields=fields,
+            title="Storage Volumes",
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+        )
+
+        return table
+
+    def get_storage(self, uuid: str) -> list:
+        """
+        Get a specific storage volume by UUID.
+
+        :param uuid: Storage volume UUID.
+        :type uuid: str
+        :return: Storage volume details.
+        :rtype: list
+        :raises FabricManagerV2Exception: If there is an error retrieving the storage volume.
+        """
+        return self.get_manager().get_storage(uuid=uuid)
 
     def discover_ceph_clusters(self, verify: bool = True) -> list:
         """
