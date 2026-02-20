@@ -1169,8 +1169,7 @@ class NetworkService(TemplateMixin):
             )
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
-            else:
-                self.get_fim().connect_interface(interface=interface.get_fim())
+            self.get_fim().connect_interface(interface=interface.get_fim())
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
