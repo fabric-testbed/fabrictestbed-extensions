@@ -1163,7 +1163,7 @@ class NetworkService(TemplateMixin):
 
         iface_fablib_data = interface.get_fablib_data()
 
-        new_interfaces = self.get_interfaces()
+        new_interfaces = self.get_interfaces(refresh=True)
         new_interfaces.append(interface)
 
         curr_nstype = self.get_type()
@@ -1175,6 +1175,9 @@ class NetworkService(TemplateMixin):
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
             self.get_fim().connect_interface(interface=interface.get_fim())
+            # Invalidate cache so subsequent add_interface calls see
+            # the updated interface list from FIM
+            self._interfaces_cache = {}
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
@@ -1199,6 +1202,8 @@ class NetworkService(TemplateMixin):
 
         if self.get_layer() == NSLayer.L3:
             self.get_fim().connect_interface(interface=interface.get_fim())
+            # Invalidate cache after L3 connect as well
+            self._interfaces_cache = {}
 
     def remove_interface(self, interface: Interface):
         """
