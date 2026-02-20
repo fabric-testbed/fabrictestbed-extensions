@@ -157,6 +157,10 @@ class Node(TemplateMixin):
         self._cached_instance_name: Optional[str] = None
         self._cached_type: Optional[NodeType] = None
 
+        # Persistent network configuration backend: 'nmcli', 'netplan', or 'ip'
+        self._net_config_backend: Optional[str] = None
+        self._persistent_config: bool = True
+
         try:
             self.set_username()
         except:
@@ -2436,6 +2440,393 @@ class Node(TemplateMixin):
 
         return dataplane_devs
 
+    # =========================================================================
+    # Persistent network configuration backend detection and helpers
+    # =========================================================================
+
+    def _detect_net_config_backend(self) -> str:
+        """
+        Detect the available network configuration backend.
+
+        Checks in order: nmcli (running NetworkManager), netplan, then falls
+        back to raw ip commands.
+
+        :return: 'nmcli', 'netplan', or 'ip'
+        :rtype: str
+        """
+        if self._net_config_backend is not None:
+            return self._net_config_backend
+
+        try:
+            stdout, stderr = self.execute(
+                "command -v nmcli && nmcli general status",
+                quiet=True,
+            )
+            if stdout and "running" in stdout.lower():
+                self._net_config_backend = "nmcli"
+                log.info(f"{self.get_name()}: detected nmcli backend")
+                return self._net_config_backend
+        except Exception:
+            pass
+
+        try:
+            stdout, stderr = self.execute("command -v netplan", quiet=True)
+            if stdout and stdout.strip():
+                self._net_config_backend = "netplan"
+                log.info(f"{self.get_name()}: detected netplan backend")
+                return self._net_config_backend
+        except Exception:
+            pass
+
+        self._net_config_backend = "ip"
+        log.info(f"{self.get_name()}: falling back to ip backend")
+        return self._net_config_backend
+
+    def _get_effective_backend(self, persistent: Optional[bool] = None) -> str:
+        """
+        Return the effective backend considering the persistent flag.
+
+        :param persistent: Override for self._persistent_config. If False,
+            forces legacy 'ip' backend.
+        :return: 'nmcli', 'netplan', or 'ip'
+        """
+        use_persistent = persistent if persistent is not None else self._persistent_config
+        if not use_persistent:
+            return "ip"
+        return self._detect_net_config_backend()
+
+    @staticmethod
+    def _nm_conn_name(device_name: str) -> str:
+        """
+        Return a deterministic NetworkManager connection name for a device.
+
+        :param device_name: OS device name (e.g. 'enp7s0', 'enp7s0.100')
+        :return: connection name like 'fabric-enp7s0'
+        """
+        return f"fabric-{device_name}"
+
+    def _detect_ip_version_for_interface(self, interface: Interface) -> str:
+        """
+        Detect the IP version ('ipv4' or 'ipv6') for a given interface
+        based on its network service type.
+
+        :param interface: the fablib interface
+        :return: 'ipv4' or 'ipv6'
+        """
+        try:
+            network = interface.get_network()
+            if network and network.get_type() in [
+                ServiceType.FABNetv6,
+                ServiceType.FABNetv6Ext,
+            ]:
+                return "ipv6"
+        except Exception:
+            pass
+        return "ipv4"
+
+    # ---- nmcli helpers ----
+
+    def _nmcli_ensure_connection(
+        self,
+        conn_name: str,
+        ifname: str,
+        ip_version: str,
+        addresses: str,
+        conn_type: str = "ethernet",
+        vlan_id: Optional[str] = None,
+        vlan_parent: Optional[str] = None,
+        mtu: Optional[str] = None,
+    ):
+        """
+        Create or modify an nmcli connection.
+
+        :param conn_name: NM connection name (e.g. 'fabric-enp7s0')
+        :param ifname: OS interface name
+        :param ip_version: 'ipv4' or 'ipv6'
+        :param addresses: CIDR address (e.g. '10.0.0.1/24')
+        :param conn_type: 'ethernet' or 'vlan'
+        :param vlan_id: VLAN ID when conn_type is 'vlan'
+        :param vlan_parent: parent device when conn_type is 'vlan'
+        :param mtu: optional MTU value
+        """
+        # Check if connection already exists
+        stdout, stderr = self.execute(
+            f"sudo nmcli -t -f NAME c show 2>/dev/null | grep -Fx '{conn_name}' || true",
+            quiet=True,
+        )
+        exists = conn_name in (stdout or "").strip()
+
+        if not exists:
+            cmd = f"sudo nmcli c add type {conn_type} ifname {ifname} con-name {conn_name}"
+            if conn_type == "vlan" and vlan_id and vlan_parent:
+                cmd += f" dev {vlan_parent} id {vlan_id}"
+            cmd += (
+                f" {ip_version}.method manual"
+                f" {ip_version}.addresses {addresses}"
+                f" connection.autoconnect yes"
+            )
+            if mtu:
+                cmd += f" 802-3-ethernet.mtu {mtu}"
+            self.execute(cmd, quiet=True)
+        else:
+            cmd = (
+                f"sudo nmcli c mod {conn_name}"
+                f" {ip_version}.method manual"
+                f" {ip_version}.addresses {addresses}"
+                f" connection.autoconnect yes"
+            )
+            if mtu:
+                cmd += f" 802-3-ethernet.mtu {mtu}"
+            self.execute(cmd, quiet=True)
+
+    def _nmcli_up(self, conn_name: str):
+        """
+        Bring up an nmcli connection.
+
+        :param conn_name: NM connection name
+        """
+        self.execute(
+            f"sudo nmcli c up {conn_name} 2>/dev/null || sudo nmcli c up {conn_name}",
+            quiet=True,
+        )
+
+    def _nmcli_down(self, conn_name: str):
+        """
+        Bring down an nmcli connection.
+
+        :param conn_name: NM connection name
+        """
+        self.execute(f"sudo nmcli c down {conn_name} 2>/dev/null || true", quiet=True)
+
+    def _nmcli_route_add(
+        self,
+        conn_name: str,
+        subnet: str,
+        gateway: str,
+        ip_version: str,
+    ):
+        """
+        Add a route to an nmcli connection.
+
+        :param conn_name: NM connection name
+        :param subnet: destination subnet (e.g. '10.128.0.0/10')
+        :param gateway: next-hop gateway IP
+        :param ip_version: 'ipv4' or 'ipv6'
+        """
+        self.execute(
+            f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{subnet} {gateway}\"",
+            quiet=True,
+        )
+
+    def _nmcli_delete(self, conn_name: str):
+        """
+        Delete an nmcli connection.
+
+        :param conn_name: NM connection name
+        """
+        self.execute(f"sudo nmcli c delete {conn_name} 2>/dev/null || true", quiet=True)
+
+    def _nmcli_configure_pbr(
+        self,
+        conn_name: str,
+        ip_version: str,
+        addr: str,
+        prefix: str,
+        gateway: str,
+        subnet: str,
+        pbr_table: int = 100,
+        pbr_priority: int = 1000,
+        route_metric: int = 200,
+    ):
+        """
+        Configure Policy-Based Routing on an nmcli connection.
+        Used for FabNetv4Ext/FabNetv6Ext networks.
+
+        :param conn_name: NM connection name
+        :param ip_version: 'ipv4' or 'ipv6'
+        :param addr: IP address (without prefix)
+        :param prefix: prefix length
+        :param gateway: next-hop gateway IP
+        :param subnet: interface subnet in CIDR notation
+        :param pbr_table: routing table number
+        :param pbr_priority: routing rule priority
+        :param route_metric: route metric
+        """
+        ip_vaddr = "::" if ip_version == "ipv6" else "0.0.0.0"
+        default_route = "::/0" if ip_version == "ipv6" else "0.0.0.0/0"
+
+        # Check if management network uses same IP version
+        ip_flag = "-6" if ip_version == "ipv6" else "-4"
+        stdout, stderr = self.execute(
+            f"ip {ip_flag} route show default | awk '{{print $3; exit}}'",
+            quiet=True,
+        )
+        mgmt_has_same_version = bool((stdout or "").strip())
+
+        if mgmt_has_same_version:
+            # PBR mode: never-default + route-table + routing-rules
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.route-table {pbr_table}",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{subnet} {ip_vaddr}\"",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{default_route} {gateway}\"",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} +{ip_version}.routing-rules \"priority {pbr_priority} from {addr}/{prefix} table {pbr_table}\"",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.route-metric {route_metric}",
+                quiet=True,
+            )
+        else:
+            # Standard default route (different IP version for management)
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.never-default no",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{default_route} {gateway}\"",
+                quiet=True,
+            )
+
+    def _nmcli_configure_fabnet_routes(
+        self,
+        conn_name: str,
+        ip_version: str,
+        gateway: str,
+        network_type,
+    ):
+        """
+        Configure routes for FabNetv4/FabNetv6 networks (non-Ext).
+        Adds never-default and a route to the FABRIC gateway host.
+
+        :param conn_name: NM connection name
+        :param ip_version: 'ipv4' or 'ipv6'
+        :param gateway: next-hop gateway IP
+        :param network_type: the ServiceType
+        """
+        if network_type == ServiceType.FABNetv4:
+            fabric_route = "10.128.0.1/32"
+        else:
+            fabric_route = "2602:FCFB:00::1/128"
+
+        self.execute(
+            f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
+            quiet=True,
+        )
+        self.execute(
+            f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{fabric_route} {gateway}\"",
+            quiet=True,
+        )
+
+    # ---- netplan helpers ----
+
+    def _netplan_write_config(
+        self,
+        ifname: str,
+        addresses: List[str],
+        routes: Optional[List[dict]] = None,
+        routing_policy: Optional[List[dict]] = None,
+        is_vlan: bool = False,
+        vlan_id: Optional[str] = None,
+        vlan_link: Optional[str] = None,
+        mtu: Optional[str] = None,
+    ):
+        """
+        Write a netplan YAML config for a FABRIC interface.
+
+        :param ifname: OS interface name
+        :param addresses: list of CIDR addresses
+        :param routes: optional list of route dicts with 'to' and 'via' keys
+        :param routing_policy: optional list of routing-policy dicts
+        :param is_vlan: whether this is a VLAN interface
+        :param vlan_id: VLAN ID
+        :param vlan_link: parent device for VLAN
+        :param mtu: optional MTU value
+        """
+        safe_name = ifname.replace(".", "-")
+        config_file = f"/etc/netplan/90-fabric-{safe_name}.yaml"
+
+        if is_vlan and vlan_id and vlan_link:
+            iface_config = {
+                "id": int(vlan_id),
+                "link": vlan_link,
+                "addresses": addresses,
+            }
+            if routes:
+                iface_config["routes"] = routes
+            if routing_policy:
+                iface_config["routing-policy"] = routing_policy
+            if mtu:
+                iface_config["mtu"] = int(mtu)
+            yaml_content = {
+                "network": {
+                    "version": 2,
+                    "renderer": "networkd",
+                    "vlans": {ifname: iface_config},
+                }
+            }
+        else:
+            iface_config = {
+                "dhcp4": False,
+                "dhcp6": False,
+                "addresses": addresses,
+            }
+            if routes:
+                iface_config["routes"] = routes
+            if routing_policy:
+                iface_config["routing-policy"] = routing_policy
+            if mtu:
+                iface_config["mtu"] = int(mtu)
+            yaml_content = {
+                "network": {
+                    "version": 2,
+                    "renderer": "networkd",
+                    "ethernets": {ifname: iface_config},
+                }
+            }
+
+        import yaml
+
+        yaml_str = yaml.dump(yaml_content, default_flow_style=False)
+        # Escape single quotes for shell
+        yaml_str_escaped = yaml_str.replace("'", "'\\''")
+        self.execute(
+            f"echo '{yaml_str_escaped}' | sudo tee {config_file} > /dev/null && sudo chmod 600 {config_file}",
+            quiet=True,
+        )
+
+    def _netplan_apply(self):
+        """
+        Apply netplan configuration.
+        """
+        self.execute("sudo netplan apply", quiet=True)
+
+    def _netplan_remove_config(self, ifname: str):
+        """
+        Remove a netplan config file for a FABRIC interface.
+
+        :param ifname: OS interface name
+        """
+        safe_name = ifname.replace(".", "-")
+        config_file = f"/etc/netplan/90-fabric-{safe_name}.yaml"
+        self.execute(f"sudo rm -f {config_file}", quiet=True)
+
+    # =========================================================================
+    # End persistent network configuration helpers
+    # =========================================================================
+
     def flush_all_os_interfaces(self):
         """
         Flushes the configuration of all dataplane interfaces in the node.
@@ -2443,13 +2834,25 @@ class Node(TemplateMixin):
         for iface in self.get_dataplane_os_interfaces():
             self.flush_os_interface(iface["ifname"])
 
-    def flush_os_interface(self, os_iface: str):
+    def flush_os_interface(self, os_iface: str, persistent: Optional[bool] = None):
         """
         Flush the configuration of an interface in the node
 
         :param os_iface: the name of the interface to flush
         :type os_iface: String
+        :param persistent: if True, also remove persistent config (nmcli/netplan)
+        :type persistent: bool
         """
+        backend = self._get_effective_backend(persistent)
+
+        if backend == "nmcli":
+            conn_name = self._nm_conn_name(os_iface)
+            self._nmcli_delete(conn_name)
+        elif backend == "netplan":
+            self._netplan_remove_config(os_iface)
+            self._netplan_apply()
+
+        # Always flush via ip commands as well for immediate cleanup
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}", quiet=True)
         stdout, stderr = self.execute(
             f"sudo ip -6 addr flush dev {os_iface}", quiet=True
@@ -2487,6 +2890,8 @@ class Node(TemplateMixin):
         self,
         subnet: Union[IPv4Network, IPv6Network],
         gateway: Union[IPv4Address, IPv6Address],
+        interface: Interface = None,
+        persistent: Optional[bool] = None,
     ):
         """
         Add a route on the node.
@@ -2496,7 +2901,37 @@ class Node(TemplateMixin):
 
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
+
+        :param interface: Optional interface for nmcli connection lookup
+        :type interface: Interface
+
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
+        backend = self._get_effective_backend(persistent)
+        ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
+
+        if backend == "nmcli" and interface is not None:
+            try:
+                device_name = interface.get_device_name()
+                conn_name = self._nm_conn_name(device_name)
+                self._nmcli_route_add(conn_name, str(subnet), str(gateway), ip_version)
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli route add failed, falling back to ip: {e}"
+                )
+
+        # Legacy ip route add
+        self._ip_route_add_legacy(subnet, gateway)
+
+    def _ip_route_add_legacy(
+        self,
+        subnet: Union[IPv4Network, IPv6Network],
+        gateway: Union[IPv4Address, IPv6Address],
+    ):
+        """Legacy ip route add using raw ip commands."""
         ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
@@ -2595,6 +3030,7 @@ class Node(TemplateMixin):
         addr: Union[IPv4Address, IPv6Address],
         subnet: Union[IPv4Network, IPv6Network],
         interface: Interface,
+        persistent: Optional[bool] = None,
     ):
         """
         Add an IP to an interface on the node.
@@ -2607,7 +3043,53 @@ class Node(TemplateMixin):
 
         :param interface: the FABlib interface.
         :type interface: Interface
+
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
+        backend = self._get_effective_backend(persistent)
+        device_name = interface.get_device_name()
+        cidr = f"{addr}/{subnet.prefixlen}"
+        ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
+
+        if backend == "nmcli":
+            try:
+                conn_name = self._nm_conn_name(device_name)
+                self._nmcli_ensure_connection(
+                    conn_name=conn_name,
+                    ifname=device_name,
+                    ip_version=ip_version,
+                    addresses=cidr,
+                )
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli ip_addr_add failed, falling back to ip: {e}"
+                )
+        elif backend == "netplan":
+            try:
+                self._netplan_write_config(
+                    ifname=device_name,
+                    addresses=[cidr],
+                )
+                self._netplan_apply()
+                return
+            except Exception as e:
+                log.warning(
+                    f"netplan ip_addr_add failed, falling back to ip: {e}"
+                )
+
+        # Legacy fallback
+        self._ip_addr_add_legacy(addr, subnet, interface)
+
+    def _ip_addr_add_legacy(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[IPv4Network, IPv6Network],
+        interface: Interface,
+    ):
+        """Legacy ip addr add using raw ip commands."""
         ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
@@ -2658,16 +3140,20 @@ class Node(TemplateMixin):
 
     def un_manage_interface(self, interface: Interface):
         """
-        Mark an interface unmanaged by Network Manager;
+        Mark an interface unmanaged by Network Manager.
 
-        This is needed to be run on rocky* images to avoid the network
-        configuration from being overwritten by NetworkManager
+        When using the nmcli backend, this is a no-op because NM manages
+        the interface persistently. Only applies to legacy (ip) backend.
 
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-
         if interface is None:
+            return
+
+        backend = self._get_effective_backend()
+        if backend == "nmcli":
+            # No-op: NM manages the interface persistently now
             return
 
         try:
@@ -2688,7 +3174,34 @@ class Node(TemplateMixin):
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        if not interface:
+            return
 
+        backend = self._get_effective_backend()
+
+        if backend == "nmcli":
+            try:
+                device_name = interface.get_device_name()
+                conn_name = self._nm_conn_name(device_name)
+                # Check if connection exists before trying to bring it up
+                stdout, stderr = self.execute(
+                    f"sudo nmcli -t -f NAME c show 2>/dev/null | grep -Fx '{conn_name}' || true",
+                    quiet=True,
+                )
+                if conn_name in (stdout or "").strip():
+                    self._nmcli_up(conn_name)
+                    return
+                # Connection doesn't exist yet; fall through to legacy
+            except Exception as e:
+                log.warning(f"nmcli ip_link_up failed, falling back to ip: {e}")
+
+        # Legacy fallback
+        self._ip_link_up_legacy(subnet, interface)
+
+    def _ip_link_up_legacy(
+        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+    ):
+        """Legacy ip link up using raw ip commands."""
         if not interface:
             return
 
@@ -2744,6 +3257,24 @@ class Node(TemplateMixin):
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        backend = self._get_effective_backend()
+
+        if backend == "nmcli":
+            try:
+                device_name = interface.get_device_name()
+                conn_name = self._nm_conn_name(device_name)
+                self._nmcli_down(conn_name)
+                return
+            except Exception as e:
+                log.warning(f"nmcli ip_link_down failed, falling back to ip: {e}")
+
+        # Legacy fallback
+        self._ip_link_down_legacy(subnet, interface)
+
+    def _ip_link_down_legacy(
+        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+    ):
+        """Legacy ip link down using raw ip commands."""
         ip_command = None
 
         try:
@@ -2780,6 +3311,7 @@ class Node(TemplateMixin):
         ip: str = None,
         cidr: str = None,
         mtu: str = None,
+        persistent: Optional[bool] = None,
     ):
         """
         Configure IP Address on network interface as seen inside the VM
@@ -2798,6 +3330,9 @@ class Node(TemplateMixin):
         :param mtu: MTU size
         :type mtu: String
 
+        :param persistent: Override persistent config setting
+        :type persistent: bool
+
         NOTE: This does not add the IP information in the fablib_data
         """
         if cidr:
@@ -2805,6 +3340,53 @@ class Node(TemplateMixin):
         if mtu:
             mtu = str(mtu)
 
+        backend = self._get_effective_backend(persistent)
+        ip_version = "ipv6" if self.validIPAddress(ip) == "IPv6" else "ipv4"
+
+        if backend == "nmcli" and ip is not None and cidr is not None:
+            try:
+                if vlan is not None:
+                    vlan = str(vlan)
+                    target_iface = f"{os_iface}.{vlan}"
+                    conn_name = self._nm_conn_name(target_iface)
+                    self._nmcli_ensure_connection(
+                        conn_name=conn_name,
+                        ifname=target_iface,
+                        ip_version=ip_version,
+                        addresses=f"{ip}/{cidr}",
+                        conn_type="vlan",
+                        vlan_id=vlan,
+                        vlan_parent=os_iface,
+                        mtu=mtu,
+                    )
+                else:
+                    conn_name = self._nm_conn_name(os_iface)
+                    self._nmcli_ensure_connection(
+                        conn_name=conn_name,
+                        ifname=os_iface,
+                        ip_version=ip_version,
+                        addresses=f"{ip}/{cidr}",
+                        mtu=mtu,
+                    )
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli set_ip_os_interface failed, falling back to ip: {e}"
+                )
+
+        # Legacy fallback
+        self._set_ip_os_interface_legacy(os_iface, vlan, ip, cidr, mtu)
+
+    def _set_ip_os_interface_legacy(
+        self,
+        os_iface: str = None,
+        vlan: str = None,
+        ip: str = None,
+        cidr: str = None,
+        mtu: str = None,
+    ):
+        """Legacy set_ip_os_interface using raw ip commands."""
         if self.validIPAddress(ip) == "IPv4":
             ip_command = "sudo ip"
         elif self.validIPAddress(ip) == "IPv6":
@@ -2869,11 +3451,26 @@ class Node(TemplateMixin):
             if "link" in i.keys():
                 self.remove_vlan_os_interface(os_iface=i["ifname"])
 
-    def remove_vlan_os_interface(self, os_iface: str = None):
+    def remove_vlan_os_interface(self, os_iface: str = None, persistent: Optional[bool] = None):
         """
         Remove one VLAN OS interface
+
+        :param os_iface: the name of the VLAN interface to remove
+        :type os_iface: String
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
-        # TODO: Add docstring after doc networking classes
+        backend = self._get_effective_backend(persistent)
+
+        if backend == "nmcli":
+            conn_name = self._nm_conn_name(os_iface)
+            self._nmcli_delete(conn_name)
+
+        # Also do legacy removal to clean up the kernel device
+        self._remove_vlan_os_interface_legacy(os_iface)
+
+    def _remove_vlan_os_interface_legacy(self, os_iface: str = None):
+        """Legacy remove_vlan_os_interface using raw ip commands."""
         command = f"sudo ip -j addr show {os_iface}"
         stdout, stderr = self.execute(command, quiet=True)
         try:
@@ -2895,6 +3492,7 @@ class Node(TemplateMixin):
         cidr: str = None,
         mtu: str = None,
         interface: Interface = None,
+        persistent: Optional[bool] = None,
     ):
         """
         Add VLAN tagged interface for a given interface and set IP address on it
@@ -2916,6 +3514,9 @@ class Node(TemplateMixin):
 
         :param interface: Interface for which tagged interface has to be added
         :type interface: Interface
+
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
         if vlan:
             vlan = str(vlan)
@@ -2924,9 +3525,67 @@ class Node(TemplateMixin):
         if mtu:
             mtu = str(mtu)
 
+        backend = self._get_effective_backend(persistent)
+        ip_version = self._detect_ip_version_for_interface(interface) if interface else "ipv4"
+
+        # Only use persistent backends when we have an IP to configure.
+        # When called without ip/cidr (e.g., from config_vlan_iface just to
+        # create the VLAN device), use legacy ip commands to create the device;
+        # the nmcli connection will be created later when config() adds the IP.
+        if ip and cidr and backend == "nmcli":
+            try:
+                vlan_iface = f"{os_iface}.{vlan}"
+                conn_name = self._nm_conn_name(vlan_iface)
+                self._nmcli_ensure_connection(
+                    conn_name=conn_name,
+                    ifname=vlan_iface,
+                    ip_version=ip_version,
+                    addresses=f"{ip}/{cidr}",
+                    conn_type="vlan",
+                    vlan_id=vlan,
+                    vlan_parent=os_iface,
+                    mtu=mtu,
+                )
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli add_vlan_os_interface failed, falling back to ip: {e}"
+                )
+        elif ip and cidr and backend == "netplan":
+            try:
+                vlan_iface = f"{os_iface}.{vlan}"
+                self._netplan_write_config(
+                    ifname=vlan_iface,
+                    addresses=[f"{ip}/{cidr}"],
+                    is_vlan=True,
+                    vlan_id=vlan,
+                    vlan_link=os_iface,
+                    mtu=mtu,
+                )
+                self._netplan_apply()
+                return
+            except Exception as e:
+                log.warning(
+                    f"netplan add_vlan_os_interface failed, falling back to ip: {e}"
+                )
+
+        # Legacy fallback
+        self._add_vlan_os_interface_legacy(os_iface, vlan, ip, cidr, mtu, interface)
+
+    def _add_vlan_os_interface_legacy(
+        self,
+        os_iface: str = None,
+        vlan: str = None,
+        ip: str = None,
+        cidr: str = None,
+        mtu: str = None,
+        interface: Interface = None,
+    ):
+        """Legacy add_vlan_os_interface using raw ip commands."""
         ip_command = "sudo ip"
         try:
-            if interface.get_network().get_layer() == NSLayer.L3:
+            if interface and interface.get_network().get_layer() == NSLayer.L3:
                 if interface.get_network().get_type() in [
                     ServiceType.FABNetv6,
                     ServiceType.FABNetv6Ext,
@@ -2953,7 +3612,7 @@ class Node(TemplateMixin):
         stdout, stderr = self.execute(command, quiet=True)
 
         if ip and cidr:
-            self.set_ip_os_interface(
+            self._set_ip_os_interface_legacy(
                 os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu
             )
 
@@ -3163,6 +3822,22 @@ class Node(TemplateMixin):
         except Exception as e:
             return []
 
+    def _find_interface_for_gateway(self, gateway) -> Optional[Interface]:
+        """
+        Find the interface whose network gateway matches the given gateway.
+
+        :param gateway: gateway IP address
+        :return: matching Interface or None
+        """
+        for iface in self.get_interfaces():
+            try:
+                network = iface.get_network()
+                if network and network.get_gateway() and str(network.get_gateway()) == str(gateway):
+                    return iface
+            except Exception:
+                continue
+        return None
+
     def config_routes(self):
         """
         .. warning::
@@ -3186,7 +3861,14 @@ class Node(TemplateMixin):
                 net_name = route["subnet"].split(".")[0]
                 subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
 
-            self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
+            # Find the interface for this gateway so nmcli can add the route
+            # to the correct connection
+            target_iface = self._find_interface_for_gateway(next_hop)
+            self.ip_route_add(
+                subnet=ipaddress.ip_network(subnet),
+                gateway=next_hop,
+                interface=target_iface,
+            )
 
     def run_post_boot_tasks(self, log_dir: str = "."):
         """

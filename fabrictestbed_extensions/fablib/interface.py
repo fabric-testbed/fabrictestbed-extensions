@@ -1070,8 +1070,14 @@ class Interface(TemplateMixin):
         - If the mode is 'CONFIG' or 'AUTO', it configures the interface with the assigned IP address and subnet.
         - If the mode is 'MANUAL', it does not perform any automatic configuration.
 
+        When nmcli backend is available, uses a consolidated nmcli flow for
+        persistent, reboot-safe configuration. For FabNetv4Ext/FabNetv6Ext
+        networks, also configures Policy-Based Routing.
+
         :return: None
         """
+        from fabrictestbed.slice_editor import ServiceType
+
         self.config_vlan_iface()
         network = self.get_network()
         if not network:
@@ -1094,18 +1100,124 @@ class Interface(TemplateMixin):
             fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
             self.set_fablib_data(fablib_data)
 
-        self.ip_link_up()
+        if mode not in [self.CONFIG, self.AUTO]:
+            # Manual mode; just bring the link up via legacy path
+            self.ip_link_up()
+            return
 
-        if mode in [self.CONFIG, self.AUTO]:
-            subnet = self.get_network().get_subnet()
-            addr = fablib_data.get(self.ADDR)
-            if addr and subnet:
-                self.un_manage_interface()
-                self.ip_link_up()
-                self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+        subnet = self.get_network().get_subnet()
+        addr = fablib_data.get(self.ADDR)
+        if not addr or not subnet:
+            self.ip_link_up()
+            return
+
+        node = self.get_node()
+        backend = node._get_effective_backend()
+
+        if backend == "nmcli":
+            try:
+                self._config_nmcli(node, network, addr, subnet)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli config failed for {self.get_name()}, "
+                    f"falling back to legacy: {e}"
+                )
+
+        # Legacy path
+        self.un_manage_interface()
+        self.ip_link_up()
+        self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+
+    def _config_nmcli(self, node, network, addr: str, subnet: str):
+        """
+        Configure the interface using nmcli for persistent, reboot-safe config.
+
+        Handles all network types including PBR for FabNetv4Ext/FabNetv6Ext.
+
+        :param node: the Node object
+        :param network: the NetworkService
+        :param addr: IP address string
+        :param subnet: subnet string
+        """
+        from fabrictestbed.slice_editor import ServiceType
+
+        device_name = self.get_device_name()
+        conn_name = node._nm_conn_name(device_name)
+        ip_version = node._detect_ip_version_for_interface(self)
+        subnet_net = ipaddress.ip_network(subnet)
+        cidr = f"{addr}/{subnet_net.prefixlen}"
+
+        # Determine if this is a VLAN interface
+        vlan = self.get_vlan()
+        physical_iface = self.get_physical_os_interface_name()
+        is_vlan = (vlan is not None and device_name != physical_iface)
+
+        # Create or modify the connection with the IP address
+        if is_vlan:
+            node._nmcli_ensure_connection(
+                conn_name=conn_name,
+                ifname=device_name,
+                ip_version=ip_version,
+                addresses=cidr,
+                conn_type="vlan",
+                vlan_id=str(vlan),
+                vlan_parent=physical_iface,
+            )
         else:
-            # Manual mode; do nothing.
-            pass
+            node._nmcli_ensure_connection(
+                conn_name=conn_name,
+                ifname=device_name,
+                ip_version=ip_version,
+                addresses=cidr,
+            )
+
+        network_type = network.get_type()
+        gateway = network.get_gateway()
+
+        if network_type in [ServiceType.FABNetv4Ext, ServiceType.FABNetv6Ext]:
+            # External networks: configure PBR
+            if gateway:
+                # Calculate the interface subnet for PBR route
+                iface_subnet = str(ipaddress.ip_network(
+                    f"{addr}/{subnet_net.prefixlen}", strict=False
+                ))
+                node._nmcli_configure_pbr(
+                    conn_name=conn_name,
+                    ip_version=ip_version,
+                    addr=addr,
+                    prefix=str(subnet_net.prefixlen),
+                    gateway=str(gateway),
+                    subnet=iface_subnet,
+                )
+        elif network_type in [ServiceType.FABNetv4, ServiceType.FABNetv6]:
+            # Internal L3 networks: never-default + fabric route
+            if gateway:
+                node._nmcli_configure_fabnet_routes(
+                    conn_name=conn_name,
+                    ip_version=ip_version,
+                    gateway=str(gateway),
+                    network_type=network_type,
+                )
+        else:
+            # L2 networks: IP only, no gateway or routes
+            node.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
+                quiet=True,
+            )
+
+        # Bring the connection up
+        node._nmcli_up(conn_name)
+
+        # Configure rp_filter for asymmetric routing tolerance
+        node.execute(
+            f"sudo sysctl -w net.{ip_version}.conf.all.rp_filter=2 > /dev/null 2>&1 || true",
+            quiet=True,
+        )
+        node.execute(
+            f"sudo sysctl -w net.{ip_version}.conf.{self.get_physical_os_interface_name()}.rp_filter=2 > /dev/null 2>&1 || true",
+            quiet=True,
+        )
 
     def add_mirror(self, port_name: str, name: str = "mirror", vlan: str = None):
         """

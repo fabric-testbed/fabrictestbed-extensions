@@ -2274,10 +2274,15 @@ class Slice:
 
         for interface in self.get_interfaces():
             try:
-                interface.get_node().execute(
-                    f"sudo nmcli device set {interface.get_device_name()} managed no",
-                    quiet=True,
-                )
+                node = interface.get_node()
+                # Skip unmanaging when using nmcli backend — NM will manage
+                # the interface persistently
+                backend = node._get_effective_backend()
+                if backend != "nmcli":
+                    node.execute(
+                        f"sudo nmcli device set {interface.get_device_name()} managed no",
+                        quiet=True,
+                    )
             except Exception as e:
                 log.error(
                     f"Interface: {interface.get_name()} failed to become unmanaged"
