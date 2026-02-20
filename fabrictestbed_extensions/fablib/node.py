@@ -2462,7 +2462,11 @@ class Node(TemplateMixin):
                 "command -v nmcli && nmcli general status",
                 quiet=True,
             )
-            if stdout and "running" in stdout.lower():
+            # nmcli general status outputs STATE as "connected" (or
+            # "connected-local", "connecting") when NetworkManager is
+            # running.  If NM is stopped, the command itself fails.
+            if stdout and ("connected" in stdout.lower() or
+                           "connecting" in stdout.lower()):
                 self._net_config_backend = "nmcli"
                 log.info(f"{self.get_name()}: detected nmcli backend")
                 return self._net_config_backend

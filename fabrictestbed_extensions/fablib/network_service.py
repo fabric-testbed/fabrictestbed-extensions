@@ -946,10 +946,20 @@ class NetworkService(TemplateMixin):
 
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
-                    if self.get_sliver().sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
-                        gateway = IPv4Address(self.get_sliver().gateway.get("ipv4"))
+                    sliver = self.get_sliver()
+                    if isinstance(sliver, SliverDTO):
+                        # V2 path: SliverDTO has .gateway as a dict
+                        if sliver.sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
+                            gateway = IPv4Address(sliver.gateway.get("ipv4"))
+                        else:
+                            gateway = IPv6Address(sliver.gateway.get("ipv6"))
+                    elif hasattr(sliver, 'fim_sliver') and sliver.fim_sliver:
+                        # V1 path: OrchestratorSliver has .fim_sliver.gateway
+                        gateway = ipaddress.ip_address(
+                            sliver.fim_sliver.gateway.gateway
+                        )
                     else:
-                        gateway = IPv6Address(self.get_sliver().gateway.get("ipv6"))
+                        log.warning("Unknown sliver type in get_gateway")
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
@@ -1028,15 +1038,25 @@ class NetworkService(TemplateMixin):
             subnet = None
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
-                    if self.get_sliver().sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
-                        subnet_key = "ipv4_subnet"
+                    sliver = self.get_sliver()
+                    if isinstance(sliver, SliverDTO):
+                        # V2 path: SliverDTO has .gateway as a dict
+                        if sliver.sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
+                            subnet_key = "ipv4_subnet"
+                        else:
+                            subnet_key = "ipv6_subnet"
+                        gateway = sliver.gateway
+                        if gateway:
+                            subnet_str = gateway.get(subnet_key)
+                            if subnet_str:
+                                subnet = ipaddress.ip_network(subnet_str)
+                    elif hasattr(sliver, 'fim_sliver') and sliver.fim_sliver:
+                        # V1 path: OrchestratorSliver has .fim_sliver.gateway
+                        subnet = ipaddress.ip_network(
+                            sliver.fim_sliver.gateway.subnet
+                        )
                     else:
-                        subnet_key = "ipv6_subnet"
-                    gateway = self.get_sliver().gateway
-                    if gateway:
-                        subnet_str = gateway.get(subnet_key)
-                        if subnet_str:
-                            subnet = ipaddress.ip_network(subnet_str)
+                        log.warning("Unknown sliver type in get_subnet")
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
