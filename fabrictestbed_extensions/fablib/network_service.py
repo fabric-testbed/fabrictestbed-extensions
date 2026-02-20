@@ -54,7 +54,7 @@ from fabrictestbed.slice_editor import Capacities, Labels
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
-from fim.slivers.network_service import NSLayer, ServiceType
+from fim.slivers.network_service import NSLayer, ServiceType, NetworkServiceSliver
 from fim.user.network_service import MirrorDirection
 
 log = logging.getLogger("fablib")
@@ -866,8 +866,13 @@ class NetworkService(TemplateMixin):
         """
         Gets site name on network service.
         """
-        if self.get_sliver():
-            return self.get_sliver().site
+        sliver = self.get_sliver()
+        if sliver:
+            if isinstance(sliver, SliverDTO):
+                return sliver.site
+            elif isinstance(sliver, NetworkServiceSliver):
+                return sliver.site
+            return None
         else:
             return None
 
