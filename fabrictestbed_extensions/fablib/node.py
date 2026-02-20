@@ -360,13 +360,16 @@ class Node(TemplateMixin):
             )
             d["state"] = str(self.get_reservation_state())
             d["error"] = str(self.get_error_message())
-            if str(self.get_reservation_state()) == "Active":
-                d["ssh_command"] = str(self.get_ssh_command())
-            else:
-                d["ssh_command"] = ""
+            # ssh_command is deferred to avoid recursion: get_ssh_command()
+            # calls render_template() which calls toDict() again.
+            d["ssh_command"] = ""
             d["public_ssh_key_file"] = str(self.get_public_key_file())
             d["private_ssh_key_file"] = str(self.get_private_key_file())
             self._cached_dict = d
+            # Now that _cached_dict exists, render_template can use it
+            # without recursion.
+            if str(self.get_reservation_state()) == "Active":
+                self._cached_dict["ssh_command"] = str(self.get_ssh_command())
 
         if not skip:
             return dict(self._cached_dict)
