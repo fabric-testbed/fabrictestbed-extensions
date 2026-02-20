@@ -2574,7 +2574,7 @@ class Slice:
         if self._is_modify():
             if lease_in_hours:
                 return_status, result = self.fablib_manager.get_manager().renew(
-                    slice_object=self.sm_slice.slice_id, new_lease_end_time=end_time_str
+                    slice_object=self.sm_slice, new_lease_end_time=end_time_str
                 )
             else:
                 (

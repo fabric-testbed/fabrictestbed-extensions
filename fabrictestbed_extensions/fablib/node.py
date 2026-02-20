@@ -155,6 +155,7 @@ class Node(TemplateMixin):
         self._cached_requested_cores: Optional[int] = None
         self._cached_allocated_cores: Optional[int] = None
         self._cached_instance_name: Optional[str] = None
+        self._cached_type: Optional[NodeType] = None
 
         try:
             self.set_username()
@@ -771,9 +772,10 @@ class Node(TemplateMixin):
             likely should be picked to match the image type.
         """
         try:
-            if self.get_fim().type == NodeType.Switch and not username:
+            if self.get_type() == NodeType.Switch and not username:
                 self.username = Constants.FABRIC_USER
                 return
+
             username = (
                 self.get_fablib_manager()
                 .get_os_images()
@@ -782,6 +784,8 @@ class Node(TemplateMixin):
             )
             if username is not None:
                 self.username = username
+            elif self.get_image() is None:
+                self.username = None
             elif "default_centos10_stream" == self.get_image():
                 self.username = "cloud-user"
             elif "default_centos9_stream" == self.get_image():
@@ -1054,6 +1058,27 @@ class Node(TemplateMixin):
             except Exception:
                 self._cached_site = None
         return self._cached_site if self._cached_site is not None else ""
+
+    def get_type(self) -> Optional[NodeType]:
+        """
+        Gets the type of the network services.
+
+        Results are cached for performance.
+
+        :return: network service types
+        :rtype: NodeType
+        """
+        if self._cached_type is None:
+            try:
+                if self.get_fim():
+                    node_type = self.get_fim().get_property("type")
+                    self._cached_type = node_type if node_type else None
+                else:
+                    self._cached_type = None
+            except Exception as e:
+                log.warning(f"Failed to get type: {e}")
+                self._cached_type = None
+        return self._cached_type
 
     def get_management_ip(self) -> str:
         """
