@@ -2479,8 +2479,6 @@ class Slice:
                         hasNetworks = True
                     else:
                         hasNetworks = False
-                else:
-                    self.update_slice()
 
             slice_show_table = self.show(colors=True, quiet=True)
             sliver_table = self.list_slivers(colors=True, quiet=True)
