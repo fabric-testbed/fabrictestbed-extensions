@@ -830,6 +830,18 @@ class Component(TemplateMixin):
         """
         return self.fim_component
 
+    def get_fim_component(self) -> FimComponent:
+        """
+        Not recommended for most users.
+
+        Gets the FABRIC component this fablib component represents. This method
+        is used to access data at a lower level than FABlib.
+
+        :return: the FABRIC component on this component
+        :rtype: FIMComponent
+        """
+        return self.get_fim()
+
     def delete(self):
         """
         Remove the component from the slice/node.

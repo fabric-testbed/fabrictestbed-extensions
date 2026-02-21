@@ -1797,8 +1797,12 @@ class Slice:
         :rtype: Node
         """
         try:
+            # Ensure nodes dict exists (add_l2network/add_node set it to None)
+            if self.nodes is None:
+                self.nodes = {}
+
             # Check cache first
-            if self.nodes and name in self.nodes:
+            if name in self.nodes:
                 return self.nodes[name]
 
             # Not in cache - get from topology (single access)

@@ -968,7 +968,17 @@ class NetworkService(TemplateMixin):
                     except Exception as e:
                         gateway = None
             else:
-                gateway = f"{self.get_name()}.gateway"
+                # Not yet instantiated — check if gateway was explicitly
+                # set via set_gateway() (common for L2 networks in modify)
+                fablib_data = self.get_fablib_data()
+                try:
+                    gw_str = fablib_data.get("subnet", {}).get("gateway")
+                    if gw_str:
+                        gateway = ipaddress.ip_address(gw_str)
+                    else:
+                        gateway = f"{self.get_name()}.gateway"
+                except Exception:
+                    gateway = f"{self.get_name()}.gateway"
 
             if gateway is not None:
                 self._cached_gateway = gateway
@@ -1070,7 +1080,20 @@ class NetworkService(TemplateMixin):
                         except Exception as e:
                             log.warning(f"Failed to get L2 subnet: {e}")
             else:
-                subnet = f"{self.get_name()}.subnet"
+                # Not yet instantiated — check if subnet was explicitly
+                # set via set_subnet() (common for L2 networks in modify)
+                fablib_data = self.get_fablib_data()
+                if fablib_data.get("subnet") and fablib_data.get("subnet").get(
+                    "subnet"
+                ):
+                    try:
+                        subnet = ipaddress.ip_network(
+                            fablib_data["subnet"]["subnet"]
+                        )
+                    except Exception:
+                        subnet = f"{self.get_name()}.subnet"
+                else:
+                    subnet = f"{self.get_name()}.subnet"
 
             if subnet is not None:
                 self._cached_subnet = subnet
