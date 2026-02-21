@@ -1771,8 +1771,12 @@ class Slice:
         """
         name = Attestable_Switch.name(name)
         try:
+            # Ensure nodes dict exists (add_* methods set it to None)
+            if self.nodes is None:
+                self.nodes = {}
+
             # Check cache first
-            if self.nodes and name in self.nodes:
+            if name in self.nodes:
                 cached = self.nodes[name]
                 if isinstance(cached, Attestable_Switch):
                     return cached
