@@ -31,9 +31,9 @@ Methods to manage FABRIC `slices`_.
 You would create and use a slice like so::
 
     from ipaddress import IPv4Address
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
+    from fabrictestbed_extensions.fablib.fablib import FablibManagerV1
 
-    fablib = FablibManager()
+    fablib = FablibManagerV1()
 
     # Create a slice and add resources to it, creating a topology.
     slice = fablib.new_slice(name="MySlice")
@@ -74,7 +74,7 @@ if TYPE_CHECKING:
         Slice as OrchestratorSlice,
         Sliver as OrchestratorSliver,
     )
-    from fabrictestbed_extensions.fablib.fablib import FablibManager
+    from fabrictestbed_extensions.fablib.fablib_old import FablibManagerV1
 
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -96,7 +96,7 @@ log = logging.getLogger("fablib")
 
 class Slice:
     def __init__(
-        self, fablib_manager: FablibManager, name: str = None, user_only: bool = True
+        self, fablib_manager: FablibManagerV1, name: str = None, user_only: bool = True
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -440,7 +440,7 @@ class Slice:
         return table
 
     @staticmethod
-    def new_slice(fablib_manager: FablibManager, name: str = None):
+    def new_slice(fablib_manager: FablibManagerV1, name: str = None):
         """
         Create a new slice
         :param fablib_manager:
@@ -455,7 +455,7 @@ class Slice:
 
     @staticmethod
     def get_slice(
-        fablib_manager: FablibManager,
+        fablib_manager: FablibManagerV1,
         sm_slice: OrchestratorSlice = None,
         user_only: bool = True,
     ):

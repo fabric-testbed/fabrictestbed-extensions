@@ -3363,15 +3363,29 @@ class Slice:
         result = self.fablib_manager.get_manager().accept_modify(
             slice_id=self.slice_id
         )
+        topology_replaced = False
         if isinstance(result, dict) and result.get("model"):
             self.topology = ExperimentTopology()
             self.topology.load(graph_string=result["model"])
+            topology_replaced = True
         elif hasattr(result, 'model') and result.model:
             self.topology = ExperimentTopology()
             self.topology.load(graph_string=result.model)
+            topology_replaced = True
         log.debug(f"modified topology: {self.topology}")
 
         self.update_slice()
+
+        # Invalidate and rebuild caches so cached objects point to the new
+        # topology graph instead of the stale one replaced above.
+        if topology_replaced:
+            self.interfaces = {}
+            self._topology_dirty = True
+            self.get_nodes()
+            self.get_facilities()
+            self.get_network_services()
+            self.get_interfaces(refresh=True)
+            self._topology_dirty = False
 
     def get_user_data(self):
         """
