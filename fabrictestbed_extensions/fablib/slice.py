@@ -748,7 +748,7 @@ class Slice:
         # Mark topology as clean after all caches are refreshed
         self._topology_dirty = False
 
-        if self.get_state() == "ModifyOK":
+        if self.get_state() in ("ModifyOK", "ModifyError"):
             self.modify_accept()
 
     def get_private_key_passphrase(self) -> str:
@@ -1625,9 +1625,18 @@ class Slice:
         ]
 
         for node_name in nodes_to_remove:
-            for ifs in self.nodes[node_name].get_interfaces():
-                if ifs.get_name() in self.interfaces:
-                    self.interfaces.pop(ifs.get_name())
+            # Clean up interfaces from cache.  Use try/except because the
+            # deleted node's FIM reference may point to a graph that was
+            # already replaced by update_topology(), making FIM queries fail.
+            try:
+                for ifs in self.nodes[node_name].get_interfaces():
+                    if ifs.get_name() in self.interfaces:
+                        self.interfaces.pop(ifs.get_name())
+            except Exception:
+                log.debug(
+                    f"Could not query interfaces for deleted node {node_name}, "
+                    f"skipping interface cleanup"
+                )
             self.nodes.pop(node_name)
             log.debug(f"Removed extra node: {node_name}")
 
@@ -1742,9 +1751,15 @@ class Slice:
         ]
 
         for fac_name in facilities_to_remove:
-            for ifs in self.facilities[fac_name].get_interfaces():
-                if ifs.get_name() in self.interfaces:
-                    self.interfaces.pop(ifs.get_name())
+            try:
+                for ifs in self.facilities[fac_name].get_interfaces():
+                    if ifs.get_name() in self.interfaces:
+                        self.interfaces.pop(ifs.get_name())
+            except Exception:
+                log.debug(
+                    f"Could not query interfaces for deleted facility {fac_name}, "
+                    f"skipping interface cleanup"
+                )
             self.facilities.pop(fac_name)
             log.debug(f"Removed extra facility: {fac_name}")
 
