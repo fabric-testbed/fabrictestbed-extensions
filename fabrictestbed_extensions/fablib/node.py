@@ -4623,6 +4623,15 @@ class Node(TemplateMixin):
         if fim_node:
             self.fim_node = fim_node
             self._invalidate_cache()
-            self.get_components(refresh=True)
-            self.get_interfaces(refresh=True)
+            try:
+                self.get_components(refresh=True)
+                self.get_interfaces(refresh=True)
+            except Exception as e:
+                # Component/interface queries may fail if the topology is in
+                # a transitional state (e.g. mid-modify).  The FIM reference
+                # is already updated; caches will rebuild on next access.
+                log.debug(
+                    f"Node {self.get_name()}: error refreshing caches "
+                    f"during update: {e}"
+                )
             self._fim_dirty = False

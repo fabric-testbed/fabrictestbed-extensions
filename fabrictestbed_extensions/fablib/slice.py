@@ -1591,16 +1591,21 @@ class Slice:
 
             # Update the nodes dictionary with current topology nodes
             for node_name, fim_node in current_topology_nodes.items():
-                if node_name not in self.nodes:
-                    if fim_node.type == NodeType.Switch:
-                        node_obj = Switch.get_switch(self, fim_node)
+                try:
+                    if node_name not in self.nodes:
+                        if fim_node.type == NodeType.Switch:
+                            node_obj = Switch.get_switch(self, fim_node)
+                        else:
+                            # Add new node to the dictionary if it doesn't exist
+                            node_obj = Node.get_node(self, fim_node)
+                        self.nodes[node_name] = node_obj
                     else:
-                        # Add new node to the dictionary if it doesn't exist
-                        node_obj = Node.get_node(self, fim_node)
-                    self.nodes[node_name] = node_obj
-                else:
-                    # Update existing node's fim_node reference
-                    self.nodes[node_name].update(fim_node=fim_node)
+                        # Update existing node's fim_node reference
+                        self.nodes[node_name].update(fim_node=fim_node)
+                except Exception as e:
+                    log.warning(
+                        f"Error initializing node {node_name}: {e}"
+                    )
 
             # Remove nodes that are no longer present in the current topology
             self.__remove_deleted_nodes(current_topology_nodes)
@@ -1720,13 +1725,18 @@ class Slice:
 
             # Update the facilities dictionary with current topology facilities
             for fac_name, facility in current.items():
-                if fac_name not in self.facilities:
-                    self.facilities[fac_name] = FacilityPort.get_facility_port(
-                        self, facility
+                try:
+                    if fac_name not in self.facilities:
+                        self.facilities[fac_name] = FacilityPort.get_facility_port(
+                            self, facility
+                        )
+                    else:
+                        # Update existing facility's fim_node reference
+                        self.facilities[fac_name].update(fim_node=facility)
+                except Exception as e:
+                    log.warning(
+                        f"Error initializing facility {fac_name}: {e}"
                     )
-                else:
-                    # Update existing facility's fim_node reference
-                    self.facilities[fac_name].update(fim_node=facility)
 
             # Remove facilities that are no longer present in the current topology
             self.__remove_deleted_facilities(current)
@@ -1862,12 +1872,24 @@ class Slice:
             self.interfaces = {}
             for node in self.get_nodes(refresh=refresh):
                 log.debug(f"Getting interfaces for node {node.get_name()}")
-                n_ifaces = node.get_interfaces(include_subs=include_subs, refresh=refresh, output="dict")
-                self.interfaces.update(n_ifaces)
+                try:
+                    n_ifaces = node.get_interfaces(include_subs=include_subs, refresh=refresh, output="dict")
+                    self.interfaces.update(n_ifaces)
+                except Exception as e:
+                    log.warning(
+                        f"Error getting interfaces for node "
+                        f"{node.get_name()}: {e}"
+                    )
             for fac in self.get_facilities(refresh=refresh):
                 log.debug(f"Getting interfaces for facility {fac.get_name()}")
-                fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
-                self.interfaces.update(fac_ifaces)
+                try:
+                    fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
+                    self.interfaces.update(fac_ifaces)
+                except Exception as e:
+                    log.warning(
+                        f"Error getting interfaces for facility "
+                        f"{fac.get_name()}: {e}"
+                    )
 
         if output == "dict":
             return self.interfaces
@@ -1973,14 +1995,20 @@ class Slice:
             valid_types = NetworkService.get_fim_network_service_types()
 
             for net_name, net in fim_network_services.items():
-                if str(net.get_property("type")) in valid_types:
-                    if net_name not in self.network_services:
-                        self.network_services[net_name] = NetworkService(
-                            slice=self, fim_network_service=net
-                        )
-                    else:
-                        # Update existing network service's fim reference
-                        self.network_services[net_name].fim_network_service = net
+                try:
+                    if str(net.get_property("type")) in valid_types:
+                        if net_name not in self.network_services:
+                            self.network_services[net_name] = NetworkService(
+                                slice=self, fim_network_service=net
+                            )
+                        else:
+                            # Update existing network service's fim reference
+                            self.network_services[net_name].fim_network_service = net
+                except Exception as e:
+                    log.warning(
+                        f"Error initializing network service "
+                        f"{net_name}: {e}"
+                    )
 
             # Remove network services that are no longer in topology
             current_net_names = set(fim_network_services.keys())

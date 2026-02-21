@@ -308,7 +308,13 @@ class FacilityPort(TemplateMixin):
         if fim_node:
             self.fim_object = fim_node
             self._invalidate_cache()
-            self.get_interfaces(refresh=True)
+            try:
+                self.get_interfaces(refresh=True)
+            except Exception as e:
+                log.debug(
+                    f"FacilityPort {self.get_name()}: error refreshing "
+                    f"caches during update: {e}"
+                )
             self._fim_dirty = False
 
     def delete(self):
