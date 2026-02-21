@@ -1204,6 +1204,11 @@ class NetworkService(TemplateMixin):
         # calls still see all previously connected interfaces
         self._interfaces_cache = saved_cache
         self.interfaces = current_interfaces
+        # Invalidate type/layer caches since the FIM service was replaced
+        # with a different nstype (e.g. L2Bridge → L2STS).  Do NOT call
+        # _invalidate_cache() here as it would also clear _interfaces_cache.
+        self._cached_type = None
+        self._cached_layer = None
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
