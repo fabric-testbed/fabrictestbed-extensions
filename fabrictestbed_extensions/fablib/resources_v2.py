@@ -81,8 +81,8 @@ FACILITY_PORT_PRETTY_NAMES: Dict[str, str] = {
 # Reverse map: FIM model name → v1 non_pretty_name used by attribute_name_mappings
 _FIM_MODEL_TO_ATTR: Dict[str, str] = {}
 for _attr, _names in ResourceConstants.attribute_name_mappings.items():
-    _FIM_MODEL_TO_ATTR[_attr] = _attr          # exact FIM key (lowered)
-    _FIM_MODEL_TO_ATTR[_attr.lower()] = _attr   # lowered duplicate safe
+    _FIM_MODEL_TO_ATTR[_attr] = _attr  # exact FIM key (lowered)
+    _FIM_MODEL_TO_ATTR[_attr.lower()] = _attr  # lowered duplicate safe
 
 # Also map component model names that appear in the summary JSON
 # to the attribute_name_mappings key they correspond to.
@@ -143,23 +143,20 @@ def _site_summary_to_v1_dict(site_data: Dict[str, Any]) -> Dict[str, Any]:
         cap_key = f"{low}_capacity"
         alloc_key = f"{low}_allocated"
         if cap_key in site_data:
-            return (site_data.get(cap_key, 0) or 0,
-                    site_data.get(alloc_key, 0) or 0)
+            return (site_data.get(cap_key, 0) or 0, site_data.get(alloc_key, 0) or 0)
 
         # Try components dict (keyed by FIM model name)
         for comp_name, const_key in _SUMMARY_COMP_TO_ATTR.items():
             if const_key == attr_key and comp_name in components:
                 cv = components[comp_name]
                 if isinstance(cv, dict):
-                    return (cv.get("capacity", 0) or 0,
-                            cv.get("allocated", 0) or 0)
+                    return (cv.get("capacity", 0) or 0, cv.get("allocated", 0) or 0)
 
         # Also try lowercased component key
         if low in components:
             cv = components[low]
             if isinstance(cv, dict):
-                return (cv.get("capacity", 0) or 0,
-                        cv.get("allocated", 0) or 0)
+                return (cv.get("capacity", 0) or 0, cv.get("allocated", 0) or 0)
 
         return (0, 0)
 
@@ -196,21 +193,18 @@ def _host_summary_to_v1_dict(host_data: Dict[str, Any]) -> Dict[str, Any]:
         cap_key = f"{low}_capacity"
         alloc_key = f"{low}_allocated"
         if cap_key in host_data:
-            return (host_data.get(cap_key, 0) or 0,
-                    host_data.get(alloc_key, 0) or 0)
+            return (host_data.get(cap_key, 0) or 0, host_data.get(alloc_key, 0) or 0)
 
         for comp_name, const_key in _SUMMARY_COMP_TO_ATTR.items():
             if const_key == attr_key and comp_name in components:
                 cv = components[comp_name]
                 if isinstance(cv, dict):
-                    return (cv.get("capacity", 0) or 0,
-                            cv.get("allocated", 0) or 0)
+                    return (cv.get("capacity", 0) or 0, cv.get("allocated", 0) or 0)
 
         if low in components:
             cv = components[low]
             if isinstance(cv, dict):
-                return (cv.get("capacity", 0) or 0,
-                        cv.get("allocated", 0) or 0)
+                return (cv.get("capacity", 0) or 0, cv.get("allocated", 0) or 0)
 
         return (0, 0)
 
@@ -231,6 +225,7 @@ def _host_summary_to_v1_dict(host_data: Dict[str, Any]) -> Dict[str, Any]:
 # ==================================================================
 # ResourcesV2Wrapper — sites + hosts (main entry point)
 # ==================================================================
+
 
 class ResourcesV2:
     """High-performance resource manager backed by ``resources_summary``.
@@ -299,13 +294,20 @@ class ResourcesV2:
 
         manager = self.fablib_manager.get_manager()
         from fabrictestbed.fabric_manager_v2 import FabricManagerV2
+
         if not isinstance(manager, FabricManagerV2):
             raise Exception(
                 "ResourcesV2Wrapper requires FabricManagerV2 as the manager"
             )
 
-        summary = manager.resources_summary(level=2, start=start, end=end, includes=includes, excludes=avoid,
-                                            force_refresh=force_refresh)
+        summary = manager.resources_summary(
+            level=2,
+            start=start,
+            end=end,
+            includes=includes,
+            excludes=avoid,
+            force_refresh=force_refresh,
+        )
         if not summary:
             raise Exception(
                 "resources_summary returned None — endpoint may be unavailable"
@@ -331,9 +333,7 @@ class ResourcesV2:
         # Filter hosts to only those belonging to non-excluded sites
         if avoid or includes:
             valid = set(self._sites_by_name.keys())
-            self._hosts_data = [
-                h for h in self._hosts_data if h.get("site") in valid
-            ]
+            self._hosts_data = [h for h in self._hosts_data if h.get("site") in valid]
 
         # ---- links ----
         self._links_data = summary.get("links") or []
@@ -427,19 +427,29 @@ class ResourcesV2:
         s = self._sites_by_name.get(site_name)
         if not s:
             return 0
-        return (s.get("components") or {}).get(component_model_name, {}).get("capacity", 0)
+        return (
+            (s.get("components") or {}).get(component_model_name, {}).get("capacity", 0)
+        )
 
     def get_component_allocated(self, site_name: str, component_model_name: str) -> int:
         s = self._sites_by_name.get(site_name)
         if not s:
             return 0
-        return (s.get("components") or {}).get(component_model_name, {}).get("allocated", 0)
+        return (
+            (s.get("components") or {})
+            .get(component_model_name, {})
+            .get("allocated", 0)
+        )
 
     def get_component_available(self, site_name: str, component_model_name: str) -> int:
         s = self._sites_by_name.get(site_name)
         if not s:
             return 0
-        return (s.get("components") or {}).get(component_model_name, {}).get("available", 0)
+        return (
+            (s.get("components") or {})
+            .get(component_model_name, {})
+            .get("available", 0)
+        )
 
     def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
         loc = self._site_val(site_name, "location", None)
@@ -546,7 +556,9 @@ class ResourcesV2:
             output=output,
             quiet=quiet,
             filter_function=filter_function,
-            pretty_names_dict=ResourceConstants.pretty_names_hosts if pretty_names else {},
+            pretty_names_dict=(
+                ResourceConstants.pretty_names_hosts if pretty_names else {}
+            ),
         )
 
     def show_host(
@@ -566,7 +578,9 @@ class ResourcesV2:
                     title=f"Host: {host_name}",
                     output=output,
                     quiet=quiet,
-                    pretty_names_dict=ResourceConstants.pretty_names_hosts if pretty_names else {},
+                    pretty_names_dict=(
+                        ResourceConstants.pretty_names_hosts if pretty_names else {}
+                    ),
                 )
         return f"Host '{host_name}' not found."
 
@@ -653,7 +667,9 @@ class ResourcesV2:
                     title=f"Facility Port: {fp_name}",
                     output=output,
                     quiet=quiet,
-                    pretty_names_dict=FACILITY_PORT_PRETTY_NAMES if pretty_names else {},
+                    pretty_names_dict=(
+                        FACILITY_PORT_PRETTY_NAMES if pretty_names else {}
+                    ),
                 )
         return f"Facility port '{fp_name}' not found."
 

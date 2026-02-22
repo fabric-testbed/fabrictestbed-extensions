@@ -1144,7 +1144,7 @@ class Slice:
             user_data=user_data,
             technology=technology,
             subnet=subnet,
-            site=site
+            site=site,
         )
 
     def add_facility_port(
@@ -2640,11 +2640,7 @@ class Slice:
                 )
             )
 
-        if (
-            progress
-            and wait_jupyter == "text"
-            and Utils.is_jupyter_notebook()
-        ):
+        if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
                 timeout=wait_timeout,
                 interval=wait_interval,
@@ -3221,11 +3217,7 @@ class Slice:
 
         log.debug(f"slice_reservations: {slice_reservations}")
 
-        if (
-            progress
-            and wait_jupyter == "text"
-            and Utils.is_jupyter_notebook()
-        ):
+        if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
                 timeout=wait_timeout,
                 interval=wait_interval,

@@ -103,7 +103,6 @@ from fabrictestbed_extensions.fablib.slice import Slice
 log = logging.getLogger("fablib")
 
 
-
 class FablibManager(Config):
     """
     The main class to use when interacting with the testbed.
@@ -575,8 +574,7 @@ class FablibManager(Config):
         # Write SSH config
         ssh_config_path = os.path.join(dir_path, file_name)
         with open(ssh_config_path, "w") as f:
-            f.write(
-                f"""UserKnownHostsFile /dev/null
+            f.write(f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 120
 
@@ -589,8 +587,7 @@ Host bastion.fabric-testbed.net
 
 Host * !bastion.fabric-testbed.net
      ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
-    """
-            )
+    """)
 
         # Tar the directory
         tgz_path = f"{dir_path}.tgz"
@@ -642,8 +639,7 @@ Usage Instructions:
                 raise Exception(msg)
 
         with open(bastion_ssh_config_file, "w") as f:
-            f.write(
-                f"""UserKnownHostsFile /dev/null
+            f.write(f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 120
 
@@ -656,8 +652,7 @@ Host bastion.fabric-testbed.net
 
 Host * !bastion.fabric-testbed.net
      ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
-    """
-            )
+    """)
 
     def validate_and_update_bastion_keys(self, validate_only: bool = False):
         """
@@ -1128,7 +1123,7 @@ Host * !bastion.fabric-testbed.net
         quiet: Optional[bool] = False,
         filter_function=None,
         update: Optional[bool] = False,
-        pretty_names: Optional[bool] =True,
+        pretty_names: Optional[bool] = True,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> object:
@@ -1366,10 +1361,10 @@ Host * !bastion.fabric-testbed.net
         )
 
     def get_random_site(
-            self,
-            avoid: Optional[List[str]] = None,
-            filter_function=None,
-            update: Optional[bool] = True
+        self,
+        avoid: Optional[List[str]] = None,
+        filter_function=None,
+        update: Optional[bool] = True,
     ) -> str:
         """
         Get a random site.
@@ -1794,7 +1789,7 @@ Host * !bastion.fabric-testbed.net
             slice_id=slice_id,
             limit=200,
             as_self=user_only,
-            return_fmt="dto"
+            return_fmt="dto",
         )
 
         if self.get_log_level() == logging.DEBUG:
@@ -1805,9 +1800,7 @@ Host * !bastion.fabric-testbed.net
 
         return_slices = []
         for slice in slices:
-            slice_object = Slice.get_slice(
-                self, sm_slice=slice, user_only=user_only
-            )
+            slice_object = Slice.get_slice(self, sm_slice=slice, user_only=user_only)
             return_slices.append(slice_object)
         return return_slices
 
@@ -2049,7 +2042,9 @@ Host * !bastion.fabric-testbed.net
         elif artifact_title:
             artifacts = self.get_artifacts(artifact_title=artifact_title)
             if len(artifacts) == 1:
-                self.get_manager().delete_artifact(artifact_id=artifacts[0].to_dict().get("uuid"))
+                self.get_manager().delete_artifact(
+                    artifact_id=artifacts[0].to_dict().get("uuid")
+                )
             else:
                 raise ValueError("More than one artifact found")
         else:

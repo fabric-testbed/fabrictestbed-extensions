@@ -889,7 +889,9 @@ class Node(TemplateMixin):
         if self._cached_instance_name is None:
             try:
                 if self.get_fim():
-                    label_allocations = self.get_fim().get_property(pname="label_allocations")
+                    label_allocations = self.get_fim().get_property(
+                        pname="label_allocations"
+                    )
                     if label_allocations:
                         self._cached_instance_name = label_allocations.instance
             except Exception:
@@ -906,9 +908,15 @@ class Node(TemplateMixin):
         if self._cached_allocated_cores is None:
             try:
                 if self.get_fim():
-                    capacities = self.get_fim().get_property(pname="capacity_allocations")
+                    capacities = self.get_fim().get_property(
+                        pname="capacity_allocations"
+                    )
                     if capacities:
-                        self._cached_allocated_cores = self.get_fim().get_property(pname="capacity_allocations").core
+                        self._cached_allocated_cores = (
+                            self.get_fim()
+                            .get_property(pname="capacity_allocations")
+                            .core
+                        )
             except Exception:
                 self._cached_allocated_cores = None
         return self._cached_allocated_cores if self._cached_allocated_cores else 0
@@ -925,7 +933,9 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_cores = self.get_fim().get_property(pname="capacities").core
+                        self._cached_requested_cores = (
+                            self.get_fim().get_property(pname="capacities").core
+                        )
             except Exception:
                 self._cached_requested_cores = None
         return self._cached_requested_cores if self._cached_requested_cores else 0
@@ -940,13 +950,18 @@ class Node(TemplateMixin):
         if self._cached_allocated_ram is None:
             try:
                 if self.get_fim():
-                    capacities = self.get_fim().get_property(pname="capacity_allocations")
+                    capacities = self.get_fim().get_property(
+                        pname="capacity_allocations"
+                    )
                     if capacities:
-                        self._cached_allocated_ram = self.get_fim().get_property(pname="capacity_allocations").ram
+                        self._cached_allocated_ram = (
+                            self.get_fim()
+                            .get_property(pname="capacity_allocations")
+                            .ram
+                        )
             except Exception:
                 self._cached_allocated_ram = None
         return self._cached_allocated_ram if self._cached_allocated_ram else 0
-
 
     def get_requested_ram(self) -> Optional[int]:
         """
@@ -960,7 +975,9 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_ram = self.get_fim().get_property(pname="capacities").ram
+                        self._cached_requested_ram = (
+                            self.get_fim().get_property(pname="capacities").ram
+                        )
             except Exception:
                 self._cached_requested_ram = None
         return self._cached_requested_ram if self._cached_requested_ram else 0
@@ -975,9 +992,15 @@ class Node(TemplateMixin):
         if self._cached_allocated_disk is None:
             try:
                 if self.get_fim():
-                    capacities = self.get_fim().get_property(pname="capacity_allocations")
+                    capacities = self.get_fim().get_property(
+                        pname="capacity_allocations"
+                    )
                     if capacities:
-                        self._cached_allocated_disk = self.get_fim().get_property(pname="capacity_allocations").disk
+                        self._cached_allocated_disk = (
+                            self.get_fim()
+                            .get_property(pname="capacity_allocations")
+                            .disk
+                        )
             except Exception:
                 self._cached_allocated_disk = None
         return self._cached_allocated_disk if self._cached_allocated_disk else 0
@@ -994,7 +1017,9 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_disk = self.get_fim().get_property(pname="capacities").disk
+                        self._cached_requested_disk = (
+                            self.get_fim().get_property(pname="capacities").disk
+                        )
             except Exception:
                 self._cached_requested_disk = None
         return self._cached_requested_disk if self._cached_requested_disk else 0
@@ -1106,7 +1131,11 @@ class Node(TemplateMixin):
                 self._cached_management_ip = str(self.fim_node.management_ip)
             except Exception:
                 self._cached_management_ip = None
-        return self._cached_management_ip if self._cached_management_ip is not None else None
+        return (
+            self._cached_management_ip
+            if self._cached_management_ip is not None
+            else None
+        )
 
     def get_username(self) -> str:
         """
@@ -2459,13 +2488,13 @@ class Node(TemplateMixin):
 
         try:
             stdout, stderr = self.execute(
-                "command -v nmcli", #"command -v nmcli && nmcli general status",
+                "command -v nmcli",  # "command -v nmcli && nmcli general status",
                 quiet=True,
             )
             # nmcli general status outputs STATE as "connected" (or
             # "connected-local", "connecting") when NetworkManager is
             # running.  If NM is stopped, the command itself fails.
-            #if stdout and ("connected" in stdout.lower() or
+            # if stdout and ("connected" in stdout.lower() or
             #               "connecting" in stdout.lower()):
             if stdout and stdout.strip():
                 self._net_config_backend = "nmcli"
@@ -2495,7 +2524,9 @@ class Node(TemplateMixin):
             forces legacy 'ip' backend.
         :return: 'nmcli', 'netplan', or 'ip'
         """
-        use_persistent = persistent if persistent is not None else self._persistent_config
+        use_persistent = (
+            persistent if persistent is not None else self._persistent_config
+        )
         if not use_persistent:
             return "ip"
         return self._detect_net_config_backend()
@@ -2658,7 +2689,7 @@ class Node(TemplateMixin):
         :param ip_version: 'ipv4' or 'ipv6'
         """
         self.execute(
-            f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{subnet} {gateway}\"",
+            f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{subnet} {gateway}"',
             quiet=True,
         )
 
@@ -2718,15 +2749,15 @@ class Node(TemplateMixin):
                 quiet=True,
             )
             self.execute(
-                f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{subnet} {ip_vaddr}\"",
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{subnet} {ip_vaddr}"',
                 quiet=True,
             )
             self.execute(
-                f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{default_route} {gateway}\"",
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{default_route} {gateway}"',
                 quiet=True,
             )
             self.execute(
-                f"sudo nmcli c mod {conn_name} +{ip_version}.routing-rules \"priority {pbr_priority} from {addr}/{prefix} table {pbr_table}\"",
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routing-rules "priority {pbr_priority} from {addr}/{prefix} table {pbr_table}"',
                 quiet=True,
             )
             self.execute(
@@ -2740,7 +2771,7 @@ class Node(TemplateMixin):
                 quiet=True,
             )
             self.execute(
-                f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{default_route} {gateway}\"",
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{default_route} {gateway}"',
                 quiet=True,
             )
 
@@ -2770,7 +2801,7 @@ class Node(TemplateMixin):
             quiet=True,
         )
         self.execute(
-            f"sudo nmcli c mod {conn_name} +{ip_version}.routes \"{fabric_route} {gateway}\"",
+            f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{fabric_route} {gateway}"',
             quiet=True,
         )
 
@@ -2963,9 +2994,7 @@ class Node(TemplateMixin):
                 self._nmcli_up(conn_name)
                 return
             except Exception as e:
-                log.warning(
-                    f"nmcli route add failed, falling back to ip: {e}"
-                )
+                log.warning(f"nmcli route add failed, falling back to ip: {e}")
 
         # Legacy ip route add
         self._ip_route_add_legacy(subnet, gateway)
@@ -3108,9 +3137,7 @@ class Node(TemplateMixin):
                 self._nmcli_up(conn_name)
                 return
             except Exception as e:
-                log.warning(
-                    f"nmcli ip_addr_add failed, falling back to ip: {e}"
-                )
+                log.warning(f"nmcli ip_addr_add failed, falling back to ip: {e}")
         elif backend == "netplan":
             try:
                 self._netplan_write_config(
@@ -3120,9 +3147,7 @@ class Node(TemplateMixin):
                 self._netplan_apply()
                 return
             except Exception as e:
-                log.warning(
-                    f"netplan ip_addr_add failed, falling back to ip: {e}"
-                )
+                log.warning(f"netplan ip_addr_add failed, falling back to ip: {e}")
 
         # Legacy fallback
         self._ip_addr_add_legacy(addr, subnet, interface)
@@ -3495,7 +3520,9 @@ class Node(TemplateMixin):
             if "link" in i.keys():
                 self.remove_vlan_os_interface(os_iface=i["ifname"])
 
-    def remove_vlan_os_interface(self, os_iface: str = None, persistent: Optional[bool] = None):
+    def remove_vlan_os_interface(
+        self, os_iface: str = None, persistent: Optional[bool] = None
+    ):
         """
         Remove one VLAN OS interface
 
@@ -3570,7 +3597,9 @@ class Node(TemplateMixin):
             mtu = str(mtu)
 
         backend = self._get_effective_backend(persistent)
-        ip_version = self._detect_ip_version_for_interface(interface) if interface else "ipv4"
+        ip_version = (
+            self._detect_ip_version_for_interface(interface) if interface else "ipv4"
+        )
 
         # Only use persistent backends when we have an IP to configure.
         # When called without ip/cidr (e.g., from config_vlan_iface just to
@@ -3879,7 +3908,11 @@ class Node(TemplateMixin):
         for iface in self.get_interfaces():
             try:
                 network = iface.get_network()
-                if network and network.get_gateway() and str(network.get_gateway()) == str(gateway):
+                if (
+                    network
+                    and network.get_gateway()
+                    and str(network.get_gateway()) == str(gateway)
+                ):
                     return iface
             except Exception:
                 continue

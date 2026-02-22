@@ -98,10 +98,10 @@ class Component(TemplateMixin):
 
     component_configure_commands = {
         Constants.CMP_NIC_ConnectX_7_100: [
-                        "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
-                        "sudo ip link set tmfifo_net0 up",
-                        "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
-                  ],
+            "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo ip link set tmfifo_net0 up",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+        ],
         Constants.CMP_NIC_ConnectX_7_400: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
             "sudo ip link set tmfifo_net0 up",
@@ -418,9 +418,7 @@ class Component(TemplateMixin):
             iface = Interface(component=self, fim_interface=fim_interface)
             self.interfaces[iface.get_name()] = iface
             if include_subs:
-                child_interfaces = iface.get_interfaces(
-                    refresh=refresh, output="dict"
-                )
+                child_interfaces = iface.get_interfaces(refresh=refresh, output="dict")
                 if child_interfaces and len(child_interfaces):
                     self.interfaces.update(child_interfaces)
 

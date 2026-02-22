@@ -118,7 +118,6 @@ class Interface(TemplateMixin):
         self._cached_subnet: Optional[str] = None
         self._cached_peer_port_vlan: Optional[str] = None
 
-
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
         super(Interface, self)._invalidate_cache()
@@ -280,7 +279,7 @@ class Interface(TemplateMixin):
             d["network"] = str(network_name)
             d["bandwidth"] = str(self.get_bandwidth())
             d["mode"] = str(self.get_mode())
-            d["vlan"] = (str(self.get_vlan()) if self.get_vlan() else "")
+            d["vlan"] = str(self.get_vlan()) if self.get_vlan() else ""
             d["mac"] = mac
             d["physical_dev"] = physical_dev
             d["dev"] = dev
@@ -362,7 +361,9 @@ class Interface(TemplateMixin):
                 and self.fim_interface.get_peers()
                 and self.fim_interface.get_peers()[0]
             ):
-                self._cached_peer_port_name = self.fim_interface.get_peers()[0].labels.local_name
+                self._cached_peer_port_name = self.fim_interface.get_peers()[
+                    0
+                ].labels.local_name
         return self._cached_peer_port_name
 
     def get_peer_port_vlan(self) -> Optional[str]:
@@ -376,7 +377,9 @@ class Interface(TemplateMixin):
         if self._cached_peer_port_vlan is None:
             self._cached_peer_port_vlan = self.get_vlan()
             if not self._cached_peer_port_vlan:
-                label_allocations = self.get_fim().get_property(pname="label_allocations")
+                label_allocations = self.get_fim().get_property(
+                    pname="label_allocations"
+                )
                 if label_allocations:
                     self._cached_peer_port_vlan = label_allocations.vlan
 
@@ -396,9 +399,7 @@ class Interface(TemplateMixin):
             from fabrictestbed_extensions.fablib.switch import Switch
 
             if self.node and isinstance(self.node, Switch):
-                match = re.search(
-                    r"\d+", self.get_name()
-                )  # Find digits in the string
+                match = re.search(r"\d+", self.get_name())  # Find digits in the string
                 if match:
                     return match.group()
 
@@ -475,8 +476,11 @@ class Interface(TemplateMixin):
                 interface=self,
             )
 
-    def ip_addr_add(self, addr: Union[IPv4Address, IPv6Address],
-                    subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network]):
+    def ip_addr_add(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network],
+    ):
         """
         Add an IP address to the interface in the node.
 
@@ -487,8 +491,11 @@ class Interface(TemplateMixin):
         """
         self.get_node().ip_addr_add(addr, subnet, self)
 
-    def ip_addr_del(self, addr: Union[IPv4Address, IPv6Address],
-                    subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network]):
+    def ip_addr_del(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network],
+    ):
         """
         Delete an IP address to the interface in the node.
 
@@ -669,9 +676,7 @@ class Interface(TemplateMixin):
         if self._cached_vlan is None:
             try:
                 if self.fim_interface:
-                    labels = self.fim_interface.get_property(
-                        pname="labels"
-                    )
+                    labels = self.fim_interface.get_property(pname="labels")
                     if labels and labels.vlan:
                         self._cached_vlan = str(labels.vlan)
             except Exception:
@@ -753,7 +758,11 @@ class Interface(TemplateMixin):
                     self._cached_physical_os_interface = os_dev.get("ifname")
             except Exception:
                 self._cached_physical_os_interface = None
-        return self._cached_physical_os_interface if self._cached_physical_os_interface else ""
+        return (
+            self._cached_physical_os_interface
+            if self._cached_physical_os_interface
+            else ""
+        )
 
     def get_component(self) -> Component:
         """
@@ -1167,7 +1176,7 @@ class Interface(TemplateMixin):
         # Determine if this is a VLAN interface
         vlan = self.get_vlan()
         physical_iface = self.get_physical_os_interface_name()
-        is_vlan = (vlan is not None and device_name != physical_iface)
+        is_vlan = vlan is not None and device_name != physical_iface
 
         # Create or modify the connection with the IP address
         if is_vlan:
@@ -1195,9 +1204,9 @@ class Interface(TemplateMixin):
             # External networks: configure PBR
             if gateway:
                 # Calculate the interface subnet for PBR route
-                iface_subnet = str(ipaddress.ip_network(
-                    f"{addr}/{subnet_net.prefixlen}", strict=False
-                ))
+                iface_subnet = str(
+                    ipaddress.ip_network(f"{addr}/{subnet_net.prefixlen}", strict=False)
+                )
                 node._nmcli_configure_pbr(
                     conn_name=conn_name,
                     ip_version=ip_version,

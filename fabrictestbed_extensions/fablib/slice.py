@@ -92,8 +92,11 @@ log = logging.getLogger("fablib")
 
 class Slice:
     def __init__(
-        self, fablib_manager: FablibManagerV2, name: str = None, user_only: bool = True,
-            sm_slice: Optional[SliceDTO] = None,
+        self,
+        fablib_manager: FablibManagerV2,
+        name: str = None,
+        user_only: bool = True,
+        sm_slice: Optional[SliceDTO] = None,
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -103,7 +106,7 @@ class Slice:
         """
         super().__init__()
 
-        self.fablib_manager:FablibManagerV2 = fablib_manager
+        self.fablib_manager: FablibManagerV2 = fablib_manager
         self.network_iface_map = None
         self.sm_slice: Optional[SliceDTO] = sm_slice
         self.slice_name = sm_slice.name if sm_slice else name
@@ -472,8 +475,9 @@ class Slice:
         """
         log.info("slice.get_slice()")
 
-        slice = Slice(fablib_manager=fablib_manager, sm_slice=sm_slice,
-                      user_only=user_only)
+        slice = Slice(
+            fablib_manager=fablib_manager, sm_slice=sm_slice, user_only=user_only
+        )
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
 
@@ -578,21 +582,23 @@ class Slice:
         if "components" not in skip:
             for node in nodes:
                 for component in node.get_components():
-                    context["components"][
-                        component.get_name()
-                    ] = component.generate_template_context(skip=skip)
+                    context["components"][component.get_name()] = (
+                        component.generate_template_context(skip=skip)
+                    )
 
         context["interfaces"] = {}
         if "interfaces" not in skip:
             for interface in self.get_interfaces():
-                context["interfaces"][interface.get_name()] = interface.toDict(skip=skip)
+                context["interfaces"][interface.get_name()] = interface.toDict(
+                    skip=skip
+                )
 
         context["networks"] = {}
         if "networks" not in skip:
             for network in self.get_networks():
-                context["networks"][
-                    network.get_name()
-                ] = network.generate_template_context(skip=skip)
+                context["networks"][network.get_name()] = (
+                    network.generate_template_context(skip=skip)
+                )
 
         return context
 
@@ -634,7 +640,7 @@ class Slice:
             name=self.slice_name,
             as_self=self.user_only,
             graph_format="NONE",
-            return_fmt="dto"
+            return_fmt="dto",
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -666,9 +672,9 @@ class Slice:
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
         )
 
-        slices = self.fablib_manager.get_manager().list_slices(slice_id=self.sm_slice.slice_id,
-                                                               as_self=self.user_only,
-                                                               return_fmt="dto")
+        slices = self.fablib_manager.get_manager().list_slices(
+            slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
+        )
         if len(slices) == 0:
             raise Exception(
                 f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
@@ -701,9 +707,9 @@ class Slice:
             f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}"
         )
 
-        self.slivers = self.fablib_manager.get_manager().list_slivers(slice_id=self.sm_slice.slice_id,
-                                                                      as_self=self.user_only,
-                                                                      return_fmt="dto")
+        self.slivers = self.fablib_manager.get_manager().list_slivers(
+            slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
+        )
 
     def get_sliver(self, reservation_id: str) -> SliverDTO:
         """
@@ -1165,7 +1171,7 @@ class Slice:
             user_data=user_data,
             technology=technology,
             subnet=subnet,
-            site=site
+            site=site,
         )
 
     def add_facility_port(
@@ -1603,9 +1609,7 @@ class Slice:
                         # Update existing node's fim_node reference
                         self.nodes[node_name].update(fim_node=fim_node)
                 except Exception as e:
-                    log.warning(
-                        f"Error initializing node {node_name}: {e}"
-                    )
+                    log.warning(f"Error initializing node {node_name}: {e}")
 
             # Remove nodes that are no longer present in the current topology
             self.__remove_deleted_nodes(current_topology_nodes)
@@ -1734,9 +1738,7 @@ class Slice:
                         # Update existing facility's fim_node reference
                         self.facilities[fac_name].update(fim_node=facility)
                 except Exception as e:
-                    log.warning(
-                        f"Error initializing facility {fac_name}: {e}"
-                    )
+                    log.warning(f"Error initializing facility {fac_name}: {e}")
 
             # Remove facilities that are no longer present in the current topology
             self.__remove_deleted_facilities(current)
@@ -1873,12 +1875,13 @@ class Slice:
             for node in self.get_nodes(refresh=refresh):
                 log.debug(f"Getting interfaces for node {node.get_name()}")
                 try:
-                    n_ifaces = node.get_interfaces(include_subs=include_subs, refresh=refresh, output="dict")
+                    n_ifaces = node.get_interfaces(
+                        include_subs=include_subs, refresh=refresh, output="dict"
+                    )
                     self.interfaces.update(n_ifaces)
                 except Exception as e:
                     log.warning(
-                        f"Error getting interfaces for node "
-                        f"{node.get_name()}: {e}"
+                        f"Error getting interfaces for node " f"{node.get_name()}: {e}"
                     )
             for fac in self.get_facilities(refresh=refresh):
                 log.debug(f"Getting interfaces for facility {fac.get_name()}")
@@ -2006,14 +2009,14 @@ class Slice:
                             self.network_services[net_name].fim_network_service = net
                 except Exception as e:
                     log.warning(
-                        f"Error initializing network service "
-                        f"{net_name}: {e}"
+                        f"Error initializing network service " f"{net_name}: {e}"
                     )
 
             # Remove network services that are no longer in topology
             current_net_names = set(fim_network_services.keys())
             nets_to_remove = [
-                name for name in self.network_services.keys()
+                name
+                for name in self.network_services.keys()
                 if name not in current_net_names
             ]
             for name in nets_to_remove:
@@ -2169,7 +2172,7 @@ class Slice:
                 name=self.slice_name,
                 as_self=self.user_only,
                 graph_format="NONE",
-                return_fmt="dto"
+                return_fmt="dto",
             )
             if len(slices) > 0:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
@@ -2210,8 +2213,7 @@ class Slice:
         self.update()
         return slice
 
-    def wait_ssh(self, timeout: int = 1800, interval: int = 20,
-                 progress: bool = False):
+    def wait_ssh(self, timeout: int = 1800, interval: int = 20, progress: bool = False):
         """
         Waits for all nodes to be accessible via ssh.
 
@@ -2776,16 +2778,12 @@ class Slice:
                 )
                 log.debug(f"slice_reservations: {slice_reservations}")
                 log.debug(f"slice_id: {slice_reservations[0].get('slice_id')}")
-                self.slice_id = slice_reservations[0].get('slice_id')
+                self.slice_id = slice_reservations[0].get("slice_id")
                 # Update the cache with the new slice_id
                 if self.get_fablib_manager():
                     self.get_fablib_manager().update_slice_cache_id(slice_object=self)
 
-        if (
-            progress
-            and wait_jupyter == "text"
-            and Utils.is_jupyter_notebook()
-        ):
+        if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
                 timeout=wait_timeout,
                 interval=wait_interval,
@@ -3353,11 +3351,7 @@ class Slice:
 
         log.debug(f"slice_reservations: {slice_reservations}")
 
-        if (
-            progress
-            and wait_jupyter == "text"
-            and Utils.is_jupyter_notebook()
-        ):
+        if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
                 timeout=wait_timeout,
                 interval=wait_interval,
@@ -3388,15 +3382,13 @@ class Slice:
         Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
-        result = self.fablib_manager.get_manager().accept_modify(
-            slice_id=self.slice_id
-        )
+        result = self.fablib_manager.get_manager().accept_modify(slice_id=self.slice_id)
         topology_replaced = False
         if isinstance(result, dict) and result.get("model"):
             self.topology = ExperimentTopology()
             self.topology.load(graph_string=result["model"])
             topology_replaced = True
-        elif hasattr(result, 'model') and result.model:
+        elif hasattr(result, "model") and result.model:
             self.topology = ExperimentTopology()
             self.topology.load(graph_string=result.model)
             topology_replaced = True

@@ -39,6 +39,7 @@ from tabulate import tabulate
 
 log = logging.getLogger("fablib")
 
+
 class Utils:
     @staticmethod
     def is_reachable(*, hostname: str, port: int = 443):
@@ -333,7 +334,7 @@ class Utils:
         :rtype: Depends on :py:obj:`output` parameter.
         """
         output = Utils._determine_output_type(output)
-        
+
         table = Utils._create_show_table(
             data, fields=fields, pretty_names_dict=pretty_names_dict
         )

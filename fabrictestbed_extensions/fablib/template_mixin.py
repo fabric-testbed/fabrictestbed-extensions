@@ -142,7 +142,6 @@ class TemplateMixin:
                 self._cached_reservation_id = None
         return self._cached_reservation_id
 
-
     def get_reservation_state(self) -> Optional[str]:
         """
         Gets the reservation state on the FABRIC node.
@@ -153,12 +152,13 @@ class TemplateMixin:
         if self._cached_reservation_state is None:
             try:
                 self._cached_reservation_state = str(
-                    self.get_fim().get_property(pname="reservation_info").reservation_state
+                    self.get_fim()
+                    .get_property(pname="reservation_info")
+                    .reservation_state
                 )
             except Exception:
                 self._cached_reservation_state = None
         return self._cached_reservation_state
-
 
     def get_name(self) -> str:
         """

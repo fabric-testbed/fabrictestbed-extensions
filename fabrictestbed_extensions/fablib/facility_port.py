@@ -247,7 +247,7 @@ class FacilityPort(TemplateMixin):
         return self.slice
 
     def get_interfaces(
-            self, refresh: bool = False, output: str = "list"
+        self, refresh: bool = False, output: str = "list"
     ) -> Union[Dict[str, Interface], List[Interface]]:
         """
         Gets interfaces associated with this facility port.
@@ -271,7 +271,7 @@ class FacilityPort(TemplateMixin):
         self._interfaces_cache = {}
 
         try:
-            if self.fim_object and hasattr(self.fim_object, 'interfaces'):
+            if self.fim_object and hasattr(self.fim_object, "interfaces"):
                 for iface in self.fim_object.interfaces.values():
                     interface = Interface(fim_interface=iface, node=self)
                     self._interfaces_cache[interface.get_name()] = interface
@@ -283,7 +283,7 @@ class FacilityPort(TemplateMixin):
         return list(self._interfaces_cache.values())
 
     def get_interface(
-            self, name: str = None, refresh: bool = False
+        self, name: str = None, refresh: bool = False
     ) -> Optional[Interface]:
         """
         Gets a specific interface by name.

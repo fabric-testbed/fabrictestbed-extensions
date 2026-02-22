@@ -199,7 +199,6 @@ class Switch(Node):
 
         return switch
 
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -359,8 +358,7 @@ class Switch(Node):
             return self._interfaces_cache
 
         return [
-            self._interfaces_cache[key]
-            for key in sorted(self._interfaces_cache.keys())
+            self._interfaces_cache[key] for key in sorted(self._interfaces_cache.keys())
         ]
 
     def get_interface(

@@ -133,8 +133,12 @@ class Attestable_Switch(Node):
 
             assert len(ports) > 0
 
-            self.cfg = {"ports": ports, "portmap": {}, "from_raw_image": from_raw_image,
-                        "setup_and_configure": setup_and_configure}
+            self.cfg = {
+                "ports": ports,
+                "portmap": {},
+                "from_raw_image": from_raw_image,
+                "setup_and_configure": setup_and_configure,
+            }
 
             for port in ports:
                 self.cfg["portmap"][port] = (

@@ -407,7 +407,7 @@ class NetworkService(TemplateMixin):
             user_data=user_data,
             technology=technology,
             subnet=subnet,
-            site=site
+            site=site,
         )
 
     @staticmethod
@@ -530,10 +530,16 @@ class NetworkService(TemplateMixin):
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
-            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology,
+            name=name,
+            nstype=nstype,
+            interfaces=fim_interfaces,
+            technology=technology,
         )
 
-        if site is not None and nstype in NetworkService.__get_fim_l3network_service_types():
+        if (
+            site is not None
+            and nstype in NetworkService.__get_fim_l3network_service_types()
+        ):
             fim_network_service.site = site
 
         if subnet:
@@ -949,11 +955,11 @@ class NetworkService(TemplateMixin):
                     sliver = self.get_sliver()
                     if isinstance(sliver, SliverDTO):
                         # V2 path: SliverDTO has .gateway as a dict
-                        if sliver.sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
+                        if sliver.sliver.get("Type") in ("FABNetv4", "FABNetv4Ext"):
                             gateway = IPv4Address(sliver.gateway.get("ipv4"))
                         else:
                             gateway = IPv6Address(sliver.gateway.get("ipv6"))
-                    elif hasattr(sliver, 'fim_sliver') and sliver.fim_sliver:
+                    elif hasattr(sliver, "fim_sliver") and sliver.fim_sliver:
                         # V1 path: OrchestratorSliver has .fim_sliver.gateway
                         gateway = ipaddress.ip_address(
                             sliver.fim_sliver.gateway.gateway
@@ -1051,7 +1057,7 @@ class NetworkService(TemplateMixin):
                     sliver = self.get_sliver()
                     if isinstance(sliver, SliverDTO):
                         # V2 path: SliverDTO has .gateway as a dict
-                        if sliver.sliver.get('Type') in ("FABNetv4", "FABNetv4Ext"):
+                        if sliver.sliver.get("Type") in ("FABNetv4", "FABNetv4Ext"):
                             subnet_key = "ipv4_subnet"
                         else:
                             subnet_key = "ipv6_subnet"
@@ -1060,11 +1066,9 @@ class NetworkService(TemplateMixin):
                             subnet_str = gateway.get(subnet_key)
                             if subnet_str:
                                 subnet = ipaddress.ip_network(subnet_str)
-                    elif hasattr(sliver, 'fim_sliver') and sliver.fim_sliver:
+                    elif hasattr(sliver, "fim_sliver") and sliver.fim_sliver:
                         # V1 path: OrchestratorSliver has .fim_sliver.gateway
-                        subnet = ipaddress.ip_network(
-                            sliver.fim_sliver.gateway.subnet
-                        )
+                        subnet = ipaddress.ip_network(sliver.fim_sliver.gateway.subnet)
                     else:
                         log.warning("Unknown sliver type in get_subnet")
                 else:
@@ -1087,9 +1091,7 @@ class NetworkService(TemplateMixin):
                     "subnet"
                 ):
                     try:
-                        subnet = ipaddress.ip_network(
-                            fablib_data["subnet"]["subnet"]
-                        )
+                        subnet = ipaddress.ip_network(fablib_data["subnet"]["subnet"])
                     except Exception:
                         subnet = f"{self.get_name()}.subnet"
                 else:
@@ -1130,7 +1132,9 @@ class NetworkService(TemplateMixin):
 
         return self.interfaces
 
-    def get_interface(self, name: str = None, refresh: bool = False) -> Optional[Interface]:
+    def get_interface(
+        self, name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
         """
         Gets a particular interface on this network service.
 
