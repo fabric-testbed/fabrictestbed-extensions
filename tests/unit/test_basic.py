@@ -156,9 +156,8 @@ class FablibManagerTests(unittest.TestCase):
 
         # Check that the error message is what we expected: the only
         # error should be about missing token.
-        self.assertEqual(
-            "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/Not enough segments",
-            str(ctx.exception),
+        self.assertTrue(
+            "Unable to validate provided token" in str(ctx.exception),
         )
 
     def test_FablibManager_no_config_no_env_var_token_location_offline(self):

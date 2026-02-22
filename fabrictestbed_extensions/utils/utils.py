@@ -41,8 +41,33 @@ log = logging.getLogger("fablib")
 
 
 class Utils:
+    """
+    Utility helpers for FABRIC testbed operations.
+
+    Provides reachability checks, file I/O, table formatting and
+    display for both terminal and Jupyter notebook environments.
+    """
+
     @staticmethod
     def is_reachable(*, hostname: str, port: int = 443):
+        """
+        Check whether a remote host is reachable via TCP.
+
+        Resolves the hostname to all available addresses (IPv4 and IPv6)
+        and attempts to connect to each.  Returns ``True`` if at least one
+        connection succeeds or if the connection is blocked by a local
+        firewall policy (permission denied), since that indicates the host
+        is up but locally restricted.
+
+        :param hostname: Hostname or IP address to check.
+        :type hostname: str
+        :param port: TCP port to connect to.
+        :type port: int
+        :return: ``True`` if the host is reachable.
+        :rtype: bool
+        :raises ConnectionError: if the hostname cannot be resolved or
+            no address is reachable.
+        """
         import errno
 
         try:
@@ -103,6 +128,14 @@ class Utils:
 
     @staticmethod
     def save_to_file(file_path: str, data: str):
+        """
+        Write data to a file, using atomic writes when the file already exists.
+
+        :param file_path: Path to the file.
+        :type file_path: str
+        :param data: Content to write.
+        :type data: str
+        """
         # If the file exists, use atomic_write
         if os.path.exists(file_path):
             with atomic_write(file_path, overwrite=True) as f:
@@ -114,12 +147,32 @@ class Utils:
 
     @staticmethod
     def get_md5_fingerprint(key_string):
+        """
+        Compute an MD5 fingerprint of a key string.
+
+        Returns the fingerprint in colon-separated hex format
+        (e.g. ``"aa:bb:cc:..."``).
+
+        :param key_string: The key string to fingerprint.
+        :type key_string: str
+        :return: Colon-separated MD5 hex digest.
+        :rtype: str
+        """
         key_bytes = key_string.encode("utf-8")
         md5_hash = hashlib.md5(key_bytes).hexdigest()
         return ":".join(a + b for a, b in zip(md5_hash[::2], md5_hash[1::2]))
 
     @staticmethod
     def is_yaml_file(file_path: str):
+        """
+        Check whether a file contains valid YAML content.
+
+        :param file_path: Path to the file to check.
+        :type file_path: str
+        :return: ``True`` if the file contains a valid YAML dict or list,
+            ``False`` otherwise (including file-not-found).
+        :rtype: bool
+        """
         try:
             with open(file_path, "r") as file:
                 # Attempt to load the content as YAML
@@ -140,6 +193,14 @@ class Utils:
 
     @staticmethod
     def read_file_contents(file_path: str) -> str:
+        """
+        Read and return the entire contents of a text file.
+
+        :param file_path: Path to the file to read.
+        :type file_path: str
+        :return: File contents, or ``None`` if the file does not exist.
+        :rtype: str
+        """
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
@@ -656,6 +717,17 @@ class Utils:
 
     @staticmethod
     def _determine_output_type(output: Union[str, None]) -> str:
+        """
+        Determine the output format based on the running environment.
+
+        If *output* is ``None``, returns ``"pandas"`` when running inside
+        a Jupyter notebook, or ``"text"`` otherwise.
+
+        :param output: Explicit output type, or ``None`` for auto-detect.
+        :type output: str or None
+        :return: The resolved output type string.
+        :rtype: str
+        """
         if output is None:
             if Utils.is_jupyter_notebook():
                 output = "pandas"
