@@ -992,7 +992,8 @@ class FablibManagerV1(Config):
         # Write SSH config
         ssh_config_path = os.path.join(dir_path, file_name)
         with open(ssh_config_path, "w") as f:
-            f.write(f"""UserKnownHostsFile /dev/null
+            f.write(
+                f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 120
 
@@ -1005,7 +1006,8 @@ Host bastion.fabric-testbed.net
 
 Host * !bastion.fabric-testbed.net
      ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
-    """)
+    """
+            )
 
         # Tar the directory
         tgz_path = f"{dir_path}.tgz"
@@ -1057,7 +1059,8 @@ Usage Instructions:
                 raise Exception(msg)
 
         with open(bastion_ssh_config_file, "w") as f:
-            f.write(f"""UserKnownHostsFile /dev/null
+            f.write(
+                f"""UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
 ServerAliveInterval 120
 
@@ -1070,7 +1073,8 @@ Host bastion.fabric-testbed.net
 
 Host * !bastion.fabric-testbed.net
      ProxyJump {self.get_bastion_username()}@bastion.fabric-testbed.net:22
-    """)
+    """
+            )
 
     def validate_and_update_bastion_keys(self, validate_only: bool = False):
         """
