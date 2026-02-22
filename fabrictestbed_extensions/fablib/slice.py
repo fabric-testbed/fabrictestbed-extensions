@@ -56,18 +56,17 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Tuple, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import pandas as pd
 from fabrictestbed.external_api.orchestrator_client import SliceDTO, SliverDTO
-
-from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.switch import Switch
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
@@ -82,10 +81,10 @@ from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.attestable_switch import Attestable_Switch
 from fabrictestbed_extensions.fablib.component import Component
+from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
-from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 
 log = logging.getLogger("fablib")
 

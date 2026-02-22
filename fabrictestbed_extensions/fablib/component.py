@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING, Union, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from fim.user import ComponentType
 

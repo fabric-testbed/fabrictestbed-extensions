@@ -34,15 +34,15 @@ import json
 import logging
 import re
 from ipaddress import IPv4Address, IPv6Address
-from typing import TYPE_CHECKING, Any, List, Union, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from fabrictestbed.slice_editor import Flags
-from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Capacities, InterfaceType, Labels
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice

@@ -58,8 +58,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
 from fabrictestbed.external_api.orchestrator_client import SliverDTO
-
-from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
@@ -67,6 +65,7 @@ from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice

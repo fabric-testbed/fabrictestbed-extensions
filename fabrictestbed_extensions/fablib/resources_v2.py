@@ -43,7 +43,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from fabrictestbed.slice_editor import AdvertisedTopology
 
-
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.site import ResourceConstants
 from fabrictestbed_extensions.utils.utils import Utils

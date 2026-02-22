@@ -36,11 +36,11 @@ import threading
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 from fabrictestbed.external_api.orchestrator_client import SliverDTO
-
-from fabrictestbed_extensions.utils.utils import Utils
 from fim.slivers.path_info import Path
 from fim.user import ERO, Gateway
 from tabulate import tabulate
+
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -51,11 +51,12 @@ import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 from fabrictestbed.slice_editor import Capacities, Labels
-from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
-from fim.slivers.network_service import NSLayer, ServiceType, NetworkServiceSliver
+from fim.slivers.network_service import NetworkServiceSliver, NSLayer, ServiceType
 from fim.user.network_service import MirrorDirection
+
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 log = logging.getLogger("fablib")
 

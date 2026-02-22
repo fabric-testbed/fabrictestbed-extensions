@@ -27,15 +27,16 @@ import json
 import logging
 import os
 import socket
-from typing import Dict, Any, List, Union, Callable, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Union
 
 import pandas as pd
 import yaml
+from atomicwrites import atomic_write
 from IPython import get_ipython
 from IPython.core.display_functions import display
-from atomicwrites import atomic_write
-from fabrictestbed_extensions.fablib.constants import Constants
 from tabulate import tabulate
+
+from fabrictestbed_extensions.fablib.constants import Constants
 
 log = logging.getLogger("fablib")
 

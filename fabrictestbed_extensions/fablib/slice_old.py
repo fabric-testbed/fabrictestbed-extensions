@@ -60,7 +60,6 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fabrictestbed_extensions.utils.utils import Utils
 from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
@@ -68,6 +67,7 @@ from IPython.core.display_functions import display
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 from fabrictestbed_extensions.fablib.switch import Switch
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabric_cf.orchestrator.swagger_client import (
