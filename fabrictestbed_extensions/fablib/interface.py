@@ -33,15 +33,16 @@ import ipaddress
 import json
 import logging
 import re
-from ipaddress import IPv4Address
-from typing import TYPE_CHECKING, Any, List, Union
+from ipaddress import IPv4Address, IPv6Address
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
-import jinja2
 from fabrictestbed.slice_editor import Flags
 from fim.user import Capacities, InterfaceType, Labels
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
@@ -57,7 +58,9 @@ from fim.user.interface import Interface as FimInterface
 log = logging.getLogger("fablib")
 
 
-class Interface:
+class Interface(TemplateMixin):
+    _show_title = "Interface"
+
     CONFIGURED = "configured"
     MODE = "mode"
     AUTO = "auto"
@@ -98,11 +101,55 @@ class Interface:
         self.interfaces = {}
         self.parent = parent
 
-    def get_fablib_manager(self):
+        # V2 specific: cached FIM properties
+        self._cached_mac: Optional[str] = None
+        self._cached_vlan: Optional[str] = None
+        self._cached_bandwidth: Optional[int] = None
+        self._cached_site: Optional[str] = None
+        self._cached_physical_os_interface: Optional[str] = None
+        self._cached_switch_port: Optional[str] = None
+        self._cached_flag: Optional[bool] = False
+        self._cached_peer_port_name: Optional[str] = None
+        self._cached_fim_type: Optional[str] = None
+        self._cached_peer_account_id: Optional[str] = None
+        self._cached_peer_bgp_key: Optional[str] = None
+        self._cached_peer_asn: Optional[str] = None
+        self._cached_peer_subnet: Optional[str] = None
+        self._cached_subnet: Optional[str] = None
+        self._cached_peer_port_vlan: Optional[str] = None
+
+    def _invalidate_cache(self):
+        """Invalidate all cached properties."""
+        super(Interface, self)._invalidate_cache()
+
+        self._cached_mac = None
+        self._cached_vlan = None
+        self._cached_bandwidth = None
+        self._cached_site = None
+        self._cached_physical_os_interface = None
+        self._cached_switch_port = None
+        self._cached_flag = False
+        self._cached_peer_port_name = None
+        self._cached_fim_type = None
+        self._cached_peer_account_id = None
+        self._cached_peer_bgp_key = None
+        self._cached_peer_asn = None
+        self._cached_peer_subnet = None
+        self._cached_subnet = None
+        self._cached_peer_port_vlan = None
+        self.interfaces = {}
+
+    def update(self, fim_interface: FimInterface = None):
         """
-        Get a reference to :py:class:`.FablibManager` instance.
+        Update the interface with new FIM data.
+
+        :param fim_interface: The new FIM interface data
+        :type fim_interface: FimInterface
         """
-        return self.get_slice().get_fablib_manager()
+        if fim_interface:
+            self.fim_interface = fim_interface
+            self._invalidate_cache()
+            self._fim_dirty = False
 
     def __str__(self):
         """
@@ -153,17 +200,8 @@ class Interface:
 
         return tabulate(table)
 
-    def toJson(self):
-        """
-        Returns the interface attributes as a json string
-
-        :return: slice attributes as json string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
-    def get_pretty_name_dict():
+    def get_pretty_name_dict() -> dict[str, str]:
         """
         Return a mapping used when rendering table headers.
         """
@@ -177,95 +215,103 @@ class Interface:
             "mac": "MAC",
             "physical_dev": "Physical Device",
             "dev": "Device",
-            "username": "Username",
-            "management_ip": "Management IP",
-            "state": "State",
-            "error": "Error",
-            "ssh_command": "SSH Command",
-            "public_ssh_key_file": "Public SSH Key File",
-            "private_ssh_key_file": "Private SSH Key File",
             "mode": "Mode",
             "ip_addr": "IP Address",
             "numa": "Numa Node",
             "switch_port": "Switch Port",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: Optional[List[str]] = None) -> dict[str, str]:
         """
-        Returns the interface attributes as a dictionary
+        Returns the interface attributes as a dictionary.
 
-        :return: slice attributes as dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: List[str]
+        :return: interface attributes as dictionary
         :rtype: dict
         """
-        if self.get_network():
-            log.info(
-                f"Getting results from get network name thread for iface {self.get_name()} "
-            )
-            network_name = self.get_network().get_name()
-        else:
-            network_name = None
+        if skip is None:
+            skip = []
 
-        if self.get_node():
-            log.info(
-                f"Getting results from get node name thread for iface {self.get_name()} "
-            )
-            node_name = self.get_node().get_name()
-        else:
-            node_name = None
+        if self._cached_dict is None:
+            if self.get_network():
+                log.info(
+                    f"Getting results from get network name thread for iface {self.get_name()} "
+                )
+                network_name = self.get_network().get_name()
+            else:
+                network_name = None
 
-        from fabrictestbed_extensions.fablib.node import Node
+            if self.get_node():
+                log.info(
+                    f"Getting results from get node name thread for iface {self.get_name()} "
+                )
+                node_name = self.get_node().get_name()
+            else:
+                node_name = None
 
-        if (
-            self.get_node()
-            and isinstance(self.get_node(), Node)
-            and str(self.get_node().get_reservation_state()) == "Active"
-        ):
-            mac = str(self.get_mac())
-            physical_dev = str(self.get_physical_os_interface_name())
-            dev = str(self.get_device_name())
-            ip_addr = str(self.get_ip_addr())
-            numa = str(self.get_numa_node())
-        else:
-            mac = ""
-            physical_dev = ""
-            dev = ""
-            ip_addr = ""
-            numa = ""
+            from fabrictestbed_extensions.fablib.node import Node
 
-        return {
-            "name": str(self.get_name()),
-            "short_name": str(self.get_short_name()),
-            "node": str(node_name),
-            "network": str(network_name),
-            "bandwidth": str(self.get_bandwidth()),
-            "mode": str(self.get_mode()),
-            "vlan": (str(self.get_vlan()) if self.get_vlan() else ""),
-            "mac": mac,
-            "physical_dev": physical_dev,
-            "dev": dev,
-            "ip_addr": ip_addr,
-            "numa": numa,
-            "switch_port": str(self.get_switch_port()),
-        }
+            if (
+                self.get_node()
+                and isinstance(self.get_node(), Node)
+                and str(self.get_node().get_reservation_state()) == "Active"
+            ):
+                mac = str(self.get_mac())
+                physical_dev = str(self.get_physical_os_interface_name())
+                dev = str(self.get_device_name())
+                ip_addr = str(self.get_ip_addr())
+                numa = str(self.get_numa_node())
+            else:
+                mac = ""
+                physical_dev = ""
+                dev = ""
+                ip_addr = ""
+                numa = ""
 
-    def get_switch_port(self) -> str:
+            d = {}
+            d["name"] = str(self.get_name())
+            d["short_name"] = str(self.get_short_name())
+            d["node"] = str(node_name)
+            d["network"] = str(network_name)
+            d["bandwidth"] = str(self.get_bandwidth())
+            d["mode"] = str(self.get_mode())
+            d["vlan"] = str(self.get_vlan()) if self.get_vlan() else ""
+            d["mac"] = mac
+            d["physical_dev"] = physical_dev
+            d["dev"] = dev
+            d["ip_addr"] = ip_addr
+            d["numa"] = numa
+            d["switch_port"] = str(self.get_switch_port())
+            self._cached_dict = d
+
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
+
+    def get_switch_port(self) -> Optional[str]:
         """
         Get the name of the port on the switch corresponding to this interface
 
         :return: name of the port on switch
         :rtype: String
         """
-        network = self.get_network()
-        if network and network.get_fim():
-            ifs = None
-            for ifs_name in network.get_fim().interfaces.keys():
-                if self.get_name() in ifs_name:
-                    ifs = network.get_fim().interfaces[ifs_name]
-                    break
-            if ifs and ifs.labels and ifs.labels.local_name:
-                return ifs.labels.local_name
+        if self._cached_switch_port is None:
+            network = self.get_network()
+            if network and network.get_fim():
+                ifs = None
+                for ifs_name in network.get_fim().interfaces.keys():
+                    if self.get_name() in ifs_name:
+                        ifs = network.get_fim().interfaces[ifs_name]
+                        break
+                if ifs and ifs.labels and ifs.labels.local_name:
+                    self._cached_switch_port = ifs.labels.local_name
+        return self._cached_switch_port
 
-    def get_numa_node(self) -> str:
+    def get_numa_node(self) -> Optional[str]:
         """
         Retrieve the NUMA node of the component linked to the interface.
 
@@ -274,80 +320,11 @@ class Interface:
         """
         if self.get_component() is not None:
             return self.get_component().get_numa_node()
-
-    def generate_template_context(self):
-        context = self.toDict()
-        return context
-
-    def get_template_context(self):
-        return self.get_slice().get_template_context(self)
-
-    def render_template(self, input_string):
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context())
-
-        return output_string
-
-    def show(
-        self,
-        fields=None,
-        output: str = None,
-        quiet: bool = False,
-        colors: bool = False,
-        pretty_names: bool = True,
-    ):
-        """
-        Show a table containing the current interface attributes.
-
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
-
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
-
-        fields: json output will include all available fields.
-
-        Example: fields=['Name','MAC']
-
-        :param output: output format
-        :type output: str
-        :param fields: list of fields to show
-        :type fields: List[str]
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-        :param pretty_names: Display pretty names
-        :type pretty_names: bool
-        :return: table in format specified by output parameter
-        :rtype: Object
-        """
-
-        data = self.toDict()
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        table = self.get_fablib_manager().show_table(
-            data,
-            fields=fields,
-            title="Interface",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return table
+        return None
 
     def set_auto_config(self):
         """
-        Enable auto-configuration for the interface.
+        Enable autoconfiguration for the interface.
 
         This method sets the `auto_config` flag to `True` for the interface
         associated with the current instance. The `auto_config` flag enables
@@ -357,10 +334,11 @@ class Interface:
         """
         fim_iface = self.get_fim()
         fim_iface.flags = Flags(auto_config=True)
+        self._cached_flag = True
 
     def unset_auto_config(self):
         """
-        Disable auto-configuration for the interface.
+        Disable autoconfiguration for the interface.
 
         This method sets the `auto_config` flag to `False` for the interface
         associated with the current instance. The `auto_config` flag disables
@@ -370,22 +348,25 @@ class Interface:
         """
         fim_iface = self.get_fim()
         fim_iface.flags = Flags(auto_config=False)
+        self._cached_flag = False
 
-    def get_peer_port_name(self) -> str or None:
+    def get_peer_port_name(self) -> Optional[str]:
         """
         If available provide the name of the attached port on the dataplane switch.
         Only possible once the slice has been instantiated.
         """
-        if (
-            self.fim_interface
-            and self.fim_interface.get_peers()
-            and self.fim_interface.get_peers()[0]
-        ):
-            return self.fim_interface.get_peers()[0].labels.local_name
-        else:
-            return None
+        if self._cached_peer_port_name is None:
+            if (
+                self.fim_interface
+                and self.fim_interface.get_peers()
+                and self.fim_interface.get_peers()[0]
+            ):
+                self._cached_peer_port_name = self.fim_interface.get_peers()[
+                    0
+                ].labels.local_name
+        return self._cached_peer_port_name
 
-    def get_peer_port_vlan(self) -> str:
+    def get_peer_port_vlan(self) -> Optional[str]:
         """
         Returns the VLAN associated with the interface.
         For shared NICs extracts it from label_allocations.
@@ -393,13 +374,18 @@ class Interface:
         :return: VLAN to be used for Port Mirroring
         :rtype: String
         """
-        vlan = self.get_vlan()
-        if not vlan:
-            label_allocations = self.get_fim().get_property(pname="label_allocations")
-            if label_allocations:
-                return label_allocations.vlan
+        if self._cached_peer_port_vlan is None:
+            self._cached_peer_port_vlan = self.get_vlan()
+            if not self._cached_peer_port_vlan:
+                label_allocations = self.get_fim().get_property(
+                    pname="label_allocations"
+                )
+                if label_allocations:
+                    self._cached_peer_port_vlan = label_allocations.vlan
 
-    def get_device_name(self) -> str:
+        return self._cached_peer_port_vlan
+
+    def get_device_name(self) -> Optional[str]:
         """
         Gets a name of the device name on the node
 
@@ -413,13 +399,11 @@ class Interface:
             from fabrictestbed_extensions.fablib.switch import Switch
 
             if self.node and isinstance(self.node, Switch):
-                match = re.search(
-                    r"\d+", self.fim_interface.name
-                )  # Find digits in the string
+                match = re.search(r"\d+", self.get_name())  # Find digits in the string
                 if match:
                     return match.group()
 
-                return self.fim_interface.name
+                return self.get_name()
 
             fablib_data = self.get_fablib_data()
             if "dev" in fablib_data and fablib_data.get("dev"):
@@ -448,7 +432,7 @@ class Interface:
         Gets a name of the interface the operating system uses for this
         FABLib interface.
 
-        If the interface requires a FABRIC VLAN tag, the interface name retruned
+        If the interface requires a FABRIC VLAN tag, the interface name returned
         will be the VLAN tagged.
 
         :return: OS interface name
@@ -457,37 +441,9 @@ class Interface:
         .. deprecated:: 1.6.5
            Use `get_device_name()` instead.
         """
-        try:
-            # log.debug(f"iface: {self}")
-            os_iface = self.get_physical_os_interface_name()
-            vlan = self.get_vlan()
+        return self.get_device_name()
 
-            if vlan is not None:
-                os_iface = f"{os_iface}.{vlan}"
-        except:
-            os_iface = None
-
-        return os_iface
-
-    def get_mac(self) -> str:
-        """
-        Gets the MAC address of the interface.
-
-        :return: MAC address
-        :rtype: String
-        """
-        try:
-            if self.parent:
-                return self.parent.get_mac()
-            else:
-                if self.get_fim() and self.get_fim().get_property(
-                    pname="label_allocations"
-                ):
-                    return self.get_fim().get_property(pname="label_allocations").mac
-        except:
-            mac = None
-
-    def get_os_dev(self):
+    def get_os_dev(self) -> Optional[dict[str, str]]:
         """
         Gets json output of 'ip addr list' for the interface.
 
@@ -507,22 +463,6 @@ class Interface:
 
         return None
 
-    def get_physical_os_interface_name(self) -> str:
-        """
-        Gets a name of the physical interface the operating system uses for this
-        FABLib interface.
-
-        If the interface requires a FABRIC VLAN tag, the base interface name
-        will be returned (i.e. not the VLAN tagged interface)
-
-        :return: physical OS interface name
-        :rtype: String
-        """
-        try:
-            return self.get_os_dev().get("ifname")
-        except:
-            return None
-
     def config_vlan_iface(self):
         """
         Configure vlan interface
@@ -536,47 +476,26 @@ class Interface:
                 interface=self,
             )
 
-    def set_ip(self, ip=None, cidr=None, mtu=None):
-        """
-        Configures IP address for the interface inside the VM
-
-        :param ip: IP address
-        :type ip: String
-
-        :param cidr: CIDR
-        :type cidr: String
-
-        :param mtu: MTU
-        :type mtu: String
-
-        .. deprecated:: 1.7.0
-           Use `set_ip_os_interface()` instead.
-        """
-        if cidr:
-            cidr = str(cidr)
-        if mtu:
-            mtu = str(mtu)
-
-        self.get_node().set_ip_os_interface(
-            os_iface=self.get_physical_os_interface_name(),
-            vlan=self.get_vlan(),
-            ip=ip,
-            cidr=cidr,
-            mtu=mtu,
-        )
-
-    def ip_addr_add(self, addr, subnet):
+    def ip_addr_add(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network],
+    ):
         """
         Add an IP address to the interface in the node.
 
         :param addr: IP address
         :type addr: IPv4Address or IPv6Address
         :param subnet: subnet
-        :type subnet: IPv4Network or IPv4Network
+        :type subnet: IPv4Network or IPv6Network
         """
         self.get_node().ip_addr_add(addr, subnet, self)
 
-    def ip_addr_del(self, addr, subnet):
+    def ip_addr_del(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network],
+    ):
         """
         Delete an IP address to the interface in the node.
 
@@ -633,6 +552,7 @@ class Interface:
         if_labels = self.get_fim().get_property(pname="labels")
         if_labels.vlan = str(vlan)
         self.get_fim().set_properties(labels=if_labels)
+        self._invalidate_cache()
 
         return self
 
@@ -640,15 +560,16 @@ class Interface:
         """
         Set the Bandwidths on the FABRIC request.
 
-        :param addr: bw
-        :type addr: int
+        :param bw: bw
+        :type bw: int
         """
         if not bw:
-            return
+            return None
 
         if_capacities = self.get_fim().get_property(pname="capacities")
         if_capacities.bw = int(bw)
         self.get_fim().set_properties(capacities=if_capacities)
+        self._invalidate_cache()
 
         if (
             self.get_fim().get_peers()
@@ -661,67 +582,6 @@ class Interface:
 
         return self
 
-    def get_fim_interface(self) -> FimInterface:
-        """
-        Not recommended for most users.
-
-        Gets the node's FABRIC Information Model (fim) object. This method
-        is used to access data at a lower level than FABlib.
-
-        :return: the FABRIC model node
-        :rtype: fim interface
-
-        .. deprecated:: 1.7.0
-           Use `get_fim()` instead.
-        """
-        return self.get_fim()
-
-    def get_bandwidth(self) -> int:
-        """
-        Gets the bandwidth of an interface. Basic NICs claim 0 bandwidth but
-        are 100 Gbps shared by all Basic NICs on the host.
-
-        :return: bandwith
-        :rtype: String
-        """
-        bw = 0
-        fim = self.get_fim()
-        peers = None
-        if fim:
-            peers = fim.get_peers()
-
-        if fim and fim.capacities and fim.capacities.bw:
-            bw = fim.capacities.bw
-        if (
-            not bw
-            and fim
-            and peers
-            and peers[0]
-            and peers[0].capacities
-            and peers[0].capacities.bw
-        ):
-            bw = peers[0].capacities.bw
-        if (
-            not bw
-            and self.get_component()
-            and self.get_component().get_model() == "NIC_Basic"
-        ):
-            bw = 100
-        return bw
-
-    def get_vlan(self) -> str:
-        """
-        Gets the FABRIC VLAN of an interface.
-
-        :return: VLAN
-        :rtype: String
-        """
-        try:
-            vlan = self.get_fim().get_property(pname="labels").vlan
-        except:
-            vlan = None
-        return vlan
-
     def get_reservation_id(self) -> str or None:
         """
         Gets the reservation id
@@ -729,24 +589,24 @@ class Interface:
         :return: reservation id
         :rtype: String
         """
-        try:
-            return self.get_fim().get_property(pname="reservation_info").reservation_id
-        except:
-            return None
+        if self.get_network():
+            return self.get_network().get_reservation_id()
+        elif self.get_node():
+            return self.get_node().get_reservation_id()
+        return None
 
-    def get_reservation_state(self) -> str or None:
+    def get_reservation_state(self) -> Optional[str]:
         """
         Gets the reservation state
 
         :return: reservation state
         :rtype: String
         """
-        try:
-            return (
-                self.get_fim().get_property(pname="reservation_info").reservation_state
-            )
-        except:
-            return None
+        if self.get_network():
+            return self.get_network().get_reservation_state()
+        elif self.get_node():
+            return self.get_node().get_reservation_state()
+        return None
 
     def get_error_message(self) -> str:
         """
@@ -755,10 +615,11 @@ class Interface:
         :return: error
         :rtype: String
         """
-        try:
-            return self.get_fim().get_property(pname="reservation_info").error_message
-        except:
-            return ""
+        if self.get_network():
+            return self.get_network().get_error_message()
+        elif self.get_node():
+            return self.get_node().get_error_message()
+        return None
 
     def get_short_name(self):
         """
@@ -780,14 +641,128 @@ class Interface:
         )
         return self.get_name()[prefix_length:]
 
-    def get_name(self) -> str:
+    def get_mac(self) -> str:
         """
-        Gets the name of this interface.
+        Gets the MAC address of the interface.
 
-        :return: the name of this interface
-        :rtype: String
+        Results are cached for performance.
+
+        :return: the MAC address
+        :rtype: str
         """
-        return self.get_fim().name
+        if self._cached_mac is None:
+            try:
+                if self.parent:
+                    self._cached_mac = self.parent.get_mac()
+                elif self.fim_interface:
+                    label_allocations = self.fim_interface.get_property(
+                        pname="label_allocations"
+                    )
+                    if label_allocations:
+                        self._cached_mac = label_allocations.mac
+            except Exception:
+                self._cached_mac = None
+        return self._cached_mac if self._cached_mac else ""
+
+    def get_vlan(self) -> str:
+        """
+        Gets the VLAN of the interface.
+
+        Results are cached for performance.
+
+        :return: the VLAN
+        :rtype: str
+        """
+        if self._cached_vlan is None:
+            try:
+                if self.fim_interface:
+                    labels = self.fim_interface.get_property(pname="labels")
+                    if labels and labels.vlan:
+                        self._cached_vlan = str(labels.vlan)
+            except Exception:
+                self._cached_vlan = None
+        return self._cached_vlan if self._cached_vlan else ""
+
+    def get_bandwidth(self) -> int:
+        """
+        Gets the bandwidth of the interface in Gbps.
+
+        Basic NICs claim 0 bandwidth but are 100 Gbps shared by all
+        Basic NICs on the host.
+
+        Results are cached for performance.
+
+        :return: the bandwidth in Gbps
+        :rtype: int
+        """
+        if self._cached_bandwidth is None:
+            try:
+                bw = 0
+                if self.fim_interface:
+                    capacities = self.fim_interface.get_property(pname="capacities")
+                    if capacities and capacities.bw:
+                        bw = int(capacities.bw)
+                    if (
+                        not bw
+                        and self.fim_interface.get_peers()
+                        and self.fim_interface.get_peers()[0]
+                        and self.fim_interface.get_peers()[0].capacities
+                        and self.fim_interface.get_peers()[0].capacities.bw
+                    ):
+                        bw = int(self.fim_interface.get_peers()[0].capacities.bw)
+                    if (
+                        not bw
+                        and self.get_component()
+                        and self.get_component().get_model() == "NIC_Basic"
+                    ):
+                        bw = 100
+                self._cached_bandwidth = bw
+            except Exception:
+                self._cached_bandwidth = 0
+        return self._cached_bandwidth
+
+    def get_site(self) -> str:
+        """
+        Gets the site where the interface is located.
+
+        Results are cached for performance.
+
+        :return: the site name
+        :rtype: str
+        """
+        if self._cached_site is None:
+            try:
+                if self.get_node():
+                    self._cached_site = self.get_node().get_site()
+            except Exception:
+                self._cached_site = None
+        return self._cached_site if self._cached_site else ""
+
+    def get_physical_os_interface_name(self) -> str:
+        """
+        Gets a name of the physical interface the operating system uses for this
+        FABLib interface.
+
+        If the interface requires a FABRIC VLAN tag, the base interface name
+        will be returned (i.e. not the VLAN tagged interface)
+
+        Results are cached for performance.
+
+        :return: physical OS interface name
+        :rtype: str
+        """
+        if self._cached_physical_os_interface is None:
+            try:
+                os_dev = self.get_os_dev()
+                if os_dev:
+                    self._cached_physical_os_interface = os_dev.get("ifname")
+            except Exception:
+                self._cached_physical_os_interface = None
+        return (
+            self._cached_physical_os_interface
+            if self._cached_physical_os_interface
+            else ""
+        )
 
     def get_component(self) -> Component:
         """
@@ -815,15 +790,6 @@ class Interface:
         except Exception:
             return ""
 
-    def get_site(self) -> str:
-        """
-        Gets the site this interface's component is on.
-
-        :return: the site this interface is on
-        :rtype: str
-        """
-        return self.get_node().get_site()
-
     def get_slice(self) -> Slice:
         """
         Gets the FABLIB slice this interface's node is attached to.
@@ -845,7 +811,7 @@ class Interface:
         else:
             return self.get_component().get_node()
 
-    def get_network(self) -> NetworkService:
+    def get_network(self) -> Optional[NetworkService]:
         """
         Gets the network this interface is on.
 
@@ -870,6 +836,7 @@ class Interface:
                         f"Interface network found. interface {self.get_name()}, network {self.network.get_name()}"
                     )
                     return self.network
+            return None
 
     # fablib.Interface.get_ip_link()
     def get_ip_link(self):
@@ -939,7 +906,6 @@ class Interface:
             addrs = json.loads(stdout)
 
             dev = self.get_device_name()
-            # print(f"dev: {dev}")
 
             if dev is None:
                 return addrs
@@ -988,68 +954,6 @@ class Interface:
         """
         return self.fim_interface
 
-    def set_user_data(self, user_data: dict):
-        """
-        Set the user data for the interface.
-
-        This method stores the given user data dictionary as a JSON string
-        in the FIM object associated with the interface.
-
-        :param user_data: The user data to be set.
-        :type user_data: dict
-        :return: None
-        """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self):
-        """
-        Retrieve the user data for the interface.
-
-        This method fetches the user data stored in the FIM object associated
-        with the interface and returns it as a dictionary. If an error occurs,
-        it returns an empty dictionary.
-
-        :return: The user data dictionary.
-        :rtype: dict
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except Exception as e:
-            return {}
-
-    def get_fablib_data(self):
-        """
-        Retrieve the 'fablib_data' from the user data.
-
-        This method extracts and returns the 'fablib_data' field from the
-        user data dictionary. If an error occurs or the field is not present,
-        it returns an empty dictionary.
-
-        :return: The 'fablib_data' dictionary.
-        :rtype: dict
-        """
-        try:
-            return self.get_user_data()["fablib_data"]
-        except:
-            return {}
-
-    def set_fablib_data(self, fablib_data: dict):
-        """
-        Set the 'fablib_data' in the user data.
-
-        This method updates the 'fablib_data' field in the user data dictionary
-        and stores the updated user data back in the FIM.
-
-        :param fablib_data: The 'fablib_data' to be set.
-        :type fablib_data: dict
-        :return: None
-        """
-        user_data = self.get_user_data()
-        user_data["fablib_data"] = fablib_data
-        self.set_user_data(user_data)
-
     def set_network(self, network: NetworkService):
         """
         Set the network for the interface.
@@ -1071,7 +975,7 @@ class Interface:
 
         return self
 
-    def set_ip_addr(self, addr: ipaddress = None, mode: str = None):
+    def set_ip_addr(self, addr: Optional[ipaddress] = None, mode: str = None):
         """
         Set the IP address for the interface.
 
@@ -1191,8 +1095,14 @@ class Interface:
         - If the mode is 'CONFIG' or 'AUTO', it configures the interface with the assigned IP address and subnet.
         - If the mode is 'MANUAL', it does not perform any automatic configuration.
 
+        When nmcli backend is available, uses a consolidated nmcli flow for
+        persistent, reboot-safe configuration. For FabNetv4Ext/FabNetv6Ext
+        networks, also configures Policy-Based Routing.
+
         :return: None
         """
+        from fabrictestbed.slice_editor import ServiceType
+
         self.config_vlan_iface()
         network = self.get_network()
         if not network:
@@ -1215,18 +1125,124 @@ class Interface:
             fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
             self.set_fablib_data(fablib_data)
 
-        self.ip_link_up()
+        if mode not in [self.CONFIG, self.AUTO]:
+            # Manual mode; just bring the link up via legacy path
+            self.ip_link_up()
+            return
 
-        if mode in [self.CONFIG, self.AUTO]:
-            subnet = self.get_network().get_subnet()
-            addr = fablib_data.get(self.ADDR)
-            if addr and subnet:
-                self.un_manage_interface()
-                self.ip_link_up()
-                self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+        subnet = self.get_network().get_subnet()
+        addr = fablib_data.get(self.ADDR)
+        if not addr or not subnet:
+            self.ip_link_up()
+            return
+
+        node = self.get_node()
+        backend = node._get_effective_backend()
+
+        if backend == "nmcli":
+            try:
+                self._config_nmcli(node, network, addr, subnet)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli config failed for {self.get_name()}, "
+                    f"falling back to legacy: {e}"
+                )
+
+        # Legacy path
+        self.un_manage_interface()
+        self.ip_link_up()
+        self.ip_addr_add(addr=addr, subnet=ipaddress.ip_network(subnet))
+
+    def _config_nmcli(self, node, network, addr: str, subnet: str):
+        """
+        Configure the interface using nmcli for persistent, reboot-safe config.
+
+        Handles all network types including PBR for FabNetv4Ext/FabNetv6Ext.
+
+        :param node: the Node object
+        :param network: the NetworkService
+        :param addr: IP address string
+        :param subnet: subnet string
+        """
+        from fabrictestbed.slice_editor import ServiceType
+
+        device_name = self.get_device_name()
+        conn_name = node._nm_conn_name(device_name)
+        ip_version = node._detect_ip_version_for_interface(self)
+        subnet_net = ipaddress.ip_network(subnet)
+        cidr = f"{addr}/{subnet_net.prefixlen}"
+
+        # Determine if this is a VLAN interface
+        vlan = self.get_vlan()
+        physical_iface = self.get_physical_os_interface_name()
+        is_vlan = vlan is not None and device_name != physical_iface
+
+        # Create or modify the connection with the IP address
+        if is_vlan:
+            node._nmcli_ensure_connection(
+                conn_name=conn_name,
+                ifname=device_name,
+                ip_version=ip_version,
+                addresses=cidr,
+                conn_type="vlan",
+                vlan_id=str(vlan),
+                vlan_parent=physical_iface,
+            )
         else:
-            # Manual mode; do nothing.
-            pass
+            node._nmcli_ensure_connection(
+                conn_name=conn_name,
+                ifname=device_name,
+                ip_version=ip_version,
+                addresses=cidr,
+            )
+
+        network_type = network.get_type()
+        gateway = network.get_gateway()
+
+        if network_type in [ServiceType.FABNetv4Ext, ServiceType.FABNetv6Ext]:
+            # External networks: configure PBR
+            if gateway:
+                # Calculate the interface subnet for PBR route
+                iface_subnet = str(
+                    ipaddress.ip_network(f"{addr}/{subnet_net.prefixlen}", strict=False)
+                )
+                node._nmcli_configure_pbr(
+                    conn_name=conn_name,
+                    ip_version=ip_version,
+                    addr=addr,
+                    prefix=str(subnet_net.prefixlen),
+                    gateway=str(gateway),
+                    subnet=iface_subnet,
+                )
+        elif network_type in [ServiceType.FABNetv4, ServiceType.FABNetv6]:
+            # Internal L3 networks: never-default + fabric route
+            if gateway:
+                node._nmcli_configure_fabnet_routes(
+                    conn_name=conn_name,
+                    ip_version=ip_version,
+                    gateway=str(gateway),
+                    network_type=network_type,
+                )
+        else:
+            # L2 networks: IP only, no gateway or routes
+            node.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
+                quiet=True,
+            )
+
+        # Bring the connection up
+        node._nmcli_up(conn_name)
+
+        # Configure rp_filter for asymmetric routing tolerance
+        node.execute(
+            f"sudo sysctl -w net.{ip_version}.conf.all.rp_filter=2 > /dev/null 2>&1 || true",
+            quiet=True,
+        )
+        node.execute(
+            f"sudo sysctl -w net.{ip_version}.conf.{self.get_physical_os_interface_name()}.rp_filter=2 > /dev/null 2>&1 || true",
+            quiet=True,
+        )
 
     def add_mirror(self, port_name: str, name: str = "mirror", vlan: str = None):
         """
@@ -1255,11 +1271,16 @@ class Interface:
             net.remove_interface(self)
         if self.parent and self.parent.get_fim():
             self.parent.get_fim().remove_child_interface(name=self.get_name())
+            # Invalidate parent's interface cache so subsequent
+            # get_interfaces() calls don't return the deleted interface
+            self.parent.interfaces = {}
+            self.parent._fim_dirty = True
 
     def set_subnet(self, ipv4_subnet: str = None, ipv6_subnet: str = None):
         """
         Set subnet for the interface.
-        Used only for interfaces connected to L3VPN service where each interface could be connected to multiple subnets
+        Used only for interfaces connected to L3VPN service where each interface
+        could be connected to multiple subnets
 
         :param ipv4_subnet: ipv4 subnet
         :type ipv4_subnet: str
@@ -1281,6 +1302,7 @@ class Interface:
                 labels = Labels.update(labels, ipv6_subnet=ipv6_subnet)
 
             self.get_fim().set_property("labels", labels)
+            self._invalidate_cache()
         except Exception as e:
             log.error(f"Failed to set the ip subnet e: {e}")
             raise e
@@ -1292,11 +1314,13 @@ class Interface:
         :return: ipv4/ipv6 subnet associated with the interface
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().labels:
-            if self.get_fim().labels.ipv4_subnet:
-                return self.get_fim().labels.ipv4_subnet
-            if self.get_fim().labels.ipv6_subnet:
-                return self.get_fim().labels.ipv6_subnet
+        if self._cached_subnet is None:
+            if self.get_fim() and self.get_fim().labels:
+                if self.get_fim().labels.ipv4_subnet:
+                    self._cached_subnet = self.get_fim().labels.ipv4_subnet
+                if self.get_fim().labels.ipv6_subnet:
+                    self._cached_subnet = self.get_fim().labels.ipv6_subnet
+        return self._cached_subnet
 
     def get_peer_subnet(self):
         """
@@ -1305,11 +1329,13 @@ class Interface:
         :return: peer ipv4/ipv6 subnet associated with the interface
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            if self.get_fim().peer_labels.ipv4_subnet:
-                return self.get_fim().peer_labels.ipv4_subnet
-            if self.get_fim().peer_labels.ipv6_subnet:
-                return self.get_fim().peer_labels.ipv6_subnet
+        if self._cached_peer_subnet is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                if self.get_fim().peer_labels.ipv4_subnet:
+                    self._cached_peer_subnet = self.get_fim().peer_labels.ipv4_subnet
+                if self.get_fim().peer_labels.ipv6_subnet:
+                    self._cached_peer_subnet = self.get_fim().peer_labels.ipv6_subnet
+        return self._cached_peer_subnet
 
     def get_peer_asn(self):
         """
@@ -1318,8 +1344,10 @@ class Interface:
         :return: peer asn
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            return self.get_fim().peer_labels.asn
+        if self._cached_peer_asn is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                self._cached_peer_asn = self.get_fim().peer_labels.asn
+        return self._cached_peer_asn
 
     def get_peer_bgp_key(self):
         """
@@ -1328,8 +1356,10 @@ class Interface:
         :return: peer BGP Key
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            return self.get_fim().peer_labels.bgp_key
+        if self._cached_peer_bgp_key is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                self._cached_peer_bgp_key = self.get_fim().peer_labels.bgp_key
+        return self._cached_peer_bgp_key
 
     def get_peer_account_id(self):
         """
@@ -1338,8 +1368,10 @@ class Interface:
         :return: peer account id associated with the interface (Used when interface is peered to AWS via AL2S)
         :rtype: String
         """
-        if self.get_fim() and self.get_fim().peer_labels:
-            return self.get_fim().peer_labels.account_id
+        if self._cached_peer_account_id is None:
+            if self.get_fim() and self.get_fim().peer_labels:
+                self._cached_peer_account_id = self.get_fim().peer_labels.account_id
+        return self._cached_peer_account_id
 
     def get_interfaces(
         self, refresh: bool = False, output: str = "list"
@@ -1357,8 +1389,13 @@ class Interface:
         :rtype: Union[dict[str, Interface], list[Interface]]
         """
 
-        if len(self.interfaces) == 0 or refresh:
-            self.interfaces = {}
+        if self.interfaces and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self.interfaces
+            return list(self.interfaces.values())
+
+        self.interfaces = {}
+        if self.get_fim().interface_list:
             for fim_interface in self.get_fim().interface_list:
                 ch_iface = Interface(
                     component=self.get_component(),
@@ -1421,18 +1458,21 @@ class Interface:
             )
             self.interfaces[ch_iface.get_name()] = ch_iface
             return ch_iface
+        return None
 
-    def get_type(self) -> str:
+    def get_type(self) -> Optional[str]:
         """
         Get Interface type
 
         :return: get interface type
         :rtype: String
         """
-        if self.get_fim():
-            return self.get_fim().type
+        if self._cached_fim_type is None:
+            if self.get_fim():
+                self._cached_fim_type = str(self.get_fim().type)
+        return self._cached_fim_type
 
     def __is_shared_nic(self) -> bool:
-        if self.get_fim() and str(self.get_fim().type) == "SharedPort":
+        if self.get_type() == "SharedPort":
             return True
         return False

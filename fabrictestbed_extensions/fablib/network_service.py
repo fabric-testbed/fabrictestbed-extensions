@@ -33,35 +33,40 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+from fabrictestbed.external_api.orchestrator_client import SliverDTO
 from fim.slivers.path_info import Path
 from fim.user import ERO, Gateway
 from tabulate import tabulate
 
+from fabrictestbed_extensions.utils.utils import Utils
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
-    from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
 import ipaddress
 import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
-import jinja2
 from fabrictestbed.slice_editor import Capacities, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType, UserData
-from fim.slivers.network_service import NSLayer, ServiceType
+from fim.slivers.network_service import NetworkServiceSliver, NSLayer, ServiceType
 from fim.user.network_service import MirrorDirection
+
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 log = logging.getLogger("fablib")
 
 
-class NetworkService:
+class NetworkService(TemplateMixin):
     """
     A class for working with FABRIC network services.
     """
+
+    _show_title = "Network"
 
     network_service_map = {
         "L2Bridge": ServiceType.L2Bridge,
@@ -297,7 +302,7 @@ class NetworkService:
         name: str = None,
         mirror_interface_name: str = None,
         mirror_interface_vlan: str = None,
-        receive_interface: Interface or None = None,
+        receive_interface: Optional[Interface] = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
@@ -368,9 +373,10 @@ class NetworkService:
         name: str = None,
         interfaces: List[Interface] = [],
         type: str = None,
-        user_data={},
+        user_data: dict = {},
         technology: str = None,
-        subnet: ipaddress.ip_network = None,
+        subnet: Optional[ipaddress.ip_network] = None,
+        site: str = None,
     ):
         """
         Not inteded for API use. See slice.add_l3network
@@ -402,6 +408,7 @@ class NetworkService:
             user_data=user_data,
             technology=technology,
             subnet=subnet,
+            site=site,
         )
 
     @staticmethod
@@ -482,7 +489,8 @@ class NetworkService:
         interfaces: List[Interface] = [],
         user_data: dict = {},
         technology: str = None,
-        subnet: ipaddress.ip_network = None,
+        subnet: Optional[ipaddress.ip_network] = None,
+        site: str = None,
     ):
         """
         Not intended for API use. See slice.add_l2network
@@ -509,19 +517,31 @@ class NetworkService:
                        It's ignored for any other services.
         :type ipaddress.ip_network
 
+        :param site: Site for L3 networks
+        :type site: str
+
         :return: the new fablib network service
         :rtype: NetworkService
         """
         fim_interfaces = []
         for interface in interfaces:
-            fim_interfaces.append(interface.get_fim_interface())
+            fim_interfaces.append(interface.get_fim())
 
         log.info(
             f"Create Network Service: Slice: {slice.get_name()}, Network Name: {name}, Type: {nstype}"
         )
         fim_network_service = slice.topology.add_network_service(
-            name=name, nstype=nstype, interfaces=fim_interfaces, technology=technology
+            name=name,
+            nstype=nstype,
+            interfaces=fim_interfaces,
+            technology=technology,
         )
+
+        if (
+            site is not None
+            and nstype in NetworkService.__get_fim_l3network_service_types()
+        ):
+            fim_network_service.site = site
 
         if subnet:
             if nstype == ServiceType.FABNetv4:
@@ -581,7 +601,8 @@ class NetworkService:
         """
         Gets a particular L3 network service from this slice.
 
-
+        :param slice: the fabric slice to build this network on
+        :type slice: Slice
         :param name: Name network
         :type name: String
         :return: network services on this slice
@@ -608,7 +629,6 @@ class NetworkService:
         topology = slice.get_fim_topology()
 
         rtn_network_services = []
-        fim_network_service = None
         for net_name, net in topology.network_services.items():
             if (
                 str(net.get_property("type"))
@@ -655,7 +675,6 @@ class NetworkService:
         topology = slice.get_fim_topology()
 
         rtn_network_services = {}
-        fim_network_service = None
         for net_name, net in topology.network_services.items():
             if (
                 str(net.get_property("type"))
@@ -675,6 +694,8 @@ class NetworkService:
         """
         Gest a particular network service from this slice.
 
+        :param slice: the fablib slice from which to get the network services
+        :type slice: Slice
         :param name: the name of the network service to search for
         :type name: str
         :return: a particular network service
@@ -687,7 +708,10 @@ class NetworkService:
         raise Exception(f"Network not found. Slice {slice.slice_name}, network {name}")
 
     def __init__(
-        self, slice: Slice = None, fim_network_service: FimNetworkService = None
+        self,
+        slice: Slice = None,
+        fim_network_service: FimNetworkService = None,
+        name: str = None,
     ):
         """
         .. note::
@@ -700,12 +724,16 @@ class NetworkService:
         :param fim_network_service: the FIM network service to set as
             instance state
         :type fim_network_service: FimNetworkService
+
+        :param name: the name of the network service
+        :type name: str
         """
         super().__init__()
         self.fim_network_service = fim_network_service
         self.slice = slice
 
         self.interfaces = None
+        self.sliver = None
 
         try:
             if self.slice.isStable():
@@ -715,8 +743,39 @@ class NetworkService:
         except:
             pass
 
-        self.sliver = None
         self.lock = threading.Lock()
+
+        # Caching support
+        self._cached_type: Optional[str] = None
+        self._cached_layer: Optional[str] = None
+        self._cached_subnet: Optional[Union[IPv4Network, IPv6Network]] = None
+        self._cached_gateway: Optional[Union[IPv4Address, IPv6Address]] = None
+
+        self._interfaces_cache: Dict[str, Interface] = {}
+
+    def _invalidate_cache(self):
+        """Invalidate all cached properties."""
+        super(NetworkService, self)._invalidate_cache()
+
+        self._cached_type = None
+        self._cached_layer = None
+        self._cached_subnet = None
+        self._cached_gateway = None
+
+        self._interfaces_cache = {}
+        self.interfaces = None
+
+    def update(self, fim_network_service: FimNetworkService = None):
+        """
+        Update the network service with new FIM data.
+
+        :param fim_network_service: The new FIM network service data
+        :type fim_network_service: FimNetworkService
+        """
+        if fim_network_service:
+            self.fim_network_service = fim_network_service
+            self._invalidate_cache()
+            self._fim_dirty = False
 
     def __str__(self):
         """
@@ -741,15 +800,6 @@ class NetworkService:
 
         return tabulate(table)  # , headers=["Property", "Value"])
 
-    def toJson(self):
-        """
-        Returns the network attributes as a json string
-
-        :return: network attributes as json string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -769,100 +819,46 @@ class NetworkService:
             "error": "Error",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: List[str] = None):
         """
-        Returns the network attributes as a dictionary
+        Returns the network attributes as a dictionary.
 
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to skip
+        :type skip: List[str]
         :return: network attributes as dictionary
         :rtype: dict
         """
-        return {
-            "id": str(self.get_reservation_id()),
-            "name": str(self.get_name()),
-            "layer": str(self.get_layer()),
-            "type": str(self.get_type()),
-            "site": str(self.get_site()),
-            "subnet": str(self.get_subnet()),
-            "gateway": str(self.get_gateway()),
-            "state": str(self.get_reservation_state()),
-            "error": str(self.get_error_message()),
-        }
+        if skip is None:
+            skip = []
 
-    def generate_template_context(self):
-        context = self.toDict()
+        if self._cached_dict is None:
+            d = {}
+            d["id"] = str(self.get_reservation_id())
+            d["name"] = str(self.get_name())
+            d["layer"] = str(self.get_layer())
+            d["type"] = str(self.get_type())
+            d["site"] = str(self.get_site())
+            d["subnet"] = str(self.get_subnet())
+            d["gateway"] = str(self.get_gateway())
+            d["state"] = str(self.get_reservation_state())
+            d["error"] = str(self.get_error_message())
+            self._cached_dict = d
+
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
+
+    def generate_template_context(self, skip: List[str] = None):
+        context = self.toDict(skip=skip)
         context["interfaces"] = []
-        # for interface in self.get_interfaces():
-        #    context["interfaces"].append(interface.get_name())
 
         return context
 
-    def get_template_context(self):
-        return self.get_slice().get_template_context(self)
-
-    def render_template(self, input_string):
-        environment = jinja2.Environment()
+    def _configure_template_environment(self, environment):
         environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context())
-
-        return output_string
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Show a table containing the current network attributes.
-
-        There are several output options: "text", "pandas", and "json"
-        that determine the format of the output that is returned and
-        (optionally) displayed/printed.  This is controlled by the
-        parameter ``output``, which can be one of:
-
-        - ``"text"``: string formatted with tabular
-        - ``"pandas"``: pandas dataframe
-        - ``"json"``: string in json format
-
-        :param output: Output format (``"text"``, ``"pandas"``, or
-            ``"json"``)
-        :type output: str
-
-        :param fields: List of fields to show.  JSON output will
-            include all available fields.  Example:
-            ``fields=['Name','State']``
-        :type fields: List[str]
-
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-
-        :return: table in format specified by output parameter
-        :rtype: Object
-        """
-
-        data = self.toDict()
-
-        # fields = ["ID", "Name", "Layer", "Type", "Site",
-        #        "Gateway", "Subnet","State", "Error",
-        #         ]
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        node_table = self.get_fablib_manager().show_table(
-            data,
-            fields=fields,
-            title="Network",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return node_table
 
     def get_slice(self) -> Slice:
         """
@@ -873,52 +869,63 @@ class NetworkService:
         """
         return self.slice
 
-    def get_fablib_manager(self):
-        """
-        Get a reference to :py:class:`.FablibManager`.
-        """
-        return self.get_slice().get_fablib_manager()
-
-    def get_site(self) -> str or None:
+    def get_site(self) -> Optional[str]:
         """
         Gets site name on network service.
         """
-        try:
-            return self.get_sliver().fim_sliver.site
-        except Exception as e:
-            log.warning(f"Failed to get site: {e}")
-
+        sliver = self.get_sliver()
+        if sliver:
+            if isinstance(sliver, SliverDTO):
+                return sliver.site
+            elif isinstance(sliver, NetworkServiceSliver):
+                return sliver.site
+            return None
+        else:
             return None
 
-    def get_layer(self) -> str or None:
+    def get_layer(self) -> Optional[str]:
         """
-        Gets the layer of the network services (L2 or L3)
+        Gets the layer of the network services (L2 or L3).
+
+        Results are cached for performance.
 
         :return: L2 or L3
         :rtype: String
         """
-        try:
-            return self.get_fim().get_property(pname="layer")
-            # return self.get_sliver().fim_sliver.layer
-        except Exception as e:
-            log.warning(f"Failed to get layer: {e}")
-            return None
+        if self._cached_layer is None:
+            try:
+                if self.get_fim():
+                    layer = self.get_fim().get_property(pname="layer")
+                    self._cached_layer = layer if layer else None
+                else:
+                    self._cached_layer = None
+            except Exception as e:
+                log.warning(f"Failed to get layer: {e}")
+                self._cached_layer = None
+        return self._cached_layer
 
     def get_type(self):
         """
-        Gets the type of the network services
+        Gets the type of the network services.
+
+        Results are cached for performance.
 
         :return: network service types
         :rtype: String
         """
-        try:
-            return self.get_fim().type
-            # return self.get_sliver().fim_sliver.resource_type
-        except Exception as e:
-            log.warning(f"Failed to get type: {e}")
-            return None
+        if self._cached_type is None:
+            try:
+                if self.get_fim():
+                    ns_type = self.get_fim().get_property("type")
+                    self._cached_type = ns_type if ns_type else None
+                else:
+                    self._cached_type = None
+            except Exception as e:
+                log.warning(f"Failed to get type: {e}")
+                self._cached_type = None
+        return self._cached_type
 
-    def get_sliver(self) -> OrchestratorSliver:
+    def get_sliver(self) -> SliverDTO:
         """
         Gets the sliver.
         """
@@ -928,52 +935,38 @@ class NetworkService:
             )
         return self.sliver
 
-    def get_fim_network_service(self) -> FimNetworkService:
+    def get_gateway(self) -> Optional[Union[IPv4Address, IPv6Address]]:
         """
-        Not recommended for most users.
+        Gets the assigned gateway for a FABnetv L3 IPv6 or IPv4 network.
 
-        Gets the FABRIC network service this instance represents.
-
-        :return: the FIM network service
-        :rtype: FIMNetworkService
-        """
-        return self.fim_network_service
-
-    def get_error_message(self) -> str:
-        """
-        Gets the error messages
-
-        :return: network service types
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_network_service()
-                .get_property(pname="reservation_info")
-                .error_message
-            )
-        except:
-            return ""
-
-    def get_gateway(self) -> IPv4Address or IPv6Address or None:
-        """
-        Gets the assigend gateway for a FABnetv L3 IPv6 or IPv4 network
+        Results are cached for performance. Cache is invalidated when
+        ``set_gateway()`` or ``set_instantiated()`` is called.
 
         :return: gateway IP
         :rtype: IPv4Address or IPv6Network
         """
+        if self._cached_gateway is not None:
+            return self._cached_gateway
+
         try:
             gateway = None
 
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
-                    gateway = ipaddress.ip_address(
-                        self.get_sliver().fim_sliver.gateway.gateway
-                    )
-                    # if self.get_type() in [ServiceType.FABNetv6, ServiceType.FABNetv6Ext]:
-                #    gateway = IPv6Address(self.get_sliver().fim_sliver.gateway.gateway)
-                # elif self.get_type() in [ServiceType.FABNetv4, ServiceType.FABNetv4Ext]:
-                #    gateway = IPv4Address(self.get_sliver().fim_sliver.gateway.gateway)
+                    sliver = self.get_sliver()
+                    if isinstance(sliver, SliverDTO):
+                        # V2 path: SliverDTO has .gateway as a dict
+                        if sliver.sliver.get("Type") in ("FABNetv4", "FABNetv4Ext"):
+                            gateway = IPv4Address(sliver.gateway.get("ipv4"))
+                        else:
+                            gateway = IPv6Address(sliver.gateway.get("ipv6"))
+                    elif hasattr(sliver, "fim_sliver") and sliver.fim_sliver:
+                        # V1 path: OrchestratorSliver has .fim_sliver.gateway
+                        gateway = ipaddress.ip_address(
+                            sliver.fim_sliver.gateway.gateway
+                        )
+                    else:
+                        log.warning("Unknown sliver type in get_gateway")
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
@@ -982,15 +975,27 @@ class NetworkService:
                     except Exception as e:
                         gateway = None
             else:
-                gateway = f"{self.get_name()}.gateway"
+                # Not yet instantiated — check if gateway was explicitly
+                # set via set_gateway() (common for L2 networks in modify)
+                fablib_data = self.get_fablib_data()
+                try:
+                    gw_str = fablib_data.get("subnet", {}).get("gateway")
+                    if gw_str:
+                        gateway = ipaddress.ip_address(gw_str)
+                    else:
+                        gateway = f"{self.get_name()}.gateway"
+                except Exception:
+                    gateway = f"{self.get_name()}.gateway"
 
+            if gateway is not None:
+                self._cached_gateway = gateway
             return gateway
         except Exception as e:
             log.warning(f"Failed to get gateway: {e}")
 
     def get_available_ips(
         self, count: int = 256
-    ) -> List[IPv4Address or IPv6Address] or None:
+    ) -> Optional[List[IPv4Address or IPv6Address]]:
         """
         Gets the IPs available for a FABnet L3 network
 
@@ -1013,40 +1018,60 @@ class NetworkService:
         except Exception as e:
             log.warning(f"Failed to get_available_ips: {e}")
 
-    def get_public_ips(self) -> Union[List[IPv4Address] or List[IPv6Address] or None]:
+    def get_public_ips(self) -> Optional[Union[List[IPv4Address] or List[IPv6Address]]]:
         """
         Get list of public IPs assigned to the FabNetv*Ext service
 
         :return: List of Public IPs
         :rtype: List[IPv4Address] or List[IPv6Address] or None
         """
-        if self.get_fim_network_service().labels is not None:
-            if self.get_fim_network_service().labels.ipv4 is not None:
+        if self.get_fim().labels is not None:
+            if self.get_fim().labels.ipv4 is not None:
                 result = []
-                for x in self.get_fim_network_service().labels.ipv4:
+                for x in self.get_fim().labels.ipv4:
                     result.append(IPv4Address(x))
                 return result
-            elif self.get_fim_network_service().labels.ipv6 is not None:
+            elif self.get_fim().labels.ipv6 is not None:
                 result = []
-                for x in self.get_fim_network_service().labels.ipv6:
+                for x in self.get_fim().labels.ipv6:
                     result.append(IPv6Address(x))
                 return result
         return None
 
-    def get_subnet(self) -> IPv4Network or IPv6Network or None:
+    def get_subnet(self) -> Optional[Union[IPv4Network, IPv6Network]]:
         """
-        Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network
+        Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network.
 
-        :return: gateway IP
+        Results are cached for performance. Cache is invalidated when
+        ``set_subnet()`` or ``set_instantiated()`` is called.
+
+        :return: subnet
         :rtype: IPv4Network or IPv6Network
         """
+        if self._cached_subnet is not None:
+            return self._cached_subnet
+
         try:
             subnet = None
             if self.is_instantiated():
                 if self.get_layer() == NSLayer.L3:
-                    subnet = ipaddress.ip_network(
-                        self.get_sliver().fim_sliver.gateway.subnet
-                    )
+                    sliver = self.get_sliver()
+                    if isinstance(sliver, SliverDTO):
+                        # V2 path: SliverDTO has .gateway as a dict
+                        if sliver.sliver.get("Type") in ("FABNetv4", "FABNetv4Ext"):
+                            subnet_key = "ipv4_subnet"
+                        else:
+                            subnet_key = "ipv6_subnet"
+                        gateway = sliver.gateway
+                        if gateway:
+                            subnet_str = gateway.get(subnet_key)
+                            if subnet_str:
+                                subnet = ipaddress.ip_network(subnet_str)
+                    elif hasattr(sliver, "fim_sliver") and sliver.fim_sliver:
+                        # V1 path: OrchestratorSliver has .fim_sliver.gateway
+                        subnet = ipaddress.ip_network(sliver.fim_sliver.gateway.subnet)
+                    else:
+                        log.warning("Unknown sliver type in get_subnet")
                 else:
                     # L2 Network
                     fablib_data = self.get_fablib_data()
@@ -1060,95 +1085,81 @@ class NetworkService:
                         except Exception as e:
                             log.warning(f"Failed to get L2 subnet: {e}")
             else:
-                subnet = f"{self.get_name()}.subnet"
+                # Not yet instantiated — check if subnet was explicitly
+                # set via set_subnet() (common for L2 networks in modify)
+                fablib_data = self.get_fablib_data()
+                if fablib_data.get("subnet") and fablib_data.get("subnet").get(
+                    "subnet"
+                ):
+                    try:
+                        subnet = ipaddress.ip_network(fablib_data["subnet"]["subnet"])
+                    except Exception:
+                        subnet = f"{self.get_name()}.subnet"
+                else:
+                    subnet = f"{self.get_name()}.subnet"
 
+            if subnet is not None:
+                self._cached_subnet = subnet
             return subnet
         except Exception as e:
             log.warning(f"Failed to get subnet: {e}")
 
-    def get_reservation_id(self) -> str or None:
-        """
-        Gets the reservation id of the network
-
-        :return: reservation ID
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_network_service()
-                .get_property(pname="reservation_info")
-                .reservation_id
-            )
-        except Exception as e:
-            log.debug(f"Failed to get reservation_id: {e}")
-            return None
-
-    def get_reservation_state(self) -> str or None:
-        """
-        Gets the reservation state of the network
-
-        :return: reservation state
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_network_service()
-                .get_property(pname="reservation_info")
-                .reservation_state
-            )
-        except Exception as e:
-            log.warning(f"Failed to get reservation_state: {e}")
-            return None
-
-    def get_name(self) -> str:
-        """
-        Gets the name of this network service.
-
-        :return: the name of this network service
-        :rtype: String
-        """
-        return self.get_fim_network_service().name
-
-    def get_interfaces(self) -> List[Interface]:
+    def get_interfaces(self, refresh: bool = False) -> List[Interface]:
         """
         Gets the interfaces on this network service.
 
+        Results are cached. Use refresh=True to force reload.
+
+        :param refresh: force refresh from FIM
+        :type refresh: bool
         :return: the interfaces on this network service
         :rtype: List[Interfaces]
         """
-        if not self.interfaces or len(self.interfaces) == 0:
-            self.interfaces = []
-            for interface in self.get_fim_network_service().interface_list:
-                log.debug(f"interface: {interface}")
+        if self._interfaces_cache and not refresh and not self._fim_dirty:
+            return list(self._interfaces_cache.values())
 
-                try:
-                    self.interfaces.append(
-                        self.get_slice().get_interface(name=interface.name)
-                    )
-                except:
-                    log.warning(f"interface not found: {interface.name}")
-                    """ Commenting this code as not sure why this was added for now.
-                    from fabrictestbed_extensions.fablib.interface import Interface
+        self._interfaces_cache = {}
+        self.interfaces = []
 
-                    self.interfaces.append(
-                        Interface(fim_interface=interface, node=self)
-                    )
-                    """
+        for interface in self.get_fim().interface_list:
+            log.debug(f"interface: {interface}")
+
+            try:
+                iface = self.get_slice().get_interface(name=interface.name)
+                self.interfaces.append(iface)
+                self._interfaces_cache[interface.name] = iface
+            except:
+                log.warning(f"interface not found: {interface.name}")
 
         return self.interfaces
 
-    def get_interface(self, name: str = None) -> Interface or None:
+    def get_interface(
+        self, name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
         """
         Gets a particular interface on this network service.
 
         :param name: the name of the interface to search for
         :type name: str
+        :param refresh: force refresh from FIM
+        :type refresh: bool
         :return: the particular interface
         :rtype: Interface
         """
-        for interface in self.get_fim_network_service().interface_list:
-            if name in interface.name:
-                return self.get_slice().get_interface(name=interface.name)
+        # Ensure cache is populated
+        if not self._interfaces_cache or refresh or self._fim_dirty:
+            self.get_interfaces(refresh=refresh)
+
+        # Check cache first (exact match)
+        if name in self._interfaces_cache:
+            return self._interfaces_cache[name]
+
+        # Fall back to substring match for compatibility
+        for iface_name, iface in self._interfaces_cache.items():
+            if name in iface_name:
+                return iface
+
+        return None
 
     def has_interface(self, interface: Interface) -> bool:
         """
@@ -1159,8 +1170,7 @@ class NetworkService:
         :return: whether this network service has interface
         :rtype: bool
         """
-        for fim_interface in self.get_fim_network_service().interface_list:
-            # print(f"fim_interface.name: {fim_interface.name}, interface.get_name(): {interface.get_name()}")
+        for fim_interface in self.get_fim().interface_list:
             if fim_interface.name.endswith(interface.get_name()):
                 return True
 
@@ -1170,41 +1180,40 @@ class NetworkService:
         """
         Gets the FABRIC information model (FIM) object.
         """
-        return self.get_fim_network_service()
-
-    def set_user_data(self, user_data: dict):
-        """
-        Set user data.
-
-        :param user_data: a `dict`.
-        """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self):
-        """
-        Get user data.
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except:
-            return {}
+        return self.fim_network_service
 
     def __replace_network_service(self, nstype: ServiceType):
         fim_interfaces = []
         name = self.get_name()
 
-        for interface in self.get_interfaces():
-            fim_interfaces.append(interface.get_fim_interface())
+        # Use cache if available — get_interfaces() may fail to resolve
+        # FIM connection-point names back to fablib Interface objects for
+        # pre-submit networks (e.g. facility ports).
+        if self._interfaces_cache:
+            current_interfaces = list(self._interfaces_cache.values())
+        else:
+            current_interfaces = self.get_interfaces()
+
+        for interface in current_interfaces:
+            fim_interfaces.append(interface.get_fim())
             self.get_fim().disconnect_interface(interface=interface.get_fim())
 
         user_data = self.get_user_data()
+        saved_cache = dict(self._interfaces_cache) if self._interfaces_cache else {}
         self.get_slice().topology.remove_network_service(name=self.get_name())
 
         self.fim_network_service = self.get_slice().topology.add_network_service(
             name=name, nstype=nstype, interfaces=fim_interfaces
         )
+        # Restore the interface cache so that subsequent add_interface()
+        # calls still see all previously connected interfaces
+        self._interfaces_cache = saved_cache
+        self.interfaces = current_interfaces
+        # Invalidate type/layer caches since the FIM service was replaced
+        # with a different nstype (e.g. L2Bridge → L2STS).  Do NOT call
+        # _invalidate_cache() here as it would also clear _interfaces_cache.
+        self._cached_type = None
+        self._cached_layer = None
         self.set_user_data(user_data)
 
     def add_interface(self, interface: Interface):
@@ -1219,8 +1228,18 @@ class NetworkService:
 
         iface_fablib_data = interface.get_fablib_data()
 
-        new_interfaces = self.get_interfaces()
-        new_interfaces.append(interface)
+        # Build new_interfaces from cache if populated (reliable for
+        # pre-submit), falling back to FIM-based resolution.  The FIM
+        # resolution path (get_interfaces) can silently lose interfaces
+        # whose FIM connection-point names don't match fablib names
+        # (e.g. facility ports), so the cache is the source of truth
+        # when available.
+        if self._interfaces_cache:
+            new_interfaces = list(self._interfaces_cache.values())
+        else:
+            new_interfaces = self.get_interfaces()
+        if interface not in new_interfaces:
+            new_interfaces.append(interface)
 
         curr_nstype = self.get_type()
         if self.get_layer() == NSLayer.L2:
@@ -1230,8 +1249,10 @@ class NetworkService:
             )
             if curr_nstype != new_nstype:
                 self.__replace_network_service(new_nstype)
-            else:
-                self.get_fim().connect_interface(interface=interface.get_fim())
+            self.get_fim().connect_interface(interface=interface.get_fim())
+            # Add to cache so subsequent add_interface calls see all
+            # previously connected interfaces
+            self._interfaces_cache[interface.get_name()] = interface
         elif self.get_layer() == NSLayer.L3 and self.is_instantiated():
             if interface.get_site() != self.get_site():
                 raise Exception("L3 networks can only include nodes from one site")
@@ -1256,6 +1277,8 @@ class NetworkService:
 
         if self.get_layer() == NSLayer.L3:
             self.get_fim().connect_interface(interface=interface.get_fim())
+            # Add to cache after L3 connect as well
+            self._interfaces_cache[interface.get_name()] = interface
 
     def remove_interface(self, interface: Interface):
         """
@@ -1265,7 +1288,11 @@ class NetworkService:
 
         self.free_ip(interface.get_ip_addr())
 
-        interfaces = self.get_interfaces()
+        # Use cache if available for accurate interface tracking
+        if self._interfaces_cache:
+            interfaces = list(self._interfaces_cache.values())
+        else:
+            interfaces = self.get_interfaces()
 
         if interface in interfaces:
             interfaces.remove(interface)
@@ -1282,6 +1309,13 @@ class NetworkService:
         interface.set_fablib_data(iface_fablib_data)
 
         self.get_fim().disconnect_interface(interface=interface.get_fim())
+        # Remove from cache instead of clearing entirely
+        iface_name = interface.get_name()
+        self._interfaces_cache.pop(iface_name, None)
+        # Also remove by iterating in case the key doesn't match exactly
+        self._interfaces_cache = {
+            k: v for k, v in self._interfaces_cache.items() if v is not interface
+        }
 
     def delete(self):
         """
@@ -1291,25 +1325,11 @@ class NetworkService:
             ifs.network = None
 
         self.get_slice().get_fim_topology().remove_network_service(name=self.get_name())
+        # Mark slice topology as dirty so cached network/interface lists
+        # get refreshed on next access
+        self.get_slice()._topology_dirty = True
 
-    def get_fablib_data(self):
-        """
-        Get value associated with `fablib_data` key of user data.
-        """
-        try:
-            return self.get_user_data()["fablib_data"]
-        except:
-            return {}
-
-    def set_fablib_data(self, fablib_data: dict):
-        """
-        Set value associated with `fablib_data` key of user data.
-        """
-        user_data = self.get_user_data()
-        user_data["fablib_data"] = fablib_data
-        self.set_user_data(user_data)
-
-    def set_subnet(self, subnet: IPv4Network or IPv6Network):
+    def set_subnet(self, subnet: Union[IPv4Network, IPv6Network]):
         """
         Add subnet info to the network service.
         """
@@ -1319,8 +1339,9 @@ class NetworkService:
         fablib_data["subnet"]["subnet"] = str(subnet)
         fablib_data["subnet"]["allocated_ips"] = []
         self.set_fablib_data(fablib_data)
+        self._cached_subnet = None
 
-    def set_gateway(self, gateway: IPv4Address or IPv6Address):
+    def set_gateway(self, gateway: Union[IPv4Address, IPv6Address]):
         """
         Add gateway info to the network service.
         """
@@ -1329,6 +1350,7 @@ class NetworkService:
             fablib_data["subnet"] = {}
         fablib_data["subnet"]["gateway"] = str(gateway)
         self.set_fablib_data(fablib_data)
+        self._cached_gateway = None
 
     def get_allocated_ips(self):
         """
@@ -1343,7 +1365,7 @@ class NetworkService:
         except Exception as e:
             return []
 
-    def set_allocated_ip(self, addr: IPv4Address or IPv6Address = None):
+    def set_allocated_ip(self, addr: Optional[Union[IPv4Address, IPv6Address]] = None):
         """
         Add ``addr`` to the list of allocated IPs.
         """
@@ -1354,7 +1376,7 @@ class NetworkService:
         allocated_ips.append(str(addr))
         self.set_fablib_data(fablib_data)
 
-    def allocate_ip(self, addr: IPv4Address or IPv6Address = None):
+    def allocate_ip(self, addr: Optional[Union[IPv4Address, IPv6Address]] = None):
         """
         Allocate an IP for the network service.
         """
@@ -1381,7 +1403,7 @@ class NetworkService:
         finally:
             self.lock.release()
 
-    def set_allocated_ips(self, allocated_ips: list[IPv4Address or IPv6Address]):
+    def set_allocated_ips(self, allocated_ips: list[Union[IPv4Address, IPv6Address]]):
         """
         Set a list of IPs to be "allocated IPs".
         """
@@ -1396,7 +1418,7 @@ class NetworkService:
         fablib_data["subnet"]["allocated_ips"] = allocated_ips_strs
         self.set_fablib_data(fablib_data)
 
-    def free_ip(self, addr: IPv4Address or IPv6Address):
+    def free_ip(self, addr: Union[IPv4Address, IPv6Address]):
         """
         Remove an IP from the list of allocated IPs.
         """
@@ -1413,7 +1435,7 @@ class NetworkService:
         """
         Mark a list of IPs as publicly routable.
         """
-        labels = self.fim_network_service.labels
+        labels = self.get_fim().labels
         if labels is None:
             labels = Labels()
         if self.fim_network_service.type == ServiceType.FABNetv4Ext:
@@ -1423,6 +1445,7 @@ class NetworkService:
             labels = Labels.update(labels, ipv6=ipv6)
 
         self.fim_network_service.set_properties(labels=labels)
+        self._invalidate_cache()
 
     def init_fablib_data(self):
         """
@@ -1453,6 +1476,10 @@ class NetworkService:
         fablib_data = self.get_fablib_data()
         fablib_data["instantiated"] = str(instantiated)
         self.set_fablib_data(fablib_data)
+        # Invalidate subnet/gateway caches since instantiation state
+        # affects which code path is used to compute them
+        self._cached_subnet = None
+        self._cached_gateway = None
 
     def config(self):
         """
@@ -1543,6 +1570,7 @@ class NetworkService:
 
         ns_type = self.__calculate_l2_nstype(interfaces=interfaces, ero_enabled=True)
         self.get_fim().set_properties(type=ns_type, ero=ero)
+        self._invalidate_cache()
 
     def set_bandwidth(self, bw: int):
         """
@@ -1558,6 +1586,7 @@ class NetworkService:
 
         fim = self.get_fim()
         fim.capacities = Capacities(bw=bw)
+        self._invalidate_cache()
 
         for interface in self.get_interfaces():
             interface.set_bandwidth(bw=bw)

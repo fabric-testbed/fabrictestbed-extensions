@@ -54,7 +54,7 @@ import json
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from tabulate import tabulate
 
@@ -133,11 +133,12 @@ class Attestable_Switch(Node):
 
             assert len(ports) > 0
 
-            self.cfg = {}
-            self.cfg["ports"] = ports
-            self.cfg["portmap"] = {}
-            self.cfg["from_raw_image"] = from_raw_image
-            self.cfg["setup_and_configure"] = setup_and_configure
+            self.cfg = {
+                "ports": ports,
+                "portmap": {},
+                "from_raw_image": from_raw_image,
+                "setup_and_configure": setup_and_configure,
+            }
 
             for port in ports:
                 self.cfg["portmap"][port] = (
@@ -299,7 +300,7 @@ class Attestable_Switch(Node):
             result = as_name_prefix + orig_name
         return result
 
-    def get_name(self) -> str or None:
+    def get_name(self) -> Optional[str]:
         """
         Gets the name of the FABRIC node.
 

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missed tab spaces from PR#470. This is resolved using PR [#472]
 - Improve the performance of several get_ calls through caching (Issue [#453](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/453))
 - Enable Fabric token creation via CLI (Issue [#473](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/473))
+- MCP friendly API, persistent network config, and bug fixes (Issue [#477](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/477))
 
 
 ## 1.9.6

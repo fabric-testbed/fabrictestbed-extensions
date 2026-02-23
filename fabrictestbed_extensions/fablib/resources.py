@@ -42,6 +42,7 @@ from fim.user import interface, link, node
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.site import ResourceConstants, Site
+from fabrictestbed_extensions.utils.utils import Utils
 
 log = logging.getLogger("fablib")
 
@@ -744,7 +745,7 @@ class Resources:
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Sites",
@@ -794,7 +795,7 @@ class Resources:
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Hosts",
@@ -941,7 +942,7 @@ class Links(Resources):
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Links",
@@ -1116,7 +1117,7 @@ class FacilityPorts(Resources):
         else:
             pretty_names_dict = {}
 
-        return self.get_fablib_manager().list_table(
+        return Utils.list_table(
             table,
             fields=fields,
             title="Facility Ports",

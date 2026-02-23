@@ -55,9 +55,9 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
-import jinja2
 import paramiko
 from fabric_cf.orchestrator.orchestrator_proxy import Status
+from fabrictestbed.external_api.orchestrator_client import SliverDTO
 from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
 from paramiko_expect import SSHClientInteraction
@@ -65,10 +65,10 @@ from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.network_service import NetworkService
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
-    from fabric_cf.orchestrator.swagger_client import Sliver as OrchestratorSliver
 
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
@@ -79,14 +79,18 @@ from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component
 from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 log = logging.getLogger("fablib")
 
 
-class Node:
+class Node(TemplateMixin):
     """
     A class for working with FABRIC nodes.
     """
+
+    _default_skip = ["ssh_command"]
+    _show_title = "Node"
 
     default_cores = 2
     default_ram = 8
@@ -125,6 +129,8 @@ class Node:
         self.node_type = NodeType.VM
         self.components = {}
         self.interfaces = {}
+        self.sliver = None
+        self.username = None
         self.reservation_id = None
         self.cores = None
         self.ram = None
@@ -135,7 +141,25 @@ class Node:
         self.site = None
         self.management_ip = None
 
-        # Try to set the username.
+        # V2 specific: cached FIM properties (None means not yet cached)
+        # Must be initialized before set_username() which calls get_image()
+        self._cached_site: Optional[str] = None
+        self._cached_management_ip: Optional[str] = None
+        self._cached_image_type: Optional[str] = None
+        self._cached_image_ref: Optional[str] = None
+        self._cached_requested_disk: Optional[int] = None
+        self._cached_allocated_disk: Optional[int] = None
+        self._cached_requested_ram: Optional[int] = None
+        self._cached_allocated_ram: Optional[int] = None
+        self._cached_requested_cores: Optional[int] = None
+        self._cached_allocated_cores: Optional[int] = None
+        self._cached_instance_name: Optional[str] = None
+        self._cached_type: Optional[NodeType] = None
+
+        # Persistent network configuration backend: 'nmcli', 'netplan', or 'ip'
+        self._net_config_backend: Optional[str] = None
+        self._persistent_config: bool = True
+
         try:
             self.set_username()
         except:
@@ -147,15 +171,27 @@ class Node:
         except:
             pass
 
-        self.sliver = None
-
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
-    def get_fablib_manager(self):
+    def _invalidate_cache(self):
         """
-        Get a reference to :py:class:`.FablibManager`.
+        Invalidate all cached properties.
+
+        Called when the FIM node is updated.
         """
-        return self.slice.get_fablib_manager()
+        super(Node, self)._invalidate_cache()
+
+        self._cached_site = None
+        self._cached_management_ip = None
+        self._cached_image_type = None
+        self._cached_image_ref = None
+        self._cached_requested_disk = None
+        self._cached_allocated_disk = None
+        self._cached_requested_ram = None
+        self._cached_allocated_ram = None
+        self._cached_requested_cores = None
+        self._cached_allocated_cores = None
+        self._cached_instance_name = None
 
     def __str__(self):
         """
@@ -185,7 +221,7 @@ class Node:
 
         return tabulate(table)  # , headers=["Property", "Value"])
 
-    def get_sliver(self) -> OrchestratorSliver:
+    def get_sliver(self) -> SliverDTO:
         """
         Gets the node SM sliver.
 
@@ -201,43 +237,39 @@ class Node:
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = [],
+        avoid: List[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
-    ):
+    ) -> Node:
         """
-        Not intended for API call.  See: Slice.add_node()
+        Creates a new FABRIC node on the slice.
 
-        Creates a new FABRIC node and returns a fablib node with the
-        new node.
+        Not intended for API use. Use slice.add_node() instead.
 
         :param slice: the fablib slice to build the new node on
-        :type slice: Slice
-
+        :type slice: SliceV2
         :param name: the name of the new node
         :type name: str
-
         :param site: the name of the site to build the node on
         :type site: str
-
-        :param avoid: a list of node names to avoid
+        :param avoid: a list of site names to avoid
         :type avoid: List[str]
-
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
-
-        :param raise_exception: Raise exception in case of failure
+        :param raise_exception: Raise exception if validation fails
         :type raise_exception: bool
-
-        :return: a new fablib node
+        :return: a new Node
         :rtype: Node
         """
+        if avoid is None:
+            avoid = []
+
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(
-                avoid=avoid,
-            )
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
         log.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
+
+        # Create FIM node and NodeV2 instance
         node = Node(
             slice,
             slice.topology.add_node(name=name, site=site),
@@ -248,7 +280,6 @@ class Node:
             cores=Node.default_cores, ram=Node.default_ram, disk=Node.default_disk
         )
         node.set_image(Node.default_image)
-
         node.init_fablib_data()
 
         return node
@@ -269,18 +300,7 @@ class Node:
         :return: a new fablib node storing resources
         :rtype: Node
         """
-        ret_val = Node(slice, node)
-        ret_val.get_interfaces()
-        return ret_val
-
-    def toJson(self):
-        """
-        Returns the node attributes as a JSON string
-
-        :return: slice attributes as JSON string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
+        return Node(slice=slice, node=node)
 
     @staticmethod
     def get_pretty_name_dict():
@@ -308,78 +328,64 @@ class Node:
             "private_ssh_key_file": "Private SSH Key File",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: Optional[List[str]] = None):
         """
-        Returns the node attributes as a dictionary
+        Returns the node attributes as a dictionary.
 
-        :return: slice attributes as  dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: List[str]
+        :return: node attributes as dictionary
         :rtype: dict
         """
-        rtn_dict = {}
+        if skip is None:
+            skip = []
 
-        if "id" not in skip:
-            rtn_dict["id"] = str(self.get_reservation_id())
-        if "name" not in skip:
-            rtn_dict["name"] = str(self.get_name())
-        if "cores" not in skip:
-            rtn_dict["cores"] = str(self.get_cores())
-        if "ram" not in skip:
-            rtn_dict["ram"] = str(self.get_ram())
-        if "disk" not in skip:
-            rtn_dict["disk"] = str(self.get_disk())
-        if "image" not in skip:
-            rtn_dict["image"] = str(self.get_image())
-        if "image_type" not in skip:
-            rtn_dict["image_type"] = str(self.get_image_type())
-        if "host" not in skip:
-            rtn_dict["host"] = str(self.get_host())
-        if "site" not in skip:
-            rtn_dict["site"] = str(self.get_site())
-        if "username" not in skip:
-            rtn_dict["username"] = str(self.get_username())
-        if "management_ip" not in skip:
-            rtn_dict["management_ip"] = (
+        if self._cached_dict is None:
+            d = {}
+            d["id"] = str(self.get_reservation_id())
+            d["name"] = str(self.get_name())
+            d["cores"] = str(self.get_cores())
+            d["ram"] = str(self.get_ram())
+            d["disk"] = str(self.get_disk())
+            d["image"] = str(self.get_image())
+            d["image_type"] = str(self.get_image_type())
+            d["host"] = str(self.get_host())
+            d["site"] = str(self.get_site())
+            d["username"] = str(self.get_username())
+            d["management_ip"] = (
                 str(self.get_management_ip()).strip()
                 if str(self.get_reservation_state()) == "Active"
                 and self.get_management_ip()
                 else ""
-            )  # str(self.get_management_ip())
-        if "state" not in skip:
-            rtn_dict["state"] = str(self.get_reservation_state())
-        if "error" not in skip:
-            rtn_dict["error"] = str(self.get_error_message())
-        if "ssh_command" not in skip:
+            )
+            d["state"] = str(self.get_reservation_state())
+            d["error"] = str(self.get_error_message())
+            # ssh_command is deferred to avoid recursion: get_ssh_command()
+            # calls render_template() which calls toDict() again.
+            d["ssh_command"] = ""
+            d["public_ssh_key_file"] = str(self.get_public_key_file())
+            d["private_ssh_key_file"] = str(self.get_private_key_file())
+            self._cached_dict = d
+            # Now that _cached_dict exists, render_template can use it
+            # without recursion.
             if str(self.get_reservation_state()) == "Active":
-                rtn_dict["ssh_command"] = str(self.get_ssh_command())
-            else:
-                rtn_dict["ssh_command"] = ""
-        if "public_ssh_key_file" not in skip:
-            rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
-        if "private_ssh_key_file" not in skip:
-            rtn_dict["private_ssh_key_file"] = str(self.get_private_key_file())
+                self._cached_dict["ssh_command"] = str(self.get_ssh_command())
 
-        return rtn_dict
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def generate_template_context(self, skip: List[str] = ["ssh_command"]):
+    def generate_template_context(self, skip: List[str] = None):
+        if skip is None:
+            skip = []
+        if "ssh_command" not in skip:
+            skip.append("ssh_command")
         context = self.toDict(skip=skip)
         context["components"] = []
-        # for component in self.get_components():
-        #    context["components"].append(component.get_name())
-
-        #    context["components"].append(component.generate_template_context())
-
         return context
-
-    def get_template_context(self, skip: List[str] = ["ssh_command"]):
-        return self.get_slice().get_template_context(self, skip=skip)
-
-    def render_template(self, input_string, skip: List[str] = ["ssh_command"]):
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context(skip=skip))
-
-        return output_string
 
     def show(
         self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
@@ -430,11 +436,11 @@ class Node:
 
         def state_color(val):
             if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
+                color = f"{Constants.SUCCESS_LIGHT_COLOR}"
             elif val == "Configuring":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
+                color = f"{Constants.IN_PROGRESS_LIGHT_COLOR}"
             elif val == "Closed":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
+                color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
             return "background-color: %s" % color
@@ -444,24 +450,24 @@ class Node:
         else:
             pretty_names_dict = {}
 
-        if colors and self.get_fablib_manager().is_jupyter_notebook():
-            table = self.get_fablib_manager().show_table(
+        if colors and Utils.is_jupyter_notebook():
+            table = Utils.show_table(
                 data,
                 fields=fields,
-                title="Node",
+                title=self._show_title,
                 output="pandas",
                 quiet=True,
                 pretty_names_dict=pretty_names_dict,
             )
             table.applymap(state_color)
 
-            if quiet == False:
+            if quiet is False:
                 display(table)
         else:
-            table = self.get_fablib_manager().show_table(
+            table = Utils.show_table(
                 data,
                 fields=fields,
-                title="Node",
+                title=self._show_title,
                 output=output,
                 quiet=quiet,
                 pretty_names_dict=pretty_names_dict,
@@ -627,12 +633,6 @@ class Node:
 
             return False
 
-        # name_filter = lambda s: s['Name'] in set(ifaces)
-        # if filter_function != None:
-        #    filter_function = lambda x: filter_function(x) + name_filter(x)
-        # else:
-        #    filter_function = name_filter
-
         return self.get_slice().list_interfaces(
             fields=fields,
             output=output,
@@ -737,18 +737,6 @@ class Node:
 
         return networks
 
-    def get_fim_node(self) -> FimNode:
-        """
-        Not recommended for most users.
-
-        Gets the node's FABRIC Information Model (fim) object. This method
-        is used to access data at a lower level than FABlib.
-
-        :return: the FABRIC model node
-        :rtype: FIMNode
-        """
-        return self.fim_node
-
     def set_capacities(self, cores: int = 2, ram: int = 2, disk: int = 10):
         """
         Sets the capacities of the FABRIC node.
@@ -767,7 +755,8 @@ class Node:
         disk = int(disk)
 
         cap = Capacities(core=cores, ram=ram, disk=disk)
-        self.get_fim_node().set_properties(capacities=cap)
+        self.get_fim().set_properties(capacities=cap)
+        self._invalidate_cache()
 
     def set_instance_type(self, instance_type: str):
         """
@@ -776,9 +765,10 @@ class Node:
         :param instance_type: the name of the instance type to set
         :type instance_type: String
         """
-        self.get_fim_node().set_properties(
+        self.get_fim().set_properties(
             capacity_hints=CapacityHints(instance_type=instance_type)
         )
+        self._invalidate_cache()
 
     def set_username(self, username: str = None):
         """
@@ -789,40 +779,47 @@ class Node:
         :param username: Optional username parameter.  The username
             likely should be picked to match the image type.
         """
-        if self.get_fim_node().type == NodeType.Switch and not username:
-            self.username = Constants.FABRIC_USER
-            return
-        username = (
-            self.get_fablib_manager()
-            .get_os_images()
-            .get(self.get_image(), {})
-            .get("default_user")
-        )
-        if username is not None:
-            self.username = username
-        elif "default_centos10_stream" == self.get_image():
-            self.username = "cloud-user"
-        elif "default_centos9_stream" == self.get_image():
-            self.username = "cloud-user"
-        elif "centos" in self.get_image():
-            self.username = "centos"
-        elif "ubuntu" in self.get_image():
-            self.username = "ubuntu"
-        elif "rocky" in self.get_image():
-            self.username = "rocky"
-        elif "fedora" in self.get_image():
-            self.username = "fedora"
-        elif "cirros" in self.get_image():
-            self.username = "cirros"
-        elif "debian" in self.get_image():
-            self.username = "debian"
-        elif "freebsd" in self.get_image():
-            self.username = "freebsd"
-        elif "openbsd" in self.get_image():
-            self.username = "openbsd"
-        elif "kali" in self.get_image():
-            self.username = "kali"
-        else:
+        try:
+            if self.get_type() == NodeType.Switch and not username:
+                self.username = Constants.FABRIC_USER
+                return
+
+            username = (
+                self.get_fablib_manager()
+                .get_os_images()
+                .get(self.get_image(), {})
+                .get("default_user")
+            )
+            if username is not None:
+                self.username = username
+            elif self.get_image() is None:
+                self.username = None
+            elif "default_centos10_stream" == self.get_image():
+                self.username = "cloud-user"
+            elif "default_centos9_stream" == self.get_image():
+                self.username = "cloud-user"
+            elif "centos" in self.get_image():
+                self.username = "centos"
+            elif "ubuntu" in self.get_image():
+                self.username = "ubuntu"
+            elif "rocky" in self.get_image():
+                self.username = "rocky"
+            elif "fedora" in self.get_image():
+                self.username = "fedora"
+            elif "cirros" in self.get_image():
+                self.username = "cirros"
+            elif "debian" in self.get_image():
+                self.username = "debian"
+            elif "freebsd" in self.get_image():
+                self.username = "freebsd"
+            elif "openbsd" in self.get_image():
+                self.username = "openbsd"
+            elif "kali" in self.get_image():
+                self.username = "kali"
+            else:
+                self.username = None
+        except Exception as e:
+            log.error("Failed to set username parameter: %s", e)
             self.username = None
 
     def set_image(self, image: str, username: str = None, image_type: str = "qcow2"):
@@ -840,7 +837,8 @@ class Node:
         :param image_type: the image type to set
         :type image_type: String
         """
-        self.get_fim_node().set_properties(image_type=image_type, image_ref=image)
+        self.get_fim().set_properties(image_type=image_type, image_ref=image)
+        self._invalidate_cache()
         self.set_username(username=username)
 
     def set_host(self, host_name: str = None):
@@ -854,7 +852,8 @@ class Node:
         # example: host_name='renc-w2.fabric-testbed.net'
         labels = Labels()
         labels.instance_parent = host_name
-        self.get_fim_node().set_properties(labels=labels)
+        self.get_fim().set_properties(labels=labels)
+        self._invalidate_cache()
 
         # set an attribute used to get host before Submit
         self.host = host_name
@@ -867,7 +866,8 @@ class Node:
         :type host_name: String
         """
         # example: host_name='renc-w2.fabric-testbed.net'
-        self.get_fim_node().site = site
+        self.get_fim().site = site
+        self._invalidate_cache()
 
     def get_slice(self) -> Slice:
         """
@@ -878,141 +878,186 @@ class Node:
         """
         return self.slice
 
-    def get_name(self) -> str or None:
-        """
-        Gets the name of the FABRIC node.
-
-        :return: the name of the node
-        :rtype: String
-        """
-        try:
-            return self.get_fim_node().name
-        except:
-            return None
-
-    def get_instance_name(self) -> str or None:
+    def get_instance_name(self) -> Optional[str]:
         """
         Gets the instance name of the FABRIC node.
 
         :return: the instance name of the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().get_property(pname="label_allocations").instance
-        except:
-            return None
+        if self._cached_instance_name is None:
+            try:
+                if self.get_fim():
+                    label_allocations = self.get_fim().get_property(
+                        pname="label_allocations"
+                    )
+                    if label_allocations:
+                        self._cached_instance_name = label_allocations.instance
+            except Exception:
+                self._cached_instance_name = None
+        return self._cached_instance_name
 
-    def get_cores(self) -> int or None:
+    def get_cores(self) -> Optional[int]:
         """
         Gets the number of cores on the FABRIC node.
 
         :return: the number of cores on the node
         :rtype: int
         """
-        if not self.cores:
+        if self._cached_allocated_cores is None:
             try:
-                self.cores = (
-                    self.get_fim_node().get_property(pname="capacity_allocations").core
-                )
-            except:
-                return None
-        return self.cores
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(
+                        pname="capacity_allocations"
+                    )
+                    if capacities:
+                        self._cached_allocated_cores = (
+                            self.get_fim()
+                            .get_property(pname="capacity_allocations")
+                            .core
+                        )
+            except Exception:
+                self._cached_allocated_cores = None
+        return self._cached_allocated_cores if self._cached_allocated_cores else 0
 
-    def get_requested_cores(self) -> int or None:
+    def get_requested_cores(self) -> Optional[int]:
         """
         Gets the requested number of cores on the FABRIC node.
 
         :return: the requested number of cores on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacities").core
-        except:
-            return 0
+        if self._cached_requested_cores is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacities")
+                    if capacities:
+                        self._cached_requested_cores = (
+                            self.get_fim().get_property(pname="capacities").core
+                        )
+            except Exception:
+                self._cached_requested_cores = None
+        return self._cached_requested_cores if self._cached_requested_cores else 0
 
-    def get_ram(self) -> int or None:
+    def get_ram(self) -> Optional[int]:
         """
         Gets the amount of RAM on the FABRIC node.
 
         :return: the amount of RAM on the node
         :rtype: int
         """
-        if not self.ram:
+        if self._cached_allocated_ram is None:
             try:
-                self.ram = (
-                    self.get_fim_node().get_property(pname="capacity_allocations").ram
-                )
-            except:
-                return None
-        return self.ram
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(
+                        pname="capacity_allocations"
+                    )
+                    if capacities:
+                        self._cached_allocated_ram = (
+                            self.get_fim()
+                            .get_property(pname="capacity_allocations")
+                            .ram
+                        )
+            except Exception:
+                self._cached_allocated_ram = None
+        return self._cached_allocated_ram if self._cached_allocated_ram else 0
 
-    def get_requested_ram(self) -> int or None:
+    def get_requested_ram(self) -> Optional[int]:
         """
         Gets the requested amount of RAM on the FABRIC node.
 
         :return: the requested amount of RAM on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacities").ram
-        except:
-            return 0
-
-    def get_disk(self) -> int or None:
-        """
-        Gets the amount of disk space on the FABRIC node.
-
-        :return: the amount of disk space on the node
-        :rtype: int
-        """
-        if not self.disk:
+        if self._cached_requested_ram is None:
             try:
-                self.disk = (
-                    self.get_fim_node().get_property(pname="capacity_allocations").disk
-                )
-            except:
-                return None
-        return self.disk
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacities")
+                    if capacities:
+                        self._cached_requested_ram = (
+                            self.get_fim().get_property(pname="capacities").ram
+                        )
+            except Exception:
+                self._cached_requested_ram = None
+        return self._cached_requested_ram if self._cached_requested_ram else 0
 
-    def get_requested_disk(self) -> int or None:
+    def get_disk(self) -> Optional[int]:
         """
         Gets the amount of disk space on the FABRIC node.
 
         :return: the amount of disk space on the node
         :rtype: int
         """
-        try:
-            return self.get_fim_node().get_property(pname="capacities").disk
-        except:
-            return 0
+        if self._cached_allocated_disk is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(
+                        pname="capacity_allocations"
+                    )
+                    if capacities:
+                        self._cached_allocated_disk = (
+                            self.get_fim()
+                            .get_property(pname="capacity_allocations")
+                            .disk
+                        )
+            except Exception:
+                self._cached_allocated_disk = None
+        return self._cached_allocated_disk if self._cached_allocated_disk else 0
 
-    def get_image(self) -> str or None:
+    def get_requested_disk(self) -> Optional[int]:
+        """
+        Gets the amount of disk space on the FABRIC node.
+
+        :return: the amount of disk space on the node
+        :rtype: int
+        """
+        if self._cached_requested_disk is None:
+            try:
+                if self.get_fim():
+                    capacities = self.get_fim().get_property(pname="capacities")
+                    if capacities:
+                        self._cached_requested_disk = (
+                            self.get_fim().get_property(pname="capacities").disk
+                        )
+            except Exception:
+                self._cached_requested_disk = None
+        return self._cached_requested_disk if self._cached_requested_disk else 0
+
+    def get_image(self) -> Optional[str]:
         """
         Gets the image reference on the FABRIC node.
 
         :return: the image reference on the node
         :rtype: String
         """
-        if not self.image:
+        if self._cached_image_ref is None:
             try:
-                self.image = self.get_fim_node().image_ref
-            except:
-                return None
-        return self.image
+                if self.get_fim():
+                    self._cached_image_ref = self.get_fim().image_ref
+                else:
+                    self._cached_image_ref = None
+            except Exception:
+                self._cached_image_ref = None
+        return self._cached_image_ref
 
-    def get_image_type(self) -> str or None:
+    def get_image_type(self) -> Optional[str]:
         """
         Gets the image type on the FABRIC node.
 
         :return: the image type on the node
         :rtype: String
         """
-        try:
-            return self.get_fim_node().image_type
-        except:
-            return None
+        if self._cached_image_type is None:
+            try:
+                if self.get_fim():
+                    self._cached_image_type = self.get_fim().image_type
+                else:
+                    self._cached_image_type = None
+            except Exception:
+                self._cached_image_type = None
+        return self._cached_image_type
 
-    def get_host(self) -> str or None:
+    def get_host(self) -> Optional[str]:
         """
         Gets the hostname on the FABRIC node.
 
@@ -1021,165 +1066,75 @@ class Node:
         """
         if not self.host:
             try:
-                label_allocations = self.get_fim_node().get_property(
+                label_allocations = self.get_fim().get_property(
                     pname="label_allocations"
                 )
                 if label_allocations:
                     self.host = label_allocations.instance_parent
                 else:
-                    labels = self.get_fim_node().get_property(pname="labels")
+                    labels = self.get_fim().get_property(pname="labels")
                     if labels:
                         self.host = labels.instance_parent
             except:
                 return None
         return self.host
 
-    def get_site(self) -> str or None:
+    def get_site(self) -> str:
         """
-        Gets the sitename on the FABRIC node.
+        Gets the site this node is on.
 
-        :return: the sitename on the node
+        Results are cached for performance.
+
+        :return: the site this node is on
         :rtype: String
         """
-        if not self.site:
+        if self._cached_site is None:
             try:
-                self.site = self.get_fim_node().site
-            except:
-                return None
-        return self.site
+                self._cached_site = self.fim_node.site
+            except Exception:
+                self._cached_site = None
+        return self._cached_site if self._cached_site is not None else ""
 
-    def get_management_ip(self) -> str or None:
+    def get_type(self) -> Optional[NodeType]:
         """
-        Gets the management IP on the FABRIC node.
+        Gets the type of the network services.
+
+        Results are cached for performance.
+
+        :return: network service types
+        :rtype: NodeType
+        """
+        if self._cached_type is None:
+            try:
+                if self.get_fim():
+                    node_type = self.get_fim().get_property("type")
+                    self._cached_type = node_type if node_type else None
+                else:
+                    self._cached_type = None
+            except Exception as e:
+                log.warning(f"Failed to get type: {e}")
+                self._cached_type = None
+        return self._cached_type
+
+    def get_management_ip(self) -> str:
+        """
+        Gets the management IP of the node (IPv6).
+
+        Results are cached for performance.
 
         :return: management IP
         :rtype: String
         """
-        if not self.management_ip:
+        if self._cached_management_ip is None:
             try:
-                self.management_ip = self.get_fim_node().management_ip
-            except:
-                return None
-        return self.management_ip
-
-    def get_reservation_id(self) -> str or None:
-        """
-        Gets the reservation ID on the FABRIC node.
-
-        :return: reservation ID on the node
-        :rtype: String
-        """
-        if not self.reservation_id:
-            try:
-                self.reservation_id = (
-                    self.get_fim_node()
-                    .get_property(pname="reservation_info")
-                    .reservation_id
-                )
-            except:
-                return None
-        return self.reservation_id
-
-    def get_reservation_state(self) -> str or None:
-        """
-        Gets the reservation state on the FABRIC node.
-
-        :return: the reservation state on the node
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_node()
-                .get_property(pname="reservation_info")
-                .reservation_state
-            )
-        except:
-            return None
-
-    def get_error_message(self) -> str or None:
-        """
-        Gets the error message on the FABRIC node.
-
-        :return: the error message on the node
-        :rtype: String
-        """
-        try:
-            return (
-                self.get_fim_node().get_property(pname="reservation_info").error_message
-            )
-        except:
-            return ""
-
-    def get_interfaces(
-        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
-        """
-        Gets a list of the interfaces associated with the FABRIC node.
-
-        :param include_subs: Flag indicating if sub interfaces should be included
-        :type include_subs: bool
-
-        :param refresh: Refresh the interface object with latest Fim info
-        :type refresh: bool
-
-        :param output: Specify how the return type is expected; Possible values: list or dict
-        :type output: str
-
-        :return: a list or dict of interfaces on the node
-        :rtype: Union[dict[str, Interface], list[Interface]]
-        """
-        if refresh or len(self.interfaces) == 0:
-            self.interfaces = {}
-            for component in self.get_components(refresh=refresh):
-                c_interfaces = component.get_interfaces(
-                    include_subs=include_subs, refresh=refresh, output="dict"
-                )
-                self.interfaces.update(c_interfaces)
-
-        if output == "dict":
-            return self.interfaces
-        else:
-            return list(self.interfaces.values())
-
-    def get_interface(
-        self, name: str = None, network_name: str = None, refresh: bool = False
-    ) -> Interface or None:
-        """
-        Gets a particular interface associated with a FABRIC node.
-        Accepts either the interface name or a network_name.  If a
-        network name is used this method will return the interface on
-        the node that is connected to the network specified.  If a
-        name and network_name are both used, the interface name will
-        take precedence.
-
-        :param name: interface name to search for
-        :type name: str
-
-        :param network_name: network name to search for
-        :type name: str
-
-        :param refresh: Refresh the interface object with latest Fim info
-        :type refresh: bool
-
-        :raise Exception: if interface is not found
-
-        :return: an interface on the node
-        :rtype: Interface
-        """
-        if name is not None:
-            interface = self.get_interfaces(refresh=refresh, output="dict").get(name)
-            if interface is not None:
-                return interface
-        elif network_name is not None:
-            for interface in self.get_interfaces(refresh=refresh):
-                if (
-                    interface is not None
-                    and interface.get_network() is not None
-                    and interface.get_network().get_name() == network_name
-                ):
-                    return interface
-
-        raise Exception("Interface not found: {}".format(name))
+                self._cached_management_ip = str(self.fim_node.management_ip)
+            except Exception:
+                self._cached_management_ip = None
+        return (
+            self._cached_management_ip
+            if self._cached_management_ip is not None
+            else None
+        )
 
     def get_username(self) -> str:
         """
@@ -1305,16 +1260,36 @@ class Node:
         """
         Gets a list of components associated with this node.
 
-        :param refresh: Refresh the component object with latest Fim info
-        :type refresh: bool
+        Results are cached. Use refresh=True to force reload from FIM.
 
+        :param refresh: Refresh the component objects with latest FIM info
+        :type refresh: bool
         :return: a list of components on this node
         :rtype: List[Component]
         """
-        if refresh or len(self.components) == 0:
+        # Skip refresh if cache is valid
+        if self.components and not refresh and not self._fim_dirty:
+            return list(self.components.values())
+
+        # Get components from FIM (single access)
+        fim_components = self.fim_node.components
+
+        if refresh or not self.components:
             self.components.clear()
-            for component_name, component in self.get_fim_node().components.items():
-                self.components[component_name] = Component(self, component)
+
+        # Update or create component objects
+        for component_name, fim_component in fim_components.items():
+            if component_name not in self.components:
+                self.components[component_name] = Component(self, fim_component)
+            elif refresh:
+                # Update existing component's FIM reference
+                self.components[component_name].fim_component = fim_component
+
+        # Remove components no longer in FIM
+        current_names = set(fim_components.keys())
+        to_remove = [name for name in self.components if name not in current_names]
+        for name in to_remove:
+            del self.components[name]
 
         return list(self.components.values())
 
@@ -1322,25 +1297,29 @@ class Node:
         """
         Retrieve a component associated with this node.
 
-        :param name: Name of the component to retrieve.
-        :param refresh: Whether to refresh the component from the latest FIM data.
-        :return: The requested component.
-        :raises Exception: If the component is not found.
+        Results are cached. Use refresh=True to force reload from FIM.
+
+        :param name: Name of the component to retrieve
+        :type name: str
+        :param refresh: Whether to refresh the component from the latest FIM data
+        :type refresh: bool
+        :return: The requested component
+        :rtype: Component
+        :raises Exception: If the component is not found
         """
         try:
             calculated_name = Component.calculate_name(node=self, name=name)
 
-            if not refresh:
-                # Check both calculated and raw names
+            # Check cache first (if not forcing refresh)
+            if not refresh and not self._fim_dirty:
                 for key in (calculated_name, name):
                     if key in self.components:
                         return self.components[key]
 
-            # Attempt to retrieve from FIM node
-            fim_node = self.get_fim_node()
-            fim_comp = fim_node.components.get(
-                calculated_name
-            ) or fim_node.components.get(name)
+            # Get from FIM (single access)
+            fim_components = self.fim_node.components
+            fim_comp = fim_components.get(calculated_name) or fim_components.get(name)
+
             if not fim_comp:
                 raise Exception(f"Component not found in FIM: {name}")
 
@@ -1353,6 +1332,79 @@ class Node:
         except Exception as e:
             log.error(f"Error retrieving component '{name}': {e}", exc_info=True)
             raise Exception(f"Component not found: {name}")
+
+    def get_interfaces(
+        self, include_subs: bool = True, refresh: bool = False, output: str = "list"
+    ) -> Union[Dict[str, Interface], List[Interface]]:
+        """
+        Gets a list of the interfaces associated with the FABRIC node.
+
+        Results are cached. Use refresh=True to force reload from FIM.
+
+        :param include_subs: Flag indicating if sub interfaces should be included
+        :type include_subs: bool
+        :param refresh: Refresh the interface objects with latest FIM info
+        :type refresh: bool
+        :param output: Return type - 'list' or 'dict'
+        :type output: str
+        :return: interfaces on the node
+        :rtype: Union[Dict[str, Interface], List[Interface]]
+        """
+        # Skip refresh if cache is valid
+        if self.interfaces and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self.interfaces
+            return list(self.interfaces.values())
+
+        # Rebuild interface cache from components
+        self.interfaces.clear()
+        for component in self.get_components(refresh=refresh):
+            c_interfaces = component.get_interfaces(
+                include_subs=include_subs, refresh=refresh, output="dict"
+            )
+            self.interfaces.update(c_interfaces)
+
+        if output == "dict":
+            return self.interfaces
+        return list(self.interfaces.values())
+
+    def get_interface(
+        self, name: str = None, network_name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
+        """
+        Gets a particular interface associated with a FABRIC node.
+
+        Accepts either the interface name or a network_name. If a network name
+        is used, returns the interface connected to that network. If both name
+        and network_name are provided, name takes precedence.
+
+        :param name: interface name to search for
+        :type name: str
+        :param network_name: network name to search for
+        :type network_name: str
+        :param refresh: Refresh interface objects with latest FIM info
+        :type refresh: bool
+        :return: an interface on the node
+        :rtype: Interface
+        :raises Exception: if interface is not found
+        """
+        # Ensure interfaces are loaded
+        interfaces = self.get_interfaces(refresh=refresh, output="dict")
+
+        if name is not None:
+            interface = interfaces.get(name)
+            if interface is not None:
+                return interface
+        elif network_name is not None:
+            for interface in interfaces.values():
+                if (
+                    interface is not None
+                    and interface.get_network() is not None
+                    and interface.get_network().get_name() == network_name
+                ):
+                    return interface
+
+        raise Exception(f"Interface not found: {name or network_name}")
 
     def get_ssh_command(self) -> str:
         """
@@ -1842,7 +1894,7 @@ class Node:
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        management_ip = str(self.get_management_ip())
         if self.validIPAddress(management_ip) == "IPv4":
             src_addr = ("0.0.0.0", 22)
         elif self.validIPAddress(management_ip) == "IPv6":
@@ -2007,7 +2059,7 @@ class Node:
             start = time.time()
 
         # Get and test src and management_ips
-        management_ip = str(self.get_fim_node().get_property(pname="management_ip"))
+        management_ip = str(self.get_management_ip())
         if self.validIPAddress(management_ip) == "IPv4":
             src_addr = ("0.0.0.0", 22)
 
@@ -2416,6 +2468,439 @@ class Node:
 
         return dataplane_devs
 
+    # =========================================================================
+    # Persistent network configuration backend detection and helpers
+    # =========================================================================
+
+    def _detect_net_config_backend(self) -> str:
+        """
+        Detect the available network configuration backend.
+
+        Checks in order: nmcli (running NetworkManager), netplan, then falls
+        back to raw ip commands.
+
+        :return: 'nmcli', 'netplan', or 'ip'
+        :rtype: str
+        """
+        if self._net_config_backend is not None:
+            return self._net_config_backend
+
+        try:
+            stdout, stderr = self.execute(
+                "command -v nmcli",  # "command -v nmcli && nmcli general status",
+                quiet=True,
+            )
+            # nmcli general status outputs STATE as "connected" (or
+            # "connected-local", "connecting") when NetworkManager is
+            # running.  If NM is stopped, the command itself fails.
+            # if stdout and ("connected" in stdout.lower() or
+            #               "connecting" in stdout.lower()):
+            if stdout and stdout.strip():
+                self._net_config_backend = "nmcli"
+                log.info(f"{self.get_name()}: detected nmcli backend")
+                return self._net_config_backend
+        except Exception:
+            pass
+
+        try:
+            stdout, stderr = self.execute("command -v netplan", quiet=True)
+            if stdout and stdout.strip():
+                self._net_config_backend = "netplan"
+                log.info(f"{self.get_name()}: detected netplan backend")
+                return self._net_config_backend
+        except Exception:
+            pass
+
+        self._net_config_backend = "ip"
+        log.info(f"{self.get_name()}: falling back to ip backend")
+        return self._net_config_backend
+
+    def _get_effective_backend(self, persistent: Optional[bool] = None) -> str:
+        """
+        Return the effective backend considering the persistent flag.
+
+        :param persistent: Override for self._persistent_config. If False,
+            forces legacy 'ip' backend.
+        :return: 'nmcli', 'netplan', or 'ip'
+        """
+        use_persistent = (
+            persistent if persistent is not None else self._persistent_config
+        )
+        if not use_persistent:
+            return "ip"
+        return self._detect_net_config_backend()
+
+    def _unmanage_mgmt_interface(self):
+        """
+        When using nmcli backend, find the management interface and set it
+        to unmanaged so NetworkManager does not interfere with it.
+
+        The management interface is identified by looking up which device
+        carries the node's management IP address.
+        """
+        mgmt_ip = self.get_management_ip()
+        if not mgmt_ip:
+            log.warning(f"{self.get_name()}: no management IP, skipping unmanage")
+            return
+
+        try:
+            # Find the device that carries the management IP
+            stdout, stderr = self.execute(
+                f"ip -o addr show | grep '{mgmt_ip}/' | awk '{{print $2}}' | head -1",
+                quiet=True,
+            )
+            if stdout and stdout.strip():
+                mgmt_dev = stdout.strip()
+                self.execute(
+                    f"sudo nmcli device set {mgmt_dev} managed no",
+                    quiet=True,
+                )
+                log.info(
+                    f"{self.get_name()}: set management interface "
+                    f"{mgmt_dev} ({mgmt_ip}) to unmanaged"
+                )
+            else:
+                log.warning(
+                    f"{self.get_name()}: could not find device for "
+                    f"management IP {mgmt_ip}"
+                )
+        except Exception as e:
+            log.warning(
+                f"{self.get_name()}: failed to unmanage management interface: {e}"
+            )
+
+    @staticmethod
+    def _nm_conn_name(device_name: str) -> str:
+        """
+        Return a deterministic NetworkManager connection name for a device.
+
+        :param device_name: OS device name (e.g. 'enp7s0', 'enp7s0.100')
+        :return: connection name like 'fabric-enp7s0'
+        """
+        return f"fabric-{device_name}"
+
+    def _detect_ip_version_for_interface(self, interface: Interface) -> str:
+        """
+        Detect the IP version ('ipv4' or 'ipv6') for a given interface
+        based on its network service type.
+
+        :param interface: the fablib interface
+        :return: 'ipv4' or 'ipv6'
+        """
+        try:
+            network = interface.get_network()
+            if network and network.get_type() in [
+                ServiceType.FABNetv6,
+                ServiceType.FABNetv6Ext,
+            ]:
+                return "ipv6"
+        except Exception:
+            pass
+        return "ipv4"
+
+    # ---- nmcli helpers ----
+
+    def _nmcli_ensure_connection(
+        self,
+        conn_name: str,
+        ifname: str,
+        ip_version: str,
+        addresses: str,
+        conn_type: str = "ethernet",
+        vlan_id: Optional[str] = None,
+        vlan_parent: Optional[str] = None,
+        mtu: Optional[str] = None,
+    ):
+        """
+        Create or modify an nmcli connection.
+
+        :param conn_name: NM connection name (e.g. 'fabric-enp7s0')
+        :param ifname: OS interface name
+        :param ip_version: 'ipv4' or 'ipv6'
+        :param addresses: CIDR address (e.g. '10.0.0.1/24')
+        :param conn_type: 'ethernet' or 'vlan'
+        :param vlan_id: VLAN ID when conn_type is 'vlan'
+        :param vlan_parent: parent device when conn_type is 'vlan'
+        :param mtu: optional MTU value
+        """
+        # Check if connection already exists
+        stdout, stderr = self.execute(
+            f"sudo nmcli -t -f NAME c show 2>/dev/null | grep -Fx '{conn_name}' || true",
+            quiet=True,
+        )
+        exists = conn_name in (stdout or "").strip()
+
+        if not exists:
+            cmd = f"sudo nmcli c add type {conn_type} ifname {ifname} con-name {conn_name}"
+            if conn_type == "vlan" and vlan_id and vlan_parent:
+                cmd += f" dev {vlan_parent} id {vlan_id}"
+            cmd += (
+                f" {ip_version}.method manual"
+                f" {ip_version}.addresses {addresses}"
+                f" connection.autoconnect yes"
+            )
+            if mtu:
+                cmd += f" 802-3-ethernet.mtu {mtu}"
+            self.execute(cmd, quiet=True)
+        else:
+            cmd = (
+                f"sudo nmcli c mod {conn_name}"
+                f" {ip_version}.method manual"
+                f" {ip_version}.addresses {addresses}"
+                f" connection.autoconnect yes"
+            )
+            if mtu:
+                cmd += f" 802-3-ethernet.mtu {mtu}"
+            self.execute(cmd, quiet=True)
+
+    def _nmcli_up(self, conn_name: str):
+        """
+        Bring up an nmcli connection.
+
+        :param conn_name: NM connection name
+        """
+        self.execute(
+            f"sudo nmcli c up {conn_name} 2>/dev/null || sudo nmcli c up {conn_name}",
+            quiet=True,
+        )
+
+    def _nmcli_down(self, conn_name: str):
+        """
+        Bring down an nmcli connection.
+
+        :param conn_name: NM connection name
+        """
+        self.execute(f"sudo nmcli c down {conn_name} 2>/dev/null || true", quiet=True)
+
+    def _nmcli_route_add(
+        self,
+        conn_name: str,
+        subnet: str,
+        gateway: str,
+        ip_version: str,
+    ):
+        """
+        Add a route to an nmcli connection.
+
+        :param conn_name: NM connection name
+        :param subnet: destination subnet (e.g. '10.128.0.0/10')
+        :param gateway: next-hop gateway IP
+        :param ip_version: 'ipv4' or 'ipv6'
+        """
+        self.execute(
+            f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{subnet} {gateway}"',
+            quiet=True,
+        )
+
+    def _nmcli_delete(self, conn_name: str):
+        """
+        Delete an nmcli connection.
+
+        :param conn_name: NM connection name
+        """
+        self.execute(f"sudo nmcli c delete {conn_name} 2>/dev/null || true", quiet=True)
+
+    def _nmcli_configure_pbr(
+        self,
+        conn_name: str,
+        ip_version: str,
+        addr: str,
+        prefix: str,
+        gateway: str,
+        subnet: str,
+        pbr_table: int = 100,
+        pbr_priority: int = 1000,
+        route_metric: int = 200,
+    ):
+        """
+        Configure Policy-Based Routing on an nmcli connection.
+        Used for FabNetv4Ext/FabNetv6Ext networks.
+
+        :param conn_name: NM connection name
+        :param ip_version: 'ipv4' or 'ipv6'
+        :param addr: IP address (without prefix)
+        :param prefix: prefix length
+        :param gateway: next-hop gateway IP
+        :param subnet: interface subnet in CIDR notation
+        :param pbr_table: routing table number
+        :param pbr_priority: routing rule priority
+        :param route_metric: route metric
+        """
+        ip_vaddr = "::" if ip_version == "ipv6" else "0.0.0.0"
+        default_route = "::/0" if ip_version == "ipv6" else "0.0.0.0/0"
+
+        # Check if management network uses same IP version
+        ip_flag = "-6" if ip_version == "ipv6" else "-4"
+        stdout, stderr = self.execute(
+            f"ip {ip_flag} route show default | awk '{{print $3; exit}}'",
+            quiet=True,
+        )
+        mgmt_has_same_version = bool((stdout or "").strip())
+
+        if mgmt_has_same_version:
+            # PBR mode: never-default + route-table + routing-rules
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.route-table {pbr_table}",
+                quiet=True,
+            )
+            self.execute(
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{subnet} {ip_vaddr}"',
+                quiet=True,
+            )
+            self.execute(
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{default_route} {gateway}"',
+                quiet=True,
+            )
+            self.execute(
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routing-rules "priority {pbr_priority} from {addr}/{prefix} table {pbr_table}"',
+                quiet=True,
+            )
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.route-metric {route_metric}",
+                quiet=True,
+            )
+        else:
+            # Standard default route (different IP version for management)
+            self.execute(
+                f"sudo nmcli c mod {conn_name} {ip_version}.never-default no",
+                quiet=True,
+            )
+            self.execute(
+                f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{default_route} {gateway}"',
+                quiet=True,
+            )
+
+    def _nmcli_configure_fabnet_routes(
+        self,
+        conn_name: str,
+        ip_version: str,
+        gateway: str,
+        network_type,
+    ):
+        """
+        Configure routes for FabNetv4/FabNetv6 networks (non-Ext).
+        Adds never-default and a route to the FABRIC gateway host.
+
+        :param conn_name: NM connection name
+        :param ip_version: 'ipv4' or 'ipv6'
+        :param gateway: next-hop gateway IP
+        :param network_type: the ServiceType
+        """
+        if network_type == ServiceType.FABNetv4:
+            fabric_route = "10.128.0.1/32"
+        else:
+            fabric_route = "2602:FCFB:00::1/128"
+
+        self.execute(
+            f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
+            quiet=True,
+        )
+        self.execute(
+            f'sudo nmcli c mod {conn_name} +{ip_version}.routes "{fabric_route} {gateway}"',
+            quiet=True,
+        )
+
+    # ---- netplan helpers ----
+
+    def _netplan_write_config(
+        self,
+        ifname: str,
+        addresses: List[str],
+        routes: Optional[List[dict]] = None,
+        routing_policy: Optional[List[dict]] = None,
+        is_vlan: bool = False,
+        vlan_id: Optional[str] = None,
+        vlan_link: Optional[str] = None,
+        mtu: Optional[str] = None,
+    ):
+        """
+        Write a netplan YAML config for a FABRIC interface.
+
+        :param ifname: OS interface name
+        :param addresses: list of CIDR addresses
+        :param routes: optional list of route dicts with 'to' and 'via' keys
+        :param routing_policy: optional list of routing-policy dicts
+        :param is_vlan: whether this is a VLAN interface
+        :param vlan_id: VLAN ID
+        :param vlan_link: parent device for VLAN
+        :param mtu: optional MTU value
+        """
+        safe_name = ifname.replace(".", "-")
+        config_file = f"/etc/netplan/90-fabric-{safe_name}.yaml"
+
+        if is_vlan and vlan_id and vlan_link:
+            iface_config = {
+                "id": int(vlan_id),
+                "link": vlan_link,
+                "addresses": addresses,
+            }
+            if routes:
+                iface_config["routes"] = routes
+            if routing_policy:
+                iface_config["routing-policy"] = routing_policy
+            if mtu:
+                iface_config["mtu"] = int(mtu)
+            yaml_content = {
+                "network": {
+                    "version": 2,
+                    "renderer": "networkd",
+                    "vlans": {ifname: iface_config},
+                }
+            }
+        else:
+            iface_config = {
+                "dhcp4": False,
+                "dhcp6": False,
+                "addresses": addresses,
+            }
+            if routes:
+                iface_config["routes"] = routes
+            if routing_policy:
+                iface_config["routing-policy"] = routing_policy
+            if mtu:
+                iface_config["mtu"] = int(mtu)
+            yaml_content = {
+                "network": {
+                    "version": 2,
+                    "renderer": "networkd",
+                    "ethernets": {ifname: iface_config},
+                }
+            }
+
+        import yaml
+
+        yaml_str = yaml.dump(yaml_content, default_flow_style=False)
+        # Escape single quotes for shell
+        yaml_str_escaped = yaml_str.replace("'", "'\\''")
+        self.execute(
+            f"echo '{yaml_str_escaped}' | sudo tee {config_file} > /dev/null && sudo chmod 600 {config_file}",
+            quiet=True,
+        )
+
+    def _netplan_apply(self):
+        """
+        Apply netplan configuration.
+        """
+        self.execute("sudo netplan apply", quiet=True)
+
+    def _netplan_remove_config(self, ifname: str):
+        """
+        Remove a netplan config file for a FABRIC interface.
+
+        :param ifname: OS interface name
+        """
+        safe_name = ifname.replace(".", "-")
+        config_file = f"/etc/netplan/90-fabric-{safe_name}.yaml"
+        self.execute(f"sudo rm -f {config_file}", quiet=True)
+
+    # =========================================================================
+    # End persistent network configuration helpers
+    # =========================================================================
+
     def flush_all_os_interfaces(self):
         """
         Flushes the configuration of all dataplane interfaces in the node.
@@ -2423,13 +2908,25 @@ class Node:
         for iface in self.get_dataplane_os_interfaces():
             self.flush_os_interface(iface["ifname"])
 
-    def flush_os_interface(self, os_iface: str):
+    def flush_os_interface(self, os_iface: str, persistent: Optional[bool] = None):
         """
         Flush the configuration of an interface in the node
 
         :param os_iface: the name of the interface to flush
         :type os_iface: String
+        :param persistent: if True, also remove persistent config (nmcli/netplan)
+        :type persistent: bool
         """
+        backend = self._get_effective_backend(persistent)
+
+        if backend == "nmcli":
+            conn_name = self._nm_conn_name(os_iface)
+            self._nmcli_delete(conn_name)
+        elif backend == "netplan":
+            self._netplan_remove_config(os_iface)
+            self._netplan_apply()
+
+        # Always flush via ip commands as well for immediate cleanup
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}", quiet=True)
         stdout, stderr = self.execute(
             f"sudo ip -6 addr flush dev {os_iface}", quiet=True
@@ -2467,6 +2964,8 @@ class Node:
         self,
         subnet: Union[IPv4Network, IPv6Network],
         gateway: Union[IPv4Address, IPv6Address],
+        interface: Interface = None,
+        persistent: Optional[bool] = None,
     ):
         """
         Add a route on the node.
@@ -2476,7 +2975,35 @@ class Node:
 
         :param gateway: The next hop gateway.
         :type gateway: IPv4Address or IPv6Address
+
+        :param interface: Optional interface for nmcli connection lookup
+        :type interface: Interface
+
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
+        backend = self._get_effective_backend(persistent)
+        ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
+
+        if backend == "nmcli" and interface is not None:
+            try:
+                device_name = interface.get_device_name()
+                conn_name = self._nm_conn_name(device_name)
+                self._nmcli_route_add(conn_name, str(subnet), str(gateway), ip_version)
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(f"nmcli route add failed, falling back to ip: {e}")
+
+        # Legacy ip route add
+        self._ip_route_add_legacy(subnet, gateway)
+
+    def _ip_route_add_legacy(
+        self,
+        subnet: Union[IPv4Network, IPv6Network],
+        gateway: Union[IPv4Address, IPv6Address],
+    ):
+        """Legacy ip route add using raw ip commands."""
         ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
@@ -2575,6 +3102,7 @@ class Node:
         addr: Union[IPv4Address, IPv6Address],
         subnet: Union[IPv4Network, IPv6Network],
         interface: Interface,
+        persistent: Optional[bool] = None,
     ):
         """
         Add an IP to an interface on the node.
@@ -2587,7 +3115,49 @@ class Node:
 
         :param interface: the FABlib interface.
         :type interface: Interface
+
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
+        backend = self._get_effective_backend(persistent)
+        device_name = interface.get_device_name()
+        cidr = f"{addr}/{subnet.prefixlen}"
+        ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
+
+        if backend == "nmcli":
+            try:
+                conn_name = self._nm_conn_name(device_name)
+                self._nmcli_ensure_connection(
+                    conn_name=conn_name,
+                    ifname=device_name,
+                    ip_version=ip_version,
+                    addresses=cidr,
+                )
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(f"nmcli ip_addr_add failed, falling back to ip: {e}")
+        elif backend == "netplan":
+            try:
+                self._netplan_write_config(
+                    ifname=device_name,
+                    addresses=[cidr],
+                )
+                self._netplan_apply()
+                return
+            except Exception as e:
+                log.warning(f"netplan ip_addr_add failed, falling back to ip: {e}")
+
+        # Legacy fallback
+        self._ip_addr_add_legacy(addr, subnet, interface)
+
+    def _ip_addr_add_legacy(
+        self,
+        addr: Union[IPv4Address, IPv6Address],
+        subnet: Union[IPv4Network, IPv6Network],
+        interface: Interface,
+    ):
+        """Legacy ip addr add using raw ip commands."""
         ip_command = ""
         if type(subnet) == IPv6Network:
             ip_command = "sudo ip -6"
@@ -2638,16 +3208,20 @@ class Node:
 
     def un_manage_interface(self, interface: Interface):
         """
-        Mark an interface unmanaged by Network Manager;
+        Mark an interface unmanaged by Network Manager.
 
-        This is needed to be run on rocky* images to avoid the network
-        configuration from being overwritten by NetworkManager
+        When using the nmcli backend, this is a no-op because NM manages
+        the interface persistently. Only applies to legacy (ip) backend.
 
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-
         if interface is None:
+            return
+
+        backend = self._get_effective_backend()
+        if backend == "nmcli":
+            # No-op: NM manages the interface persistently now
             return
 
         try:
@@ -2668,7 +3242,34 @@ class Node:
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        if not interface:
+            return
 
+        backend = self._get_effective_backend()
+
+        if backend == "nmcli":
+            try:
+                device_name = interface.get_device_name()
+                conn_name = self._nm_conn_name(device_name)
+                # Check if connection exists before trying to bring it up
+                stdout, stderr = self.execute(
+                    f"sudo nmcli -t -f NAME c show 2>/dev/null | grep -Fx '{conn_name}' || true",
+                    quiet=True,
+                )
+                if conn_name in (stdout or "").strip():
+                    self._nmcli_up(conn_name)
+                    return
+                # Connection doesn't exist yet; fall through to legacy
+            except Exception as e:
+                log.warning(f"nmcli ip_link_up failed, falling back to ip: {e}")
+
+        # Legacy fallback
+        self._ip_link_up_legacy(subnet, interface)
+
+    def _ip_link_up_legacy(
+        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+    ):
+        """Legacy ip link up using raw ip commands."""
         if not interface:
             return
 
@@ -2724,6 +3325,24 @@ class Node:
         :param interface: the FABlib interface.
         :type interface: Interface
         """
+        backend = self._get_effective_backend()
+
+        if backend == "nmcli":
+            try:
+                device_name = interface.get_device_name()
+                conn_name = self._nm_conn_name(device_name)
+                self._nmcli_down(conn_name)
+                return
+            except Exception as e:
+                log.warning(f"nmcli ip_link_down failed, falling back to ip: {e}")
+
+        # Legacy fallback
+        self._ip_link_down_legacy(subnet, interface)
+
+    def _ip_link_down_legacy(
+        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+    ):
+        """Legacy ip link down using raw ip commands."""
         ip_command = None
 
         try:
@@ -2760,6 +3379,7 @@ class Node:
         ip: str = None,
         cidr: str = None,
         mtu: str = None,
+        persistent: Optional[bool] = None,
     ):
         """
         Configure IP Address on network interface as seen inside the VM
@@ -2778,6 +3398,9 @@ class Node:
         :param mtu: MTU size
         :type mtu: String
 
+        :param persistent: Override persistent config setting
+        :type persistent: bool
+
         NOTE: This does not add the IP information in the fablib_data
         """
         if cidr:
@@ -2785,6 +3408,53 @@ class Node:
         if mtu:
             mtu = str(mtu)
 
+        backend = self._get_effective_backend(persistent)
+        ip_version = "ipv6" if self.validIPAddress(ip) == "IPv6" else "ipv4"
+
+        if backend == "nmcli" and ip is not None and cidr is not None:
+            try:
+                if vlan is not None:
+                    vlan = str(vlan)
+                    target_iface = f"{os_iface}.{vlan}"
+                    conn_name = self._nm_conn_name(target_iface)
+                    self._nmcli_ensure_connection(
+                        conn_name=conn_name,
+                        ifname=target_iface,
+                        ip_version=ip_version,
+                        addresses=f"{ip}/{cidr}",
+                        conn_type="vlan",
+                        vlan_id=vlan,
+                        vlan_parent=os_iface,
+                        mtu=mtu,
+                    )
+                else:
+                    conn_name = self._nm_conn_name(os_iface)
+                    self._nmcli_ensure_connection(
+                        conn_name=conn_name,
+                        ifname=os_iface,
+                        ip_version=ip_version,
+                        addresses=f"{ip}/{cidr}",
+                        mtu=mtu,
+                    )
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli set_ip_os_interface failed, falling back to ip: {e}"
+                )
+
+        # Legacy fallback
+        self._set_ip_os_interface_legacy(os_iface, vlan, ip, cidr, mtu)
+
+    def _set_ip_os_interface_legacy(
+        self,
+        os_iface: str = None,
+        vlan: str = None,
+        ip: str = None,
+        cidr: str = None,
+        mtu: str = None,
+    ):
+        """Legacy set_ip_os_interface using raw ip commands."""
         if self.validIPAddress(ip) == "IPv4":
             ip_command = "sudo ip"
         elif self.validIPAddress(ip) == "IPv6":
@@ -2849,11 +3519,28 @@ class Node:
             if "link" in i.keys():
                 self.remove_vlan_os_interface(os_iface=i["ifname"])
 
-    def remove_vlan_os_interface(self, os_iface: str = None):
+    def remove_vlan_os_interface(
+        self, os_iface: str = None, persistent: Optional[bool] = None
+    ):
         """
         Remove one VLAN OS interface
+
+        :param os_iface: the name of the VLAN interface to remove
+        :type os_iface: String
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
-        # TODO: Add docstring after doc networking classes
+        backend = self._get_effective_backend(persistent)
+
+        if backend == "nmcli":
+            conn_name = self._nm_conn_name(os_iface)
+            self._nmcli_delete(conn_name)
+
+        # Also do legacy removal to clean up the kernel device
+        self._remove_vlan_os_interface_legacy(os_iface)
+
+    def _remove_vlan_os_interface_legacy(self, os_iface: str = None):
+        """Legacy remove_vlan_os_interface using raw ip commands."""
         command = f"sudo ip -j addr show {os_iface}"
         stdout, stderr = self.execute(command, quiet=True)
         try:
@@ -2875,6 +3562,7 @@ class Node:
         cidr: str = None,
         mtu: str = None,
         interface: Interface = None,
+        persistent: Optional[bool] = None,
     ):
         """
         Add VLAN tagged interface for a given interface and set IP address on it
@@ -2896,6 +3584,9 @@ class Node:
 
         :param interface: Interface for which tagged interface has to be added
         :type interface: Interface
+
+        :param persistent: Override persistent config setting
+        :type persistent: bool
         """
         if vlan:
             vlan = str(vlan)
@@ -2904,9 +3595,69 @@ class Node:
         if mtu:
             mtu = str(mtu)
 
+        backend = self._get_effective_backend(persistent)
+        ip_version = (
+            self._detect_ip_version_for_interface(interface) if interface else "ipv4"
+        )
+
+        # Only use persistent backends when we have an IP to configure.
+        # When called without ip/cidr (e.g., from config_vlan_iface just to
+        # create the VLAN device), use legacy ip commands to create the device;
+        # the nmcli connection will be created later when config() adds the IP.
+        if ip and cidr and backend == "nmcli":
+            try:
+                vlan_iface = f"{os_iface}.{vlan}"
+                conn_name = self._nm_conn_name(vlan_iface)
+                self._nmcli_ensure_connection(
+                    conn_name=conn_name,
+                    ifname=vlan_iface,
+                    ip_version=ip_version,
+                    addresses=f"{ip}/{cidr}",
+                    conn_type="vlan",
+                    vlan_id=vlan,
+                    vlan_parent=os_iface,
+                    mtu=mtu,
+                )
+                self._nmcli_up(conn_name)
+                return
+            except Exception as e:
+                log.warning(
+                    f"nmcli add_vlan_os_interface failed, falling back to ip: {e}"
+                )
+        elif ip and cidr and backend == "netplan":
+            try:
+                vlan_iface = f"{os_iface}.{vlan}"
+                self._netplan_write_config(
+                    ifname=vlan_iface,
+                    addresses=[f"{ip}/{cidr}"],
+                    is_vlan=True,
+                    vlan_id=vlan,
+                    vlan_link=os_iface,
+                    mtu=mtu,
+                )
+                self._netplan_apply()
+                return
+            except Exception as e:
+                log.warning(
+                    f"netplan add_vlan_os_interface failed, falling back to ip: {e}"
+                )
+
+        # Legacy fallback
+        self._add_vlan_os_interface_legacy(os_iface, vlan, ip, cidr, mtu, interface)
+
+    def _add_vlan_os_interface_legacy(
+        self,
+        os_iface: str = None,
+        vlan: str = None,
+        ip: str = None,
+        cidr: str = None,
+        mtu: str = None,
+        interface: Interface = None,
+    ):
+        """Legacy add_vlan_os_interface using raw ip commands."""
         ip_command = "sudo ip"
         try:
-            if interface.get_network().get_layer() == NSLayer.L3:
+            if interface and interface.get_network().get_layer() == NSLayer.L3:
                 if interface.get_network().get_type() in [
                     ServiceType.FABNetv6,
                     ServiceType.FABNetv6Ext,
@@ -2933,7 +3684,7 @@ class Node:
         stdout, stderr = self.execute(command, quiet=True)
 
         if ip and cidr:
-            self.set_ip_os_interface(
+            self._set_ip_os_interface_legacy(
                 os_iface=f"{os_iface}.{vlan}", ip=ip, cidr=cidr, mtu=mtu
             )
 
@@ -2967,7 +3718,7 @@ class Node:
         :rtype: Component
         """
         try:
-            return Component(self, self.get_fim_node().components[name])
+            return Component(self, self.get_fim().components[name])
         except Exception as e:
             log.error(e, exc_info=True)
             raise Exception(f"Storage not found: {name}")
@@ -2989,26 +3740,15 @@ class Node:
         """
         Get FABRIC Information Model (fim) object for the node.
         """
-        return self.get_fim_node()
+        return self.fim_node
 
-    def set_user_data(self, user_data: dict):
+    def get_fim_node(self):
         """
-        Set user data.
+        Get FABRIC Information Model (fim) node object.
 
-        :param user_data: a `dict`.
+        Alias for :meth:`get_fim` for backward compatibility.
         """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self):
-        """
-        Get user data.
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except:
-            return {}
+        return self.fim_node
 
     def delete(self):
         """
@@ -3019,6 +3759,9 @@ class Node:
             component.delete()
 
         self.get_slice().get_fim_topology().remove_node(name=self.get_name())
+        # Mark slice topology as dirty so cached node/interface lists
+        # get refreshed on next access
+        self.get_slice()._topology_dirty = True
 
     def init_fablib_data(self):
         """
@@ -3032,27 +3775,10 @@ class Node:
         }
         self.set_fablib_data(fablib_data)
 
-    def get_fablib_data(self):
-        """
-        Get fablib data. Usually used internally.
-        """
-        try:
-            return self.get_user_data()["fablib_data"]
-        except:
-            return {}
-
-    def set_fablib_data(self, fablib_data: dict):
-        """
-        Set fablib data. Usually used internally.
-        """
-        user_data = self.get_user_data()
-        user_data["fablib_data"] = fablib_data
-        self.set_user_data(user_data)
-
     def add_route(
         self,
-        subnet: IPv4Network or IPv6Network,
-        next_hop: IPv4Address or IPv6Address or NetworkService,
+        subnet: Union[IPv4Network, IPv6Network],
+        next_hop: Union[IPv4Address, IPv6Address, NetworkService],
     ):
         """
         Add a route.
@@ -3171,6 +3897,26 @@ class Node:
         except Exception as e:
             return []
 
+    def _find_interface_for_gateway(self, gateway) -> Optional[Interface]:
+        """
+        Find the interface whose network gateway matches the given gateway.
+
+        :param gateway: gateway IP address
+        :return: matching Interface or None
+        """
+        for iface in self.get_interfaces():
+            try:
+                network = iface.get_network()
+                if (
+                    network
+                    and network.get_gateway()
+                    and str(network.get_gateway()) == str(gateway)
+                ):
+                    return iface
+            except Exception:
+                continue
+        return None
+
     def config_routes(self):
         """
         .. warning::
@@ -3184,12 +3930,9 @@ class Node:
                 next_hop = ipaddress.ip_address(route["next_hop"])
             except Exception as e:
                 net_name = route["next_hop"].split(".")[0]
-                # funct = getattr(NetworkService,funct_name)
-                # next_hop = funct(self.get_slice().get_network(net_name))
                 next_hop = (
                     self.get_slice().get_network(name=str(net_name)).get_gateway()
                 )
-                # next_hop = self.get_slice().get_network(name=str(route['next_hop'])).get_gateway()
 
             try:
                 subnet = ipaddress.ip_network(route["subnet"])
@@ -3197,9 +3940,14 @@ class Node:
                 net_name = route["subnet"].split(".")[0]
                 subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
 
-            # print(f"subnet: {subnet} ({type(subnet)}, next_hop: {next_hop} ({type(next_hop)}")
-
-            self.ip_route_add(subnet=ipaddress.ip_network(subnet), gateway=next_hop)
+            # Find the interface for this gateway so nmcli can add the route
+            # to the correct connection
+            target_iface = self._find_interface_for_gateway(next_hop)
+            self.ip_route_add(
+                subnet=ipaddress.ip_network(subnet),
+                gateway=next_hop,
+                interface=target_iface,
+            )
 
     def run_post_boot_tasks(self, log_dir: str = "."):
         """
@@ -3357,7 +4105,7 @@ class Node:
         net_type="IPv4",
         nic_type="NIC_Basic",
         routes=None,
-        subnet: ipaddress.ip_network = None,
+        subnet: Optional[ipaddress.ip_network] = None,
     ):
         """
         Add a simple layer 3 network to this node.
@@ -3378,7 +4126,7 @@ class Node:
         net = self.get_slice().get_network(net_name)
         if not net:
             net = self.get_slice().add_l3network(
-                name=net_name, type=net_type, subnet=subnet
+                name=net_name, type=net_type, subnet=subnet, site=site
             )
 
         # Add ccontrol plane network to node1
@@ -3781,7 +4529,7 @@ class Node:
                 log.info(f"Numa tune complete for node: {self.get_name()}")
         except Exception as e:
             log.error(traceback.format_exc())
-            logging.error(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
+            log.error(f"Failed to Numa tune for node: {self.get_name()} e: {e}")
             raise e
 
     def add_public_key(
@@ -3906,5 +4654,16 @@ class Node:
     def update(self, fim_node: FimNode):
         if fim_node:
             self.fim_node = fim_node
-            # get_interfaces will also refresh components
-            self.get_interfaces(refresh=True)
+            self._invalidate_cache()
+            try:
+                self.get_components(refresh=True)
+                self.get_interfaces(refresh=True)
+            except Exception as e:
+                # Component/interface queries may fail if the topology is in
+                # a transitional state (e.g. mid-modify).  The FIM reference
+                # is already updated; caches will rebuild on next access.
+                log.debug(
+                    f"Node {self.get_name()}: error refreshing caches "
+                    f"during update: {e}"
+                )
+            self._fim_dirty = False

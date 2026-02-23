@@ -31,9 +31,9 @@ Methods to manage FABRIC `slices`_.
 You would create and use a slice like so::
 
     from ipaddress import IPv4Address
-    from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
+    from fabrictestbed_extensions.fablib.fablib import FablibManagerV1
 
-    fablib = FablibManagerV2()
+    fablib = FablibManagerV1()
 
     # Create a slice and add resources to it, creating a topology.
     slice = fablib.new_slice(name="MySlice")
@@ -53,23 +53,28 @@ import ipaddress
 import json
 import logging
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 import pandas as pd
-from fabrictestbed.external_api.orchestrator_client import SliceDTO, SliverDTO
 from fim.user import Labels, NodeType
 from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
+    from fabric_cf.orchestrator.swagger_client import (
+        Slice as OrchestratorSlice,
+        Sliver as OrchestratorSliver,
+    )
+    from fabrictestbed_extensions.fablib.fablib_old import FablibManagerV1
 
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -77,11 +82,11 @@ from ipaddress import IPv4Address, ip_address
 from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
+from fabrictestbed.slice_manager import Status
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.attestable_switch import Attestable_Switch
 from fabrictestbed_extensions.fablib.component import Component
-from fabrictestbed_extensions.fablib.facility_port import FacilityPort
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
@@ -91,11 +96,7 @@ log = logging.getLogger("fablib")
 
 class Slice:
     def __init__(
-        self,
-        fablib_manager: FablibManagerV2,
-        name: str = None,
-        user_only: bool = True,
-        sm_slice: Optional[SliceDTO] = None,
+        self, fablib_manager: FablibManagerV1, name: str = None, user_only: bool = True
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -105,29 +106,24 @@ class Slice:
         """
         super().__init__()
 
-        self.fablib_manager: FablibManagerV2 = fablib_manager
         self.network_iface_map = None
-        self.sm_slice: Optional[SliceDTO] = sm_slice
-        self.slice_name = sm_slice.name if sm_slice else name
-        self.slice_id: Optional[str] = sm_slice.slice_id if sm_slice else None
-        self.topology: Optional[ExperimentTopology] = ExperimentTopology()
-        if self.sm_slice and self.sm_slice.model and len(self.sm_slice.model) > 0:
-            self.topology.load(graph_string=self.sm_slice.model)
+        self.slice_name = name
+        self.sm_slice = None
+        self.slice_id = None
+        self.topology = None
+        self.slivers = []
+        self.fablib_manager = fablib_manager
 
-        self.slivers: List[SliverDTO] = []
-        self.nodes: Dict[str, Node] = {}
-        self.facilities: Dict[str, FacilityPort] = {}
-        self.interfaces: Dict[str, Interface] = {}
-        self.network_services: Dict[str, NetworkService] = {}
-        self.update_topology_count: int = 0
-        self.update_slivers_count: int = 0
-        self.update_slice_count: int = 0
-        self.update_count: int = 0
-        self.user_only: bool = user_only
-        # Flag to track if cached objects need refresh after topology update
-        self._topology_dirty: bool = True
+        self.nodes = {}
+        self.facilities = {}
+        self.interfaces = {}
+        self.update_topology_count = 0
+        self.update_slivers_count = 0
+        self.update_slice_count = 0
+        self.update_count = 0
+        self.user_only = user_only
 
-    def get_fablib_manager(self) -> FablibManagerV2:
+    def get_fablib_manager(self):
         return self.fablib_manager
 
     def __str__(self):
@@ -444,7 +440,7 @@ class Slice:
         return table
 
     @staticmethod
-    def new_slice(fablib_manager: FablibManagerV2, name: str = None):
+    def new_slice(fablib_manager: FablibManagerV1, name: str = None):
         """
         Create a new slice
         :param fablib_manager:
@@ -452,14 +448,15 @@ class Slice:
         :return: Slice
         """
         slice = Slice(fablib_manager=fablib_manager, name=name)
+        slice.topology = ExperimentTopology()
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
         return slice
 
     @staticmethod
     def get_slice(
-        fablib_manager: FablibManagerV2,
-        sm_slice: SliceDTO,
+        fablib_manager: FablibManagerV1,
+        sm_slice: OrchestratorSlice = None,
         user_only: bool = True,
     ):
         """
@@ -474,9 +471,11 @@ class Slice:
         """
         log.info("slice.get_slice()")
 
-        slice = Slice(
-            fablib_manager=fablib_manager, sm_slice=sm_slice, user_only=user_only
-        )
+        slice = Slice(fablib_manager=fablib_manager, name=sm_slice.name)
+        slice.sm_slice = sm_slice
+        slice.slice_id = sm_slice.slice_id
+        slice.slice_name = sm_slice.name
+        slice.user_only = user_only
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
 
@@ -520,84 +519,59 @@ class Slice:
             "user_id": "UserId",
         }
 
-    def toDict(self, skip: list = None):
+    def toDict(self, skip=[]):
         """
         Returns the slice attributes as a dictionary
 
-        :param skip: list of keys to exclude
-        :type skip: list
         :return: slice attributes as dictionary
         :rtype: dict
         """
-        if skip is None:
-            skip = []
+        return {
+            "id": str(self.get_slice_id()),
+            "name": str(self.get_name()),
+            "lease_end": str(self.get_lease_end()),
+            "lease_start": str(self.get_lease_start()),
+            "project_id": str(self.get_project_id()),
+            "state": str(self.get_state()),
+            "email": str(self.get_email()),
+            "user_id": str(self.get_user_id()),
+        }
 
-        rtn_dict = {}
-
-        if "id" not in skip:
-            rtn_dict["id"] = str(self.get_slice_id())
-        if "name" not in skip:
-            rtn_dict["name"] = str(self.get_name())
-        if "lease_end" not in skip:
-            rtn_dict["lease_end"] = str(self.get_lease_end())
-        if "lease_start" not in skip:
-            rtn_dict["lease_start"] = str(self.get_lease_start())
-        if "project_id" not in skip:
-            rtn_dict["project_id"] = str(self.get_project_id())
-        if "state" not in skip:
-            rtn_dict["state"] = str(self.get_state())
-        if "email" not in skip:
-            rtn_dict["email"] = str(self.get_email())
-        if "user_id" not in skip:
-            rtn_dict["user_id"] = str(self.get_user_id())
-
-        return rtn_dict
-
-    def get_template_context(self, base_object=None, skip=None):
-        if skip is None:
-            skip = []
-
+    def get_template_context(self, base_object=None, skip=[]):
         context = {}
 
         if base_object:
-            context["_self_"] = base_object.generate_template_context(skip=skip)
+            context["_self_"] = base_object.generate_template_context()
         else:
             context["_self_"] = {}
 
         context["config"] = self.get_fablib_manager().get_config()
-        context["slice"] = self.toDict(skip=skip)
-        nodes = None
-
-        if "nodes" not in skip or "components" not in skip:
-            nodes = self.get_nodes()
+        context["slice"] = self.toDict()
 
         context["nodes"] = {}
         if "nodes" not in skip:
-            for node in nodes:
-                node_context = node.generate_template_context(skip=skip)
+            for node in self.get_nodes():
+                node_context = node.generate_template_context()
                 context["nodes"][node.get_name()] = node_context
 
         context["components"] = {}
         if "components" not in skip:
-            for node in nodes:
-                for component in node.get_components():
-                    context["components"][component.get_name()] = (
-                        component.generate_template_context(skip=skip)
-                    )
+            for component in self.get_components():
+                context["components"][
+                    component.get_name()
+                ] = component.generate_template_context()
 
         context["interfaces"] = {}
         if "interfaces" not in skip:
             for interface in self.get_interfaces():
-                context["interfaces"][interface.get_name()] = interface.toDict(
-                    skip=skip
-                )
+                context["interfaces"][interface.get_name()] = interface.toDict()
 
         context["networks"] = {}
         if "networks" not in skip:
             for network in self.get_networks():
-                context["networks"][network.get_name()] = (
-                    network.generate_template_context(skip=skip)
-                )
+                context["networks"][
+                    network.get_name()
+                ] = network.generate_template_context()
 
         return context
 
@@ -634,12 +608,12 @@ class Slice:
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             start = time.time()
 
-        slices = self.fablib_manager.get_manager().list_slices(
+        return_status, slices = self.fablib_manager.get_manager().slices(
+            excludes=[],
             slice_id=self.slice_id,
             name=self.slice_name,
             as_self=self.user_only,
             graph_format="NONE",
-            return_fmt="dto",
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -648,12 +622,14 @@ class Slice:
                 f"elapsed time: {end - start} seconds"
             )
 
-        if len(slices) == 0:
+        if return_status == Status.OK:
+            self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[
+                0
+            ]
+        else:
             raise Exception(
-                f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
+                "Failed to get slice list: {}, {}".format(return_status, slices)
             )
-
-        self.sm_slice = list(filter(lambda x: x.slice_id == self.slice_id, slices))[0]
 
     def update_topology(self):
         """
@@ -671,24 +647,22 @@ class Slice:
             f"update_topology: {self.get_name()}, count: {self.update_topology_count}"
         )
 
-        slices = self.fablib_manager.get_manager().list_slices(
-            slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
+        (
+            return_status,
+            new_topo,
+        ) = self.fablib_manager.get_manager().get_slice_topology(
+            slice_object=self.sm_slice, as_self=self.user_only
         )
-        if len(slices) == 0:
+        if return_status != Status.OK:
             raise Exception(
-                f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
+                "Failed to get slice topology: {}, {}".format(return_status, new_topo)
             )
 
         # Set slice attributes
-        self.topology = ExperimentTopology()
-        self.topology.load(graph_string=slices[0].model)
-        # Mark topology as dirty so caches will refresh
-        self._topology_dirty = True
+        self.topology = new_topo
         self.get_nodes()
         self.get_facilities()
-        self.get_network_services()
         self.get_interfaces(refresh=True)
-        self._topology_dirty = False
 
     def update_slivers(self):
         """
@@ -706,11 +680,16 @@ class Slice:
             f"update_slivers: {self.get_name()}, count: {self.update_slivers_count}"
         )
 
-        self.slivers = self.fablib_manager.get_manager().list_slivers(
-            slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
+        status, slivers = self.fablib_manager.get_manager().slivers(
+            slice_object=self.sm_slice, as_self=self.user_only
         )
+        if status == Status.OK:
+            self.slivers = slivers
+            return
 
-    def get_sliver(self, reservation_id: str) -> SliverDTO:
+        raise Exception(f"{slivers}")
+
+    def get_sliver(self, reservation_id: str) -> OrchestratorSliver:
         """
         Returns the sliver associated with the reservation ID.
         """
@@ -718,7 +697,7 @@ class Slice:
         sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
         return sliver
 
-    def get_slivers(self) -> List[SliverDTO]:
+    def get_slivers(self) -> List[OrchestratorSliver]:
         """
         Returns slivers associated with the slice.
         """
@@ -747,13 +726,11 @@ class Slice:
         except Exception as e:
             log.warning(f"slice.update_slivers failed: {e}")
 
-        # Clear interface cache - will be rebuilt on next access
+        # self.nodes = None
         self.interfaces = {}
         self.update_topology()
-        # Mark topology as clean after all caches are refreshed
-        self._topology_dirty = False
 
-        if self.get_state() in ("ModifyOK", "ModifyError"):
+        if self.get_state() == "ModifyOK":
             self.modify_accept()
 
     def get_private_key_passphrase(self) -> str:
@@ -878,7 +855,7 @@ class Slice:
         else:
             return False
 
-    def get_state(self) -> Optional[str]:
+    def get_state(self) -> str:
         """
         Gets the slice state.
 
@@ -912,7 +889,7 @@ class Slice:
         """
         return self.slice_id
 
-    def get_lease_end(self) -> Optional[str]:
+    def get_lease_end(self) -> str:
         """
         Gets the timestamp at which the slice lease ends.
 
@@ -928,7 +905,7 @@ class Slice:
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
 
-    def get_lease_start(self) -> Optional[str]:
+    def get_lease_start(self) -> str:
         """
         Gets the timestamp at which the slice lease starts.
 
@@ -943,7 +920,7 @@ class Slice:
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
 
-    def get_email(self) -> Optional[str]:
+    def get_email(self) -> str:
         """
         Gets the owner's email of the slice.
 
@@ -952,9 +929,8 @@ class Slice:
         """
         if self.sm_slice:
             return self.sm_slice.owner_email
-        return None
 
-    def get_user_id(self) -> Optional[str]:
+    def get_user_id(self) -> str:
         """
         Gets the owner's user id of the slice.
 
@@ -963,9 +939,8 @@ class Slice:
         """
         if self.sm_slice:
             return self.sm_slice.owner_user_id
-        return None
 
-    def get_project_id(self) -> Optional[str]:
+    def get_project_id(self) -> str:
         """
         Gets the project id of the slice.
 
@@ -974,15 +949,14 @@ class Slice:
         """
         if self.sm_slice:
             return self.sm_slice.project_id
-        return None
 
     def add_port_mirror_service(
         self,
         name: str,
         mirror_interface_name: str,
-        receive_interface: Optional[Interface] = None,
-        mirror_interface_vlan: Optional[str] = None,
-        mirror_direction: Optional[str] = "both",
+        receive_interface: Interface or None = None,
+        mirror_interface_vlan: str = None,
+        mirror_direction: str = "both",
     ) -> NetworkService:
         """
         Adds a special PortMirror service.
@@ -1385,7 +1359,6 @@ class Slice:
 
         if validate:
             status, error = self.get_fablib_manager().validate_node(node=aswitch)
-
             if not status:
                 aswitch.delete()
                 aswitch = None
@@ -1554,16 +1527,15 @@ class Slice:
 
         # fails for topology that does not have nodes
         try:
-            for node in self.get_nodes(refresh=refresh):
-                # get_nodes will refresh components
-                return_components.extend(node.get_components())
+            for node in self.get_nodes():
+                return_components.extend(node.get_components(refresh=refresh))
         except Exception as e:
             log.error(f"get_components: error {e}", exc_info=True)
             # traceback.print_exc()
             pass
         return return_components
 
-    def __initialize_nodes(self, refresh: bool = False):
+    def __initialize_nodes(self):
         """
         Initializes the node objects for the current topology by populating
         the self.nodes dictionary with node instances.
@@ -1578,37 +1550,28 @@ class Slice:
 
         https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380
 
-        :param force_refresh: Force refresh even if cache is valid
-        :type force_refresh: bool
         :raises: Logs an exception if an error occurs during initialization.
         """
-        # Skip if cache is valid and not forcing refresh
-        if self.nodes and not self._topology_dirty and not refresh:
-            return
-
         # Initialize nodes dictionary if not already present
         if not self.nodes:
             self.nodes = {}
 
         try:
-            # Get the current FIM topology nodes (single access)
+            # Get the current FIM topology nodes
             current_topology_nodes = self.get_fim_topology().nodes
 
             # Update the nodes dictionary with current topology nodes
-            for node_name, fim_node in current_topology_nodes.items():
-                try:
-                    if node_name not in self.nodes:
-                        if fim_node.type == NodeType.Switch:
-                            node_obj = Switch.get_switch(self, fim_node)
-                        else:
-                            # Add new node to the dictionary if it doesn't exist
-                            node_obj = Node.get_node(self, fim_node)
-                        self.nodes[node_name] = node_obj
+            for node_name, node in current_topology_nodes.items():
+                if node_name not in self.nodes:
+                    if node.type == NodeType.Switch:
+                        node = Switch.get_node(self, node)
                     else:
-                        # Update existing node's fim_node reference
-                        self.nodes[node_name].update(fim_node=fim_node)
-                except Exception as e:
-                    log.warning(f"Error initializing node {node_name}: {e}")
+                        # Add new node to the dictionary if it doesn't exist
+                        node = Node.get_node(self, node)
+                    self.nodes[node_name] = node
+                else:
+                    # Update existing node's fim_node reference
+                    self.nodes[node_name].update(fim_node=node)
 
             # Remove nodes that are no longer present in the current topology
             self.__remove_deleted_nodes(current_topology_nodes)
@@ -1633,31 +1596,20 @@ class Slice:
         ]
 
         for node_name in nodes_to_remove:
-            # Clean up interfaces from cache.  Use try/except because the
-            # deleted node's FIM reference may point to a graph that was
-            # already replaced by update_topology(), making FIM queries fail.
-            try:
-                for ifs in self.nodes[node_name].get_interfaces():
-                    if ifs.get_name() in self.interfaces:
-                        self.interfaces.pop(ifs.get_name())
-            except Exception:
-                log.debug(
-                    f"Could not query interfaces for deleted node {node_name}, "
-                    f"skipping interface cleanup"
-                )
+            for ifs in self.nodes[node_name].get_interfaces():
+                if ifs.get_name() in self.interfaces:
+                    self.interfaces.pop(ifs.get_name())
             self.nodes.pop(node_name)
             log.debug(f"Removed extra node: {node_name}")
 
-    def get_nodes(self, refresh: bool = False) -> List[Node]:
+    def get_nodes(self) -> List[Node]:
         """
         Gets a list of all nodes in this slice.
 
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
-        if not self.nodes or not len(self.nodes):
-            refresh = True
-        self.__initialize_nodes(refresh=refresh)
+        self.__initialize_nodes()
         return list(self.nodes.values())
 
     def get_facility(self, name: str) -> FacilityPort:
@@ -1670,32 +1622,26 @@ class Slice:
         :rtype: FacilityPort
         """
         try:
-            # Check cache first
-            if self.facilities and name in self.facilities:
-                return self.facilities[name]
-
-            # Not in cache - get from topology and cache it
-            fim_facility = self.get_fim_topology().facilities[name]
-            facility = FacilityPort.get_facility_port(self, fim_facility)
-            self.facilities[name] = facility
-            return facility
+            if self.facilities and len(self.facilities) and name in self.facilities:
+                return self.facilities.get(name)
+            return FacilityPort.get_facility_port(
+                self, self.get_fim_topology().facilities[name]
+            )
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Facility not found: {name}")
+            raise Exception(f"Node not found: {name}")
 
-    def get_facilities(self, refresh: bool = False) -> List[FacilityPort]:
+    def get_facilities(self) -> List[FacilityPort]:
         """
         Gets a list of all nodes in this slice.
 
         :return: a list of fablib nodes
         :rtype: List[FacilityPort]
         """
-        if not self.facilities or not len(self.facilities):
-            refresh = True
-        self.__initialize_facilities(refresh=refresh)
+        self.__initialize_facilities()
         return list(self.facilities.values())
 
-    def __initialize_facilities(self, refresh: bool = False):
+    def __initialize_facilities(self):
         """
         Initializes the facilities objects for the current topology by populating
         the self.facilities dictionary with node instances.
@@ -1710,36 +1656,27 @@ class Slice:
 
         https://github.com/fabric-testbed/fabrictestbed-extensions/issues/380
 
-        :param refresh: Force refresh even if cache is valid
-        :type refresh: bool
         :raises: Logs an exception if an error occurs during initialization.
         """
-        # Skip if cache is valid and not forcing refresh
-        if self.facilities and not self._topology_dirty and not refresh:
-            return
-
         # Initialize facilities dictionary if not already present
         if not self.facilities:
             self.facilities = {}
 
         try:
-            # Get the current FIM topology facilities (single access)
+            # Get the current FIM topology nodes
             current = self.get_fim_topology().facilities
 
-            # Update the facilities dictionary with current topology facilities
+            # Update the nodes dictionary with current topology nodes
             for fac_name, facility in current.items():
-                try:
-                    if fac_name not in self.facilities:
-                        self.facilities[fac_name] = FacilityPort.get_facility_port(
-                            self, facility
-                        )
-                    else:
-                        # Update existing facility's fim_node reference
-                        self.facilities[fac_name].update(fim_node=facility)
-                except Exception as e:
-                    log.warning(f"Error initializing facility {fac_name}: {e}")
+                if fac_name not in self.facilities:
+                    self.facilities[fac_name] = FacilityPort.get_facility_port(
+                        self, facility
+                    )
+                else:
+                    # Update existing facility's fim_node reference
+                    self.facilities[fac_name].update(fim_node=facility)
 
-            # Remove facilities that are no longer present in the current topology
+            # Remove nodes that are no longer present in the current topology
             self.__remove_deleted_facilities(current)
 
         except Exception as e:
@@ -1762,15 +1699,9 @@ class Slice:
         ]
 
         for fac_name in facilities_to_remove:
-            try:
-                for ifs in self.facilities[fac_name].get_interfaces():
-                    if ifs.get_name() in self.interfaces:
-                        self.interfaces.pop(ifs.get_name())
-            except Exception:
-                log.debug(
-                    f"Could not query interfaces for deleted facility {fac_name}, "
-                    f"skipping interface cleanup"
-                )
+            for ifs in self.facilities[fac_name].get_interfaces():
+                if ifs.get_name() in self.interfaces:
+                    self.interfaces.pop(ifs.get_name())
             self.facilities.pop(fac_name)
             log.debug(f"Removed extra facility: {fac_name}")
 
@@ -1789,30 +1720,13 @@ class Slice:
     def get_attestable_switch(self, name: str) -> Attestable_Switch:
         """
         Get reference to an attestable switch in the fablib slice.
-
-        :param name: Name of the attestable switch
-        :type name: str
-        :return: The attestable switch
-        :rtype: Attestable_Switch
         """
+
         name = Attestable_Switch.name(name)
         try:
-            # Ensure nodes dict exists (add_* methods set it to None)
-            if self.nodes is None:
-                self.nodes = {}
-
-            # Check cache first
-            if name in self.nodes:
-                cached = self.nodes[name]
-                if isinstance(cached, Attestable_Switch):
-                    return cached
-
-            # Not in cache - get from topology
-            fim_node = self.get_fim_topology().nodes[name]
-            aswitch = Attestable_Switch.get_attestable_switch(self, fim_node)
-            # Cache it
-            self.nodes[name] = aswitch
-            return aswitch
+            return Attestable_Switch.get_attestable_switch(
+                self, self.get_fim_topology().nodes[name]
+            )
         except Exception as e:
             log.info(e, exc_info=True)
             raise Exception(f"Attestable Switch not found: {name}")
@@ -1827,24 +1741,11 @@ class Slice:
         :rtype: Node
         """
         try:
-            # Ensure nodes dict exists (add_l2network/add_node set it to None)
-            if self.nodes is None:
-                self.nodes = {}
-
-            # Check cache first
-            if name in self.nodes:
-                return self.nodes[name]
-
-            # Not in cache - get from topology (single access)
-            fim_node = self.get_fim_topology().nodes[name]
-            if fim_node.type == NodeType.Switch:
-                node_obj = Switch.get_switch(self, fim_node)
-            else:
-                node_obj = Node.get_node(self, fim_node)
-
-            # Cache it for future access
-            self.nodes[name] = node_obj
-            return node_obj
+            if self.nodes and len(self.nodes) and name in self.nodes:
+                return self.nodes.get(name)
+            if self.get_fim_topology().nodes[name].type == NodeType.Switch:
+                return Switch.get_node(self, self.get_fim_topology().nodes[name])
+            return Node.get_node(self, self.get_fim_topology().nodes[name])
         except Exception as e:
             log.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
@@ -1867,31 +1768,17 @@ class Slice:
         :return: a list of interfaces on this slice
         :rtype: Union[dict[str, Interface], list[Interface]]
         """
-        if self.interfaces and not refresh and not self._topology_dirty:
-            pass
-        else:
-            self.interfaces = {}
-            for node in self.get_nodes(refresh=refresh):
+        if len(self.interfaces) == 0 or refresh:
+            for node in self.get_nodes():
                 log.debug(f"Getting interfaces for node {node.get_name()}")
-                try:
-                    n_ifaces = node.get_interfaces(
-                        include_subs=include_subs, refresh=refresh, output="dict"
-                    )
-                    self.interfaces.update(n_ifaces)
-                except Exception as e:
-                    log.warning(
-                        f"Error getting interfaces for node " f"{node.get_name()}: {e}"
-                    )
-            for fac in self.get_facilities(refresh=refresh):
+                n_ifaces = node.get_interfaces(
+                    include_subs=include_subs, refresh=refresh, output="dict"
+                )
+                self.interfaces.update(n_ifaces)
+            for fac in self.get_facilities():
                 log.debug(f"Getting interfaces for facility {fac.get_name()}")
-                try:
-                    fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
-                    self.interfaces.update(fac_ifaces)
-                except Exception as e:
-                    log.warning(
-                        f"Error getting interfaces for facility "
-                        f"{fac.get_name()}: {e}"
-                    )
+                fac_ifaces = fac.get_interfaces(refresh=refresh, output="dict")
+                self.interfaces.update(fac_ifaces)
 
         if output == "dict":
             return self.interfaces
@@ -1960,7 +1847,7 @@ class Slice:
 
         return []
 
-    def get_l2network(self, name: str = None) -> Optional[NetworkService]:
+    def get_l2network(self, name: str = None) -> NetworkService or None:
         """
         Gets a particular L2 network service from this slice.
 
@@ -1974,85 +1861,50 @@ class Slice:
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_network_services(self, force_refresh: bool = False) -> List[NetworkService]:
+    def get_network_services(self) -> List[NetworkService]:
         """
         Not intended for API use. See: slice.get_networks()
 
-        Gets all network services (L2 and L3) in this slice.
-        Results are cached for performance.
+        Gets all network services (L2 and L3) in this slice
 
-        :param force_refresh: Force refresh from topology even if cached
-        :type force_refresh: bool
         :return: List of all network services in this slice
         :rtype: List[NetworkService]
         """
-        # Return cached results if valid
-        if self.network_services and not self._topology_dirty and not force_refresh:
-            return list(self.network_services.values())
+        return_networks = []
 
         # fails for topology that does not have nodes
         try:
-            # Get topology network services (single access)
-            fim_network_services = self.get_fim_topology().network_services
-            valid_types = NetworkService.get_fim_network_service_types()
-
-            for net_name, net in fim_network_services.items():
-                try:
-                    if str(net.get_property("type")) in valid_types:
-                        if net_name not in self.network_services:
-                            self.network_services[net_name] = NetworkService(
-                                slice=self, fim_network_service=net
-                            )
-                        else:
-                            # Update existing network service's fim reference
-                            self.network_services[net_name].fim_network_service = net
-                except Exception as e:
-                    log.warning(
-                        f"Error initializing network service " f"{net_name}: {e}"
+            for net_name, net in self.get_fim_topology().network_services.items():
+                if (
+                    str(net.get_property("type"))
+                    in NetworkService.get_fim_network_service_types()
+                ):
+                    return_networks.append(
+                        NetworkService(slice=self, fim_network_service=net)
                     )
-
-            # Remove network services that are no longer in topology
-            current_net_names = set(fim_network_services.keys())
-            nets_to_remove = [
-                name
-                for name in self.network_services.keys()
-                if name not in current_net_names
-            ]
-            for name in nets_to_remove:
-                del self.network_services[name]
 
         except Exception as e:
             log.error(e, exc_info=True)
+            pass
+        return return_networks
 
-        return list(self.network_services.values())
-
-    def get_networks(
-        self, refresh: bool = True, output: str = "list"
-    ) -> List[NetworkService]:
+    def get_networks(self) -> List[NetworkService]:
         """
-        Gets all network services (L2 and L3) in this slice.
-
-        Results are cached for performance.
+        Gets all network services (L2 and L3) in this slice
 
         :return: List of all network services in this slice
         :rtype: List[NetworkService]
         """
-        if not self.network_services or refresh or self._topology_dirty:
-            try:
-                self.network_services = NetworkService.get_network_services(
-                    self, output="dict"
-                )
-            except Exception as e:
-                logging.info(e, exc_info=True)
+        try:
+            return NetworkService.get_network_services(self)
+        except Exception as e:
+            log.info(e, exc_info=True)
 
-        if output == "dict":
-            return self.network_services
-        else:
-            return list(self.network_services.values())
+        return []
 
-    def get_network(self, name: str = None) -> Optional[NetworkService]:
+    def get_network(self, name: str = None) -> NetworkService or None:
         """
-        Gets a particular network service from this slice.
+        Gest a particular network service from this slice.
 
         :param name: the name of the network service to search for
         :type name: str
@@ -2060,12 +1912,7 @@ class Slice:
         :rtype: NetworkService
         """
         try:
-            # Check cache first
-            if self.network_services and name in self.network_services:
-                return self.network_services[name]
-            # Ensure cache is populated, then lookup
-            self.get_network_services()
-            return self.network_services.get(name)
+            return NetworkService.get_network_service(self, name)
         except Exception as e:
             log.info(e, exc_info=True)
 
@@ -2081,7 +1928,15 @@ class Slice:
         if not self.sm_slice:
             self.topology = None
             return
-        self.fablib_manager.get_manager().delete_slice(slice_id=self.sm_slice.slice_id)
+        return_status, result = self.fablib_manager.get_manager().delete(
+            slice_object=self.sm_slice
+        )
+
+        if return_status != Status.OK:
+            raise Exception(
+                "Failed to delete slice: {}, {}".format(return_status, result)
+            )
+
         self.topology = None
 
     def renew(self, end_date: str = None, days: int = None, **kwargs):
@@ -2166,14 +2021,13 @@ class Slice:
         if progress:
             print("Waiting for slice .", end="")
         while time.time() < timeout_start + timeout:
-            slices = self.fablib_manager.get_manager().list_slices(
+            return_status, slices = self.fablib_manager.get_manager().slices(
+                excludes=[],
                 slice_id=self.slice_id,
                 name=self.slice_name,
                 as_self=self.user_only,
-                graph_format="NONE",
-                return_fmt="dto",
             )
-            if len(slices) > 0:
+            if return_status == Status.OK:
                 slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
                 if slice.state == "StableOK" or slice.state == "ModifyOK":
                     if progress:
@@ -2324,27 +2178,12 @@ class Slice:
                 log.error(f"Interface: {interface.get_name()} failed to config")
                 log.error(e, exc_info=True)
 
-        # Track which nodes have already had their management interface
-        # set to unmanaged (to avoid duplicate SSH calls per node).
-        nmcli_mgmt_done = set()
         for interface in self.get_interfaces():
             try:
-                node = interface.get_node()
-                backend = node._get_effective_backend()
-                if backend == "nmcli":
-                    # NM manages dataplane interfaces persistently, but
-                    # the management interface should be left alone.
-                    node_name = node.get_name()
-                    if node_name not in nmcli_mgmt_done:
-                        node._unmanage_mgmt_interface()
-                        nmcli_mgmt_done.add(node_name)
-                else:
-                    # Legacy path: mark dataplane interfaces as unmanaged
-                    # so raw ip commands can configure them.
-                    node.execute(
-                        f"sudo nmcli device set {interface.get_device_name()} managed no",
-                        quiet=True,
-                    )
+                interface.get_node().execute(
+                    f"sudo nmcli device set {interface.get_device_name()} managed no",
+                    quiet=True,
+                )
             except Exception as e:
                 log.error(
                     f"Interface: {interface.get_name()} failed to become unmanaged"
@@ -2546,6 +2385,8 @@ class Slice:
                         hasNetworks = True
                     else:
                         hasNetworks = False
+                else:
+                    self.update_slice()
 
             slice_show_table = self.show(colors=True, quiet=True)
             sliver_table = self.list_slivers(colors=True, quiet=True)
@@ -2703,7 +2544,7 @@ class Slice:
 
         :return: slice_id
         """
-        slice_reservations = []
+        slice_reservations = None
 
         if not wait:
             progress = False
@@ -2732,12 +2573,15 @@ class Slice:
         # Request slice from Orchestrator
         if self._is_modify():
             if lease_in_hours:
-                self.fablib_manager.get_manager().renew_slice(
-                    slice_id=self.sm_slice.slice_id, lease_end_time=end_time_str
+                return_status, result = self.fablib_manager.get_manager().renew(
+                    slice_object=self.sm_slice, new_lease_end_time=end_time_str
                 )
             else:
-                slice_reservations = self.fablib_manager.get_manager().modify_slice(
-                    slice_id=self.slice_id, graph_model=slice_graph
+                (
+                    return_status,
+                    slice_reservations,
+                ) = self.fablib_manager.get_manager().modify(
+                    slice_id=self.slice_id, slice_graph=slice_graph
                 )
         else:
             # retrieve and validate SSH keys
@@ -2753,7 +2597,7 @@ class Slice:
                     raise Exception(
                         "Extra SSH keys must be provided as a list of strings."
                     )
-            if not ssh_keys or len(ssh_keys) < 1:
+            if not ssh_keys:
                 raise Exception(
                     "No SSH keys available. Provide extra_ssh_keys or "
                     "configure a default slice public key."
@@ -2763,24 +2607,38 @@ class Slice:
                 # this will throw an informative exception
                 FABRICSSHKey.get_key_length(ssh_key)
 
-            slice_reservations = self.fablib_manager.get_manager().create_slice(
-                name=self.slice_name,
-                graph_model=slice_graph,
-                ssh_keys=ssh_keys,
+            (
+                return_status,
+                slice_reservations,
+            ) = self.fablib_manager.get_manager().create(
+                slice_name=self.slice_name,
+                slice_graph=slice_graph,
+                ssh_key=ssh_keys,
                 lease_end_time=end_time_str,
                 lease_start_time=start_time_str,
                 lifetime=lease_in_hours,
             )
-            if len(slice_reservations):
+            if return_status == Status.OK:
                 log.info(
-                    f"Submit request success: slice_reservations: {slice_reservations}"
+                    f"Submit request success: return_status {return_status}, slice_reservations: {slice_reservations}"
                 )
                 log.debug(f"slice_reservations: {slice_reservations}")
-                log.debug(f"slice_id: {slice_reservations[0].get('slice_id')}")
-                self.slice_id = slice_reservations[0].get("slice_id")
-                # Update the cache with the new slice_id
-                if self.get_fablib_manager():
-                    self.get_fablib_manager().update_slice_cache_id(slice_object=self)
+                log.debug(f"slice_id: {slice_reservations[0].slice_id}")
+                self.slice_id = slice_reservations[0].slice_id
+            else:
+                log.error(
+                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
+                raise Exception(
+                    f"Submit request error: return_status {return_status}, slice_reservations: {slice_reservations}"
+                )
+
+        if return_status != Status.OK:
+            raise Exception(
+                "Failed to submit slice: {}, {}".format(
+                    return_status, slice_reservations
+                )
+            )
 
         if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
@@ -3344,9 +3202,18 @@ class Slice:
         slice_graph = self.get_fim_topology().serialize()
 
         # Request slice from Orchestrator
-        slice_reservations = self.fablib_manager.get_manager().modify_slice(
-            slice_id=self.slice_id, graph_model=slice_graph
+        (
+            return_status,
+            slice_reservations,
+        ) = self.fablib_manager.get_manager().modify(
+            slice_id=self.slice_id, slice_graph=slice_graph
         )
+        if return_status != Status.OK:
+            raise Exception(
+                "Failed to submit modify slice: {}, {}".format(
+                    return_status, slice_reservations
+                )
+            )
 
         log.debug(f"slice_reservations: {slice_reservations}")
 
@@ -3381,30 +3248,21 @@ class Slice:
         Submits an accept to accept the last modify slice request to FABRIC.
         """
         # Request slice from Orchestrator
-        result = self.fablib_manager.get_manager().accept_modify(slice_id=self.slice_id)
-        topology_replaced = False
-        if isinstance(result, dict) and result.get("model"):
-            self.topology = ExperimentTopology()
-            self.topology.load(graph_string=result["model"])
-            topology_replaced = True
-        elif hasattr(result, "model") and result.model:
-            self.topology = ExperimentTopology()
-            self.topology.load(graph_string=result.model)
-            topology_replaced = True
-        log.debug(f"modified topology: {self.topology}")
+        return_status, topology = self.fablib_manager.get_manager().modify_accept(
+            slice_id=self.slice_id
+        )
+        if return_status != Status.OK:
+            raise Exception(
+                "Failed to accept the last modify slice: {}, {}".format(
+                    return_status, topology
+                )
+            )
+        else:
+            self.topology = topology
+
+        log.debug(f"modified topology: {topology}")
 
         self.update_slice()
-
-        # Invalidate and rebuild caches so cached objects point to the new
-        # topology graph instead of the stale one replaced above.
-        if topology_replaced:
-            self.interfaces = {}
-            self._topology_dirty = True
-            self.get_nodes()
-            self.get_facilities()
-            self.get_network_services()
-            self.get_interfaces(refresh=True)
-            self._topology_dirty = False
 
     def get_user_data(self):
         """
@@ -3436,10 +3294,7 @@ class Slice:
 
     def validate(self, raise_exception: bool = True) -> Tuple[bool, Dict[str, str]]:
         """
-        Validate the slice w.r.t available resources before submission.
-
-        Fetches resources once and delegates to
-        :meth:`NodeValidator.validate_nodes` for batch validation.
+        Validate the slice w.r.t available resources before submission
 
         :param raise_exception: raise exception if validation fails
         :type raise_exception: bool
@@ -3448,22 +3303,19 @@ class Slice:
                  each requested node
         :rtype: Tuple[bool, Dict[str, str]]
         """
-        from fabrictestbed_extensions.fablib.validator import NodeValidator
-
-        resources = self.get_fablib_manager().get_resources()
-        nodes = self.get_nodes()
-
-        all_valid, errors = NodeValidator.validate_nodes(
-            nodes=nodes, resources=resources
-        )
-
-        # Remove invalid nodes
-        if errors:
-            for n in nodes:
-                if n.get_name() in errors:
-                    log.warning(f"{n.get_name()} - {errors[n.get_name()]}")
-                    n.delete()
-
-        if raise_exception and errors:
+        allocated = {}
+        errors = {}
+        nodes_to_remove = []
+        for n in self.get_nodes():
+            status, error = self.get_fablib_manager().validate_node(
+                node=n, allocated=allocated
+            )
+            if not status:
+                nodes_to_remove.append(n)
+                errors[n.get_name()] = error
+                log.warning(f"{n.get_name()} - {error}")
+        for n in nodes_to_remove:
+            n.delete()
+        if raise_exception and len(errors):
             raise Exception(f"Slice validation failed - {errors}!")
-        return all_valid, errors
+        return len(errors) == 0, errors

@@ -41,17 +41,17 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
-import jinja2
 from fim.user import ComponentType
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.node import Node
-    from fabrictestbed_extensions.fablib.interface import Interface
     from fabrictestbed_extensions.fablib.interface import Interface
 
 import logging
@@ -64,7 +64,7 @@ from tabulate import tabulate
 log = logging.getLogger("fablib")
 
 
-class Component:
+class Component(TemplateMixin):
     """Represents a hardware component attached to a FABRIC node.
 
     Components (NICs, GPUs, FPGAs, NVMe, etc.) extend a node's capabilities and
@@ -75,6 +75,8 @@ class Component:
     :cvar dict component_model_map: Mapping of component model names to FIM types.
     :cvar dict component_configure_commands: Component-specific configuration commands.
     """
+
+    _show_title = "Component"
 
     component_model_map = {
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
@@ -97,14 +99,17 @@ class Component:
     component_configure_commands = {
         Constants.CMP_NIC_ConnectX_7_100: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo ip link set tmfifo_net0 up",
             "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
         ],
         Constants.CMP_NIC_ConnectX_7_400: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo ip link set tmfifo_net0 up",
             "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
         ],
         Constants.CMP_NIC_BlueField2_ConnectX_6: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
+            "sudo ip link set tmfifo_net0 up",
             "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
         ],
     }
@@ -130,21 +135,6 @@ class Component:
 
         return tabulate(table)
 
-    def get_fablib_manager(self):
-        """
-        Get the Fabric library manager associated with the component.
-        """
-        return self.get_slice().get_fablib_manager()
-
-    def toJson(self):
-        """
-        Returns the component attributes as a json string
-
-        :return: slice attributes as json string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -164,114 +154,55 @@ class Component:
             "numa": "Numa Node",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: Optional[List[str]] = None):
         """
-        Returns the component attributes as a dictionary
+        Returns the component attributes as a dictionary.
 
-        :return: slice attributes as dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: List[str]
+        :return: component attributes as dictionary
         :rtype: dict
         """
-        return self.dict
+        if skip is None:
+            skip = []
 
-    def generate_template_context(self):
+        if self._cached_dict is None:
+            d = {}
+            d["name"] = str(self.get_name())
+            d["short_name"] = str(self.get_short_name())
+            d["details"] = str(self.get_details())
+            d["disk"] = str(self.get_disk())
+            d["units"] = str(self.get_unit())
+            d["pci_address"] = str(self.get_pci_addr())
+            d["model"] = str(self.get_model())
+            d["type"] = str(self.get_type())
+            d["dev"] = str(self.get_device_name())
+            d["node"] = str(self.get_node().get_name()) if self.get_node() else ""
+            d["numa"] = str(self.get_numa_node())
+            self._cached_dict = d
+
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
+
+    def generate_template_context(self, skip: Optional[List[str]] = None):
         """
         Generate the base template context for this component.
 
         Creates a dictionary context suitable for Jinja2 template rendering,
         including component attributes and an empty interfaces list.
 
+        :param skip: list of keys to exclude
+        :type skip: List[str]
         :return: Template context dictionary with component attributes
         :rtype: dict
         """
-        context = self.toDict()
+        context = self.toDict(skip=skip)
         context["interfaces"] = []
-        # for interface in self.get_interfaces():
-        #    context["interfaces"].append(interface.get_name())
-
-        #    context["interfaces"].append(interface.generate_template_context())
         return context
-
-    def get_template_context(self):
-        """
-        Get the Jinja2 template context for this component from the slice.
-
-        Retrieves the template rendering context from the slice, which includes
-        component variables and configuration that can be used in Jinja2 templates.
-
-        :return: Template context dictionary for Jinja2 rendering
-        :rtype: dict
-        """
-        return self.get_slice().get_template_context(self)
-
-    def render_template(self, input_string):
-        """
-        Render a Jinja2 template string using the component's context.
-
-        Processes the input template string with the component's template
-        context variables and returns the rendered result.
-
-        :param input_string: Jinja2 template string to render
-        :type input_string: str
-
-        :return: Rendered template output string
-        :rtype: str
-        """
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context())
-
-        return output_string
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Show a table containing the current component attributes.
-
-        There are several output options: "text", "pandas", and "json" that determine the format of the
-        output that is returned and (optionally) displayed/printed.
-
-        output:  'text': string formatted with tabular
-                  'pandas': pandas dataframe
-                  'json': string in json format
-
-        fields: json output will include all available fields.
-
-        Example: fields=['Name','PCI Address']
-
-        :param output: output format
-        :type output: str
-        :param fields: list of fields to show
-        :type fields: List[str]
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-        :return: table in format specified by output parameter
-        :rtype: Object
-        """
-        data = self.toDict()
-
-        # fields = ["Name", "Details", "Disk", "Units", "PCI Address",
-        #        "Model", "Type"
-        #         ]
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        table = self.get_fablib_manager().show_table(
-            data,
-            fields=fields,
-            title="Component",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return table
 
     def list_interfaces(
         self,
@@ -390,6 +321,7 @@ class Component:
         self.node = node
         self.interfaces = {}
 
+        # Dict for toDict() / template rendering
         self.dict = {
             "name": "",
             "short_name": "",
@@ -400,15 +332,66 @@ class Component:
             "model": "",
             "type": "",
             "dev": "",
-            "node": node.get_name(),
+            "node": "",
             "numa": "",
         }
+
+        # V2 specific: cached FIM properties
+        self._cached_details: Optional[str] = None
+        self._cached_numa_node: Optional[str] = None
+        self._cached_disk: Optional[int] = None
+        self._cached_unit: Optional[int] = None
+        self._cached_bdf: Optional[str] = None
+        self._cached_fim_model: Optional[str] = None
+        self._cached_fim_type: Optional[str] = None
+        self._cached_device_name: Optional[str] = None
+
+    def _invalidate_cache(self):
+        """Invalidate all cached properties."""
+        super(Component, self)._invalidate_cache()
+
+        self._cached_details = None
+        self._cached_numa_node = None
+        self._cached_disk = None
+        self._cached_unit = None
+        self._cached_bdf = None
+        self._cached_fim_model = None
+        self._cached_fim_type = None
+        self._cached_device_name = None
+        self.interfaces = {}
+        self.dict = {
+            "name": "",
+            "short_name": "",
+            "details": "",
+            "disk": "",
+            "units": "",
+            "pci_address": "",
+            "model": "",
+            "type": "",
+            "dev": "",
+            "node": self.get_node().get_name() if self.get_node() else "",
+            "numa": "",
+        }
+
+    def update(self, fim_component: Optional[FimComponent] = None):
+        """
+        Update the component with new FIM data.
+
+        :param fim_component: The new FIM component data
+        :type fim_component: FimComponent
+        """
+        if fim_component:
+            self.fim_component = fim_component
+            self._invalidate_cache()
+            self._fim_dirty = False
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
     ) -> Union[dict[str, Interface], list[Interface]]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
+
+        Results are cached. Use refresh=True to force reload from FIM.
 
         :param include_subs: Flag indicating if sub interfaces should be included
         :type include_subs: bool
@@ -425,42 +408,72 @@ class Component:
 
         from fabrictestbed_extensions.fablib.interface import Interface
 
-        if len(self.interfaces) == 0 or refresh:
-            for fim_interface in self.get_fim_component().interface_list:
-                iface = Interface(component=self, fim_interface=fim_interface)
-                self.interfaces[iface.get_name()] = iface
-                if include_subs:
-                    child_interfaces = iface.get_interfaces(
-                        refresh=refresh, output="dict"
-                    )
-                    if child_interfaces and len(child_interfaces):
-                        self.interfaces.update(child_interfaces)
+        if self.interfaces and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self.interfaces
+            return list(self.interfaces.values())
+
+        self.interfaces = {}
+        for fim_interface in self.get_fim().interface_list:
+            iface = Interface(component=self, fim_interface=fim_interface)
+            self.interfaces[iface.get_name()] = iface
+            if include_subs:
+                child_interfaces = iface.get_interfaces(refresh=refresh, output="dict")
+                if child_interfaces and len(child_interfaces):
+                    self.interfaces.update(child_interfaces)
 
         if output == "dict":
             return self.interfaces
-        else:
-            return list(self.interfaces.values())
+        return list(self.interfaces.values())
 
-    def get_fim_component(self) -> FimComponent:
+    def get_interface(
+        self, name: str = None, network_name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
         """
-        Not recommended for most users.
+        Gets a particular interface attached to this component.
 
-        Gets the FABRIC component this fablib component represents. This method
-        is used to access data at a lower level than FABlib.
+        Accepts either the interface name or a network_name. If a network name
+        is used, returns the interface connected to that network. If both name
+        and network_name are provided, name takes precedence.
 
-        :return: the FABRIC component on this component
-        :rtype: FIMComponent
+        :param name: the name of the interface to search for
+        :type name: str
+        :param network_name: network name to search for
+        :type network_name: str
+        :param refresh: Refresh interface objects with latest FIM info
+        :type refresh: bool
+        :return: the particular interface
+        :rtype: Interface
+        :raises Exception: if interface is not found
         """
-        return self.fim_component
+        interfaces = self.get_interfaces(refresh=refresh, output="dict")
 
-    def get_slice(self) -> Slice:
+        if name is not None:
+            interface = interfaces.get(name)
+            if interface is not None:
+                return interface
+        elif network_name is not None:
+            for interface in interfaces.values():
+                if (
+                    interface is not None
+                    and interface.get_network() is not None
+                    and interface.get_network().get_name() == network_name
+                ):
+                    return interface
+
+        raise Exception(f"Interface not found: {name or network_name}")
+
+    def get_slice(self) -> Optional[Slice]:
         """
         Gets the fablib slice associated with this component's node.
 
         :return: the slice this component is on
         :rtype: Slice
         """
-        return self.node.get_slice()
+        if self.get_node():
+            return self.node.get_slice()
+        else:
+            return None
 
     def get_node(self) -> Node:
         """
@@ -491,46 +504,40 @@ class Component:
             ]
         return self.dict["short_name"]
 
-    def get_name(self) -> str:
-        """
-        Gets the name of this component from the FABRIC component.
-
-        :return: the name of this component
-        :rtype: str
-        """
-        if not self.dict["name"]:
-            self.dict["name"] = self.get_fim_component().name
-        return self.dict["name"]
-
     def get_details(self) -> str:
         """
         Not intended for API use
         """
-        if not self.dict["details"]:
-            self.dict["details"] = self.get_fim_component().details
-        return self.dict["details"]
+        if self._cached_details is None:
+            try:
+                if self.get_fim():
+                    self._cached_details = self.get_fim().details
+                    self.dict["details"] = self._cached_details
+            except Exception:
+                self._cached_details = None
+        return self._cached_details
 
     def get_numa_node(self) -> str:
         """
         Get the Numa Node assigned to the device
         """
-        if not self.dict["numa"]:
+        if self._cached_numa_node is None:
             try:
-                numa = (
-                    self.get_fim_component()
-                    .get_property(pname="label_allocations")
-                    .numa
-                )
-                if numa is not None:
-                    if isinstance(numa, str):
-                        return numa
-                    if isinstance(numa, list):
-                        return numa[0]
-            except Exception as e:
-                logging.error(f"get_numa_node failed: {e}")
-                return None
-            self.dict["numa"] = numa
-        return self.dict["numa"]
+                if self.fim_component:
+                    label_allocations = self.fim_component.get_property(
+                        pname="label_allocations"
+                    )
+                    if label_allocations:
+                        if label_allocations.numa:
+                            if isinstance(label_allocations.numa, str):
+                                self._cached_numa_node = label_allocations.numa
+                                self.dict["numa"] = self._cached_numa_node
+                            elif isinstance(label_allocations.numa, list):
+                                self._cached_numa_node = label_allocations.numa[0]
+                                self.dict["numa"] = self._cached_numa_node
+            except Exception:
+                self._cached_numa_node = None
+        return self._cached_numa_node if self._cached_numa_node else ""
 
     def get_disk(self) -> int:
         """
@@ -539,11 +546,19 @@ class Component:
         :return: this component's disk space
         :rtype: int
         """
-        if not self.dict["disk"]:
-            self.dict["disk"] = (
-                self.get_fim_component().get_property(pname="capacity_allocations").disk
-            )
-        return self.dict["disk"]
+        if self._cached_disk is None:
+            try:
+                if self.fim_component:
+                    capacity_allocations = self.fim_component.get_property(
+                        pname="capacity_allocations"
+                    )
+                    if capacity_allocations:
+                        if capacity_allocations.disk:
+                            self._cached_disk = capacity_allocations.disk
+                            self.dict["disk"] = self._cached_disk
+            except Exception:
+                self._cached_disk = None
+        return self._cached_disk if self._cached_disk else 0
 
     def get_unit(self) -> int:
         """
@@ -552,11 +567,18 @@ class Component:
         :return: unit
         :rtype: int
         """
-        if not self.dict["units"]:
-            self.dict["units"] = (
-                self.get_fim_component().get_property(pname="capacity_allocations").unit
-            )
-        return self.dict["units"]
+        if self._cached_unit is None:
+            try:
+                if self.fim_component:
+                    capacity_allocations = self.fim_component.get_property(
+                        pname="capacity_allocations"
+                    )
+                    if capacity_allocations:
+                        if capacity_allocations.unit:
+                            self._cached_unit = capacity_allocations.unit
+            except Exception:
+                self._cached_unit = None
+        return self._cached_unit if self._cached_unit else 0
 
     def get_pci_addr(self) -> str:
         """
@@ -565,11 +587,18 @@ class Component:
         :return: PCI device ID
         :rtype: String
         """
-        if not self.dict["pci_address"]:
-            self.dict["pci_address"] = (
-                self.get_fim_component().get_property(pname="label_allocations").bdf
-            )
-        return self.dict["pci_address"]
+        if self._cached_bdf is None:
+            try:
+                if self.fim_component:
+                    label_allocations = self.fim_component.get_property(
+                        pname="label_allocations"
+                    )
+                    if label_allocations:
+                        if label_allocations.bdf:
+                            self._cached_bdf = label_allocations.bdf
+            except Exception:
+                self._cached_bdf = None
+        return self._cached_bdf
 
     def get_model(self) -> str:
         """
@@ -598,63 +627,50 @@ class Component:
         else:
             raise ValueError(f"Unsupported component type: {component_type}")
 
-    def get_reservation_id(self) -> str or None:
+    def get_reservation_id(self) -> Optional[str]:
         """
         Get reservation ID for this component.
 
         :return:  reservation ID
         :rtype: String
         """
-        try:
-            # This does not work
-            # print(f"{self.get_fim_component()}")
-            return (
-                self.get_fim_component()
-                .get_property(pname="reservation_info")
-                .reservation_id
-            )
-        except:
-            return None
+        if self.get_node():
+            return self.get_node().get_reservation_id()
+        return None
 
-    def get_reservation_state(self) -> str or None:
+    def get_reservation_state(self) -> Optional[str]:
         """
         Get reservation state for this component.
 
         :return:  reservation state
         :rtype: String
         """
-        try:
-            return (
-                self.get_fim_component()
-                .get_property(pname="reservation_info")
-                .reservation_state
-            )
-        except:
-            return None
+        if self.get_node():
+            return self.get_node().get_reservation_state()
+        return None
 
-    def get_error_message(self) -> str:
+    def get_error_message(self) -> Optional[str]:
         """
         Get error message for this component.
 
         :return:  reservation state
         :rtype: String
         """
-        try:
-            return (
-                self.get_fim_component()
-                .get_property(pname="reservation_info")
-                .error_message
-            )
-        except:
-            return ""
+        if self.get_node():
+            return self.get_node().get_error_message()
+        return None
 
     def get_fim_model(self) -> str:
         """
         Not for API use
         """
-        if not self.fim_model:
-            self.fim_model = self.get_fim_component().model
-        return self.fim_model
+        if self._cached_fim_model is None:
+            try:
+                if self.fim_component:
+                    self._cached_fim_model = self.fim_component.model
+            except Exception:
+                self._cached_fim_model = None
+        return self._cached_fim_model
 
     def get_type(self) -> str:
         """
@@ -665,9 +681,13 @@ class Component:
         :return: the type of component
         :rtype: str
         """
-        if not self.dict["type"]:
-            self.dict["type"] = self.get_fim_component().type
-        return self.dict["type"]
+        if self._cached_fim_type is None:
+            try:
+                if self.fim_component:
+                    self._cached_fim_type = self.fim_component.type
+            except Exception:
+                self._cached_fim_type = None
+        return self._cached_fim_type
 
     def configure(self, commands: List[str] = []):
         """
@@ -764,13 +784,18 @@ class Component:
         """
         Not for API use
         """
-        if not self.dict["dev"]:
-            self.dict["dev"] = (
-                self.get_fim_component()
-                .get_property(pname="label_allocations")
-                .device_name
-            )
-        return self.dict["dev"]
+        if self._cached_device_name is None:
+            try:
+                if self.fim_component:
+                    label_allocations = self.fim_component.get_property(
+                        pname="label_allocations"
+                    )
+                    if label_allocations:
+                        if label_allocations.device_name:
+                            self._cached_device_name = label_allocations.device_name
+            except Exception:
+                self._cached_device_name = None
+        return self._cached_device_name
 
     @staticmethod
     def new_storage(node: Node, name: str, auto_mount: bool = False):
@@ -801,37 +826,19 @@ class Component:
         This method is used to access data at a lower level than
         FABlib.
         """
-        return self.get_fim_component()
+        return self.fim_component
 
-    def set_user_data(self, user_data: dict):
+    def get_fim_component(self) -> FimComponent:
         """
-        Set the user data for the component.
+        Not recommended for most users.
 
-        This method stores the given user data dictionary as a JSON
-        string in the FIM object associated with the component.
+        Gets the FABRIC component this fablib component represents. This method
+        is used to access data at a lower level than FABlib.
 
-        :param user_data: The user data to be set.
-        :type user_data: dict
+        :return: the FABRIC component on this component
+        :rtype: FIMComponent
         """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
-        )
-
-    def get_user_data(self) -> dict:
-        """
-        Retrieve the user data for the component.
-
-        This method fetches the user data stored in the FIM object
-        associated with the component and returns it as a dictionary.
-        If an error occurs, it returns an empty dictionary.
-
-        :return: The user data dictionary.
-        :rtype: dict
-        """
-        try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
-        except:
-            return {}
+        return self.get_fim()
 
     def delete(self):
         """
@@ -844,3 +851,7 @@ class Component:
         self.get_slice().get_fim_topology().nodes[
             self.get_node().get_name()
         ].remove_component(name=self.get_name())
+        # Invalidate parent node's component cache so subsequent
+        # get_components() calls don't return the deleted component
+        self.get_node().components = {}
+        self.get_node()._fim_dirty = True

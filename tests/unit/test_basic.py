@@ -137,9 +137,11 @@ class FablibManagerTests(unittest.TestCase):
     def test_FablibManager_no_config_no_env_var(self):
         # Instantiate Fablib manager without any config or environment variables
         # Results in using the defaults and initialization fails when token file is not found!
+        # Pass the empty rcfile so no real config file on disk is read.
         self.assertRaises(
             ConfigException,
             FablibManager,
+            fabric_rc=self.rcfile.name,
         )
 
     def test_FablibManager_no_config_no_env_var_token_location(self):
@@ -154,11 +156,15 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, Exception)
 
-        # Check that the error message is what we expected: the only
-        # error should be about missing token.
-        self.assertEqual(
-            "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/Not enough segments",
-            str(ctx.exception),
+        # Check that the error message indicates an authentication failure.
+        # V1 raised "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/..."
+        # V2 sends the token to the Core API which returns a 401 Unauthorized.
+        error_msg = str(ctx.exception)
+        self.assertTrue(
+            "UNPARSABLE_TOKEN" in error_msg
+            or "401" in error_msg
+            or "Unauthorized" in error_msg,
+            f"Unexpected error message: {error_msg}",
         )
 
     def test_FablibManager_no_config_no_env_var_token_location_offline(self):
