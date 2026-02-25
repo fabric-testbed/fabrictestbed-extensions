@@ -917,8 +917,7 @@ Host * !bastion.fabric-testbed.net
             self.runtime_config[Constants.PROJECT_NAME] = (
                 self.manager.get_project_name()
             )
-            if not self.get_no_ssh():
-                self.determine_bastion_username()
+            self.determine_bastion_username()
         except Exception as e:
             log.error(e, exc_info=True)
             raise e
