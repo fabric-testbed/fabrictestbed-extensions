@@ -69,10 +69,9 @@ from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
+    from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
 
 import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Address, ip_address
 from typing import Dict, List, Union
 
@@ -369,63 +368,65 @@ class Slice:
         :return: table in format specified by output parameter
         :rtype: Object
         """
-        executor = ThreadPoolExecutor(64)
+        no_ssh = self.get_fablib_manager().get_no_ssh()
 
-        net_name_threads = {}
-        node_name_threads = {}
-        physical_os_interface_name_threads = {}
-        os_interface_threads = {}
-        for iface in self.get_interfaces(refresh=refresh):
-            if iface.get_network():
-                log.info(
-                    f"Starting get network name thread for iface {iface.get_name()} "
-                )
-                net_name_threads[iface.get_name()] = executor.submit(
-                    iface.get_network().get_name
-                )
+        with ThreadPoolExecutor(64) as executor:
+            net_name_threads = {}
+            node_name_threads = {}
+            physical_os_interface_name_threads = {}
+            os_interface_threads = {}
+            for iface in self.get_interfaces(refresh=refresh):
+                if iface.get_network():
+                    log.info(
+                        f"Starting get network name thread for iface {iface.get_name()} "
+                    )
+                    net_name_threads[iface.get_name()] = executor.submit(
+                        iface.get_network().get_name
+                    )
 
-            if iface.get_node():
-                log.info(f"Starting get node name thread for iface {iface.get_name()} ")
-                node_name_threads[iface.get_name()] = executor.submit(
-                    iface.get_node().get_name
-                )
+                if iface.get_node():
+                    log.info(
+                        f"Starting get node name thread for iface {iface.get_name()} "
+                    )
+                    node_name_threads[iface.get_name()] = executor.submit(
+                        iface.get_node().get_name
+                    )
 
-            log.info(
-                f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} "
-            )
-            physical_os_interface_name_threads[iface.get_name()] = executor.submit(
-                iface.get_physical_os_interface_name
-            )
+                # Skip SSH-dependent interface lookups when no_ssh is set
+                if not no_ssh:
+                    log.info(
+                        f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} "
+                    )
+                    physical_os_interface_name_threads[iface.get_name()] = (
+                        executor.submit(iface.get_physical_os_interface_name)
+                    )
 
-            log.info(
-                f"Starting get get_os_interface_threads for iface {iface.get_name()} "
-            )
-            os_interface_threads[iface.get_name()] = executor.submit(
-                iface.get_device_name
-            )
+                    log.info(
+                        f"Starting get get_os_interface_threads for iface {iface.get_name()} "
+                    )
+                    os_interface_threads[iface.get_name()] = executor.submit(
+                        iface.get_device_name
+                    )
 
-        table = []
-        for iface in self.get_interfaces():
-            if iface.get_network():
-                # network_name = iface.get_network().get_name()
-                log.info(
-                    f"Getting results from get network name thread for iface {iface.get_name()} "
-                )
-                network_name = net_name_threads[iface.get_name()].result()
-            else:
-                network_name = None
+            table = []
+            for iface in self.get_interfaces():
+                if iface.get_network():
+                    log.info(
+                        f"Getting results from get network name thread for iface {iface.get_name()} "
+                    )
+                    network_name = net_name_threads[iface.get_name()].result()
+                else:
+                    network_name = None
 
-            if iface.get_node():
-                # node_name = iface.get_node().get_name()
-                log.info(
-                    f"Getting results from get node name thread for iface {iface.get_name()} "
-                )
-                node_name = node_name_threads[iface.get_name()].result()
+                if iface.get_node():
+                    log.info(
+                        f"Getting results from get node name thread for iface {iface.get_name()} "
+                    )
+                    node_name = node_name_threads[iface.get_name()].result()
+                else:
+                    node_name = None
 
-            else:
-                node_name = None
-
-            table.append(iface.toDict())
+                table.append(iface.toDict())
         if pretty_names:
             pretty_names_dict = Interface.get_pretty_name_dict()
         else:
@@ -2369,40 +2370,39 @@ class Slice:
 
         start = time.time()
 
-        # from concurrent.futures import ThreadPoolExecutor
-        my_thread_pool_executor = ThreadPoolExecutor(32)
-        threads = {}
+        with ThreadPoolExecutor(32) as executor:
+            threads = {}
 
-        for node in self.get_nodes():
-            # Run configuration on newly created nodes and on modify.
-            log.info(
-                f"Configuring {node.get_name()} "
-                f"(instantiated: {node.is_instantiated()}, "
-                f"modify: {self._is_modify()})"
-            )
-            if not node.is_instantiated() or self._is_modify():
-                thread = my_thread_pool_executor.submit(node.config)
-                threads[thread] = node
+            for node in self.get_nodes():
+                # Run configuration on newly created nodes and on modify.
+                log.info(
+                    f"Configuring {node.get_name()} "
+                    f"(instantiated: {node.is_instantiated()}, "
+                    f"modify: {self._is_modify()})"
+                )
+                if not node.is_instantiated() or self._is_modify():
+                    thread = executor.submit(node.config)
+                    threads[thread] = node
 
-        print(
-            f"Running post boot config threads ..."
-        )  # ({time.time() - start:.0f} sec)")
+            print(
+                f"Running post boot config threads ..."
+            )  # ({time.time() - start:.0f} sec)")
 
-        for thread in concurrent.futures.as_completed(threads.keys()):
-            node = threads[thread]
-            try:
-                result = thread.result()
-                # print(result)
-                print(
-                    f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
-                )
-            except Exception as e:
-                print(
-                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
-                )
-                log.error(
-                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
-                )
+            for thread in concurrent.futures.as_completed(threads.keys()):
+                node = threads[thread]
+                try:
+                    result = thread.result()
+                    # print(result)
+                    print(
+                        f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
+                    )
+                except Exception as e:
+                    print(
+                        f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
+                    )
+                    log.error(
+                        f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
+                    )
 
         # print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
