@@ -2224,10 +2224,16 @@ class Slice:
         :type progress: bool
 
         :raises Exception: if timeout threshold reached
+        :raises RuntimeError: if no_ssh mode is enabled
 
         :return: true when slice ssh successful
         :rtype: bool
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
 
         timeout_start = time.time()
         slice = self.sm_slice
@@ -2300,7 +2306,15 @@ class Slice:
 
         Only use this method after a non-blocking submit call and only call it
         once.
+
+        :raises RuntimeError: if no_ssh mode is enabled
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
+
         if self.is_dead_or_closing() or self.is_allocated():
             print(
                 f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
@@ -2704,6 +2718,11 @@ class Slice:
         :return: slice_id
         """
         slice_reservations = []
+
+        # When no_ssh is set, force SSH-dependent options off
+        if self.get_fablib_manager().get_no_ssh():
+            wait_ssh = False
+            post_boot_config = False
 
         if not wait:
             progress = False
@@ -3337,6 +3356,10 @@ class Slice:
         :param post_boot_config: Flag indicating if post boot config should be applied
         """
 
+        # When no_ssh is set, force SSH-dependent options off
+        if self.get_fablib_manager().get_no_ssh():
+            post_boot_config = False
+
         if not wait:
             progress = False
 
@@ -3359,9 +3382,10 @@ class Slice:
             return self.slice_id
 
         elif wait:
-            self.wait_ssh(
-                timeout=wait_timeout, interval=wait_interval, progress=progress
-            )
+            if not self.get_fablib_manager().get_no_ssh():
+                self.wait_ssh(
+                    timeout=wait_timeout, interval=wait_interval, progress=progress
+                )
 
             if progress:
                 print("Running post boot config ... ", end="")
