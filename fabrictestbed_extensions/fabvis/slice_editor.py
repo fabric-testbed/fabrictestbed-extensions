@@ -30,6 +30,7 @@ nodes, components, and networks, then submit or modify the slice.
 """
 
 import logging
+import select
 import threading
 from typing import Optional
 
@@ -842,15 +843,18 @@ class SliceEditor:
     # ----------------------------------------------------------------
 
     def _build_terminal_panel(self) -> None:
-        """Build the terminal panel (hidden by default).
+        """Build the SSH terminal panel (hidden by default).
 
-        Uses a real Jupyter server terminal embedded in an IFrame.
-        This gives a full TTY experience — tab completion, arrow keys,
-        interactive programs (vim, top), and proper scrollback.
+        The output and input are styled identically so they appear as a
+        single continuous terminal.  A small auto-scroll script in the
+        output HTML keeps the latest text visible.
         """
         self._terminal_node = None
-        self._terminal_name = None  # Jupyter terminal session name
-        self._terminal_session = None  # requests.Session for API calls
+        self._terminal_ssh_client = None
+        self._terminal_bastion = None
+        self._terminal_channel = None
+        self._terminal_reader_thread = None
+        self._terminal_stop = threading.Event()
 
         # Close button
         close_btn = widgets.Button(
@@ -877,18 +881,87 @@ class SliceEditor:
             ),
         )
 
-        # IFrame for the Jupyter terminal
-        self._terminal_iframe = widgets.HTML(
-            value=self._terminal_placeholder_html(),
+        # ── Scrollable output area ──
+        self._terminal_lines = []
+        self._terminal_output = widgets.HTML(
+            value=self._render_terminal_html(),
             layout=widgets.Layout(
                 width="100%",
                 flex="1",
-                min_height="200px",
+                overflow_y="auto",
+                padding="0",
             ),
         )
+        self._terminal_output.add_class("fabvis-term-output")
+
+        # ── Prompt label + input — styled to blend into the output ──
+        self._terminal_prompt = widgets.HTML(
+            value=self._prompt_html("$"),
+            layout=widgets.Layout(
+                width="auto",
+                min_width="20px",
+            ),
+        )
+        self._terminal_input = widgets.Text(
+            value="",
+            placeholder="",
+            layout=widgets.Layout(
+                flex="1",
+                border="none",
+            ),
+        )
+        self._terminal_input.continuous_update = False
+        self._terminal_input.on_submit(self._on_terminal_submit)
+        self._terminal_input.add_class("fabvis-terminal-input")
+
+        input_row = widgets.HBox(
+            [self._terminal_prompt, self._terminal_input],
+            layout=widgets.Layout(
+                width="100%",
+                gap="0px",
+                align_items="center",
+                padding="0",
+                margin="0",
+            ),
+        )
+        input_row.add_class("fabvis-term-input-row")
+
+        # ── CSS — make input and output look like one continuous terminal ──
+        self._terminal_css = widgets.HTML(value=(
+            '<style>'
+            '.fabvis-term-output .widget-html-content {'
+            '  display: flex;'
+            '  flex-direction: column;'
+            '  justify-content: flex-end;'
+            '  min-height: 100%;'
+            '}'
+            '.fabvis-terminal-input input {'
+            '  background: #1e1e1e !important;'
+            '  color: #d0d0d0 !important;'
+            '  font-family: "Courier New", Courier, monospace !important;'
+            '  font-size: 13px !important;'
+            '  border: none !important;'
+            '  outline: none !important;'
+            '  padding: 0 4px !important;'
+            '  margin: 0 !important;'
+            '  height: 22px !important;'
+            '  line-height: 22px !important;'
+            '  caret-color: #d0d0d0 !important;'
+            '  box-shadow: none !important;'
+            '}'
+            '.fabvis-terminal-input input::placeholder {'
+            '  color: #555 !important;'
+            '}'
+            '.fabvis-term-input-row {'
+            '  background: #1e1e1e !important;'
+            '  padding: 2px 10px !important;'
+            '}'
+            '</style>'
+        ))
 
         self._terminal_panel = widgets.VBox(
-            [terminal_header, self._terminal_iframe],
+            [self._terminal_css, terminal_header,
+             self._terminal_output, input_row],
             layout=widgets.Layout(
                 width="100%",
                 border_top=f"1px solid rgba(138,201,239,0.4)",
@@ -905,207 +978,241 @@ class SliceEditor:
         )
 
     @staticmethod
-    def _terminal_placeholder_html() -> str:
+    def _prompt_html(prompt: str) -> str:
+        """Render the shell prompt label that sits beside the input."""
+        from html import escape
         return (
-            '<div style="background:#1e1e1e; color:#555; font-family:'
-            '\'Courier New\',monospace; font-size:13px; padding:20px;'
-            ' text-align:center; height:100%;">'
-            'Select a node and click Terminal to connect.</div>'
+            f'<span style="color:#d0d0d0; font-family:\'Courier New\',Courier,'
+            f'monospace; font-size:13px; white-space:pre; line-height:22px;'
+            f' user-select:none;">{escape(prompt)} </span>'
         )
 
-    def _get_jupyter_base_url(self) -> str:
-        """Detect the Jupyter server base URL (path prefix only)."""
-        import os
-        # JupyterHub sets JUPYTERHUB_SERVICE_PREFIX
-        prefix = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "")
-        if prefix:
-            return prefix.rstrip("/")
-        # Fallback — try to read from running server list
-        try:
-            from jupyter_server.serverapp import list_running_servers
-            for info in list_running_servers():
-                return info.get("base_url", "").rstrip("/")
-        except Exception:
-            pass
-        return ""
-
-    def _get_jupyter_ws_base(self) -> str:
-        """Get the WebSocket base URL for the Jupyter server."""
-        try:
-            from jupyter_server.serverapp import list_running_servers
-            for info in list_running_servers():
-                port = info.get("port", 8888)
-                base = info.get("base_url", "").rstrip("/")
-                return f"ws://localhost:{port}{base}"
-        except Exception:
-            pass
-        return "ws://localhost:8888"
-
-    def _create_jupyter_terminal(self) -> str:
-        """Create a new Jupyter server terminal session.
-
-        Returns the terminal name, or raises on failure.
-        """
-        import requests as _req
-
-        self._terminal_session = _req.Session()
-
-        # Detect server port
-        port = 8888
-        try:
-            from jupyter_server.serverapp import list_running_servers
-            for info in list_running_servers():
-                port = info.get("port", 8888)
-                break
-        except Exception:
-            pass
-        self._terminal_port = port
-        base = f"http://localhost:{port}"
-
-        # Get XSRF cookie (must hit main page, not API endpoint)
-        self._terminal_session.get(f"{base}/")
-        xsrf = self._terminal_session.cookies.get("_xsrf", "")
-
-        resp = self._terminal_session.post(
-            f"{base}/api/terminals",
-            json={},
-            headers={"X-XSRFToken": xsrf},
+    def _render_terminal_html(self) -> str:
+        """Render the terminal buffer as styled HTML with auto-scroll."""
+        if not self._terminal_lines:
+            content = ""
+        else:
+            if len(self._terminal_lines) > 500:
+                self._terminal_lines = self._terminal_lines[-500:]
+            escaped = []
+            for line in self._terminal_lines:
+                escaped.append(self._esc(line))
+            content = "\n".join(escaped)
+        # The auto-scroll script runs each time the HTML is updated,
+        # scrolling the output widget to the bottom.
+        return (
+            f'<pre style="background:#1e1e1e; color:#d0d0d0; margin:0; '
+            f'padding:8px 10px 2px 10px; '
+            f'font-family:\'Courier New\',Courier,monospace; '
+            f'font-size:13px; line-height:1.4; white-space:pre-wrap; '
+            f'word-wrap:break-word; min-height:100%;">{content}</pre>'
+            f'<script>(function(){{'
+            f'var el=document.currentScript;'
+            f'while(el&&!el.scrollTop&&el.parentElement)el=el.parentElement;'
+            f'if(el)el.scrollTop=el.scrollHeight;'
+            f'}})();</script>'
         )
-        resp.raise_for_status()
-        name = resp.json()["name"]
-        self._terminal_name = name
-        return name
 
-    def _destroy_jupyter_terminal(self) -> None:
-        """Delete the Jupyter terminal session."""
-        if self._terminal_name and self._terminal_session:
-            port = getattr(self, "_terminal_port", 8888)
-            try:
-                xsrf = self._terminal_session.cookies.get("_xsrf", "")
-                self._terminal_session.delete(
-                    f"http://localhost:{port}/api/terminals/{self._terminal_name}",
-                    headers={"X-XSRFToken": xsrf},
-                )
-            except Exception:
-                pass
-        self._terminal_name = None
-        self._terminal_session = None
+    def _term_write(self, text: str) -> None:
+        """Append text to the terminal buffer and refresh the display."""
+        import re as _re
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        # Strip ANSI escape sequences for plain-text display
+        text = _re.sub(r"\x1b\[\??[0-9;]*[a-zA-Z]", "", text)
+        text = _re.sub(r"\x1b\][^\x07]*\x07", "", text)
 
-    def _build_ssh_command(self, node) -> str:
-        """Build the SSH command string for connecting to a node."""
-        try:
-            fablib_manager = node.get_fablib_manager()
-            management_ip = node.get_management_ip()
-            bastion_username = fablib_manager.get_bastion_username()
-            bastion_host = fablib_manager.get_bastion_host()
-            bastion_key = fablib_manager.get_bastion_key_location()
-            node_username = node.username
-            node_key = node.get_private_key_file()
+        parts = text.split("\n")
+        if self._terminal_lines:
+            self._terminal_lines[-1] += parts[0]
+            for p in parts[1:]:
+                self._terminal_lines.append(p)
+        else:
+            for p in parts:
+                self._terminal_lines.append(p)
 
-            return (
-                f"ssh -q -o StrictHostKeyChecking=no "
-                f"-o UserKnownHostsFile=/dev/null "
-                f"-i {node_key} "
-                f"-J {bastion_username}@{bastion_host} "
-                f"{node_username}@{management_ip}"
-            )
-        except Exception as e:
-            return f"echo 'Failed to build SSH command: {e}'"
+        self._terminal_output.value = self._render_terminal_html()
+
+        # Update the prompt to show the last line (which is the shell prompt)
+        # This makes the input row look like a continuation of the output
+        last = self._terminal_lines[-1] if self._terminal_lines else "$"
+        if last.strip():
+            self._terminal_prompt.value = self._prompt_html(last)
+        else:
+            self._terminal_prompt.value = self._prompt_html("$")
+
+    @staticmethod
+    def _esc(text: str) -> str:
+        """Escape HTML entities."""
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
 
     def _on_terminal_click(self, _btn) -> None:
-        """Open a real Jupyter terminal connected to the selected node."""
+        """Open the terminal panel and establish an SSH shell session."""
         node = self._selected_node_obj
         if node is None:
             return
 
-        # Close any existing terminal
+        # Close any existing session first
         self._terminal_disconnect()
 
         node_name = self._safe_get(node, "get_name", "?")
         self._terminal_node = node
         self._terminal_title.value = self._terminal_title_html(node_name)
+        self._terminal_lines = []
+        self._terminal_output.value = self._render_terminal_html()
+        self._terminal_splitter.layout.display = None
+        self._terminal_panel.layout.display = None
+        self._terminal_input.value = ""
+        self._terminal_prompt.value = self._prompt_html("$")
+
+        self._term_write(f"Connecting to {node_name}...\n")
+
+        # Connect in a background thread so the UI stays responsive
+        thread = threading.Thread(
+            target=self._terminal_connect, args=(node,), daemon=True
+        )
+        thread.start()
+
+    def _terminal_connect(self, node) -> None:
+        """Establish SSH connection through bastion and open interactive shell."""
+        import paramiko
 
         try:
-            # Create a Jupyter server terminal
-            term_name = self._create_jupyter_terminal()
-            base_url = self._get_jupyter_base_url()
-            ssh_cmd = self._build_ssh_command(node)
+            fablib_manager = node.get_fablib_manager()
+            management_ip = node.get_management_ip()
 
-            # Build IFrame that loads the Jupyter terminal and auto-runs SSH
-            self._terminal_iframe.value = (
-                f'<iframe src="{base_url}/terminals/{term_name}" '
-                f'style="width:100%;height:100%;min-height:200px;border:none;'
-                f'background:#000;"></iframe>'
-                f'<script>(function(){{'
-                f'var iframe=document.currentScript.previousElementSibling;'
-                f'iframe.onload=function(){{'
-                f'  setTimeout(function(){{'
-                f'    try{{'
-                f'      var w=iframe.contentWindow;'
-                f'      if(w&&w.document){{'
-                # Try to find the terminal and type the SSH command
-                f'        var term=w.document.querySelector(".xterm-helper-textarea");'
-                f'        if(term){{'
-                f'          term.focus();'
-                f'        }}'
-                f'      }}'
-                f'    }}catch(e){{}}'
-                f'  }},1500);'
-                f'}};'
-                f'}})();</script>'
+            bastion_username = fablib_manager.get_bastion_username()
+            bastion_key_file = fablib_manager.get_bastion_key_location()
+            node_username = node.username
+            node_key_file = node.get_private_key_file()
+            node_key_passphrase = node.get_private_key_passphrase()
+
+            ip_type = node.validIPAddress(management_ip)
+            src_addr = ("0.0.0.0", 22) if ip_type == "IPv4" else ("::", 22)
+            dest_addr = (str(management_ip), 22)
+
+            key = node.get_paramiko_key(
+                private_key_file=node_key_file,
+                get_private_key_passphrase=node_key_passphrase,
             )
 
-            # Show the panel
-            self._terminal_splitter.layout.display = None
-            self._terminal_panel.layout.display = None
-
-            # Send the SSH command after a delay to let the terminal init
-            cookies_str = "; ".join(
-                f"{k}={v}" for k, v in self._terminal_session.cookies.items()
+            # Connect to bastion
+            bastion = paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(
+                fablib_manager.get_bastion_host(),
+                username=bastion_username,
+                key_filename=bastion_key_file,
             )
 
-            def _send_ssh():
-                import time
-                time.sleep(2)
-                try:
-                    import websocket
-                    import json as _json
-                    ws_base = self._get_jupyter_ws_base()
-                    ws_url = f"{ws_base}/terminals/websocket/{term_name}"
-                    ws = websocket.create_connection(ws_url, cookie=cookies_str)
-                    # Jupyter terminal protocol: ["stdin", "command\r"]
-                    ws.send(_json.dumps(["stdin", ssh_cmd + "\r"]))
-                    ws.close()
-                except ImportError:
-                    logger.warning("websocket-client not installed; "
-                                   "cannot auto-send SSH command")
-                except Exception as exc:
-                    logger.debug(f"Failed to send SSH command via WS: {exc}")
+            bastion_transport = bastion.get_transport()
+            bastion_channel = bastion_transport.open_channel(
+                "direct-tcpip", dest_addr, src_addr
+            )
 
-            send_thread = threading.Thread(target=_send_ssh, daemon=True)
-            send_thread.start()
+            # Connect to node through bastion
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(
+                management_ip,
+                username=node_username,
+                pkey=key,
+                sock=bastion_channel,
+            )
+
+            # Open interactive shell — use dumb terminal to keep output
+            # clean for the HTML-based display
+            channel = client.invoke_shell(term="dumb", width=120, height=40)
+            channel.settimeout(0.0)
+
+            self._terminal_ssh_client = client
+            self._terminal_bastion = bastion
+            self._terminal_channel = channel
+            self._terminal_stop.clear()
+
+            # Start reader thread
+            self._terminal_reader_thread = threading.Thread(
+                target=self._terminal_reader_loop, daemon=True
+            )
+            self._terminal_reader_thread.start()
 
         except Exception as e:
-            self._terminal_iframe.value = (
-                f'<div style="background:#1e1e1e; color:#ff6b6b; '
-                f'font-family:\'Courier New\',monospace; font-size:13px; '
-                f'padding:20px;">Failed to create terminal: {e}</div>'
-            )
-            self._terminal_splitter.layout.display = None
-            self._terminal_panel.layout.display = None
+            self._term_write(f"SSH connection failed: {e}\n")
 
-    def _terminal_disconnect(self) -> None:
-        """Tear down the Jupyter terminal session cleanly."""
-        self._destroy_jupyter_terminal()
-        self._terminal_node = None
+    def _terminal_reader_loop(self) -> None:
+        """Background thread: read from SSH channel and display in HTML widget."""
+        channel = self._terminal_channel
+        if channel is None:
+            return
+
+        while not self._terminal_stop.is_set():
+            try:
+                ready, _, _ = select.select([channel], [], [], 0.3)
+                if ready:
+                    data = channel.recv(4096)
+                    if not data:
+                        self._term_write("\n[Connection closed]\n")
+                        break
+                    text = data.decode("utf-8", errors="replace")
+                    self._term_write(text)
+            except Exception:
+                if not self._terminal_stop.is_set():
+                    self._term_write("\n[Connection lost]\n")
+                break
+
+    def _on_terminal_submit(self, text_widget) -> None:
+        """Send a command to the SSH shell channel."""
+        command = text_widget.value
+        text_widget.value = ""
+
+        if self._terminal_channel is None or self._terminal_channel.closed:
+            self._term_write("Not connected.\n")
+            return
+
+        try:
+            self._terminal_channel.send(command + "\n")
+        except Exception as e:
+            self._term_write(f"Send failed: {e}\n")
 
     def _on_terminal_close(self, _btn) -> None:
-        """Close the terminal panel and destroy the Jupyter terminal."""
+        """Close the terminal panel and disconnect SSH."""
         self._terminal_disconnect()
-        self._terminal_iframe.value = self._terminal_placeholder_html()
-        self._terminal_title.value = self._terminal_title_html("")
-        self._terminal_panel.layout.display = "none"
         self._terminal_splitter.layout.display = "none"
+        self._terminal_panel.layout.display = "none"
+        self._terminal_lines = []
+        self._terminal_output.value = self._render_terminal_html()
+
+    def _terminal_disconnect(self) -> None:
+        """Tear down the SSH session cleanly."""
+        self._terminal_stop.set()
+
+        if self._terminal_channel is not None:
+            try:
+                self._terminal_channel.close()
+            except Exception:
+                pass
+            self._terminal_channel = None
+
+        if self._terminal_ssh_client is not None:
+            try:
+                self._terminal_ssh_client.close()
+            except Exception:
+                pass
+            self._terminal_ssh_client = None
+
+        if self._terminal_bastion is not None:
+            try:
+                self._terminal_bastion.close()
+            except Exception:
+                pass
+            self._terminal_bastion = None
+
+        self._terminal_node = None
+        self._terminal_reader_thread = None
 
     # ----------------------------------------------------------------
     # Dropdown population
