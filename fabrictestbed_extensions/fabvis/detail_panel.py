@@ -50,34 +50,44 @@ class DetailPanel:
     <style>
         .fabvis-detail {{
             font-family: {FABRIC_BODY_FONT};
-            font-size: 12px; padding: 10px; line-height: 1.5;
+            font-size: 12px; padding: 12px; line-height: 1.6;
         }}
         .fabvis-detail h3 {{
-            color: {FABRIC_PRIMARY_DARK}; margin: 0 0 10px 0; font-size: 14px;
-            padding-bottom: 6px; border-bottom: 2px solid {FABRIC_PRIMARY_LIGHT};
+            color: {FABRIC_PRIMARY_DARK}; margin: 0 0 12px 0; font-size: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid rgba(138,201,239,0.5);
             font-weight: 600;
         }}
         .fabvis-detail h4 {{
-            color: {FABRIC_DARK}; margin: 10px 0 4px 0; font-size: 11px;
+            color: {FABRIC_DARK}; margin: 12px 0 6px 0; font-size: 11px;
             text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+            opacity: 0.8;
         }}
-        .fabvis-detail table {{ border-collapse: collapse; width: 100%; }}
-        .fabvis-detail tr {{ border-bottom: 1px solid #f0f0f0; }}
-        .fabvis-detail td {{ padding: 3px 6px; vertical-align: top; }}
+        .fabvis-detail table {{
+            border-collapse: separate; border-spacing: 0; width: 100%;
+            border-radius: 6px; overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.06);
+        }}
+        .fabvis-detail tr {{ border-bottom: 1px solid rgba(0,0,0,0.04); }}
+        .fabvis-detail tr:last-child {{ border-bottom: none; }}
+        .fabvis-detail td {{ padding: 5px 8px; vertical-align: top; }}
         .fabvis-detail td:first-child {{
             font-weight: 600; white-space: nowrap; color: {FABRIC_DARK};
-            width: 80px; font-size: 11px;
+            width: 80px; font-size: 11px; opacity: 0.85;
         }}
         .fabvis-detail td:last-child {{ color: #212121; }}
-        .fabvis-detail .state-ok {{ color: {FABRIC_SUCCESS}; font-weight: bold; }}
-        .fabvis-detail .state-err {{ color: {FABRIC_DANGER}; font-weight: bold; }}
-        .fabvis-detail .state-prog {{ color: {FABRIC_WARNING}; font-weight: bold; }}
+        .fabvis-detail .state-ok {{ color: {FABRIC_SUCCESS}; font-weight: 600; }}
+        .fabvis-detail .state-err {{ color: {FABRIC_DANGER}; font-weight: 600; }}
+        .fabvis-detail .state-prog {{ color: {FABRIC_WARNING}; font-weight: 600; }}
         .fabvis-detail .section {{
-            border-top: 1px solid {FABRIC_PRIMARY_LIGHT}; margin-top: 10px; padding-top: 8px;
+            border-top: 1px solid rgba(138,201,239,0.3);
+            margin-top: 12px; padding-top: 10px;
         }}
         .fabvis-detail .cmp-item {{
-            margin: 3px 0; padding: 4px 8px; background: {FABRIC_LIGHT};
-            border-radius: 4px; border-left: 3px solid {FABRIC_PRIMARY_LIGHT}; font-size: 11px;
+            margin: 4px 0; padding: 5px 10px; background: {FABRIC_LIGHT};
+            border-radius: 6px;
+            border-left: 2.5px solid rgba(138,201,239,0.6);
+            font-size: 11px;
         }}
     </style>
     """

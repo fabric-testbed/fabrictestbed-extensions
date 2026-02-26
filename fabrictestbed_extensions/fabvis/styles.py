@@ -199,7 +199,7 @@ SITE_LOCATIONS = {
     "PSC": (40.4343887, -79.750207),
     "CERN": (46.2338702, 6.0469869),
     "HAWI": (21.2989762, -157.8163991),
-    "TOKY": (35.7115097, 139.7640619),
+    "TOKY": (35.7115097, -220.2359381),
     "SRI": (37.4566052, -122.174686),
     "EDUKY": (38.0325, -84.502801),
     "UCSD": (32.8886802, -117.239324),
@@ -223,8 +223,8 @@ SITE_LOCATIONS = {
     "LBNL": (37.8755, -122.2477),
 }
 
-DEFAULT_MAP_CENTER = (38.12, -85.71)
-DEFAULT_MAP_ZOOM = 4
+DEFAULT_MAP_CENTER = (30.0, -96.0)
+DEFAULT_MAP_ZOOM = 2
 
 
 def get_site_location(site_name: str):
@@ -262,6 +262,70 @@ def get_logo_data_url() -> str:
     return ""
 
 
+# ── Global CSS for softening ipywidget buttons/inputs inside fabvis ──
+WIDGET_SOFT_CSS = f"""
+{FONT_IMPORT_CSS}
+<style>
+    .fabvis-soft .widget-button {{
+        border-radius: 8px !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        font-family: {FABRIC_BODY_FONT} !important;
+        font-weight: 500 !important;
+        font-size: 12px !important;
+        letter-spacing: 0.2px !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+    }}
+    .fabvis-soft .widget-button:hover {{
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+    }}
+    .fabvis-soft .widget-dropdown > select,
+    .fabvis-soft .widget-combobox > input,
+    .fabvis-soft .widget-text > input {{
+        border-radius: 6px !important;
+        border: 1px solid rgba(0,0,0,0.12) !important;
+        font-family: {FABRIC_BODY_FONT} !important;
+    }}
+    .fabvis-soft .widget-select > select {{
+        border-radius: 6px !important;
+        border: 1px solid rgba(0,0,0,0.12) !important;
+    }}
+    .fabvis-soft .widget-toggle-buttons .widget-toggle-button {{
+        border-radius: 6px !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+    }}
+    .fabvis-soft .widget-readout {{
+        border-radius: 4px !important;
+    }}
+    .fabvis-soft .widget-tab > .p-TabBar-tab {{
+        border-radius: 6px 6px 0 0 !important;
+    }}
+    /* ── Scrollbar styling (WebKit / Blink browsers) ── */
+    .fabvis-soft ::-webkit-scrollbar {{
+        width: 8px;
+        height: 8px;
+    }}
+    .fabvis-soft ::-webkit-scrollbar-track {{
+        background: {FABRIC_BG_TINT};
+        border-radius: 4px;
+    }}
+    .fabvis-soft ::-webkit-scrollbar-thumb {{
+        background: {FABRIC_PRIMARY_LIGHT};
+        border-radius: 4px;
+        border: 1px solid {FABRIC_BG_TINT};
+    }}
+    .fabvis-soft ::-webkit-scrollbar-thumb:hover {{
+        background: {FABRIC_PRIMARY};
+    }}
+    /* ── Scrollbar styling (Firefox) ── */
+    .fabvis-soft * {{
+        scrollbar-width: thin;
+        scrollbar-color: {FABRIC_PRIMARY_LIGHT} {FABRIC_BG_TINT};
+    }}
+</style>
+"""
+
+
 def build_stylesheet() -> list:
     """Build the complete Cytoscape stylesheet.
 
@@ -279,29 +343,32 @@ def build_stylesheet() -> list:
             "css": {
                 "shape": "roundrectangle",
                 "background-color": "#f8f9fa",
-                "background-opacity": 0.5,
-                "border-width": 2,
-                "border-color": FABRIC_PRIMARY,
+                "background-opacity": 0.4,
+                "border-width": 1.5,
+                "border-color": FABRIC_PRIMARY_LIGHT,
                 "border-style": "dashed",
+                "border-opacity": 0.7,
                 "content": "data(label)",
                 "text-valign": "top",
                 "text-halign": "center",
-                "font-size": 16,
-                "font-weight": "bold",
+                "font-size": 15,
+                "font-weight": "600",
                 "color": FABRIC_PRIMARY_DARK,
                 "text-margin-y": 8,
                 "padding": "30px",
             },
         },
 
-        # ── VM / compute nodes — card style ──
+        # ── VM / compute nodes — soft card style ──
         {
             "selector": "node.vm",
             "css": {
                 "shape": "roundrectangle",
                 "background-color": "data(state_bg)",
-                "border-width": 3,
+                "background-opacity": 0.85,
+                "border-width": 2,
                 "border-color": "data(state_color)",
+                "border-opacity": 0.8,
                 "content": "data(label)",
                 "text-valign": "center",
                 "text-halign": "center",
@@ -319,13 +386,14 @@ def build_stylesheet() -> list:
         {
             "selector": "node.switch",
             "css": {
-                "shape": "triangle",
+                "shape": "roundrectangle",
                 "background-color": "data(state_bg)",
-                "border-width": 3,
+                "background-opacity": 0.85,
+                "border-width": 2,
                 "border-color": "data(state_color)",
+                "border-opacity": 0.8,
                 "content": "data(label)",
-                "text-valign": "bottom",
-                "text-margin-y": 6,
+                "text-valign": "center",
                 "color": FABRIC_BLACK,
                 "width": 70,
                 "height": 70,
@@ -340,10 +408,12 @@ def build_stylesheet() -> list:
         {
             "selector": "node.facility-port",
             "css": {
-                "shape": "pentagon",
+                "shape": "roundrectangle",
                 "background-color": "#fff3e0",
-                "border-width": 3,
+                "background-opacity": 0.85,
+                "border-width": 2,
                 "border-color": FABRIC_WARNING,
+                "border-opacity": 0.7,
                 "content": "data(label)",
                 "text-valign": "center",
                 "color": FABRIC_BLACK,
@@ -356,55 +426,62 @@ def build_stylesheet() -> list:
             },
         },
 
-        # ── L2 network nodes — hexagon ──
+        # ── L2 network nodes — soft ellipse ──
         {
             "selector": "node.network-l2",
             "css": {
-                "shape": "hexagon",
+                "shape": "ellipse",
                 "background-color": COLOR_NETWORK_L2_BG,
-                "border-width": 3,
+                "background-opacity": 0.85,
+                "border-width": 2,
                 "border-color": COLOR_NETWORK_L2,
+                "border-opacity": 0.7,
                 "content": "data(label)",
                 "text-valign": "center",
                 "text-halign": "center",
                 "color": COLOR_NETWORK_L2,
-                "width": 80,
+                "width": 90,
                 "height": 80,
                 "font-size": 10,
-                "font-weight": "bold",
+                "font-weight": "600",
                 "text-wrap": "wrap",
-                "text-max-width": "72px",
+                "text-max-width": "78px",
             },
         },
 
-        # ── L3 network nodes — hexagon ──
+        # ── L3 network nodes — soft ellipse ──
         {
             "selector": "node.network-l3",
             "css": {
-                "shape": "hexagon",
+                "shape": "ellipse",
                 "background-color": COLOR_NETWORK_L3_BG,
-                "border-width": 3,
+                "background-opacity": 0.85,
+                "border-width": 2,
                 "border-color": COLOR_NETWORK_L3,
+                "border-opacity": 0.7,
                 "content": "data(label)",
                 "text-valign": "center",
                 "text-halign": "center",
                 "color": COLOR_NETWORK_L3,
-                "width": 80,
+                "width": 90,
                 "height": 80,
                 "font-size": 10,
-                "font-weight": "bold",
+                "font-weight": "600",
                 "text-wrap": "wrap",
-                "text-max-width": "72px",
+                "text-max-width": "78px",
             },
         },
 
-        # ── Edges (interface connections) ──
+        # ── Edges (interface connections) — softer curves ──
         {
             "selector": "edge",
             "style": {
-                "width": 2.5,
-                "line-color": "#bdbdbd",
-                "curve-style": "bezier",
+                "width": 2,
+                "line-color": "#c5cfd8",
+                "opacity": 0.85,
+                "curve-style": "unbundled-bezier",
+                "control-point-distances": [40],
+                "control-point-weights": [0.5],
                 "target-arrow-shape": "none",
                 "label": "data(edge_label)",
                 "font-size": 9,
@@ -413,38 +490,42 @@ def build_stylesheet() -> list:
                 "text-margin-y": -12,
                 "text-background-color": "#ffffff",
                 "text-background-opacity": 0.85,
-                "text-background-padding": "2px",
+                "text-background-padding": "3px",
                 "text-background-shape": "roundrectangle",
             },
         },
 
-        # ── L2 edges — solid blue ──
+        # ── L2 edges — soft solid blue ──
         {
             "selector": "edge.l2",
             "style": {
                 "line-color": COLOR_NETWORK_L2,
                 "line-style": "solid",
-                "width": 3,
+                "width": 2.5,
+                "opacity": 0.7,
             },
         },
 
-        # ── L3 edges — dashed green ──
+        # ── L3 edges — soft dashed green ──
         {
             "selector": "edge.l3",
             "style": {
                 "line-color": COLOR_NETWORK_L3,
                 "line-style": "dashed",
-                "width": 3,
+                "width": 2.5,
+                "opacity": 0.7,
             },
         },
 
-        # ── Selected elements — orange highlight ──
+        # ── Selected elements — soft orange highlight ──
         {
             "selector": ":selected",
             "css": {
-                "border-width": 4,
+                "border-width": 3,
                 "border-color": FABRIC_WARNING,
+                "border-opacity": 0.9,
                 "line-color": FABRIC_WARNING,
+                "opacity": 1.0,
             },
         },
     ]

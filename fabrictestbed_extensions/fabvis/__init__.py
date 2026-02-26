@@ -23,18 +23,54 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
-"""FABRIC Slice Visualizers — interactive topology viewers for Jupyter.
+"""FABRIC Visualization Suite — interactive topology tools for Jupyter.
 
-Two visualizers are provided:
+Primary entry point:
 
-- SliceVisualizer: Cytoscape-based graph topology viewer (nodes, components,
-  networks as an interactive graph with compound nodes and click-to-inspect).
+- FabVis: Unified tool with two modes — Editor (Cytoscape graph + editing
+  panels) and Geographic (ipyleaflet map with sites, links, and slices).
+  Includes a view selector and built-in image export.
 
-- GeoVisualizer: Geographic map viewer using ipyleaflet (sites on a world map,
-  nodes as markers at their sites, network links as animated ant paths).
+Individual tools (also usable standalone):
+
+- SliceVisualizer: Cytoscape-based graph topology viewer
+- GeoVisualizer: Geographic map viewer using ipyleaflet
+- SliceEditor: Interactive slice builder/editor
+
+Static image renderers (no GUI required):
+
+- render_slice_graph(): Generate a graph topology image from a slice object.
+- render_slice_map(): Generate a geographic map image from a slice object.
+
+Usage::
+
+    from fabrictestbed_extensions.fabvis import FabVis
+
+    fablib = FablibManager()
+    fv = FabVis(fablib)
+    fv.show()
+
+    # Static images (no GUI):
+    from fabrictestbed_extensions.fabvis import render_slice_graph, render_slice_map
+    fig = render_slice_graph(my_slice, save="topology.png")
+    fig = render_slice_map(my_slice, save="map.png")
 """
 
+from .fabvis import FabVis
 from .visualizer import SliceVisualizer
 from .geo_visualizer import GeoVisualizer
+from .slice_editor import SliceEditor
+from .image_export import render_slice_graph, render_slice_map
+from .configure_gui import ConfigureGUI
+from .artifact_browser import ArtifactBrowser
 
-__all__ = ["SliceVisualizer", "GeoVisualizer"]
+__all__ = [
+    "FabVis",
+    "SliceVisualizer",
+    "GeoVisualizer",
+    "SliceEditor",
+    "render_slice_graph",
+    "render_slice_map",
+    "ConfigureGUI",
+    "ArtifactBrowser",
+]

@@ -35,6 +35,7 @@ from IPython.display import display
 from .detail_panel import DetailPanel
 from .graph_builder import GraphBuilder
 from .layouts import AVAILABLE_LAYOUTS, DEFAULT_LAYOUT, get_layout
+from .splitter import create_h_splitter
 from .styles import (
     FABRIC_BODY_FONT,
     FABRIC_DARK,
@@ -44,6 +45,7 @@ from .styles import (
     FABRIC_PRIMARY_LIGHT,
     FABRIC_WARNING,
     FONT_IMPORT_CSS,
+    WIDGET_SOFT_CSS,
     build_stylesheet,
     get_logo_data_url,
 )
@@ -68,24 +70,64 @@ class SliceVisualizer:
         vis.show()
     """
 
-    def __init__(self, fablib_manager):
-        """Initialize with a FablibManager instance.
+    def __init__(self, fablib_manager=None):
+        """Initialize with an optional FablibManager instance.
 
         Args:
             fablib_manager: An initialized FablibManager from fablib.
+                            Not required if using show_slice() or passing
+                            slice objects directly.
         """
         self._fablib = fablib_manager
         self._builder = GraphBuilder()
         self._detail = DetailPanel()
         self._loaded_slices: dict = {}  # name -> Slice object
         self._current_layout = DEFAULT_LAYOUT
+        self._picker_mode = fablib_manager is not None
 
         # Build widgets
         self._build_widgets()
 
+    @classmethod
+    def show_slice(cls, slice_obj, layout: str = None):
+        """Display a single slice in a compact viewer (no slice picker).
+
+        Args:
+            slice_obj: A FABlib Slice object.
+            layout: Optional layout name (default: dagre).
+
+        Returns:
+            The SliceVisualizer instance.
+        """
+        return cls.show_slices([slice_obj], layout=layout)
+
+    @classmethod
+    def show_slices(cls, slice_objs: list, layout: str = None):
+        """Display one or more slices in a compact viewer (no slice picker).
+
+        Args:
+            slice_objs: List of FABlib Slice objects.
+            layout: Optional layout name (default: dagre).
+
+        Returns:
+            The SliceVisualizer instance.
+        """
+        vis = cls()  # no fablib_manager → picker hidden
+        for s in slice_objs:
+            name = s.get_name() if hasattr(s, "get_name") else str(s)
+            vis._loaded_slices[name] = s
+        if layout:
+            vis._current_layout = layout
+        vis._render_graph()
+        names = ", ".join(vis._loaded_slices.keys())
+        vis._set_status(f"Showing: {names}")
+        display(vis._container)
+        return vis
+
     def show(self) -> None:
         """Display the full widget UI in the notebook."""
-        self._refresh_slice_list()
+        if self._fablib and self._picker_mode:
+            self._refresh_slice_list()
         display(self._container)
 
     def load_slices(self, slice_names: list) -> None:
@@ -121,6 +163,50 @@ class SliceVisualizer:
 
         names = list(self._loaded_slices.keys())
         self.load_slices(names)
+
+    def to_image(self, **kwargs):
+        """Render loaded slices as a static matplotlib Figure.
+
+        Uses the current node positions from the cytoscape widget so
+        the exported image matches the on-screen layout.
+
+        Args:
+            **kwargs: Passed to render_slice_graph() (figsize, dpi, title,
+                      show_edge_labels).
+
+        Returns:
+            matplotlib Figure object.
+        """
+        from .image_export import render_slice_graph
+
+        if not self._loaded_slices:
+            raise ValueError("No slices loaded. Call load_slices() first.")
+        positions = self._get_cytoscape_positions()
+        return render_slice_graph(
+            list(self._loaded_slices.values()),
+            positions=positions, **kwargs,
+        )
+
+    def save_image(self, path: str, **kwargs) -> None:
+        """Render loaded slices and save as an image file.
+
+        Uses the current node positions from the cytoscape widget.
+
+        Args:
+            path: Output file path (png, pdf, svg).
+            **kwargs: Passed to render_slice_graph().
+        """
+        from .image_export import render_slice_graph
+
+        if not self._loaded_slices:
+            raise ValueError("No slices loaded. Call load_slices() first.")
+        positions = self._get_cytoscape_positions()
+        fig = render_slice_graph(
+            list(self._loaded_slices.values()), save=path,
+            positions=positions, **kwargs,
+        )
+        import matplotlib.pyplot as plt
+        plt.close(fig)
 
     def set_layout(self, name: str, **kwargs) -> None:
         """Change the graph layout algorithm.
@@ -184,7 +270,7 @@ class SliceVisualizer:
              self._load_btn, self._refresh_btn, self._refresh_list_btn],
             layout=widgets.Layout(
                 padding="8px 12px",
-                border_bottom=f"1px solid {FABRIC_PRIMARY_LIGHT}",
+                border_bottom=f"1px solid rgba(138,201,239,0.4)",
                 background=FABRIC_LIGHT,
                 align_items="center",
                 gap="8px",
@@ -200,44 +286,91 @@ class SliceVisualizer:
         self._cytoscape.on("node", "click", self._on_node_click)
         self._cytoscape.on("edge", "click", self._on_edge_click)
 
-        canvas_box = widgets.Box(
+        self._canvas_box = widgets.Box(
             [self._cytoscape],
             layout=widgets.Layout(
-                width="75%",
+                flex="1",
+                min_width="0",
                 height="600px",
-                border=f"1px solid {FABRIC_PRIMARY_LIGHT}",
-                border_radius="4px",
+                border=f"1px solid rgba(138,201,239,0.4)",
+                border_radius="8px",
             ),
         )
 
-        # Detail panel
-        detail_box = widgets.VBox(
+        # Detail panel with toggle button
+        self._detail_toggle = widgets.Button(
+            description="",
+            icon="angle-right",
+            tooltip="Collapse Details panel",
+            layout=widgets.Layout(width="24px", height="20px",
+                                  padding="0px", margin="0px"),
+        )
+        self._detail_toggle.on_click(self._toggle_detail_panel)
+
+        detail_header = widgets.HBox(
             [
                 widgets.HTML(
                     value=(
                         f'{FONT_IMPORT_CSS}'
-                        f'<div style="background:{FABRIC_LIGHT}; padding:6px 10px; '
-                        f'border-bottom:2px solid {FABRIC_PRIMARY}; '
-                        f'font-family:{FABRIC_BODY_FONT};">'
-                        f'<b style="color:{FABRIC_PRIMARY_DARK}; font-size:13px;">'
-                        f'Details</b></div>'
+                        f'<b style="color:{FABRIC_PRIMARY_DARK}; font-size:13px; '
+                        f'font-family:{FABRIC_BODY_FONT};">Details</b>'
                     ),
-                    layout=widgets.Layout(padding="0px"),
                 ),
-                self._detail.widget,
+                self._detail_toggle,
             ],
             layout=widgets.Layout(
-                width="25%",
-                height="600px",
-                border=f"1px solid {FABRIC_PRIMARY_LIGHT}",
-                border_radius="4px",
-                overflow_y="auto",
+                background=FABRIC_LIGHT,
+                padding="8px 12px",
+                border_bottom=f"1.5px solid rgba(87,152,188,0.4)",
+                border_radius="8px 8px 0 0",
+                justify_content="space-between",
+                align_items="center",
             ),
         )
 
+        self._detail_box = widgets.VBox(
+            [detail_header, self._detail.widget],
+            layout=widgets.Layout(
+                width="25%",
+                min_width="0",
+                height="600px",
+                border=f"1px solid rgba(138,201,239,0.4)",
+                border_radius="8px",
+                overflow_y="auto",
+                overflow_x="hidden",
+            ),
+        )
+        self._detail_visible = True
+
+        # Collapsed detail strip (shown when panel is hidden)
+        self._detail_expand_btn = widgets.Button(
+            description="",
+            icon="angle-left",
+            tooltip="Expand Details panel",
+            layout=widgets.Layout(width="24px", height="24px",
+                                  padding="0px", margin="0px"),
+        )
+        self._detail_expand_btn.on_click(self._toggle_detail_panel)
+
+        self._detail_strip = widgets.VBox(
+            [self._detail_expand_btn],
+            layout=widgets.Layout(
+                width="28px",
+                height="600px",
+                border=f"1px solid rgba(138,201,239,0.4)",
+                border_radius="8px",
+                align_items="center",
+                padding="6px 0",
+                display="none",
+            ),
+        )
+
+        self._detail_splitter = create_h_splitter(resize_side="next")
+
         main_area = widgets.HBox(
-            [canvas_box, detail_box],
-            layout=widgets.Layout(gap="4px"),
+            [self._canvas_box, self._detail_splitter,
+             self._detail_box, self._detail_strip],
+            layout=widgets.Layout(gap="0px"),
         )
 
         # Bottom bar
@@ -265,7 +398,7 @@ class SliceVisualizer:
             [self._layout_dropdown, self._fit_btn, self._status_label],
             layout=widgets.Layout(
                 padding="8px 12px",
-                border_top=f"1px solid {FABRIC_PRIMARY_LIGHT}",
+                border_top=f"1px solid rgba(138,201,239,0.4)",
                 background=FABRIC_LIGHT,
                 align_items="center",
                 gap="12px",
@@ -288,7 +421,7 @@ class SliceVisualizer:
                 f'{FONT_IMPORT_CSS}'
                 f'<div style="background:linear-gradient(135deg, {FABRIC_PRIMARY_DARK}, {FABRIC_PRIMARY}); '
                 f'color:white; padding:10px 16px; font-size:16px; font-weight:600; '
-                f'letter-spacing:0.5px; border-radius:4px 4px 0 0; '
+                f'letter-spacing:0.5px; border-radius:8px 8px 0 0; '
                 f'font-family:{FABRIC_BODY_FONT}; '
                 f'display:flex; align-items:center;">'
                 f'{logo_html}'
@@ -296,15 +429,45 @@ class SliceVisualizer:
             ),
         )
 
-        # Main container
+        # Inject soft button/input CSS
+        css_widget = widgets.HTML(value=WIDGET_SOFT_CSS)
+
+        # Main container — hide the slice picker bar when no fablib
+        if self._picker_mode:
+            container_children = [css_widget, title, top_bar, main_area, bottom_bar]
+        else:
+            container_children = [css_widget, title, main_area, bottom_bar]
+
         self._container = widgets.VBox(
-            [title, top_bar, main_area, bottom_bar],
+            container_children,
             layout=widgets.Layout(
-                border=f"1px solid {FABRIC_PRIMARY_LIGHT}",
-                border_radius="4px",
-                box_shadow="0 2px 8px rgba(0,0,0,0.08)",
+                border=f"1px solid rgba(138,201,239,0.4)",
+                border_radius="10px",
+                box_shadow="0 2px 12px rgba(0,0,0,0.06)",
+                overflow="hidden",
             ),
         )
+        self._container.add_class("fabvis-soft")
+
+    # ----------------------------------------------------------------
+    # Panel toggle
+    # ----------------------------------------------------------------
+
+    def _toggle_detail_panel(self, _btn) -> None:
+        """Toggle the detail panel between expanded and collapsed."""
+        self._detail_visible = not self._detail_visible
+        if self._detail_visible:
+            self._detail_box.layout.display = None
+            self._detail_splitter.layout.display = None
+            self._detail_strip.layout.display = "none"
+            self._detail_toggle.icon = "angle-right"
+            self._detail_toggle.tooltip = "Collapse Details panel"
+        else:
+            self._detail_box.layout.display = "none"
+            self._detail_splitter.layout.display = "none"
+            self._detail_strip.layout.display = None
+            self._detail_toggle.icon = "angle-left"
+            self._detail_toggle.tooltip = "Expand Details panel"
 
     # ----------------------------------------------------------------
     # Event handlers
@@ -436,6 +599,23 @@ class SliceVisualizer:
         self._cytoscape.set_layout(**layout_config)
 
         self._detail.clear()
+
+    def _get_cytoscape_positions(self) -> dict:
+        """Extract current node positions from the cytoscape widget.
+
+        Returns:
+            Dict mapping cytoscape node IDs to (x, y) tuples.
+        """
+        positions = {}
+        try:
+            for node in self._cytoscape.graph.nodes:
+                nid = node.data.get("id", "")
+                pos = node.position
+                if pos and "x" in pos and "y" in pos:
+                    positions[nid] = (pos["x"], pos["y"])
+        except Exception:
+            pass
+        return positions
 
     def _set_status(self, text: str) -> None:
         """Update the status label."""
