@@ -248,7 +248,7 @@ class ConfigureGUI:
         css_widget = widgets.HTML(value=WIDGET_SOFT_CSS)
         self._widget = widgets.VBox(
             [css_widget, header, self._body],
-            layout=widgets.Layout(max_width="820px", margin="8px 0"),
+            layout=widgets.Layout(width="100%", margin="8px 0"),
         )
         self._widget.add_class("fabvis-soft")
 
