@@ -42,6 +42,7 @@ from .detail_panel import DetailPanel
 from .graph_builder import GraphBuilder
 from .layouts import AVAILABLE_LAYOUTS, DEFAULT_LAYOUT, get_layout
 from .splitter import create_h_splitter, create_v_splitter
+from .terminal_widget import XtermWidget
 from .styles import (
     FABRIC_BODY_FONT,
     FABRIC_DARK,
@@ -843,7 +844,11 @@ class SliceEditor:
     # ----------------------------------------------------------------
 
     def _build_terminal_panel(self) -> None:
-        """Build the SSH terminal panel (hidden by default)."""
+        """Build the SSH terminal panel (hidden by default).
+
+        Uses an embedded xterm.js terminal for a real terminal experience
+        with inline typing, ANSI color support, and auto-scrolling.
+        """
         self._terminal_node = None
         self._terminal_ssh_client = None
         self._terminal_bastion = None
@@ -876,53 +881,13 @@ class SliceEditor:
             ),
         )
 
-        # Output area — HTML widget for full control over rendering
-        self._terminal_lines = []  # raw text lines buffer
-        self._terminal_output = widgets.HTML(
-            value=self._render_terminal_html(),
-            layout=widgets.Layout(
-                width="100%",
-                height="200px",
-                overflow_y="auto",
-                padding="0",
-            ),
-        )
-
-        # Command input
-        self._terminal_input = widgets.Text(
-            value="",
-            placeholder="Type a command and press Enter...",
-            layout=widgets.Layout(
-                width="100%",
-                border="none",
-            ),
-        )
-        self._terminal_input.continuous_update = False
-        self._terminal_input.on_submit(self._on_terminal_submit)
-        self._terminal_input.add_class("fabvis-terminal-input")
-
-        # CSS for terminal styling
-        self._terminal_css = widgets.HTML(value=(
-            '<style>'
-            '.fabvis-terminal-input input {'
-            '  background: #000 !important;'
-            '  color: #00ff41 !important;'
-            '  font-family: "Courier New", Courier, monospace !important;'
-            '  font-size: 13px !important;'
-            '  border: none !important;'
-            '  border-top: 1px solid #333 !important;'
-            '  padding: 6px 10px !important;'
-            '  caret-color: #00ff41 !important;'
-            '}'
-            '.fabvis-terminal-input input::placeholder {'
-            '  color: #555 !important;'
-            '}'
-            '</style>'
-        ))
+        # xterm.js terminal widget
+        self._xterm = XtermWidget()
+        self._xterm.on_data = self._on_terminal_data
+        self._xterm.on_resize = self._on_terminal_resize
 
         self._terminal_panel = widgets.VBox(
-            [self._terminal_css, terminal_header,
-             self._terminal_output, self._terminal_input],
+            [terminal_header, self._xterm.widget],
             layout=widgets.Layout(
                 width="100%",
                 border_top=f"1px solid rgba(138,201,239,0.4)",
@@ -938,58 +903,26 @@ class SliceEditor:
             f'&#9638; {label}</span>'
         )
 
-    def _render_terminal_html(self) -> str:
-        """Render the terminal buffer as styled HTML."""
-        if not self._terminal_lines:
-            content = ""
-        else:
-            # Keep last 500 lines
-            if len(self._terminal_lines) > 500:
-                self._terminal_lines = self._terminal_lines[-500:]
-            escaped = []
-            for line in self._terminal_lines:
-                escaped.append(self._esc(line))
-            content = "\n".join(escaped)
-        return (
-            f'<pre style="background:#000; color:#d0d0d0; margin:0; '
-            f'padding:8px 10px; font-family:\'Courier New\',Courier,monospace; '
-            f'font-size:13px; line-height:1.4; white-space:pre-wrap; '
-            f'word-wrap:break-word; min-height:100%;">{content}</pre>'
-        )
-
     def _term_write(self, text: str) -> None:
-        """Append raw text to the terminal buffer and refresh the display."""
-        # Split incoming text into lines, merging with last partial line
-        # Handle \r\n and \r
-        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        """Write text to the xterm.js terminal (thread-safe)."""
+        self._xterm.write(text)
 
-        # Strip common ANSI escape sequences for clean HTML display
-        import re
-        text = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
-        text = re.sub(r"\x1b\][^\x07]*\x07", "", text)  # OSC sequences
-        text = re.sub(r"\x1b\[[\?]?[0-9;]*[a-zA-Z]", "", text)
+    def _on_terminal_data(self, data: str) -> None:
+        """Handle raw keystrokes from xterm.js — send to SSH channel."""
+        if self._terminal_channel is None or self._terminal_channel.closed:
+            return
+        try:
+            self._terminal_channel.send(data)
+        except Exception as e:
+            self._xterm.write(f"\r\n\x1b[31mSend failed: {e}\x1b[0m\r\n")
 
-        parts = text.split("\n")
-        if self._terminal_lines:
-            # Append first part to existing last line
-            self._terminal_lines[-1] += parts[0]
-            for p in parts[1:]:
-                self._terminal_lines.append(p)
-        else:
-            for p in parts:
-                self._terminal_lines.append(p)
-
-        self._terminal_output.value = self._render_terminal_html()
-
-    @staticmethod
-    def _esc(text: str) -> str:
-        """Escape HTML entities in text."""
-        return (
-            text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-        )
+    def _on_terminal_resize(self, cols: int, rows: int) -> None:
+        """Handle terminal resize — update SSH PTY size."""
+        if self._terminal_channel is not None and not self._terminal_channel.closed:
+            try:
+                self._terminal_channel.resize_pty(width=cols, height=rows)
+            except Exception:
+                pass
 
     def _on_terminal_click(self, _btn) -> None:
         """Open the terminal panel and establish an SSH shell session."""
@@ -1003,13 +936,11 @@ class SliceEditor:
         node_name = self._safe_get(node, "get_name", "?")
         self._terminal_node = node
         self._terminal_title.value = self._terminal_title_html(node_name)
-        self._terminal_lines = []
-        self._terminal_output.value = self._render_terminal_html()
+        self._xterm.clear()
         self._terminal_splitter.layout.display = None
         self._terminal_panel.layout.display = None
-        self._terminal_input.value = ""
 
-        self._term_write(f"Connecting to {node_name}...\n")
+        self._term_write(f"Connecting to {node_name}...\r\n")
 
         # Connect in a background thread so the UI stays responsive
         thread = threading.Thread(
@@ -1064,9 +995,9 @@ class SliceEditor:
                 sock=bastion_channel,
             )
 
-            # Open interactive shell — use dumb terminal to avoid
-            # escape sequences that clutter the HTML display
-            channel = client.invoke_shell(term="dumb", width=120, height=40)
+            # Open interactive shell with xterm emulation for full
+            # ANSI support (colors, cursor movement, etc.)
+            channel = client.invoke_shell(term="xterm-256color", width=120, height=40)
             channel.settimeout(0.0)
 
             self._terminal_ssh_client = client
@@ -1104,27 +1035,11 @@ class SliceEditor:
                     self._term_write("\n[Connection lost]\n")
                 break
 
-    def _on_terminal_submit(self, text_widget) -> None:
-        """Send a command to the SSH shell channel."""
-        command = text_widget.value
-        text_widget.value = ""
-
-        if self._terminal_channel is None or self._terminal_channel.closed:
-            self._term_write("Not connected.\n")
-            return
-
-        try:
-            self._terminal_channel.send(command + "\n")
-        except Exception as e:
-            self._term_write(f"Send failed: {e}\n")
-
     def _on_terminal_close(self, _btn) -> None:
         """Close the terminal panel and disconnect SSH."""
         self._terminal_disconnect()
         self._terminal_splitter.layout.display = "none"
         self._terminal_panel.layout.display = "none"
-        self._terminal_lines = []
-        self._terminal_output.value = self._render_terminal_html()
 
     def _terminal_disconnect(self) -> None:
         """Tear down the SSH session cleanly."""
