@@ -24,13 +24,12 @@
 #
 # Author: Erica Fu (ericafu@renci.org), Komal Thareja (kthare10@renci.org)
 #
+import datetime
+import json
 import os
 import re
 
-import datetime
-import json
 import click
-
 from fabrictestbed.util.constants import Constants
 
 _DEFAULT_CREDMGR_HOST = "cm.fabric-testbed.net"
@@ -51,15 +50,15 @@ def _load_fabric_rc():
     if not os.path.exists(_FABRIC_RC_PATH):
         return config
     try:
-        with open(_FABRIC_RC_PATH, 'r') as f:
+        with open(_FABRIC_RC_PATH, "r") as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
-                if line.startswith('export '):
-                    line = line[len('export '):]
-                if '=' in line:
-                    key, _, value = line.partition('=')
+                if line.startswith("export "):
+                    line = line[len("export ") :]
+                if "=" in line:
+                    key, _, value = line.partition("=")
                     key = key.strip()
                     value = value.strip().strip('"').strip("'")
                     if key and value:
@@ -69,37 +68,115 @@ def _load_fabric_rc():
     return config
 
 
-def __get_fabric_manager(*, oc_host=None, cm_host=None, project_id=None,
-                         scope="all", token_location=None, project_name=None):
+def __get_fabric_manager(
+    *,
+    oc_host=None,
+    cm_host=None,
+    project_id=None,
+    scope="all",
+    token_location=None,
+    project_name=None,
+):
     """Construct a FabricManagerV2 from CLI args, env vars, fabric_rc, and defaults."""
     from fabrictestbed.fabric_manager_v2 import FabricManagerV2
+
     rc = _load_fabric_rc()
-    cm = cm_host or os.getenv(Constants.FABRIC_CREDMGR_HOST) or rc.get(Constants.FABRIC_CREDMGR_HOST) or _DEFAULT_CREDMGR_HOST
-    oc = oc_host or os.getenv(Constants.FABRIC_ORCHESTRATOR_HOST) or rc.get(Constants.FABRIC_ORCHESTRATOR_HOST) or _DEFAULT_ORCHESTRATOR_HOST
-    pid = project_id or os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(Constants.FABRIC_PROJECT_ID)
-    pname = project_name or os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(Constants.FABRIC_PROJECT_NAME)
-    tl = token_location or os.getenv(Constants.FABRIC_TOKEN_LOCATION) or rc.get(Constants.FABRIC_TOKEN_LOCATION) or _DEFAULT_TOKEN_PATH
-    core = os.getenv(Constants.FABRIC_CORE_API_HOST) or rc.get(Constants.FABRIC_CORE_API_HOST) or _DEFAULT_CORE_API_HOST
+    cm = (
+        cm_host
+        or os.getenv(Constants.FABRIC_CREDMGR_HOST)
+        or rc.get(Constants.FABRIC_CREDMGR_HOST)
+        or _DEFAULT_CREDMGR_HOST
+    )
+    oc = (
+        oc_host
+        or os.getenv(Constants.FABRIC_ORCHESTRATOR_HOST)
+        or rc.get(Constants.FABRIC_ORCHESTRATOR_HOST)
+        or _DEFAULT_ORCHESTRATOR_HOST
+    )
+    pid = (
+        project_id
+        or os.getenv(Constants.FABRIC_PROJECT_ID)
+        or rc.get(Constants.FABRIC_PROJECT_ID)
+    )
+    pname = (
+        project_name
+        or os.getenv(Constants.FABRIC_PROJECT_NAME)
+        or rc.get(Constants.FABRIC_PROJECT_NAME)
+    )
+    tl = (
+        token_location
+        or os.getenv(Constants.FABRIC_TOKEN_LOCATION)
+        or rc.get(Constants.FABRIC_TOKEN_LOCATION)
+        or _DEFAULT_TOKEN_PATH
+    )
+    core = (
+        os.getenv(Constants.FABRIC_CORE_API_HOST)
+        or rc.get(Constants.FABRIC_CORE_API_HOST)
+        or _DEFAULT_CORE_API_HOST
+    )
     return FabricManagerV2(
-        credmgr_host=cm, orchestrator_host=oc, core_api_host=core,
-        token_location=tl, project_id=pid, project_name=pname, scope=scope,
+        credmgr_host=cm,
+        orchestrator_host=oc,
+        core_api_host=core,
+        token_location=tl,
+        project_id=pid,
+        project_name=pname,
+        scope=scope,
     )
 
 
-def __get_fablib_manager(*, oc_host=None, cm_host=None, project_id=None,
-                         scope="all", token_location=None, project_name=None):
+def __get_fablib_manager(
+    *,
+    oc_host=None,
+    cm_host=None,
+    project_id=None,
+    scope="all",
+    token_location=None,
+    project_name=None,
+):
     """Construct a FablibManager from CLI args, env vars, fabric_rc, and defaults."""
     from fabrictestbed_extensions.fablib.fablib import FablibManager
+
     rc = _load_fabric_rc()
-    cm = cm_host or os.getenv(Constants.FABRIC_CREDMGR_HOST) or rc.get(Constants.FABRIC_CREDMGR_HOST) or _DEFAULT_CREDMGR_HOST
-    oc = oc_host or os.getenv(Constants.FABRIC_ORCHESTRATOR_HOST) or rc.get(Constants.FABRIC_ORCHESTRATOR_HOST) or _DEFAULT_ORCHESTRATOR_HOST
-    pid = project_id or os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(Constants.FABRIC_PROJECT_ID)
-    pname = project_name or os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(Constants.FABRIC_PROJECT_NAME)
-    tl = token_location or os.getenv(Constants.FABRIC_TOKEN_LOCATION) or rc.get(Constants.FABRIC_TOKEN_LOCATION) or _DEFAULT_TOKEN_PATH
-    core = os.getenv(Constants.FABRIC_CORE_API_HOST) or rc.get(Constants.FABRIC_CORE_API_HOST) or _DEFAULT_CORE_API_HOST
+    cm = (
+        cm_host
+        or os.getenv(Constants.FABRIC_CREDMGR_HOST)
+        or rc.get(Constants.FABRIC_CREDMGR_HOST)
+        or _DEFAULT_CREDMGR_HOST
+    )
+    oc = (
+        oc_host
+        or os.getenv(Constants.FABRIC_ORCHESTRATOR_HOST)
+        or rc.get(Constants.FABRIC_ORCHESTRATOR_HOST)
+        or _DEFAULT_ORCHESTRATOR_HOST
+    )
+    pid = (
+        project_id
+        or os.getenv(Constants.FABRIC_PROJECT_ID)
+        or rc.get(Constants.FABRIC_PROJECT_ID)
+    )
+    pname = (
+        project_name
+        or os.getenv(Constants.FABRIC_PROJECT_NAME)
+        or rc.get(Constants.FABRIC_PROJECT_NAME)
+    )
+    tl = (
+        token_location
+        or os.getenv(Constants.FABRIC_TOKEN_LOCATION)
+        or rc.get(Constants.FABRIC_TOKEN_LOCATION)
+        or _DEFAULT_TOKEN_PATH
+    )
+    core = (
+        os.getenv(Constants.FABRIC_CORE_API_HOST)
+        or rc.get(Constants.FABRIC_CORE_API_HOST)
+        or _DEFAULT_CORE_API_HOST
+    )
     return FablibManager(
-        credmgr_host=cm, orchestrator_host=oc, core_api_host=core,
-        token_location=tl, project_id=pid,
+        credmgr_host=cm,
+        orchestrator_host=oc,
+        core_api_host=core,
+        token_location=tl,
+        project_id=pid,
     )
 
 
@@ -176,6 +253,7 @@ _STATE_COLORS = {
 
 
 # ── Shared display utilities ──────────────────────────────────────────────
+
 
 def _status(state):
     """Return a colored ● dot + state label."""
@@ -273,6 +351,7 @@ def _row(*parts):
 
 # ── Slices ─────────────────────────────────────────────────────────────────
 
+
 def _print_slices(slices_list):
     """Print slices in a dashboard-style table."""
     if not slices_list:
@@ -285,7 +364,12 @@ def _print_slices(slices_list):
         name = s.get("name") or s.get("Name") or "—"
         sid = s.get("id") or s.get("ID") or s.get("slice_id") or "—"
         proj = s.get("project_id") or s.get("Project ID") or "—"
-        lease_end = s.get("lease_end") or s.get("Lease Expiration (UTC)") or s.get("lease_end_time") or "—"
+        lease_end = (
+            s.get("lease_end")
+            or s.get("Lease Expiration (UTC)")
+            or s.get("lease_end_time")
+            or "—"
+        )
 
         click.echo(f"  {_bold(name)}   {_status(state)}")
         _row(_kv("ID:", sid))
@@ -319,6 +403,7 @@ def _print_slice_detail(slice_dict):
 
 
 # ── Nodes ──────────────────────────────────────────────────────────────────
+
 
 def _print_nodes(nodes_list):
     """Print nodes in a dashboard-style format."""
@@ -361,12 +446,16 @@ def _print_nodes(nodes_list):
 
 # ── Networks ───────────────────────────────────────────────────────────────
 
+
 def _print_networks(networks_list):
     """Print networks in a dashboard-style format."""
     if not networks_list:
         click.echo("No networks found.")
         return
-    _header("Networks", f"{len(networks_list)} network{'s' if len(networks_list) != 1 else ''}")
+    _header(
+        "Networks",
+        f"{len(networks_list)} network{'s' if len(networks_list) != 1 else ''}",
+    )
     click.echo()
     for net in networks_list:
         name = net.get("name") or net.get("Name") or "—"
@@ -378,7 +467,9 @@ def _print_networks(networks_list):
         gateway = net.get("gateway") or net.get("Gateway") or ""
         error = net.get("error") or net.get("Error") or ""
 
-        click.echo(f"  {_bold(name)}   {_status(state)}   {_cyan(ntype)}  {_dim(layer)}")
+        click.echo(
+            f"  {_bold(name)}   {_status(state)}   {_cyan(ntype)}  {_dim(layer)}"
+        )
         detail = [_kv("site:", site)]
         if subnet:
             detail.append(_kv("subnet:", subnet))
@@ -393,12 +484,16 @@ def _print_networks(networks_list):
 
 # ── Interfaces ─────────────────────────────────────────────────────────────
 
+
 def _print_interfaces(interfaces_list):
     """Print interfaces in a dashboard-style format."""
     if not interfaces_list:
         click.echo("No interfaces found.")
         return
-    _header("Interfaces", f"{len(interfaces_list)} interface{'s' if len(interfaces_list) != 1 else ''}")
+    _header(
+        "Interfaces",
+        f"{len(interfaces_list)} interface{'s' if len(interfaces_list) != 1 else ''}",
+    )
     click.echo()
     for ifc in interfaces_list:
         name = ifc.get("name") or ifc.get("Name") or "—"
@@ -411,10 +506,7 @@ def _print_interfaces(interfaces_list):
         ip_addr = ifc.get("ip_addr") or ifc.get("IP Address") or ""
         dev = ifc.get("dev") or ifc.get("Device") or ""
 
-        click.echo(
-            f"  {_bold(name)}   "
-            f"{_cyan(node)} {_dim('━━')} {_cyan(network)}"
-        )
+        click.echo(f"  {_bold(name)}   " f"{_cyan(node)} {_dim('━━')} {_cyan(network)}")
         detail = [_kv("bw:", f"{bw} Mbps")]
         if vlan:
             detail.append(_kv("vlan:", vlan))
@@ -437,12 +529,15 @@ def _print_interfaces(interfaces_list):
 
 # ── Slice Slivers ──────────────────────────────────────────────────────────
 
+
 def _print_slice_slivers(slivers_list):
     """Print slivers in a dashboard-style format."""
     if not slivers_list:
         click.echo("No slivers found.")
         return
-    _header("Slivers", f"{len(slivers_list)} sliver{'s' if len(slivers_list) != 1 else ''}")
+    _header(
+        "Slivers", f"{len(slivers_list)} sliver{'s' if len(slivers_list) != 1 else ''}"
+    )
     click.echo()
     for sv in slivers_list:
         name = sv.get("name") or sv.get("Name") or "—"
@@ -452,7 +547,9 @@ def _print_slice_slivers(slivers_list):
         sid = sv.get("id") or sv.get("ID") or "—"
         error = sv.get("error") or sv.get("Error") or ""
 
-        click.echo(f"  {_bold(name)}   {_status(state)}   {_cyan(stype)}   {_dim('@')} {site}")
+        click.echo(
+            f"  {_bold(name)}   {_status(state)}   {_cyan(stype)}   {_dim('@')} {site}"
+        )
         _row(_kv("id:", sid))
         if error:
             _row(click.style("error:", fg="red") + f"  {error}")
@@ -461,6 +558,7 @@ def _print_slice_slivers(slivers_list):
 
 
 # ── Sites ──────────────────────────────────────────────────────────────────
+
 
 def _print_sites(sites_list):
     """Print sites in a dashboard-style format with usage bars."""
@@ -514,11 +612,26 @@ def _print_site_detail(site_dict):
     click.echo()
     _row(_kv("Address:", address))
     _row(_kv("Location:", str(location)))
-    _row(_kv("PTP:", "Yes" if ptp else "No"), _kv("Hosts:", str(hosts)), _kv("CPUs:", str(cpus)))
+    _row(
+        _kv("PTP:", "Yes" if ptp else "No"),
+        _kv("Hosts:", str(hosts)),
+        _kv("CPUs:", str(cpus)),
+    )
     click.echo()
 
-    for label, key, unit in [("Cores", "cores", ""), ("RAM", "ram", "G"), ("Disk", "disk", "G")]:
-        _row(_res(f"{label:<5s}", s.get(f"{key}_available"), s.get(f"{key}_capacity"), unit))
+    for label, key, unit in [
+        ("Cores", "cores", ""),
+        ("RAM", "ram", "G"),
+        ("Disk", "disk", "G"),
+    ]:
+        _row(
+            _res(
+                f"{label:<5s}",
+                s.get(f"{key}_available"),
+                s.get(f"{key}_capacity"),
+                unit,
+            )
+        )
     click.echo()
 
     comp_lines = []
@@ -532,7 +645,7 @@ def _print_site_detail(site_dict):
         _row(_dim("Components:"))
         for i in range(0, len(comp_lines), 3):
             parts = []
-            for label, avail, cap in comp_lines[i:i + 3]:
+            for label, avail, cap in comp_lines[i : i + 3]:
                 if avail == cap:
                     val = click.style(f"{avail}/{cap}", fg="green")
                 elif avail == 0:
@@ -546,6 +659,7 @@ def _print_site_detail(site_dict):
 
 
 # ── Hosts ──────────────────────────────────────────────────────────────────
+
 
 def _print_hosts(hosts_list):
     """Print hosts in a dashboard-style format with usage bars."""
@@ -573,6 +687,7 @@ def _print_hosts(hosts_list):
 
 
 # ── Links ──────────────────────────────────────────────────────────────────
+
 
 def _print_links(links_list):
     """Print links in a dashboard-style format."""
@@ -609,6 +724,7 @@ def _print_links(links_list):
 
 # ── Facility Ports ─────────────────────────────────────────────────────────
 
+
 def _print_facility_ports(fp_list):
     """Print facility ports in a dashboard-style format."""
     if not fp_list:
@@ -628,15 +744,12 @@ def _print_facility_ports(fp_list):
     _footer()
 
 
-
-
-
 @click.group()
-@click.option('-v', '--verbose', is_flag=True)
+@click.option("-v", "--verbose", is_flag=True)
 @click.pass_context
 def cli(ctx, verbose):
     ctx.ensure_object(dict)
-    ctx.obj['VERBOSE'] = verbose
+    ctx.obj["VERBOSE"] = verbose
 
 
 @click.group()
@@ -651,20 +764,57 @@ def tokens(ctx):
 
 
 @tokens.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--projectid', default=None, help='Project UUID (uses first project if not specified)')
-@click.option('--projectname', default=None, help='Project name (uses first project if not specified)')
-@click.option('--lifetime', default=4, help='Token lifetime in hours')
-@click.option('--comment', default=None, help='Comment/note to associate with the token')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--tokenlocation', help='Path to save token JSON (defaults to ./tokens.json)', default=None)
-@click.option('--no-browser', is_flag=True, default=False, help='Do not attempt to open a browser automatically')
-@click.option('--code-file', default=None, type=click.Path(exists=True),
-              help='File containing the base64 authorization code (for remote/headless use)')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option(
+    "--projectid",
+    default=None,
+    help="Project UUID (uses first project if not specified)",
+)
+@click.option(
+    "--projectname",
+    default=None,
+    help="Project name (uses first project if not specified)",
+)
+@click.option("--lifetime", default=4, help="Token lifetime in hours")
+@click.option(
+    "--comment", default=None, help="Comment/note to associate with the token"
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--tokenlocation",
+    help="Path to save token JSON (defaults to ./tokens.json)",
+    default=None,
+)
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not attempt to open a browser automatically",
+)
+@click.option(
+    "--code-file",
+    default=None,
+    type=click.Path(exists=True),
+    help="File containing the base64 authorization code (for remote/headless use)",
+)
 @click.pass_context
-def create(ctx, cmhost: str, projectid: str, projectname: str, lifetime: int, comment: str,
-           scope: str, tokenlocation: str, no_browser: bool, code_file: str):
+def create(
+    ctx,
+    cmhost: str,
+    projectid: str,
+    projectname: str,
+    lifetime: int,
+    comment: str,
+    scope: str,
+    tokenlocation: str,
+    no_browser: bool,
+    code_file: str,
+):
     """Create token
 
     Opens a browser for CILogon authentication (or prints the URL if the
@@ -682,14 +832,20 @@ def create(ctx, cmhost: str, projectid: str, projectname: str, lifetime: int, co
         cookie_name = os.getenv(Constants.FABRIC_COOKIE_NAME)
 
         from fabrictestbed.external_api.credmgr_client import CredmgrClient
-        client = CredmgrClient(credmgr_host=cmhost,
-                                cookie_name=cookie_name or "fabric-service")
+
+        client = CredmgrClient(
+            credmgr_host=cmhost, cookie_name=cookie_name or "fabric-service"
+        )
 
         rc = _load_fabric_rc()
         if projectid is None:
-            projectid = os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(Constants.FABRIC_PROJECT_ID)
+            projectid = os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(
+                Constants.FABRIC_PROJECT_ID
+            )
         if projectname is None:
-            projectname = os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(Constants.FABRIC_PROJECT_NAME)
+            projectname = os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(
+                Constants.FABRIC_PROJECT_NAME
+            )
 
         tokens = client.create_cli(
             scope=scope,
@@ -721,14 +877,24 @@ def create(ctx, cmhost: str, projectid: str, projectname: str, lifetime: int, co
 
 
 @tokens.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--projectname', default=None, help='Project name')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option("--projectname", default=None, help="Project name")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
 @click.pass_context
-def refresh(ctx, cmhost: str, tokenlocation: str, projectid: str, projectname: str, scope: str):
+def refresh(
+    ctx, cmhost: str, tokenlocation: str, projectid: str, projectname: str, scope: str
+):
     """Refresh token
 
     Reads the existing token file, uses the refresh_token to obtain a new
@@ -742,7 +908,7 @@ def refresh(ctx, cmhost: str, tokenlocation: str, projectid: str, projectname: s
         if not os.path.exists(tokenlocation):
             raise click.ClickException(f"Token file not found: {tokenlocation}")
 
-        with open(tokenlocation, 'r') as f:
+        with open(tokenlocation, "r") as f:
             existing = json.load(f)
 
         refresh_token = existing.get("refresh_token")
@@ -751,15 +917,21 @@ def refresh(ctx, cmhost: str, tokenlocation: str, projectid: str, projectname: s
 
         rc = _load_fabric_rc()
         if projectid is None:
-            projectid = os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(Constants.FABRIC_PROJECT_ID)
+            projectid = os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(
+                Constants.FABRIC_PROJECT_ID
+            )
         if projectname is None:
-            projectname = os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(Constants.FABRIC_PROJECT_NAME)
+            projectname = os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(
+                Constants.FABRIC_PROJECT_NAME
+            )
 
         cookie_name = os.getenv(Constants.FABRIC_COOKIE_NAME)
 
         from fabrictestbed.external_api.credmgr_client import CredmgrClient
-        client = CredmgrClient(credmgr_host=cmhost,
-                                cookie_name=cookie_name or "fabric-service")
+
+        client = CredmgrClient(
+            credmgr_host=cmhost, cookie_name=cookie_name or "fabric-service"
+        )
 
         result = client.refresh(
             refresh_token=refresh_token,
@@ -778,13 +950,32 @@ def refresh(ctx, cmhost: str, tokenlocation: str, projectid: str, projectname: s
 
 
 @tokens.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to ./tokens.json)', default=None)
-@click.option('--refreshtoken', help='Refresh token to revoke (overrides token file)', default=None)
-@click.option('--identitytoken', help='Identity token for authentication (overrides token file)', default=None)
-@click.option('--tokenhash', help='SHA256 hash of the token to revoke', default=None)
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to ./tokens.json)",
+    default=None,
+)
+@click.option(
+    "--refreshtoken",
+    help="Refresh token to revoke (overrides token file)",
+    default=None,
+)
+@click.option(
+    "--identitytoken",
+    help="Identity token for authentication (overrides token file)",
+    default=None,
+)
+@click.option("--tokenhash", help="SHA256 hash of the token to revoke", default=None)
 @click.pass_context
-def revoke(ctx, cmhost: str, tokenlocation: str, refreshtoken: str, identitytoken: str, tokenhash: str):
+def revoke(
+    ctx,
+    cmhost: str,
+    tokenlocation: str,
+    refreshtoken: str,
+    identitytoken: str,
+    tokenhash: str,
+):
     """Revoke token
 
     Revokes a refresh or identity token. Reads tokens from --tokenlocation
@@ -804,7 +995,7 @@ def revoke(ctx, cmhost: str, tokenlocation: str, refreshtoken: str, identitytoke
             if not os.path.exists(tokenlocation):
                 raise click.ClickException(f"Token file not found: {tokenlocation}")
 
-            with open(tokenlocation, 'r') as f:
+            with open(tokenlocation, "r") as f:
                 file_tokens = json.load(f)
 
             refreshtoken = file_tokens.get("refresh_token")
@@ -815,17 +1006,23 @@ def revoke(ctx, cmhost: str, tokenlocation: str, refreshtoken: str, identitytoke
             raise click.ClickException("Identity token is required for revocation")
 
         from fabrictestbed.external_api.credmgr_client import CredmgrClient
-        client = CredmgrClient(credmgr_host=cmhost,
-                                cookie_name=cookie_name or "fabric-service")
+
+        client = CredmgrClient(
+            credmgr_host=cmhost, cookie_name=cookie_name or "fabric-service"
+        )
 
         if refreshtoken:
-            client.revoke(id_token=identitytoken, token_type="refresh",
-                          refresh_token=refreshtoken)
+            client.revoke(
+                id_token=identitytoken, token_type="refresh", refresh_token=refreshtoken
+            )
         else:
             if not tokenhash:
-                raise click.ClickException("Token hash is required to revoke an identity token")
-            client.revoke(id_token=identitytoken, token_type="identity",
-                          token_hash=tokenhash)
+                raise click.ClickException(
+                    "Token hash is required to revoke an identity token"
+                )
+            client.revoke(
+                id_token=identitytoken, token_type="identity", token_hash=tokenhash
+            )
 
         click.echo("Token revoked successfully")
     except click.ClickException as e:
@@ -835,7 +1032,7 @@ def revoke(ctx, cmhost: str, tokenlocation: str, refreshtoken: str, identitytoke
 
 
 @tokens.command()
-@click.option('--tokenlocation', help='Path to token JSON file to delete', default=None)
+@click.option("--tokenlocation", help="Path to token JSON file to delete", default=None)
 @click.pass_context
 def clear_cache(ctx, tokenlocation):
     """Clear cached token
@@ -867,27 +1064,51 @@ def slices(ctx):
     """
 
 
-@slices.command(name='list')
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--all', 'show_all', is_flag=True, default=False, help='Include Dead and Closing slices')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@slices.command(name="list")
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--all",
+    "show_all",
+    is_flag=True,
+    default=False,
+    help="Include Dead and Closing slices",
+)
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def list_slices(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
-                scope: str, show_all: bool, as_json: bool):
+def list_slices(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    show_all: bool,
+    as_json: bool,
+):
     """List slices
 
     Show all slices for the current user. Dead and Closing slices are
     hidden by default; use --all to include them.
     """
     try:
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid,
-                                      scope=scope, token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         from fabrictestbed.slice_manager import SliceState
+
         excludes = [] if show_all else [SliceState.Dead, SliceState.Closing]
         result = fablib.list_slices(excludes=excludes, output="json", quiet=True)
         if as_json:
@@ -902,18 +1123,31 @@ def list_slices(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: st
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def show(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
-         scope: str, name: str, sliceid: str, as_json: bool):
+def show(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    name: str,
+    sliceid: str,
+    as_json: bool,
+):
     """Show slice details
 
     Display details for a single slice by --name or --sliceid.
@@ -922,8 +1156,13 @@ def show(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
         if not name and not sliceid:
             raise click.ClickException("Either --name or --sliceid must be specified")
 
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid,
-                                      scope=scope, token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         result = fablib.show_slice(name=name, id=sliceid, output="json", quiet=True)
         if as_json:
             click.echo(result)
@@ -939,17 +1178,29 @@ def show(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
 @click.pass_context
-def delete(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
-           scope: str, name: str, sliceid: str):
+def delete(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    name: str,
+    sliceid: str,
+):
     """Delete a slice
 
     Delete a slice by --name or --sliceid.
@@ -958,8 +1209,13 @@ def delete(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
         if not name and not sliceid:
             raise click.ClickException("Either --name or --sliceid must be specified")
 
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid,
-                                      scope=scope, token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         s = fablib.get_slice(name=name, slice_id=sliceid)
         slice_label = name or sliceid
         s.delete()
@@ -971,19 +1227,40 @@ def delete(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
-@click.option('--days', type=int, default=None, help='Number of days to extend the lease')
-@click.option('--end', 'leaseend', default=None, help='New lease end time (UTC format: "YYYY-MM-DD HH:MM:SS +0000")')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
+@click.option(
+    "--days", type=int, default=None, help="Number of days to extend the lease"
+)
+@click.option(
+    "--end",
+    "leaseend",
+    default=None,
+    help='New lease end time (UTC format: "YYYY-MM-DD HH:MM:SS +0000")',
+)
 @click.pass_context
-def renew(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
-          scope: str, name: str, sliceid: str, days: int, leaseend: str):
+def renew(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    name: str,
+    sliceid: str,
+    days: int,
+    leaseend: str,
+):
     """Renew a slice lease
 
     Extend the lease for a slice by --days or an explicit --end time.
@@ -995,8 +1272,13 @@ def renew(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
         if not days and not leaseend:
             raise click.ClickException("Either --days or --end must be specified")
 
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid,
-                                      scope=scope, token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         s = fablib.get_slice(name=name, slice_id=sliceid)
         s.renew(end_date=leaseend, days=days)
 
@@ -1012,25 +1294,36 @@ def renew(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str,
 
 
 # Common options for slice subcommands that need to resolve a slice
-def _get_slice_from_opts(cmhost, ochost, tokenlocation, projectid, scope, name, sliceid):
+def _get_slice_from_opts(
+    cmhost, ochost, tokenlocation, projectid, scope, name, sliceid
+):
     """Helper: build fablib and resolve a slice by name or ID."""
     if not name and not sliceid:
         raise click.ClickException("Either --name or --sliceid must be specified")
-    fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid,
-                                  scope=scope, token_location=tokenlocation)
+    fablib = __get_fablib_manager(
+        cm_host=cmhost,
+        oc_host=ochost,
+        project_id=projectid,
+        scope=scope,
+        token_location=tokenlocation,
+    )
     return fablib, fablib.get_slice(name=name, slice_id=sliceid)
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
 def nodes(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json):
     """List nodes in a slice
@@ -1038,7 +1331,9 @@ def nodes(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, a
     Show all nodes in a slice identified by --name or --sliceid.
     """
     try:
-        _, s = _get_slice_from_opts(cmhost, ochost, tokenlocation, projectid, scope, name, sliceid)
+        _, s = _get_slice_from_opts(
+            cmhost, ochost, tokenlocation, projectid, scope, name, sliceid
+        )
         result = s.list_nodes(output="json", quiet=True)
         if as_json:
             click.echo(result)
@@ -1052,23 +1347,31 @@ def nodes(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, a
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def networks(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json):
+def networks(
+    ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json
+):
     """List networks in a slice
 
     Show all network services in a slice identified by --name or --sliceid.
     """
     try:
-        _, s = _get_slice_from_opts(cmhost, ochost, tokenlocation, projectid, scope, name, sliceid)
+        _, s = _get_slice_from_opts(
+            cmhost, ochost, tokenlocation, projectid, scope, name, sliceid
+        )
         result = s.list_networks(output="json", quiet=True)
         if as_json:
             click.echo(result)
@@ -1082,23 +1385,31 @@ def networks(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def interfaces(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json):
+def interfaces(
+    ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json
+):
     """List interfaces in a slice
 
     Show all interfaces in a slice identified by --name or --sliceid.
     """
     try:
-        _, s = _get_slice_from_opts(cmhost, ochost, tokenlocation, projectid, scope, name, sliceid)
+        _, s = _get_slice_from_opts(
+            cmhost, ochost, tokenlocation, projectid, scope, name, sliceid
+        )
         result = s.list_interfaces(output="json", quiet=True)
         if as_json:
             click.echo(result)
@@ -1112,23 +1423,31 @@ def interfaces(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, slice
 
 
 @slices.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--name', default=None, help='Slice name')
-@click.option('--sliceid', default=None, help='Slice UUID')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option("--tokenlocation", help="Path to token JSON file", default=None)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--name", default=None, help="Slice name")
+@click.option("--sliceid", default=None, help="Slice UUID")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def slivers(ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json):
+def slivers(
+    ctx, cmhost, ochost, tokenlocation, projectid, scope, name, sliceid, as_json
+):
     """List slivers in a slice
 
     Show all slivers in a slice identified by --name or --sliceid.
     """
     try:
-        _, s = _get_slice_from_opts(cmhost, ochost, tokenlocation, projectid, scope, name, sliceid)
+        _, s = _get_slice_from_opts(
+            cmhost, ochost, tokenlocation, projectid, scope, name, sliceid
+        )
         result = s.list_slivers(output="json", quiet=True)
         if as_json:
             click.echo(result)
@@ -1152,29 +1471,64 @@ def resources(ctx):
 
 
 @resources.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--force', is_flag=True, default=False, help='Force a fresh snapshot instead of using cache')
-@click.option('--site', default=None, help='Show details for a specific site')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output JSON instead of table')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Force a fresh snapshot instead of using cache",
+)
+@click.option("--site", default=None, help="Show details for a specific site")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Output JSON instead of table",
+)
 @click.pass_context
-def sites(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, scope: str,
-          force: bool, site: str, as_json: bool):
+def sites(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    force: bool,
+    site: str,
+    as_json: bool,
+):
     """List testbed sites
 
     Show all available sites and their resources. Use --site to show
     details for a specific site. Use --json for JSON output.
     """
     try:
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid, scope=scope,
-                                      token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         if site:
             result = fablib.get_resources(force_refresh=force).show_site(
-                site_name=site, output="json", quiet=True,
+                site_name=site,
+                output="json",
+                quiet=True,
             )
             if as_json:
                 click.echo(result)
@@ -1197,28 +1551,63 @@ def sites(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, sco
 
 
 @resources.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--force', is_flag=True, default=False, help='Force a fresh snapshot instead of using cache')
-@click.option('--site', default=None, help='Filter hosts by site name')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output JSON instead of table')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Force a fresh snapshot instead of using cache",
+)
+@click.option("--site", default=None, help="Filter hosts by site name")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Output JSON instead of table",
+)
 @click.pass_context
-def hosts(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, scope: str,
-          force: bool, site: str, as_json: bool):
+def hosts(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    force: bool,
+    site: str,
+    as_json: bool,
+):
     """List testbed hosts
 
     Show all available hosts and their resources. Use --site to filter
     by site name. Use --json for JSON output.
     """
     try:
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid, scope=scope,
-                                      token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         includes = [site] if site else None
-        result = fablib.list_hosts(output="json", quiet=True, force_refresh=force, includes=includes)
+        result = fablib.list_hosts(
+            output="json", quiet=True, force_refresh=force, includes=includes
+        )
         if as_json:
             click.echo(result)
         else:
@@ -1231,23 +1620,49 @@ def hosts(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, sco
 
 
 @resources.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output JSON instead of table')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Output JSON instead of table",
+)
 @click.pass_context
-def links(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, scope: str,
-          as_json: bool):
+def links(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    as_json: bool,
+):
     """List inter-site network links
 
     Show all available inter-site links. Use --json for JSON output.
     """
     try:
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid, scope=scope,
-                                      token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         result = fablib.list_links(output="json", quiet=True)
         if as_json:
             click.echo(result)
@@ -1260,29 +1675,58 @@ def links(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, sco
         raise click.ClickException(str(e))
 
 
-@resources.command(name='facility-ports')
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--site', default=None, help='Filter facility ports by site name')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output JSON instead of table')
+@resources.command(name="facility-ports")
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--site", default=None, help="Filter facility ports by site name")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Output JSON instead of table",
+)
 @click.pass_context
-def facility_ports(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, scope: str,
-                   site: str, as_json: bool):
+def facility_ports(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    site: str,
+    as_json: bool,
+):
     """List facility ports
 
     Show all available facility ports for external connectivity.
     Use --site to filter by site name. Use --json for JSON output.
     """
     try:
-        fablib = __get_fablib_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid, scope=scope,
-                                      token_location=tokenlocation)
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         if site:
-            filter_fn = lambda fp: fp['site'] == site
-            result = fablib.list_facility_ports(output="json", quiet=True, filter_function=filter_fn)
+            filter_fn = lambda fp: fp["site"] == site
+            result = fablib.list_facility_ports(
+                output="json", quiet=True, filter_function=filter_fn
+            )
         else:
             result = fablib.list_facility_ports(output="json", quiet=True)
         if as_json:
@@ -1310,40 +1754,94 @@ _BASTION_HOST = "bastion.fabric-testbed.net"
 
 
 @configure.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to existing token JSON file (for authentication)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--projectname', default=None, help='Project name')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--lifetime', default=4, help='Token lifetime in hours')
-@click.option('--no-browser', is_flag=True, default=False,
-              help='Do not attempt to open a browser automatically')
-@click.option('--config-dir', default=None,
-              help='Config directory (default: current working directory)')
-@click.option('--overwrite', is_flag=True, default=False,
-              help='Overwrite existing keys and config files')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to existing token JSON file (for authentication)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option("--projectname", default=None, help="Project name")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--lifetime", default=4, help="Token lifetime in hours")
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not attempt to open a browser automatically",
+)
+@click.option(
+    "--config-dir",
+    default=None,
+    help="Config directory (default: current working directory)",
+)
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing keys and config files",
+)
 @click.pass_context
-def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
-          lifetime, no_browser, config_dir, overwrite):
+def setup(
+    ctx,
+    cmhost,
+    ochost,
+    tokenlocation,
+    projectid,
+    projectname,
+    scope,
+    lifetime,
+    no_browser,
+    config_dir,
+    overwrite,
+):
     """Set up FABRIC environment
 
     Creates the config directory, creates a token, generates bastion and
     sliver SSH keys, and writes ssh_config and fabric_rc files.
     """
     try:
-        config_dir = os.path.expanduser(config_dir) if config_dir else _DEFAULT_TOKEN_DIR
+        config_dir = (
+            os.path.expanduser(config_dir) if config_dir else _DEFAULT_TOKEN_DIR
+        )
         os.makedirs(config_dir, exist_ok=True)
         click.echo(f"Config directory: {config_dir}")
 
         # Resolve hosts
         rc = _load_fabric_rc()
-        cm = cmhost or os.getenv(Constants.FABRIC_CREDMGR_HOST) or rc.get(Constants.FABRIC_CREDMGR_HOST) or _DEFAULT_CREDMGR_HOST
-        oc = ochost or os.getenv(Constants.FABRIC_ORCHESTRATOR_HOST) or rc.get(Constants.FABRIC_ORCHESTRATOR_HOST) or _DEFAULT_ORCHESTRATOR_HOST
-        core = os.getenv(Constants.FABRIC_CORE_API_HOST) or rc.get(Constants.FABRIC_CORE_API_HOST) or _DEFAULT_CORE_API_HOST
-        pid = projectid or os.getenv(Constants.FABRIC_PROJECT_ID) or rc.get(Constants.FABRIC_PROJECT_ID)
-        pname = projectname or os.getenv(Constants.FABRIC_PROJECT_NAME) or rc.get(Constants.FABRIC_PROJECT_NAME)
+        cm = (
+            cmhost
+            or os.getenv(Constants.FABRIC_CREDMGR_HOST)
+            or rc.get(Constants.FABRIC_CREDMGR_HOST)
+            or _DEFAULT_CREDMGR_HOST
+        )
+        oc = (
+            ochost
+            or os.getenv(Constants.FABRIC_ORCHESTRATOR_HOST)
+            or rc.get(Constants.FABRIC_ORCHESTRATOR_HOST)
+            or _DEFAULT_ORCHESTRATOR_HOST
+        )
+        core = (
+            os.getenv(Constants.FABRIC_CORE_API_HOST)
+            or rc.get(Constants.FABRIC_CORE_API_HOST)
+            or _DEFAULT_CORE_API_HOST
+        )
+        pid = (
+            projectid
+            or os.getenv(Constants.FABRIC_PROJECT_ID)
+            or rc.get(Constants.FABRIC_PROJECT_ID)
+        )
+        pname = (
+            projectname
+            or os.getenv(Constants.FABRIC_PROJECT_NAME)
+            or rc.get(Constants.FABRIC_PROJECT_NAME)
+        )
 
         # Resolve paths from fabric_rc / env vars, falling back to config_dir defaults
         config_token_path = (
@@ -1379,21 +1877,25 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
         if not overwrite and os.path.exists(config_token_path):
             token_needs_refresh = _is_token_expired(config_token_path)
             if token_needs_refresh:
-                click.echo(f"Existing token at {config_token_path} is expired, will refresh...")
+                click.echo(
+                    f"Existing token at {config_token_path} is expired, will refresh..."
+                )
 
         # Create or refresh token
         if overwrite or not os.path.exists(config_token_path) or token_needs_refresh:
             cookie_name = os.getenv(Constants.FABRIC_COOKIE_NAME)
 
             from fabrictestbed.external_api.credmgr_client import CredmgrClient
-            client = CredmgrClient(credmgr_host=cm,
-                                    cookie_name=cookie_name or "fabric-service")
+
+            client = CredmgrClient(
+                credmgr_host=cm, cookie_name=cookie_name or "fabric-service"
+            )
 
             # Try refreshing if token exists and has a refresh_token
             refreshed = False
             if token_needs_refresh:
                 try:
-                    with open(config_token_path, 'r') as f:
+                    with open(config_token_path, "r") as f:
                         existing = json.load(f)
                     refresh_token = existing.get("refresh_token")
                     if refresh_token:
@@ -1425,11 +1927,18 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
                 )
                 click.echo(f"  Token saved at: {config_token_path}")
         else:
-            click.echo(f"Token at {config_token_path} is valid, skipping (use --overwrite to replace)")
+            click.echo(
+                f"Token at {config_token_path} is valid, skipping (use --overwrite to replace)"
+            )
 
         # Build FabricManagerV2 using the resolved token path
-        fm = __get_fabric_manager(cm_host=cmhost, oc_host=ochost, project_id=pid,
-                                  token_location=config_token_path, project_name=pname)
+        fm = __get_fabric_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=pid,
+            token_location=config_token_path,
+            project_name=pname,
+        )
 
         # If no project ID specified, use the first active project
         if not pid:
@@ -1447,7 +1956,9 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
         user_info = fm.get_user_info()
         bastion_login = user_info.get("bastion_login", "")
         if not bastion_login:
-            raise click.ClickException("Could not determine bastion_login from user info")
+            raise click.ClickException(
+                "Could not determine bastion_login from user info"
+            )
         click.echo(f"Bastion username: {bastion_login}")
 
         # Validate bastion key against server using fingerprint
@@ -1459,35 +1970,53 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
         # Generate bastion SSH keys
         if overwrite or not bastion_valid:
             if not overwrite and os.path.exists(bastion_key_path):
-                click.echo(f"Bastion key at {bastion_key_path} missing or expired on server, regenerating...")
+                click.echo(
+                    f"Bastion key at {bastion_key_path} missing or expired on server, regenerating..."
+                )
             else:
                 click.echo("Generating bastion SSH keys...")
-            bastion_keys = fm.create_ssh_keys(key_type="bastion",
-                                               description="bastion-key-via-cli",
-                                               comment="fabric-bastion-key")
+            bastion_keys = fm.create_ssh_keys(
+                key_type="bastion",
+                description="bastion-key-via-cli",
+                comment="fabric-bastion-key",
+            )
             if bastion_keys:
                 key_data = bastion_keys[0]
-                _write_key_file(bastion_key_path, key_data.get("private_openssh", ""), private=True)
-                _write_key_file(bastion_pub_path, key_data.get("public_openssh", ""), private=False)
+                _write_key_file(
+                    bastion_key_path, key_data.get("private_openssh", ""), private=True
+                )
+                _write_key_file(
+                    bastion_pub_path, key_data.get("public_openssh", ""), private=False
+                )
                 click.echo(f"  {bastion_key_path}")
                 click.echo(f"  {bastion_pub_path}")
         else:
-            click.echo(f"Bastion key at {bastion_key_path} is valid (fingerprint matches server), skipping")
+            click.echo(
+                f"Bastion key at {bastion_key_path} is valid (fingerprint matches server), skipping"
+            )
 
         # Sliver keys — only generate if files don't exist (user may have their own keys)
         if overwrite or not os.path.exists(sliver_key_path):
             click.echo("Generating sliver SSH keys...")
-            sliver_keys = fm.create_ssh_keys(key_type="sliver",
-                                              description="sliver-key-via-cli",
-                                              comment="fabric-sliver-key")
+            sliver_keys = fm.create_ssh_keys(
+                key_type="sliver",
+                description="sliver-key-via-cli",
+                comment="fabric-sliver-key",
+            )
             if sliver_keys:
                 key_data = sliver_keys[0]
-                _write_key_file(sliver_key_path, key_data.get("private_openssh", ""), private=True)
-                _write_key_file(sliver_pub_path, key_data.get("public_openssh", ""), private=False)
+                _write_key_file(
+                    sliver_key_path, key_data.get("private_openssh", ""), private=True
+                )
+                _write_key_file(
+                    sliver_pub_path, key_data.get("public_openssh", ""), private=False
+                )
                 click.echo(f"  {sliver_key_path}")
                 click.echo(f"  {sliver_pub_path}")
         else:
-            click.echo(f"Sliver key exists at {sliver_key_path}, skipping (use --overwrite to replace)")
+            click.echo(
+                f"Sliver key exists at {sliver_key_path}, skipping (use --overwrite to replace)"
+            )
 
         # Write ssh_config
         if overwrite or not os.path.exists(ssh_config_path):
@@ -1507,11 +2036,13 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
                 f"Host * !{_BASTION_HOST}\n"
                 f"     ProxyJump {bastion_login}@{_BASTION_HOST}:22\n"
             )
-            with open(ssh_config_path, 'w') as f:
+            with open(ssh_config_path, "w") as f:
                 f.write(ssh_config)
             click.echo(f"  {ssh_config_path}")
         else:
-            click.echo(f"ssh_config exists at {ssh_config_path}, skipping (use --overwrite to replace)")
+            click.echo(
+                f"ssh_config exists at {ssh_config_path}, skipping (use --overwrite to replace)"
+            )
 
         # Write fabric_rc
         fabric_rc_path = os.path.join(config_dir, "fabric_rc")
@@ -1530,7 +2061,7 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
                 f"export FABRIC_SLICE_PUBLIC_KEY_FILE={sliver_pub_path}\n"
                 f"export FABRIC_BASTION_SSH_CONFIG_FILE={ssh_config_path}\n"
             )
-            with open(fabric_rc_path, 'w') as f:
+            with open(fabric_rc_path, "w") as f:
                 f.write(fabric_rc_content)
             click.echo(f"  {fabric_rc_path}")
         else:
@@ -1546,7 +2077,7 @@ def setup(ctx, cmhost, ochost, tokenlocation, projectid, projectname, scope,
 
 def _write_key_file(path, content, private=True):
     """Write an SSH key file with appropriate permissions."""
-    with open(path, 'w') as f:
+    with open(path, "w") as f:
         f.write(content)
     os.chmod(path, 0o600 if private else 0o644)
 
@@ -1554,12 +2085,13 @@ def _write_key_file(path, content, private=True):
 def _is_token_expired(token_path):
     """Check if the token in a JSON file is expired."""
     try:
-        with open(token_path, 'r') as f:
+        with open(token_path, "r") as f:
             data = json.load(f)
         id_token = data.get("id_token")
         if not id_token:
             return True
         from fabrictestbed.util.auth_provider import AuthProvider
+
         auth = AuthProvider.from_token(id_token=id_token)
         return auth.is_expired()
     except Exception:
@@ -1576,12 +2108,13 @@ def _is_key_valid_on_server(fm, pub_key_path, key_type):
     try:
         if not os.path.exists(pub_key_path):
             return False
-        with open(pub_key_path, 'r') as f:
+        with open(pub_key_path, "r") as f:
             local_pub_key = f.read().strip()
         if not local_pub_key:
             return False
 
         from fss_utils.sshkey import FABRICSSHKey
+
         local_fingerprint = FABRICSSHKey(local_pub_key).get_fingerprint()
 
         user_info = fm.get_user_info()
@@ -1608,6 +2141,7 @@ def _is_key_valid_on_server(fm, pub_key_path, key_type):
 
 
 # ── User / Projects ───────────────────────────────────────────────────────
+
 
 def _print_user_info(user_data):
     """Print user info in dashboard style."""
@@ -1641,7 +2175,10 @@ def _print_user_info(user_data):
                 else:
                     role_names.append(str(r))
             # Filter out entries containing UUIDs (project-specific roles like uuid-pm, uuid-po)
-            _uuid_pat = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', re.IGNORECASE)
+            _uuid_pat = re.compile(
+                r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+                re.IGNORECASE,
+            )
             role_names = [n for n in role_names if not _uuid_pat.search(n)]
             if role_names:
                 _row(_kv("roles:", ", ".join(role_names)))
@@ -1726,25 +2263,49 @@ def user(ctx):
 
 
 @user.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--uuid', default=None, help='User UUID to query (defaults to current user)')
-@click.option('--email', default=None, help='User email to query')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--uuid", default=None, help="User UUID to query (defaults to current user)"
+)
+@click.option("--email", default=None, help="User email to query")
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def info(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, scope: str,
-         uuid: str, email: str, as_json: bool):
+def info(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    scope: str,
+    uuid: str,
+    email: str,
+    as_json: bool,
+):
     """Get user information
 
     Retrieve user details including email, UUID, and bastion login.
     """
     try:
-        fm = __get_fabric_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid, scope=scope,
-                                  token_location=tokenlocation)
+        fm = __get_fabric_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
         result = fm.get_user_info(uuid=uuid, email=email)
         if as_json:
             click.echo(json.dumps(result, indent=2))
@@ -1757,25 +2318,48 @@ def info(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, scop
 
 
 @user.command()
-@click.option('--cmhost', help='Credential Manager host', default=None)
-@click.option('--ochost', help='Orchestrator host', default=None)
-@click.option('--tokenlocation', help='Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)', default=None)
-@click.option('--projectid', default=None, help='Project UUID')
-@click.option('--projectname', default=None, help='Project name')
-@click.option('--scope', type=click.Choice(['cf', 'mf', 'all'], case_sensitive=False),
-              default='all', help='Token scope')
-@click.option('--json', 'as_json', is_flag=True, default=False, help='Output raw JSON')
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--tokenlocation",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ./tokens.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option("--projectname", default=None, help="Project name")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option("--json", "as_json", is_flag=True, default=False, help="Output raw JSON")
 @click.pass_context
-def projects(ctx, cmhost: str, ochost: str, tokenlocation: str, projectid: str, projectname: str,
-             scope: str, as_json: bool):
+def projects(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    tokenlocation: str,
+    projectid: str,
+    projectname: str,
+    scope: str,
+    as_json: bool,
+):
     """List user projects
 
     Show all projects the current user belongs to.
     """
     try:
-        fm = __get_fabric_manager(cm_host=cmhost, oc_host=ochost, project_id=projectid, scope=scope,
-                                  token_location=tokenlocation)
-        result = fm.get_project_info(project_id=projectid or "all", project_name=projectname or "all")
+        fm = __get_fabric_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=tokenlocation,
+        )
+        result = fm.get_project_info(
+            project_id=projectid or "all", project_name=projectname or "all"
+        )
         if as_json:
             click.echo(json.dumps(result, indent=2))
         else:
