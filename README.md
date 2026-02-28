@@ -83,7 +83,7 @@ $ fabric-cli resources sites
 
 The CLI resolves settings from (highest to lowest priority):
 
-1. Command-line options (`--cmhost`, `--tokenlocation`, etc.)
+1. Command-line options (`--cmhost`, `--location`, etc.)
 2. Environment variables (`FABRIC_CREDMGR_HOST`, `FABRIC_TOKEN_LOCATION`, etc.)
 3. Config file at `~/work/fabric_config/fabric_rc`
 4. Built-in defaults
@@ -98,6 +98,10 @@ sliver SSH keys, and writes `ssh_config` and `fabric_rc` files. Re-run
 to refresh expired tokens automatically; use `--overwrite` to regenerate
 everything.
 
+When `--config-dir` is specified, all files are read from and written to
+that directory. An existing `fabric_rc` in the directory is used for
+configuration; default paths outside the directory are not consulted.
+
 ```console
 $ fabric-cli configure setup
 $ fabric-cli configure setup --config-dir ~/my_fabric_config --overwrite
@@ -110,9 +114,9 @@ Manage FABRIC identity tokens.
 ```console
 $ fabric-cli tokens create                    # Create a new token (opens browser)
 $ fabric-cli tokens create --no-browser       # Print URL instead of opening browser
+$ fabric-cli tokens create --location ~/my_tokens/id_token.json  # Save to custom path
 $ fabric-cli tokens refresh                   # Refresh an existing token
 $ fabric-cli tokens revoke                    # Revoke a token
-$ fabric-cli tokens clear-cache               # Delete the local token file
 ```
 
 #### `fabric-cli slices`
@@ -161,7 +165,7 @@ Most commands accept the following options:
 |---------------------|------------------------------------------|
 | `--cmhost`          | Credential Manager host                  |
 | `--ochost`          | Orchestrator host                        |
-| `--tokenlocation`   | Path to token JSON file                  |
+| `--location`        | Path to token JSON file                  |
 | `--projectid`       | Project UUID                             |
 | `--scope`           | Token scope (`cf`, `mf`, or `all`)       |
 | `--json`            | Output raw JSON instead of formatted text|
