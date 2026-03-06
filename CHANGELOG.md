@@ -6,7 +6,7 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.9.7
+## 2.0.0
 
 ### Changed
 - Fix for when reporting management interface from OS for IPv6 on rocky nodes (Issue [#471] PR [#470](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/470)
@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve the performance of several get_ calls through caching (Issue [#453](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/453))
 - Enable Fabric token creation via CLI (Issue [#473](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/473))
 - MCP friendly API, persistent network config, and bug fixes (Issue [#477](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/477))
+- Param to control SSH calls (Issue [#479](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/479))
 
 
 ## 1.9.6

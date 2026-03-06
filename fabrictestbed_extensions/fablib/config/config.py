@@ -188,6 +188,7 @@ class Config:
         log_propagate: bool = Constants.DEFAULT_LOG_PROPAGATE,
         data_dir: str = Constants.DEFAULT_DATA_DIR,
         offline: bool = True,
+        no_ssh: bool = False,
         **kwargs,
     ):
         """
@@ -214,6 +215,13 @@ class Config:
         self.is_yaml = False
         self.runtime_config = {}
         self.offline = offline
+
+        # Resolve no_ssh: constructor param > env var > default (False)
+        if no_ssh:
+            self.__no_ssh = True
+        else:
+            env_val = os.environ.get(Constants.FABRIC_NO_SSH, "").strip().lower()
+            self.__no_ssh = env_val in ("1", "true", "yes", "on")
 
         # Load from config file (if it exists)
         self.__load_configuration(file_path=fabric_rc, **kwargs)
@@ -797,6 +805,24 @@ class Config:
         :type avoid: string
         """
         self.runtime_config[Constants.AVOID] = avoid
+
+    def get_no_ssh(self) -> bool:
+        """
+        Gets the no_ssh flag. When True, SSH operations are disabled.
+
+        :return: True if SSH is disabled
+        :rtype: bool
+        """
+        return self.__no_ssh
+
+    def set_no_ssh(self, no_ssh: bool):
+        """
+        Sets the no_ssh flag.
+
+        :param no_ssh: True to disable SSH operations
+        :type no_ssh: bool
+        """
+        self.__no_ssh = no_ssh
 
     def set_avoid_csv(self, avoid_csv: str = ""):
         """

@@ -59,6 +59,127 @@ except Exception as e:
 
 Please note that some [configuration] is required for this to work.
 
+## Command-Line Interface
+
+FABlib includes a CLI tool (`fabric-cli`) that is automatically installed
+with the package. It provides commands for token management, slice
+operations, resource queries, user info, and environment setup — all from
+the terminal.
+
+### Quick start
+
+```console
+# One-time setup: creates tokens, SSH keys, ssh_config, and fabric_rc
+$ fabric-cli configure setup
+
+# List your slices
+$ fabric-cli slices list
+
+# Check available testbed sites
+$ fabric-cli resources sites
+```
+
+### Configuration
+
+The CLI resolves settings from (highest to lowest priority):
+
+1. Command-line options (`--cmhost`, `--location`, etc.)
+2. Environment variables (`FABRIC_CREDMGR_HOST`, `FABRIC_TOKEN_LOCATION`, etc.)
+3. Config file at `~/work/fabric_config/fabric_rc`
+4. Built-in defaults
+
+### Commands
+
+#### `fabric-cli configure setup`
+
+Interactive first-time setup. Creates the config directory, obtains a
+token via browser-based CILogon authentication, generates bastion and
+sliver SSH keys, and writes `ssh_config` and `fabric_rc` files. Re-run
+to refresh expired tokens automatically; use `--overwrite` to regenerate
+everything.
+
+When `--config-dir` is specified, all files are read from and written to
+that directory. An existing `fabric_rc` in the directory is used for
+configuration; default paths outside the directory are not consulted.
+
+```console
+$ fabric-cli configure setup
+$ fabric-cli configure setup --config-dir ~/my_fabric_config --overwrite
+```
+
+#### `fabric-cli tokens`
+
+Manage FABRIC identity tokens.
+
+```console
+$ fabric-cli tokens create                    # Create a new token (opens browser)
+$ fabric-cli tokens create --no-browser       # Print URL instead of opening browser
+$ fabric-cli tokens create --location ~/my_tokens/id_token.json  # Save to custom path
+$ fabric-cli tokens refresh                   # Refresh an existing token
+$ fabric-cli tokens revoke                    # Revoke a token
+```
+
+#### `fabric-cli slices`
+
+List, inspect, renew, and delete slices.
+
+```console
+$ fabric-cli slices list                      # List active slices
+$ fabric-cli slices list --all                # Include Dead and Closing slices
+$ fabric-cli slices show --name MySlice       # Show slice details
+$ fabric-cli slices delete --name MySlice     # Delete a slice
+$ fabric-cli slices renew --name MySlice --days 7  # Extend lease by 7 days
+$ fabric-cli slices nodes --name MySlice      # List nodes in a slice
+$ fabric-cli slices networks --name MySlice   # List networks in a slice
+$ fabric-cli slices interfaces --name MySlice # List interfaces in a slice
+$ fabric-cli slices slivers --name MySlice    # List slivers in a slice
+```
+
+#### `fabric-cli resources`
+
+Query testbed resources.
+
+```console
+$ fabric-cli resources sites                  # List all sites with usage bars
+$ fabric-cli resources sites --site TACC      # Show details for a specific site
+$ fabric-cli resources hosts                  # List all hosts
+$ fabric-cli resources hosts --site TACC      # Filter hosts by site
+$ fabric-cli resources links                  # List inter-site network links
+$ fabric-cli resources facility-ports         # List facility ports
+```
+
+#### `fabric-cli user`
+
+Query user and project information.
+
+```console
+$ fabric-cli user info                        # Show current user info
+$ fabric-cli user projects                    # List your projects
+```
+
+### Common options
+
+Most commands accept the following options:
+
+| Option              | Description                              |
+|---------------------|------------------------------------------|
+| `--cmhost`          | Credential Manager host                  |
+| `--ochost`          | Orchestrator host                        |
+| `--location`        | Path to token JSON file                  |
+| `--projectid`       | Project UUID                             |
+| `--scope`           | Token scope (`cf`, `mf`, or `all`)       |
+| `--json`            | Output raw JSON instead of formatted text|
+
+### Help
+
+Use `--help` on any command or subcommand for full usage details:
+
+```console
+$ fabric-cli --help
+$ fabric-cli slices --help
+$ fabric-cli tokens create --help
+```
+
 ## Contributing to FABlib
 
 We welcome contributions in the form of bug reports, feature requests,

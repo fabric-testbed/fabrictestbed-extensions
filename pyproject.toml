@@ -20,7 +20,7 @@ dependencies = [
     "ipyleaflet",
     "ipycytoscape",
     "tabulate",
-    "fabrictestbed==2.0.1",
+    "fabrictestbed==2.0.3",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
@@ -30,7 +30,8 @@ dependencies = [
     "recordclass>=0.23.1",
     "atomicwrites",
     "fabric_paramiko_expect",
-    "fabric_ceph_client==1.0.2"
+    "fabric_ceph_client==1.0.2",
+    "click>=8.0"
     ]
 
 classifiers = [
@@ -38,6 +39,9 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
+
+[project.scripts]
+fabric-cli = "fabrictestbed_extensions.cli.cli:cli"
 
 [project.urls]
 Homepage = "https://fabric-testbed.net/"

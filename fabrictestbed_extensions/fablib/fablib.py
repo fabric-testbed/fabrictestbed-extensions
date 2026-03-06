@@ -136,6 +136,7 @@ class FablibManager(Config):
         offline: bool = False,
         auto_token_refresh: bool = True,
         validate_config: bool = True,
+        no_ssh: bool = False,
         **kwargs,
     ):
         """
@@ -197,6 +198,10 @@ class FablibManager(Config):
             some unit tests.
         :param auto_token_refresh: Auto refresh tokens (automatically disabled if id_token is provided)
         :param validate_config: Whether to verify and persist configuration during initialization.
+        :param no_ssh: Disable SSH operations. When True, skips SSH-related initialization
+            (thread pool, bastion probing, SSH key validation) and prevents SSH operations
+            on nodes. Useful for API-only mode (e.g., MCP server). Can also be set via
+            the ``FABRIC_NO_SSH`` environment variable.
         """
         # If id_token is provided, disable auto_token_refresh
         if id_token is not None:
@@ -219,6 +224,7 @@ class FablibManager(Config):
             log_propagate=log_propagate,
             data_dir=data_dir,
             offline=offline,
+            no_ssh=no_ssh,
             **kwargs,
         )
         self.manager = None
@@ -229,9 +235,12 @@ class FablibManager(Config):
         self.setup_logging()
 
         if not offline:
-            self.ssh_thread_pool_executor = ThreadPoolExecutor(execute_thread_pool_size)
+            if not self.get_no_ssh():
+                self.ssh_thread_pool_executor = ThreadPoolExecutor(
+                    execute_thread_pool_size
+                )
             self.__build_manager()
-            if validate_config:
+            if validate_config and not self.get_no_ssh():
                 self.verify_and_configure(validate_only=True)
         self.required_check()
         self.lock = threading.Lock()

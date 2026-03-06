@@ -1599,7 +1599,14 @@ class Node(TemplateMixin):
         :rtype: Tuple[str, str]
 
         :raises Exception: If SSH connection fails.
+        :raises RuntimeError: If no_ssh mode is enabled.
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
+
         log.debug(
             f"Executing on node: {self.get_name()}, IP: {self.get_management_ip()}, Command: {command}"
         )
@@ -1887,7 +1894,14 @@ class Node(TemplateMixin):
         :type retry_interval: int
 
         :raise Exception: if management IP is invalid
+        :raises RuntimeError: if no_ssh mode is enabled
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
+
         log.debug(f"upload node: {self.get_name()}, local_file_path: {local_file_path}")
 
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
@@ -2050,7 +2064,15 @@ class Node(TemplateMixin):
 
         :param retry_interval: how often to retry SCP upon failure
         :type retry_interval: int
+
+        :raises RuntimeError: if no_ssh mode is enabled
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
+
         log.debug(
             f"download node: {self.get_name()}, remote_file_path: {remote_file_path}"
         )
@@ -2225,7 +2247,13 @@ class Node(TemplateMixin):
         :type retry_interval: int
 
         :raise Exception: if management IP is invalid
+        :raises RuntimeError: if no_ssh mode is enabled
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
         import os
         import tarfile
         import tempfile
@@ -2340,7 +2368,14 @@ class Node(TemplateMixin):
         :type retry_interval: int
 
         :raise Exception: if management IP is invalid
+        :raises RuntimeError: if no_ssh mode is enabled
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
+
         import os
         import tarfile
 
@@ -2368,9 +2403,12 @@ class Node(TemplateMixin):
         """
         Test whether SSH is functional on the node.
 
-        :return: true if SSH is working, false otherwise
+        :return: true if SSH is working, false otherwise (always False if no_ssh)
         :rtype: bool
         """
+        if self.get_fablib_manager().get_no_ssh():
+            return False
+
         log.debug(f"test_ssh: node {self.get_name()}")
 
         try:

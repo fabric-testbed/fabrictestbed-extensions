@@ -69,10 +69,9 @@ from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.fablib_v2 import FablibManagerV2
+    from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
 
 import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Address, ip_address
 from typing import Dict, List, Union
 
@@ -369,63 +368,65 @@ class Slice:
         :return: table in format specified by output parameter
         :rtype: Object
         """
-        executor = ThreadPoolExecutor(64)
+        no_ssh = self.get_fablib_manager().get_no_ssh()
 
-        net_name_threads = {}
-        node_name_threads = {}
-        physical_os_interface_name_threads = {}
-        os_interface_threads = {}
-        for iface in self.get_interfaces(refresh=refresh):
-            if iface.get_network():
-                log.info(
-                    f"Starting get network name thread for iface {iface.get_name()} "
-                )
-                net_name_threads[iface.get_name()] = executor.submit(
-                    iface.get_network().get_name
-                )
+        with ThreadPoolExecutor(64) as executor:
+            net_name_threads = {}
+            node_name_threads = {}
+            physical_os_interface_name_threads = {}
+            os_interface_threads = {}
+            for iface in self.get_interfaces(refresh=refresh):
+                if iface.get_network():
+                    log.info(
+                        f"Starting get network name thread for iface {iface.get_name()} "
+                    )
+                    net_name_threads[iface.get_name()] = executor.submit(
+                        iface.get_network().get_name
+                    )
 
-            if iface.get_node():
-                log.info(f"Starting get node name thread for iface {iface.get_name()} ")
-                node_name_threads[iface.get_name()] = executor.submit(
-                    iface.get_node().get_name
-                )
+                if iface.get_node():
+                    log.info(
+                        f"Starting get node name thread for iface {iface.get_name()} "
+                    )
+                    node_name_threads[iface.get_name()] = executor.submit(
+                        iface.get_node().get_name
+                    )
 
-            log.info(
-                f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} "
-            )
-            physical_os_interface_name_threads[iface.get_name()] = executor.submit(
-                iface.get_physical_os_interface_name
-            )
+                # Skip SSH-dependent interface lookups when no_ssh is set
+                if not no_ssh:
+                    log.info(
+                        f"Starting get physical_os_interface_name_threads for iface {iface.get_name()} "
+                    )
+                    physical_os_interface_name_threads[iface.get_name()] = (
+                        executor.submit(iface.get_physical_os_interface_name)
+                    )
 
-            log.info(
-                f"Starting get get_os_interface_threads for iface {iface.get_name()} "
-            )
-            os_interface_threads[iface.get_name()] = executor.submit(
-                iface.get_device_name
-            )
+                    log.info(
+                        f"Starting get get_os_interface_threads for iface {iface.get_name()} "
+                    )
+                    os_interface_threads[iface.get_name()] = executor.submit(
+                        iface.get_device_name
+                    )
 
-        table = []
-        for iface in self.get_interfaces():
-            if iface.get_network():
-                # network_name = iface.get_network().get_name()
-                log.info(
-                    f"Getting results from get network name thread for iface {iface.get_name()} "
-                )
-                network_name = net_name_threads[iface.get_name()].result()
-            else:
-                network_name = None
+            table = []
+            for iface in self.get_interfaces():
+                if iface.get_network():
+                    log.info(
+                        f"Getting results from get network name thread for iface {iface.get_name()} "
+                    )
+                    network_name = net_name_threads[iface.get_name()].result()
+                else:
+                    network_name = None
 
-            if iface.get_node():
-                # node_name = iface.get_node().get_name()
-                log.info(
-                    f"Getting results from get node name thread for iface {iface.get_name()} "
-                )
-                node_name = node_name_threads[iface.get_name()].result()
+                if iface.get_node():
+                    log.info(
+                        f"Getting results from get node name thread for iface {iface.get_name()} "
+                    )
+                    node_name = node_name_threads[iface.get_name()].result()
+                else:
+                    node_name = None
 
-            else:
-                node_name = None
-
-            table.append(iface.toDict())
+                table.append(iface.toDict())
         if pretty_names:
             pretty_names_dict = Interface.get_pretty_name_dict()
         else:
@@ -2224,10 +2225,16 @@ class Slice:
         :type progress: bool
 
         :raises Exception: if timeout threshold reached
+        :raises RuntimeError: if no_ssh mode is enabled
 
         :return: true when slice ssh successful
         :rtype: bool
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
 
         timeout_start = time.time()
         slice = self.sm_slice
@@ -2300,7 +2307,15 @@ class Slice:
 
         Only use this method after a non-blocking submit call and only call it
         once.
+
+        :raises RuntimeError: if no_ssh mode is enabled
         """
+        if self.get_fablib_manager().get_no_ssh():
+            raise RuntimeError(
+                "SSH operations are disabled (no_ssh=True). "
+                "This fablib instance is configured for API-only operations."
+            )
+
         if self.is_dead_or_closing() or self.is_allocated():
             print(
                 f"FAILURE: Slice is in {self.get_state()} state; cannot do post boot config"
@@ -2355,40 +2370,39 @@ class Slice:
 
         start = time.time()
 
-        # from concurrent.futures import ThreadPoolExecutor
-        my_thread_pool_executor = ThreadPoolExecutor(32)
-        threads = {}
+        with ThreadPoolExecutor(32) as executor:
+            threads = {}
 
-        for node in self.get_nodes():
-            # Run configuration on newly created nodes and on modify.
-            log.info(
-                f"Configuring {node.get_name()} "
-                f"(instantiated: {node.is_instantiated()}, "
-                f"modify: {self._is_modify()})"
-            )
-            if not node.is_instantiated() or self._is_modify():
-                thread = my_thread_pool_executor.submit(node.config)
-                threads[thread] = node
+            for node in self.get_nodes():
+                # Run configuration on newly created nodes and on modify.
+                log.info(
+                    f"Configuring {node.get_name()} "
+                    f"(instantiated: {node.is_instantiated()}, "
+                    f"modify: {self._is_modify()})"
+                )
+                if not node.is_instantiated() or self._is_modify():
+                    thread = executor.submit(node.config)
+                    threads[thread] = node
 
-        print(
-            f"Running post boot config threads ..."
-        )  # ({time.time() - start:.0f} sec)")
+            print(
+                f"Running post boot config threads ..."
+            )  # ({time.time() - start:.0f} sec)")
 
-        for thread in concurrent.futures.as_completed(threads.keys()):
-            node = threads[thread]
-            try:
-                result = thread.result()
-                # print(result)
-                print(
-                    f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
-                )
-            except Exception as e:
-                print(
-                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
-                )
-                log.error(
-                    f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
-                )
+            for thread in concurrent.futures.as_completed(threads.keys()):
+                node = threads[thread]
+                try:
+                    result = thread.result()
+                    # print(result)
+                    print(
+                        f"Post boot config {node.get_name()}, Done! ({time.time() - start:.0f} sec)"
+                    )
+                except Exception as e:
+                    print(
+                        f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec)"
+                    )
+                    log.error(
+                        f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
+                    )
 
         # print(f"ALL Nodes, Done! ({time.time() - start:.0f} sec)")
 
@@ -2704,6 +2718,11 @@ class Slice:
         :return: slice_id
         """
         slice_reservations = []
+
+        # When no_ssh is set, force SSH-dependent options off
+        if self.get_fablib_manager().get_no_ssh():
+            wait_ssh = False
+            post_boot_config = False
 
         if not wait:
             progress = False
@@ -3337,6 +3356,10 @@ class Slice:
         :param post_boot_config: Flag indicating if post boot config should be applied
         """
 
+        # When no_ssh is set, force SSH-dependent options off
+        if self.get_fablib_manager().get_no_ssh():
+            post_boot_config = False
+
         if not wait:
             progress = False
 
@@ -3359,9 +3382,10 @@ class Slice:
             return self.slice_id
 
         elif wait:
-            self.wait_ssh(
-                timeout=wait_timeout, interval=wait_interval, progress=progress
-            )
+            if not self.get_fablib_manager().get_no_ssh():
+                self.wait_ssh(
+                    timeout=wait_timeout, interval=wait_interval, progress=progress
+                )
 
             if progress:
                 print("Running post boot config ... ", end="")

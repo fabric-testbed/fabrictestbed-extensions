@@ -255,15 +255,25 @@ class Interface(TemplateMixin):
 
             from fabrictestbed_extensions.fablib.node import Node
 
+            no_ssh = False
+            fablib_mgr = self.get_fablib_manager()
+            if fablib_mgr:
+                no_ssh = fablib_mgr.get_no_ssh()
+
             if (
                 self.get_node()
                 and isinstance(self.get_node(), Node)
                 and str(self.get_node().get_reservation_state()) == "Active"
             ):
                 mac = str(self.get_mac())
-                physical_dev = str(self.get_physical_os_interface_name())
-                dev = str(self.get_device_name())
-                ip_addr = str(self.get_ip_addr())
+                if no_ssh:
+                    physical_dev = ""
+                    dev = ""
+                    ip_addr = ""
+                else:
+                    physical_dev = str(self.get_physical_os_interface_name())
+                    dev = str(self.get_device_name())
+                    ip_addr = str(self.get_ip_addr())
                 numa = str(self.get_numa_node())
             else:
                 mac = ""
