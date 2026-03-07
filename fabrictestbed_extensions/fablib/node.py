@@ -2821,7 +2821,7 @@ class Node(TemplateMixin):
     ):
         """
         Configure routes for FabNetv4/FabNetv6 networks (non-Ext).
-        Adds never-default and a route to the FABRIC gateway host.
+        Adds never-default and a route to the FABRIC supernet.
 
         :param conn_name: NM connection name
         :param ip_version: 'ipv4' or 'ipv6'
@@ -2829,9 +2829,9 @@ class Node(TemplateMixin):
         :param network_type: the ServiceType
         """
         if network_type == ServiceType.FABNetv4:
-            fabric_route = "10.128.0.1/32"
+            fabric_route = "10.128.0.0/10"
         else:
-            fabric_route = "2602:FCFB:00::1/128"
+            fabric_route = "2602:FCFB:00::/40"
 
         self.execute(
             f"sudo nmcli c mod {conn_name} {ip_version}.never-default yes",
