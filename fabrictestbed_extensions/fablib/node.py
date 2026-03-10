@@ -2597,6 +2597,8 @@ class Node(TemplateMixin):
                     f"{self.get_name()}: set management interface "
                     f"{mgmt_dev} ({mgmt_ip}) to unmanaged"
                 )
+                # Preserve IPv6 RA acceptance on the management interface
+                self._preserve_mgmt_ipv6_ra(mgmt_dev)
             else:
                 log.warning(
                     f"{self.get_name()}: could not find device for "
@@ -2605,6 +2607,32 @@ class Node(TemplateMixin):
         except Exception as e:
             log.warning(
                 f"{self.get_name()}: failed to unmanage management interface: {e}"
+            )
+
+    def _preserve_mgmt_ipv6_ra(self, mgmt_dev: str):
+        """
+        Ensure the management interface continues to accept IPv6 Router
+        Advertisements even when IPv6 forwarding is enabled (e.g. by Docker).
+
+        By default the Linux kernel stops processing RAs when
+        net.ipv6.conf.<dev>.forwarding=1.  Setting accept_ra=2 overrides
+        this behaviour so SLAAC addresses and the IPv6 default route are
+        maintained.
+
+        :param mgmt_dev: management network device name (e.g. 'eth0')
+        """
+        try:
+            self.execute(
+                f"sudo sysctl -w net.ipv6.conf.{mgmt_dev}.accept_ra=2 > /dev/null 2>&1",
+                quiet=True,
+            )
+            log.info(
+                f"{self.get_name()}: set accept_ra=2 on {mgmt_dev} "
+                f"to preserve IPv6 RA under forwarding"
+            )
+        except Exception as e:
+            log.warning(
+                f"{self.get_name()}: failed to set accept_ra=2 on {mgmt_dev}: {e}"
             )
 
     @staticmethod
