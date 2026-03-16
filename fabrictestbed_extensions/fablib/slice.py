@@ -96,9 +96,9 @@ def _setup_ceph_on_node(node, bundle: dict):
     script_name = os.path.basename(mount_script)
     cluster_name = os.path.basename(cluster_dir)
 
-    node.upload_directory(cluster_dir, "ceph-artifacts")
+    node.upload_directory(cluster_dir, ".ceph")
     stdout, stderr = node.execute(
-        f"sudo bash ~/ceph-artifacts/{cluster_name}/{script_name}",
+        f"sudo bash ~/.ceph/{cluster_name}/{script_name}",
         quiet=True,
     )
     if stderr and stderr.strip():

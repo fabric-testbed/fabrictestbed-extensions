@@ -61,7 +61,7 @@ class CephFsUtils:
             raise ValueError("cluster must be a non-empty string")
         self.ceph_conf_text = ceph_conf_text
         self.keyring_blob = keyring_blob
-        self.out_base = Path(out_base).resolve()
+        self.out_base = Path(out_base).expanduser().resolve()
         self.mount_root_default = mount_root_default
 
         # Filled by parse() / _resolve_slugs()
@@ -155,7 +155,7 @@ class CephFsUtils:
         token_file: Optional[str] = None,
         token: Optional[str] = None,
         verify: bool = True,
-        out_base: Path | str = "./ceph-artifacts",
+        out_base: Path | str = "~/.ceph",
         mount_root_default: str = "/mnt/cephfs",
     ) -> Dict[str, Any]:
         """
@@ -227,7 +227,7 @@ class CephFsUtils:
         token_file: Optional[str] = None,
         token: Optional[str] = None,
         verify: bool = True,
-        out_base: Path | str = "./ceph-artifacts",
+        out_base: Path | str = "~/.ceph",
         mount_root_default: str = "/mnt/cephfs",
         prefix: str = "client.",
     ) -> Dict[str, Any]:
@@ -671,7 +671,7 @@ def build_ceph_bundle_for_user(
     token_file: Optional[str] = None,
     token: Optional[str] = None,
     verify: bool = True,
-    out_base: Path | str = "./ceph-artifacts",
+    out_base: Path | str = "~/.ceph",
     mount_root_default: str = "/mnt/cephfs",
 ) -> Dict[str, Any]:
     """
@@ -716,7 +716,7 @@ def build_ceph_bundle_for_login(
     token_file: Optional[str] = None,
     token: Optional[str] = None,
     verify: bool = True,
-    out_base: Path | str = "./ceph-artifacts",
+    out_base: Path | str = "~/.ceph",
     mount_root_default: str = "/mnt/cephfs",
 ) -> Dict[str, Any]:
     """
