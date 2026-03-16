@@ -102,9 +102,7 @@ def _setup_ceph_on_node(node, bundle: dict):
         quiet=True,
     )
     if stderr and stderr.strip():
-        log.warning(
-            f"CephFS mount stderr on {node.get_name()}: {stderr.strip()}"
-        )
+        log.warning(f"CephFS mount stderr on {node.get_name()}: {stderr.strip()}")
 
 
 class Slice:
@@ -2508,22 +2506,16 @@ class Slice:
                 for node in storage_nodes:
                     cluster = node.get_storage_cluster()
                     bundle = bundles[cluster]
-                    future = executor.submit(
-                        _setup_ceph_on_node, node, bundle
-                    )
+                    future = executor.submit(_setup_ceph_on_node, node, bundle)
                     futures[future] = node
 
                 for future in concurrent.futures.as_completed(futures):
                     node = futures[future]
                     try:
                         future.result()
-                        print(
-                            f"CephFS storage configured on {node.get_name()}"
-                        )
+                        print(f"CephFS storage configured on {node.get_name()}")
                     except Exception as e:
-                        print(
-                            f"CephFS storage failed on {node.get_name()}: {e}"
-                        )
+                        print(f"CephFS storage failed on {node.get_name()}: {e}")
                         log.error(
                             f"CephFS storage setup failed on {node.get_name()}: {e}"
                         )
