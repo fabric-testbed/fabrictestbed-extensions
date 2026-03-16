@@ -6,6 +6,19 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.0.2
+
+### Added
+- Add `storage=True` API for automatic distributed shared storage mounting on slices and nodes (Issue [#485](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/485), PR [#484](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/484))
+- Add `node.enable_storage()`, `node.has_storage()`, `node.get_storage_cluster()` methods
+- Auto-discover Ceph clusters, generate credentials, and mount CephFS during `post_boot_config()`
+
+### Changed
+- Move default ceph artifacts directory from `~/ceph-artifacts` to `~/.ceph`
+- Update default Ceph manager host to DNS name `ceph-mgr.fabric-testbed.net`
+- Improve CephFS path slugs to be human-friendly with collision disambiguation
+- Handle Rocky 8/9 and Ubuntu ceph-common installation with correct repos
+
 ## 2.0.1
 
 ### Changed
