@@ -72,7 +72,7 @@ class Constants:
     DEFAULT_FABRIC_ORCHESTRATOR_HOST = "orchestrator.fabric-testbed.net"
     DEFAULT_FABRIC_CORE_API_HOST = "uis.fabric-testbed.net"
     DEFAULT_FABRIC_AM_HOST = "artifacts.fabric-testbed.net"
-    DEFAULT_FABRIC_CEPH_MGR_HOST = "23.134.232.211"
+    DEFAULT_FABRIC_CEPH_MGR_HOST = "ceph-mgr.fabric-testbed.net"
     DEFAULT_FABRIC_BASTION_HOST = "bastion.fabric-testbed.net"
     DEFAULT_LOG_LEVEL = "INFO"
     DEFAULT_LOG_FILE = "/tmp/fablib/fablib.log"

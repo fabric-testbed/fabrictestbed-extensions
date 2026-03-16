@@ -3841,6 +3841,62 @@ class Node(TemplateMixin):
         }
         self.set_fablib_data(fablib_data)
 
+    def enable_storage(self, cluster: str = None):
+        """
+        Enable CephFS storage on this node.
+
+        Adds a FABNetv4 network (if not already present) and marks
+        the node so that :py:meth:`Slice.post_boot_config` will
+        automatically generate credentials, upload them, and mount
+        the CephFS filesystem.
+
+        :param cluster: Ceph cluster name (e.g. ``"europe"``).
+            When ``None`` the first available cluster is auto-discovered
+            at post-boot time.
+        :type cluster: str
+        """
+        if self.has_storage():
+            return
+
+        self.add_fabnet(name="CEPH_STORAGE")
+
+        fablib_data = self.get_fablib_data()
+        fablib_data["storage"] = True
+        if cluster:
+            fablib_data["storage_cluster"] = cluster
+        self.set_fablib_data(fablib_data)
+
+    def has_storage(self) -> bool:
+        """
+        Check whether CephFS storage is enabled on this node.
+
+        :return: ``True`` if storage was enabled via
+            :py:meth:`enable_storage`.
+        :rtype: bool
+        """
+        return bool(self.get_fablib_data().get("storage", False))
+
+    def get_storage_cluster(self) -> Optional[str]:
+        """
+        Return the Ceph cluster name associated with this node,
+        or ``None`` if none was specified.
+
+        :return: cluster name or ``None``
+        :rtype: str or None
+        """
+        return self.get_fablib_data().get("storage_cluster")
+
+    def _set_storage_cluster(self, cluster: str):
+        """
+        Set the Ceph cluster name in fablib_data (internal use).
+
+        :param cluster: Ceph cluster name
+        :type cluster: str
+        """
+        fablib_data = self.get_fablib_data()
+        fablib_data["storage_cluster"] = cluster
+        self.set_fablib_data(fablib_data)
+
     def add_route(
         self,
         subnet: Union[IPv4Network, IPv6Network],

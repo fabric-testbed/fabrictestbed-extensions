@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
 
 import concurrent.futures
+import os
 from ipaddress import IPv4Address, ip_address
 from typing import Dict, List, Union
 
@@ -86,6 +87,24 @@ from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
 
 log = logging.getLogger("fablib")
+
+
+def _setup_ceph_on_node(node, bundle: dict):
+    """Upload Ceph artifacts and run the mount script on *node*."""
+    cluster_dir = bundle["cluster_dir"]
+    mount_script = bundle["mount_script"]
+    script_name = os.path.basename(mount_script)
+    cluster_name = os.path.basename(cluster_dir)
+
+    node.upload_directory(cluster_dir, "ceph-artifacts")
+    stdout, stderr = node.execute(
+        f"sudo bash ~/ceph-artifacts/{cluster_name}/{script_name}",
+        quiet=True,
+    )
+    if stderr and stderr.strip():
+        log.warning(
+            f"CephFS mount stderr on {node.get_name()}: {stderr.strip()}"
+        )
 
 
 class Slice:
@@ -1229,6 +1248,8 @@ class Slice:
         avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
+        storage: bool = False,
+        storage_cluster: str = None,
     ) -> Node:
         """
         Creates a new node on this fablib slice.
@@ -1278,6 +1299,15 @@ class Slice:
         :param raise_exception: Raise exception in case of Failure
         :type raise_exception: bool
 
+        :param storage: (Optional) Enable CephFS storage on this node.
+            Adds a FABNetv4 network and configures CephFS mount during
+            post-boot. Default: False
+        :type storage: bool
+
+        :param storage_cluster: (Optional) Ceph cluster name for storage.
+            When ``None``, the first available cluster is auto-discovered.
+        :type storage_cluster: str
+
         :return: a new node
         :rtype: Node
         """
@@ -1307,6 +1337,9 @@ class Slice:
 
         if host:
             node.set_host(host)
+
+        if storage:
+            node.enable_storage(cluster=storage_cluster)
 
         self.nodes = None
         self.interfaces = {}
@@ -2421,6 +2454,61 @@ class Slice:
 
         print(" Done!")
 
+        # --- CephFS storage configuration ---
+        storage_nodes = [n for n in self.get_nodes() if n.has_storage()]
+        if storage_nodes:
+            print("Configuring CephFS storage ...")
+            fablib_mgr = self.get_fablib_manager()
+
+            # Group by cluster, auto-discover if needed
+            clusters_needed = set()
+            for node in storage_nodes:
+                cluster = node.get_storage_cluster()
+                clusters_needed.add(cluster)
+
+            # Auto-discover default cluster once if any node has no cluster
+            if None in clusters_needed:
+                available = fablib_mgr.discover_ceph_clusters()
+                if not available:
+                    raise RuntimeError("No Ceph clusters available")
+                default_cluster = available[0]
+                clusters_needed.discard(None)
+                clusters_needed.add(default_cluster)
+                for node in storage_nodes:
+                    if not node.get_storage_cluster():
+                        node._set_storage_cluster(default_cluster)
+
+            # Generate bundle once per cluster
+            bundles = {}
+            for cluster in clusters_needed:
+                bundles[cluster] = fablib_mgr.generate_ceph_bundle(cluster=cluster)
+
+            # Upload and mount on each node (parallel)
+            with ThreadPoolExecutor(32) as executor:
+                futures = {}
+                for node in storage_nodes:
+                    cluster = node.get_storage_cluster()
+                    bundle = bundles[cluster]
+                    future = executor.submit(
+                        _setup_ceph_on_node, node, bundle
+                    )
+                    futures[future] = node
+
+                for future in concurrent.futures.as_completed(futures):
+                    node = futures[future]
+                    try:
+                        future.result()
+                        print(
+                            f"CephFS storage configured on {node.get_name()}"
+                        )
+                    except Exception as e:
+                        print(
+                            f"CephFS storage failed on {node.get_name()}: {e}"
+                        )
+                        log.error(
+                            f"CephFS storage setup failed on {node.get_name()}: {e}"
+                        )
+
     def validIPAddress(self, IP: str) -> str:
         """
         Not intended as a API call.
@@ -2665,6 +2753,8 @@ class Slice:
         lease_end_time: datetime = None,
         lease_in_hours: int = None,
         validate: bool = False,
+        storage: bool = False,
+        storage_cluster: str = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2715,8 +2805,22 @@ class Slice:
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
 
+        :param storage: (Optional) Enable CephFS storage on all nodes in
+            the slice that don't already have it enabled. Default: False
+        :type storage: bool
+
+        :param storage_cluster: (Optional) Ceph cluster name for storage.
+            When ``None``, the first available cluster is auto-discovered.
+        :type storage_cluster: str
+
         :return: slice_id
         """
+        # Enable storage on all nodes that don't already have it
+        if storage:
+            for node in self.get_nodes():
+                if not node.has_storage():
+                    node.enable_storage(cluster=storage_cluster)
+
         slice_reservations = []
 
         # When no_ssh is set, force SSH-dependent options off
