@@ -144,6 +144,9 @@ class Slice:
         self.user_only: bool = user_only
         # Flag to track if cached objects need refresh after topology update
         self._topology_dirty: bool = True
+        # CephFS storage defaults applied to every new node via add_node()
+        self._storage: bool = False
+        self._storage_cluster: Optional[str] = None
 
     def get_fablib_manager(self) -> FablibManagerV2:
         return self.fablib_manager
@@ -464,14 +467,28 @@ class Slice:
         return table
 
     @staticmethod
-    def new_slice(fablib_manager: FablibManagerV2, name: str = None):
+    def new_slice(
+        fablib_manager: FablibManagerV2,
+        name: str = None,
+        storage: bool = False,
+        storage_cluster: str = None,
+    ):
         """
         Create a new slice
+
         :param fablib_manager:
         :param name:
+        :param storage: Enable CephFS storage on every node added to
+            this slice.  Default: False
+        :type storage: bool
+        :param storage_cluster: Ceph cluster name.  When ``None``, the
+            first available cluster is auto-discovered at post-boot time.
+        :type storage_cluster: str
         :return: Slice
         """
         slice = Slice(fablib_manager=fablib_manager, name=name)
+        slice._storage = storage
+        slice._storage_cluster = storage_cluster
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
         return slice
@@ -1338,8 +1355,10 @@ class Slice:
         if host:
             node.set_host(host)
 
-        if storage:
-            node.enable_storage(cluster=storage_cluster)
+        # Enable storage: explicit node-level flag, or inherit slice default
+        if storage or self._storage:
+            cluster = storage_cluster or self._storage_cluster
+            node.enable_storage(cluster=cluster)
 
         self.nodes = None
         self.interfaces = {}
@@ -2753,8 +2772,6 @@ class Slice:
         lease_end_time: datetime = None,
         lease_in_hours: int = None,
         validate: bool = False,
-        storage: bool = False,
-        storage_cluster: str = None,
     ) -> str:
         """
         Submits a slice request to FABRIC.
@@ -2805,22 +2822,8 @@ class Slice:
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
 
-        :param storage: (Optional) Enable CephFS storage on all nodes in
-            the slice that don't already have it enabled. Default: False
-        :type storage: bool
-
-        :param storage_cluster: (Optional) Ceph cluster name for storage.
-            When ``None``, the first available cluster is auto-discovered.
-        :type storage_cluster: str
-
         :return: slice_id
         """
-        # Enable storage on all nodes that don't already have it
-        if storage:
-            for node in self.get_nodes():
-                if not node.has_storage():
-                    node.enable_storage(cluster=storage_cluster)
-
         slice_reservations = []
 
         # When no_ssh is set, force SSH-dependent options off
