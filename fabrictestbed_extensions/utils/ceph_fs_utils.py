@@ -459,13 +459,15 @@ class CephFsUtils:
 
       echo "Mounting (fs=) fs={fsname} path={path} -> {mnt}"
       set +e
-      sudo mount -t ceph ":{path}" "{mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",fs="{fsname}",_netdev,noatime
+      sudo mount -t ceph ":{path}" "{mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",fs="{fsname}",_netdev,noatime 2>/dev/null
       rc=$?
       set -e
-      if [[ $rc -eq 22 ]]; then
-        echo "fs= not accepted (EINVAL). Retrying with mds_namespace={fsname} ..."
+      if [[ $rc -ne 0 ]]; then
+        echo "fs= mount failed (rc=$rc). Retrying with mds_namespace={fsname} ..."
+        set +e
         sudo mount -t ceph ":{path}" "{mnt}" -o name="$USER_NAME",secretfile="$SECRET_TGT",conf="$CONF_TGT",mds_namespace="{fsname}",_netdev,noatime
         rc=$?
+        set -e
       fi
 
       if [[ $rc -ne 0 ]]; then
@@ -513,6 +515,21 @@ class CephFsUtils:
         sudo install -m "$mode" -D "$src" "$dst"
       fi
     }}
+
+    # Install ceph-common if the mount helper is missing
+    if ! command -v mount.ceph &>/dev/null; then
+      echo "Installing ceph-common ..."
+      if command -v dnf &>/dev/null; then
+        sudo dnf install -y ceph-common
+      elif command -v yum &>/dev/null; then
+        sudo yum install -y ceph-common
+      elif command -v apt-get &>/dev/null; then
+        sudo apt-get update -qq && sudo apt-get install -y -qq ceph-common
+      else
+        echo "ERROR: cannot install ceph-common — unsupported package manager"
+        exit 1
+      fi
+    fi
 
     # Ensure /etc/ceph has the right files (idempotent)
     sudo mkdir -p /etc/ceph
