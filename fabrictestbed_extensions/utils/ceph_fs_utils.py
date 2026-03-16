@@ -521,7 +521,12 @@ class CephFsUtils:
       echo "Installing ceph-common ..."
       if command -v dnf &>/dev/null; then
         sudo dnf install -y epel-release
-        sudo dnf install -y centos-release-ceph-squid
+        EL_VER=$(rpm -E %rhel)
+        if [[ "$EL_VER" -ge 9 ]]; then
+          sudo dnf install -y centos-release-ceph-squid
+        else
+          sudo dnf install -y centos-release-ceph-reef
+        fi
         sudo dnf install -y ceph-common ceph-fuse --nobest
       elif command -v apt-get &>/dev/null; then
         sudo apt-get update -qq && sudo apt-get install -y -qq ceph-common ceph-fuse
