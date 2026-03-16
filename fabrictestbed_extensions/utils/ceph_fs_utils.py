@@ -520,20 +520,11 @@ class CephFsUtils:
     if ! command -v mount.ceph &>/dev/null; then
       echo "Installing ceph-common ..."
       if command -v dnf &>/dev/null; then
-        # Rocky/Alma/CentOS/RHEL — ceph-common is not in base repos
-        if ! dnf list available ceph-common &>/dev/null; then
-          echo "Adding Ceph repo ..."
-          sudo dnf install -y centos-release-ceph-reef || sudo dnf install -y centos-release-ceph-squid || {{
-            RELEASEVER=$(rpm -E %rhel)
-            sudo dnf install -y "https://download.ceph.com/rpm-reef/el${{RELEASEVER}}/noarch/ceph-release-1-1.el${{RELEASEVER}}.noarch.rpm" || true
-          }}
-        fi
-        sudo dnf install -y ceph-common
-      elif command -v yum &>/dev/null; then
-        sudo yum install -y centos-release-ceph-reef 2>/dev/null || true
-        sudo yum install -y ceph-common
+        sudo dnf install -y epel-release
+        sudo dnf install -y centos-release-ceph-squid
+        sudo dnf install -y ceph-common ceph-fuse --nobest
       elif command -v apt-get &>/dev/null; then
-        sudo apt-get update -qq && sudo apt-get install -y -qq ceph-common
+        sudo apt-get update -qq && sudo apt-get install -y -qq ceph-common ceph-fuse
       else
         echo "ERROR: cannot install ceph-common — unsupported package manager"
         exit 1
