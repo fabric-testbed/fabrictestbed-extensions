@@ -1291,7 +1291,7 @@ class Slice:
         :type disk: int
 
         :param image: (Optional) The image to use for the node.
-            Default: default_rocky_8
+            Default: default_rocky_9
         :type image: String
 
         :param instance_type:

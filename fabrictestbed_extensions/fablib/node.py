@@ -95,7 +95,7 @@ class Node(TemplateMixin):
     default_cores = 2
     default_ram = 8
     default_disk = 10
-    default_image = "default_rocky_8"
+    default_image = "default_rocky_9"
 
     def __init__(
         self,
