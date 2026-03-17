@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `node.enable_storage()`, `node.has_storage()`, `node.get_storage_cluster()` methods
 - Auto-discover Ceph clusters, generate credentials, and mount CephFS during `post_boot_config()`
 
+### Fixed
+- Fix `get_storage_cluster()` returning `None` after `post_boot_config` — persist storage metadata back to orchestrator (Issue [#487](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/487), PR [#486](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/486))
+- Auto-detect user's Ceph clusters instead of using all available clusters, preventing `ValueError` when user lacks credentials on some clusters
+
 ### Changed
 - Move default ceph artifacts directory from `~/ceph-artifacts` to `~/.ceph`
 - Update default Ceph manager host to DNS name `ceph-mgr.fabric-testbed.net`
