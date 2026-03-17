@@ -2537,6 +2537,12 @@ class Slice:
                             f"CephFS storage setup failed on {node.get_name()}: {e}"
                         )
 
+            # Persist storage_cluster in fablib_data back to the orchestrator
+            print("Saving storage metadata... ", end="")
+            self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
+            self.update()
+            print("Done!")
+
     def validIPAddress(self, IP: str) -> str:
         """
         Not intended as a API call.
