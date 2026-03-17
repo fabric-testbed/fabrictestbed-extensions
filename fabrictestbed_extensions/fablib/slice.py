@@ -2520,8 +2520,10 @@ class Slice:
                     cluster = node.get_storage_cluster()
                     bundle = bundles.get(cluster)
                     if not bundle:
-                        print(f"WARNING: No credentials for cluster '{cluster}', "
-                              f"skipping CephFS on {node.get_name()}")
+                        print(
+                            f"WARNING: No credentials for cluster '{cluster}', "
+                            f"skipping CephFS on {node.get_name()}"
+                        )
                         continue
                     future = executor.submit(_setup_ceph_on_node, node, bundle)
                     futures[future] = node
@@ -2539,7 +2541,9 @@ class Slice:
 
             # Persist storage_cluster in fablib_data back to the orchestrator
             print("Saving storage metadata... ", end="")
-            self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
+            self.submit(
+                wait=True, progress=False, post_boot_config=False, wait_ssh=False
+            )
             self.update()
             print("Done!")
 
