@@ -2256,6 +2256,33 @@ Host * !bastion.fabric-testbed.net
             verify=verify,
         )
 
+    def discover_user_ceph_clusters(self, verify: bool = True) -> list:
+        """
+        Discover Ceph clusters where the current user has a CephX keyring.
+
+        Queries all clusters and returns only those where the user's entity
+        has an active keyring.
+
+        :param bool verify: Verify TLS certificates when calling the API.
+        :return: List of cluster names where the user has credentials.
+        :rtype: list
+        """
+        user_entity = self.get_bastion_username()
+        if not user_entity:
+            self.determine_bastion_username()
+            user_entity = self.get_bastion_username()
+        if not user_entity:
+            raise ValueError("User/bastion login is empty.")
+        if not user_entity.startswith("client."):
+            user_entity = f"client.{user_entity}"
+
+        return CephFsUtils.discover_user_clusters(
+            user_entity=user_entity,
+            base_url=self.get_ceph_mgr_host(),
+            token_file=self.get_token_location(),
+            verify=verify,
+        )
+
     def generate_ceph_bundle(
         self,
         cluster: str,

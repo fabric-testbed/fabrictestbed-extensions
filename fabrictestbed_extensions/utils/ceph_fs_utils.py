@@ -147,6 +147,56 @@ class CephFsUtils:
         ]
 
     @staticmethod
+    def discover_user_clusters(
+        *,
+        user_entity: str,
+        base_url: str,
+        token_file: Optional[str] = None,
+        token: Optional[str] = None,
+        verify: bool = True,
+    ) -> List[str]:
+        """
+        Return the subset of clusters where ``user_entity`` has a CephX keyring.
+
+        Discovers all clusters via :meth:`list_clusters_from_api`, then tries
+        exporting the user's keyring on each. Only clusters that return a
+        non-empty keyring are included.
+
+        :param user_entity: CephX entity, e.g., ``client.alice``.
+        :type user_entity: str
+        :param base_url: Ceph Manager API base URL.
+        :type base_url: str
+        :param token_file: Path to a token file.
+        :type token_file: str | None, optional
+        :param token: Raw token string.
+        :type token: str | None, optional
+        :param verify: Whether to verify TLS certificates.
+        :type verify: bool, optional
+        :return: Cluster names where the user has a keyring.
+        :rtype: List[str]
+        """
+        c = CephManagerClient(
+            base_url=base_url, token=token, token_file=token_file, verify=verify
+        )
+        all_clusters = CephFsUtils.list_clusters_from_api(
+            base_url=base_url, token=token, token_file=token_file, verify=verify
+        )
+        user_clusters = []
+        for cluster in all_clusters:
+            try:
+                export = c.export_users(cluster=cluster, entities=[user_entity])
+                key_blob = (
+                    ((export or {}).get("clusters", {}) or {})
+                    .get(cluster, {})
+                    .get(user_entity)
+                )
+                if key_blob:
+                    user_clusters.append(cluster)
+            except Exception:
+                pass
+        return user_clusters
+
+    @staticmethod
     def build_for_user_from_api(
         *,
         user_entity: str,

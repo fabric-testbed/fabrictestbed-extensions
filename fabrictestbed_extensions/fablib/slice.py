@@ -2485,9 +2485,12 @@ class Slice:
 
             # Auto-discover default cluster once if any node has no cluster
             if None in clusters_needed:
-                available = fablib_mgr.discover_ceph_clusters()
+                available = fablib_mgr.discover_user_ceph_clusters()
                 if not available:
-                    raise RuntimeError("No Ceph clusters available")
+                    raise RuntimeError(
+                        "No Ceph clusters available for your account. "
+                        "Please check that you have CephFS credentials."
+                    )
                 default_cluster = available[0]
                 clusters_needed.discard(None)
                 clusters_needed.add(default_cluster)
@@ -2498,14 +2501,28 @@ class Slice:
             # Generate bundle once per cluster
             bundles = {}
             for cluster in clusters_needed:
-                bundles[cluster] = fablib_mgr.generate_ceph_bundle(cluster=cluster)
+                try:
+                    bundles[cluster] = fablib_mgr.generate_ceph_bundle(cluster=cluster)
+                except ValueError as e:
+                    print(f"WARNING: Skipping cluster '{cluster}': {e}")
+                    log.warning(f"No keyring on cluster '{cluster}': {e}")
+
+            if not bundles:
+                raise RuntimeError(
+                    "Could not generate CephFS bundles for any cluster. "
+                    "Please check that you have CephFS credentials."
+                )
 
             # Upload and mount on each node (parallel)
             with ThreadPoolExecutor(32) as executor:
                 futures = {}
                 for node in storage_nodes:
                     cluster = node.get_storage_cluster()
-                    bundle = bundles[cluster]
+                    bundle = bundles.get(cluster)
+                    if not bundle:
+                        print(f"WARNING: No credentials for cluster '{cluster}', "
+                              f"skipping CephFS on {node.get_name()}")
+                        continue
                     future = executor.submit(_setup_ceph_on_node, node, bundle)
                     futures[future] = node
 
