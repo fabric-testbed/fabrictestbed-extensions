@@ -1548,17 +1548,29 @@ Host * !bastion.fabric-testbed.net
         """
         return self.manager
 
-    def new_slice(self, name: str) -> Slice:
+    def new_slice(
+        self,
+        name: str,
+        storage: bool = False,
+        storage_cluster: str = None,
+    ) -> Slice:
         """
         Creates a new slice with the given name.
 
         :param name: the name to give the slice
         :type name: String
+        :param storage: Enable CephFS storage on every node added to
+            this slice.  Default: False
+        :type storage: bool
+        :param storage_cluster: Ceph cluster name.  When ``None``, the
+            first available cluster is auto-discovered at post-boot time.
+        :type storage_cluster: str
         :return: a new slice
         :rtype: Slice
         """
-        # fabric = fablib()
-        new_slice = Slice.new_slice(self, name=name)
+        new_slice = Slice.new_slice(
+            self, name=name, storage=storage, storage_cluster=storage_cluster
+        )
         return new_slice
 
     def get_available_resources(
@@ -2247,7 +2259,7 @@ Host * !bastion.fabric-testbed.net
     def generate_ceph_bundle(
         self,
         cluster: str,
-        out_base: str = "./ceph-artifacts",
+        out_base: str = "~/.ceph",
         mount_root: str = "/mnt/cephfs",
         verify: bool = True,
     ) -> dict:
@@ -2265,7 +2277,7 @@ Host * !bastion.fabric-testbed.net
 
         :param str region: Target cluster name (e.g., ``"europe"``).
         :param str out_base: Output root directory for artifacts
-                             (default: ``"./ceph-artifacts"``).
+                             (default: ``"~/.ceph"``).
         :param str mount_root: Mount prefix used by the generated script
                                (default: ``"/mnt/cephfs"``).
         :param bool verify: Verify TLS certificates when calling the API.
@@ -2273,11 +2285,11 @@ Host * !bastion.fabric-testbed.net
         :return: Details of the generated bundle, for example::
 
             {
-              "cluster_dir": "./ceph-artifacts/europe",
-              "ceph_conf": "./ceph-artifacts/europe/ceph.conf",
-              "secret_file": "./ceph-artifacts/europe/ceph.client.alice.secret",
-              "keyring_file": "./ceph-artifacts/europe/ceph.client.alice.keyring",
-              "mount_script": "./ceph-artifacts/europe/mount_alice.sh",
+              "cluster_dir": "~/.ceph/europe",
+              "ceph_conf": "~/.ceph/europe/ceph.conf",
+              "secret_file": "~/.ceph/europe/ceph.client.alice.secret",
+              "keyring_file": "~/.ceph/europe/ceph.client.alice.keyring",
+              "mount_script": "~/.ceph/europe/mount_alice.sh",
               "entity": "client.alice",
               "user": "alice",
               "mounts": [

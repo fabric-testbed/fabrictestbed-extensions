@@ -1241,6 +1241,14 @@ class Interface(TemplateMixin):
                 quiet=True,
             )
 
+        # Disable the unused IP version on data-plane interfaces to prevent
+        # SLAAC/DHCP from running (e.g. IPv6 auto-config on an IPv4-only link).
+        other_version = "ipv6" if ip_version == "ipv4" else "ipv4"
+        node.execute(
+            f"sudo nmcli c mod {conn_name} {other_version}.method disabled",
+            quiet=True,
+        )
+
         # Bring the connection up
         node._nmcli_up(conn_name)
 

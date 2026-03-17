@@ -95,7 +95,7 @@ class Node(TemplateMixin):
     default_cores = 2
     default_ram = 8
     default_disk = 10
-    default_image = "default_rocky_8"
+    default_image = "default_rocky_9"
 
     def __init__(
         self,
@@ -2597,6 +2597,8 @@ class Node(TemplateMixin):
                     f"{self.get_name()}: set management interface "
                     f"{mgmt_dev} ({mgmt_ip}) to unmanaged"
                 )
+                # Preserve IPv6 RA acceptance on the management interface
+                self._preserve_mgmt_ipv6_ra(mgmt_dev)
             else:
                 log.warning(
                     f"{self.get_name()}: could not find device for "
@@ -2605,6 +2607,32 @@ class Node(TemplateMixin):
         except Exception as e:
             log.warning(
                 f"{self.get_name()}: failed to unmanage management interface: {e}"
+            )
+
+    def _preserve_mgmt_ipv6_ra(self, mgmt_dev: str):
+        """
+        Ensure the management interface continues to accept IPv6 Router
+        Advertisements even when IPv6 forwarding is enabled (e.g. by Docker).
+
+        By default the Linux kernel stops processing RAs when
+        net.ipv6.conf.<dev>.forwarding=1.  Setting accept_ra=2 overrides
+        this behaviour so SLAAC addresses and the IPv6 default route are
+        maintained.
+
+        :param mgmt_dev: management network device name (e.g. 'eth0')
+        """
+        try:
+            self.execute(
+                f"sudo sysctl -w net.ipv6.conf.{mgmt_dev}.accept_ra=2 > /dev/null 2>&1",
+                quiet=True,
+            )
+            log.info(
+                f"{self.get_name()}: set accept_ra=2 on {mgmt_dev} "
+                f"to preserve IPv6 RA under forwarding"
+            )
+        except Exception as e:
+            log.warning(
+                f"{self.get_name()}: failed to set accept_ra=2 on {mgmt_dev}: {e}"
             )
 
     @staticmethod
@@ -3811,6 +3839,62 @@ class Node(TemplateMixin):
             "post_boot_commands": [],
             "post_update_commands": [],
         }
+        self.set_fablib_data(fablib_data)
+
+    def enable_storage(self, cluster: str = None):
+        """
+        Enable CephFS storage on this node.
+
+        Adds a FABNetv4 network (if not already present) and marks
+        the node so that :py:meth:`Slice.post_boot_config` will
+        automatically generate credentials, upload them, and mount
+        the CephFS filesystem.
+
+        :param cluster: Ceph cluster name (e.g. ``"europe"``).
+            When ``None`` the first available cluster is auto-discovered
+            at post-boot time.
+        :type cluster: str
+        """
+        if self.has_storage():
+            return
+
+        self.add_fabnet(name="CEPH_STORAGE")
+
+        fablib_data = self.get_fablib_data()
+        fablib_data["storage"] = True
+        if cluster:
+            fablib_data["storage_cluster"] = cluster
+        self.set_fablib_data(fablib_data)
+
+    def has_storage(self) -> bool:
+        """
+        Check whether CephFS storage is enabled on this node.
+
+        :return: ``True`` if storage was enabled via
+            :py:meth:`enable_storage`.
+        :rtype: bool
+        """
+        return bool(self.get_fablib_data().get("storage", False))
+
+    def get_storage_cluster(self) -> Optional[str]:
+        """
+        Return the Ceph cluster name associated with this node,
+        or ``None`` if none was specified.
+
+        :return: cluster name or ``None``
+        :rtype: str or None
+        """
+        return self.get_fablib_data().get("storage_cluster")
+
+    def _set_storage_cluster(self, cluster: str):
+        """
+        Set the Ceph cluster name in fablib_data (internal use).
+
+        :param cluster: Ceph cluster name
+        :type cluster: str
+        """
+        fablib_data = self.get_fablib_data()
+        fablib_data["storage_cluster"] = cluster
         self.set_fablib_data(fablib_data)
 
     def add_route(
