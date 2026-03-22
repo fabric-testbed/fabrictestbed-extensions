@@ -911,11 +911,7 @@ class Node(TemplateMixin):
                         pname="capacity_allocations"
                     )
                     if capacities:
-                        self._cached_allocated_cores = (
-                            self.get_fim()
-                            .get_property(pname="capacity_allocations")
-                            .core
-                        )
+                        self._cached_allocated_cores = capacities.core
             except Exception:
                 self._cached_allocated_cores = None
         return self._cached_allocated_cores if self._cached_allocated_cores else 0
@@ -932,9 +928,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_cores = (
-                            self.get_fim().get_property(pname="capacities").core
-                        )
+                        self._cached_requested_cores = capacities.core
             except Exception:
                 self._cached_requested_cores = None
         return self._cached_requested_cores if self._cached_requested_cores else 0
@@ -953,11 +947,7 @@ class Node(TemplateMixin):
                         pname="capacity_allocations"
                     )
                     if capacities:
-                        self._cached_allocated_ram = (
-                            self.get_fim()
-                            .get_property(pname="capacity_allocations")
-                            .ram
-                        )
+                        self._cached_allocated_ram = capacities.ram
             except Exception:
                 self._cached_allocated_ram = None
         return self._cached_allocated_ram if self._cached_allocated_ram else 0
@@ -974,9 +964,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_ram = (
-                            self.get_fim().get_property(pname="capacities").ram
-                        )
+                        self._cached_requested_ram = capacities.ram
             except Exception:
                 self._cached_requested_ram = None
         return self._cached_requested_ram if self._cached_requested_ram else 0
@@ -995,11 +983,7 @@ class Node(TemplateMixin):
                         pname="capacity_allocations"
                     )
                     if capacities:
-                        self._cached_allocated_disk = (
-                            self.get_fim()
-                            .get_property(pname="capacity_allocations")
-                            .disk
-                        )
+                        self._cached_allocated_disk = capacities.disk
             except Exception:
                 self._cached_allocated_disk = None
         return self._cached_allocated_disk if self._cached_allocated_disk else 0
@@ -1016,9 +1000,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_disk = (
-                            self.get_fim().get_property(pname="capacities").disk
-                        )
+                        self._cached_requested_disk = capacities.disk
             except Exception:
                 self._cached_requested_disk = None
         return self._cached_requested_disk if self._cached_requested_disk else 0
