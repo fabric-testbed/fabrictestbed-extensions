@@ -97,6 +97,59 @@
 
 ---
 
+## Performance Optimizations
+
+### Quick Wins (1-2 sprints)
+- [ ] Fix redundant FIM property lookups in `node.py` — `get_cores()` etc. call `get_fim().get_property()` twice instead of storing result (~30% speedup for node queries)
+- [ ] Implement SSH connection pooling in `node.py` — every `execute()` creates a new bastion+node connection; cache and reuse (~40% latency reduction for parallel commands)
+- [ ] Lightweight slice polling in `slice.py` — `wait()` fetches full slice state every 10s; use lightweight state-only query (~80% reduction in polling overhead)
+- [ ] Avoid unnecessary `dict()` copy in `toDict()` — return cached dict directly when no skip filter is applied
+
+### Medium-Term (2-3 sprints)
+- [ ] Bulk sliver fetch — Node constructor individually fetches its sliver (N+1 pattern); bulk-fetch at Slice level and cache by reservation_id
+- [ ] Lazy FablibManager initialization — defer `__build_manager()` and `verify_and_configure()` to first use instead of `__init__`
+- [ ] Automatic cache invalidation — `_invalidate_cache()` should trigger automatically after `slice.update()`, not require manual calls
+
+### Advanced (large slice scale, 100+ nodes)
+- [ ] Parallel component/interface discovery — `Node.update()` fetches FIM data sequentially; parallelize across nodes using ThreadPoolExecutor
+- [ ] Configurable thread pool sizing — expose `ssh_thread_pool_executor` size for runtime adjustment, allow auto-scaling
+- [ ] Batch SSH operations helper — CephFS setup and post-boot config should reuse connections across multiple commands per node
+
+---
+
+## Usability Improvements
+
+### API Consistency (High Priority)
+- [ ] Standardize `show_*()` vs `list_*()` — currently `show_site()` returns `str` while `show_config()` returns a table object; unify return types
+- [ ] Clarify `get_*()` vs `list_*()` — `get_nodes()` returns `List[Node]` but `list_nodes()` returns a table; rename or document clearly to avoid confusion
+- [ ] Replace `print()` with `logging` — `submit()`, `wait()`, `post_boot_config()` print progress directly to stdout; use `logging.getLogger("fablib")` instead so scripting/automation isn't polluted
+- [ ] Add global output format config — `fablib.set_default_output("json")` to avoid passing `output=` to every method
+
+### Error Handling & Feedback (High Priority)
+- [ ] Add specific exception types — replace generic `Exception` with `SliceTimeoutError`, `SliceAllocationError`, `SliceStateError` for better error handling
+- [ ] Improve error messages — timeout errors should include last known sliver states and troubleshooting hints, not just "Timeout exceeded"
+- [ ] Eliminate bare `except:` clauses — `node.py` silently swallows exceptions (e.g., `set_username()` failure); catch specific exceptions and log warnings
+- [ ] Enforce state transitions — raise exceptions when methods are called in wrong state (e.g., `execute()` before `wait()`) instead of failing with cryptic errors
+
+### Workflow Simplification (Medium Priority)
+- [ ] Track post-boot-config state — add `slice.is_configured()` method; raise error if `post_boot_config()` called twice; make it automatic even for non-blocking submit
+- [ ] Simplify `submit()` signature — 12 parameters is too many; group lease options separately or use a config object
+- [ ] Add convenience methods — `slice.execute_on_all_nodes(cmd)`, `slice.get_all_interfaces()`, `slice.get_interfaces_for_network(net)`
+- [ ] Add node filter methods — `slice.get_nodes(site="RENC")`, `slice.get_nodes(image="rocky_9")` instead of manual list filtering
+
+### Discoverability & Onboarding (Medium Priority)
+- [ ] Add resource browser — `fablib.resources.sites()`, `.images()`, `.components()`, `.find_sites(has_gpu=True)` for unified discovery
+- [ ] Better config setup errors — "Missing Token File" should say where to put it and which env var to set, not just raise `ConfigException`
+- [ ] Add `FablibManager.interactive_setup()` — walk through configuration from Python REPL (complement to `fabric-cli configure`)
+- [ ] Document state machine — clearly show `Nascent → Submitted → StableOK/StableError → Closed` transitions in docstrings
+
+### Output Consistency (Low Priority)
+- [ ] Standardize JSON output — always return parsed `dict` for `output="json"`, let user serialize if needed
+- [ ] Document output schemas per method
+- [ ] Ensure table outputs fit standard 120-char terminals
+
+---
+
 ## Technical Debt Tracker
 
 | Item | Priority | Effort | Impact |

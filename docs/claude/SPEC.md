@@ -216,7 +216,66 @@ FablibManager(token_location=..., fabric_rc=...)
 - Slice cache operations are not thread-safe (single-user assumed)
 - FIM topology operations are not thread-safe
 
-## 7. Supported OS Images
+## 7. Backward Compatibility Policy
+
+All changes to FABlib MUST be backward compatible with previous versions unless the
+change addresses a critical bug, security vulnerability, or fundamental design flaw
+that cannot be resolved without breaking the existing API.
+
+### Rules
+
+1. **Public methods must not be removed** — deprecate first, remove in next major version
+2. **Method signatures must not change** — new parameters must have defaults; existing
+   parameter order must be preserved
+3. **Return types must not change** — if a method returns `List[Node]`, it must continue
+   to do so; adding fields to dicts is allowed, removing fields is not
+4. **Exception types must not change** — if a method raises `ConfigException`, it must
+   continue to do so; new exception types may be added as subclasses
+5. **Default behavior must not change** — if `submit(wait=True)` is the default, it must
+   remain so; new defaults require a deprecation cycle
+6. **Configuration keys must not be renamed** — old keys must continue to work; new keys
+   can be added alongside with the old key taking precedence during transition
+
+### Deprecation Process
+
+1. Add `@deprecated("Use new_method() instead")` decorator or warnings.warn()
+2. Log a deprecation warning at first use
+3. Document in CHANGELOG.md under "Deprecated" section
+4. Maintain deprecated code for at least one minor version
+5. Remove in next major version (e.g., v3.0)
+
+### When Breaking Changes Are Acceptable
+
+A breaking change requires ALL of the following:
+- **Justification**: Security fix, legal/compliance requirement, or fundamental design
+  flaw that causes data loss or silent incorrect behavior
+- **Approval**: Explicit sign-off from project maintainer
+- **Version bump**: Major version increment (e.g., v2.x → v3.0)
+- **Migration guide**: Before/after code examples in CHANGELOG and migration-helper agent
+- **Advance notice**: Deprecation warning in at least one prior release
+
+### Examples
+
+```python
+# ALLOWED: Adding optional parameter with default
+def get_nodes(self, site=None):  # was: def get_nodes(self):
+
+# ALLOWED: Adding new method
+def get_nodes_by_site(self, site): ...
+
+# NOT ALLOWED: Changing return type
+def get_nodes(self) -> Dict:  # was: -> List[Node]
+
+# NOT ALLOWED: Removing parameter
+def submit(self):  # was: def submit(self, wait=True):
+
+# ALLOWED with deprecation: Renaming method
+def list_nodes(self):
+    warnings.warn("list_nodes() is deprecated, use show_nodes_table()", DeprecationWarning)
+    return self.show_nodes_table()
+```
+
+## 8. Supported OS Images
 
 Rocky 8/9/10, CentOS 8/9/10, Ubuntu 20/22/24, Debian 11/12, Fedora 39/40,
 FreeBSD 13/14, Kali, OpenBSD 7, Docker Rocky 9, Docker Ubuntu 22/24, BMv2
