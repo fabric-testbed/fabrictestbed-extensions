@@ -675,6 +675,7 @@ class Slice:
             as_self=self.user_only,
             graph_format="NONE",
             return_fmt="dto",
+            limit=1,
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -2239,18 +2240,19 @@ class Slice:
                 as_self=self.user_only,
                 graph_format="NONE",
                 return_fmt="dto",
+                limit=1,
             )
-            if len(slices) > 0:
-                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
-                if slice.state == "StableOK" or slice.state == "ModifyOK":
+            if slices:
+                slice = slices[0]
+                if slice.state in ("StableOK", "ModifyOK"):
                     if progress:
                         print(" Slice state: {}".format(slice.state))
                     break
-                if (
-                    slice.state == "Closing"
-                    or slice.state == "Dead"
-                    or slice.state == "StableError"
-                    or slice.state == "ModifyError"
+                if slice.state in (
+                    "Closing",
+                    "Dead",
+                    "StableError",
+                    "ModifyError",
                 ):
                     if progress:
                         print(" Slice state: {}".format(slice.state))
