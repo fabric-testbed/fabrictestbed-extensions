@@ -1556,9 +1556,9 @@ Host * !bastion.fabric-testbed.net
         """
         if not self._manager_built and not self._offline:
             self.__build_manager()
+            self._manager_built = True
             if self._validate_config and not self.get_no_ssh():
                 self.verify_and_configure(validate_only=True)
-            self._manager_built = True
         return self.manager
 
     def new_slice(
