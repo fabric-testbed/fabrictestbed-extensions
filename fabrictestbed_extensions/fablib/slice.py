@@ -1540,7 +1540,7 @@ class Slice:
                     return iface
 
                     # TODO: test other resource types.
-        except:
+        except Exception:
             pass
 
         return None
@@ -3181,7 +3181,7 @@ class Slice:
 
                 reservation_info = json.loads(sliver.sliver["ReservationInfo"])
                 error = reservation_info["error_message"]
-            except:
+            except Exception:
                 error = ""
 
             if sliver.sliver_type == "NetworkServiceSliver":

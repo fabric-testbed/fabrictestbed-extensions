@@ -167,13 +167,14 @@ class Node(TemplateMixin):
 
         try:
             self.set_username()
-        except:
+        except Exception as e:
+            log.debug(f"Could not set username during init: {e}")
             self.username = None
 
         try:
             if slice.isStable():
                 self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
-        except:
+        except Exception:
             pass
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -1062,7 +1063,7 @@ class Node(TemplateMixin):
                     labels = self.get_fim().get_property(pname="labels")
                     if labels:
                         self.host = labels.instance_parent
-            except:
+            except Exception:
                 return None
         return self.host
 
@@ -1413,7 +1414,7 @@ class Node(TemplateMixin):
                     "networks",
                 ],
             )
-        except:
+        except Exception:
             return self.get_fablib_manager().get_ssh_command_line()
 
     def validIPAddress(self, IP: str) -> str:

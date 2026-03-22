@@ -110,7 +110,7 @@ class SliceUtils(AbcUtils):
                         str(slice_name), str(slice_id)
                     )
                 )
-        except:
+        except Exception:
             raise Exception(
                 "Slice not found name: {}, slice_id: {}".format(
                     str(slice_name), str(slice_id)
@@ -135,7 +135,7 @@ class SliceUtils(AbcUtils):
                         slice.slice_name, slice.slice_id, slice.slice_state
                     )
                 )
-        except:
+        except Exception:
             raise Exception(
                 "Slice not found name: {}, slice_id: {}".format(
                     str(slice_name), str(slice_id)
