@@ -64,9 +64,9 @@ Current state: 9 tests in `tests/integration/` but incomplete coverage, never ru
 
 ### Code Quality
 - [x] Remove `fablib_old.py` and `slice_old.py` (deprecated legacy code)
-- [ ] Add `py.typed` marker for PEP 561 compliance
+- [x] Add `py.typed` marker for PEP 561 compliance
 - [ ] Add type annotations to remaining untyped methods
-- [ ] Consolidate `resources.py` and `resources_v2.py` (v1 appears unused)
+- [x] Consolidate `resources.py` and `resources_v2.py` (removed unused v1)
 - [ ] Extract SSH operations into dedicated `ssh.py` module from `node.py`
 
 ### Documentation
@@ -158,7 +158,7 @@ Current state: 9 tests in `tests/integration/` but incomplete coverage, never ru
 - [ ] Add global output format config — `fablib.set_default_output("json")` to avoid passing `output=` to every method
 
 ### Error Handling & Feedback (High Priority)
-- [ ] Add specific exception types — replace generic `Exception` with `SliceTimeoutError`, `SliceAllocationError`, `SliceStateError` for better error handling
+- [x] Add specific exception types — `FablibException`, `ResourceNotFoundError`, `SliceTimeoutError`, `SliceStateError`, `SSHError`, `ValidationError` (39 generic raises replaced)
 - [ ] Improve error messages — timeout errors should include last known sliver states and troubleshooting hints, not just "Timeout exceeded"
 - [ ] Eliminate bare `except:` clauses — `node.py` silently swallows exceptions (e.g., `set_username()` failure); catch specific exceptions and log warnings
 - [ ] Enforce state transitions — raise exceptions when methods are called in wrong state (e.g., `execute()` before `wait()`) instead of failing with cryptic errors

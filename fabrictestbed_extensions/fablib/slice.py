@@ -65,6 +65,12 @@ from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    SliceStateError,
+    SliceTimeoutError,
+    ValidationError,
+)
 from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 
@@ -686,7 +692,7 @@ class Slice:
             )
 
         if len(slices) == 0:
-            raise Exception(
+            raise ResourceNotFoundError(
                 f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
             )
 
@@ -712,7 +718,7 @@ class Slice:
             slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
         )
         if len(slices) == 0:
-            raise Exception(
+            raise ResourceNotFoundError(
                 f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
             )
 
@@ -1738,7 +1744,7 @@ class Slice:
             return facility
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Facility not found: {name}")
+            raise ResourceNotFoundError(f"Facility not found: {name}")
 
     def get_facilities(self, refresh: bool = False) -> List[FacilityPort]:
         """
@@ -1872,7 +1878,7 @@ class Slice:
             return aswitch
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Attestable Switch not found: {name}")
+            raise ResourceNotFoundError(f"Attestable Switch not found: {name}")
 
     def get_node(self, name: str) -> Node:
         """
@@ -1904,7 +1910,7 @@ class Slice:
             return node_obj
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Node not found: {name}")
+            raise ResourceNotFoundError(f"Node not found: {name}")
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
@@ -1972,7 +1978,7 @@ class Slice:
         for interface in self.get_interfaces():
             if name.endswith(interface.get_name()):
                 return interface
-        raise Exception("Interface not found: {}".format(name))
+        raise ResourceNotFoundError("Interface not found: {}".format(name))
 
     def get_l3networks(self) -> List[NetworkService]:
         """
@@ -2173,7 +2179,7 @@ class Slice:
         :raises Exception: if renewal fails
         """
         if end_date is None and days is None:
-            raise Exception("Either end_date or days must be specified!")
+            raise ValidationError("Either end_date or days must be specified!")
 
         if end_date is not None:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
@@ -2266,7 +2272,7 @@ class Slice:
                     except Exception as e:
                         exception_string = "Exception while getting error messages"
 
-                    raise Exception(str(exception_string))
+                    raise SliceStateError(str(exception_string))
             else:
                 print(f"Failure: {slices}")
 
@@ -2275,7 +2281,7 @@ class Slice:
             time.sleep(interval)
 
         if time.time() >= timeout_start + timeout:
-            raise Exception(
+            raise SliceTimeoutError(
                 " Timeout exceeded ({} sec). Slice: {} ({})".format(
                     timeout, slice.name, slice.state
                 )
@@ -2347,7 +2353,7 @@ class Slice:
                         print(
                             f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
                         )
-                    raise Exception(
+                    raise SliceTimeoutError(
                         f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
                     )
             except Exception as e:
@@ -2676,7 +2682,9 @@ class Slice:
         # while not self.isReady():
         while True:
             if time.time() > start + timeout:
-                raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
+                raise SliceTimeoutError(
+                    f"Timeout {timeout} sec exceeded in Jupyter wait"
+                )
 
             time.sleep(interval)
 
@@ -2918,11 +2926,11 @@ class Slice:
                     ssh_keys.extend(extra_ssh_keys)
                 else:
                     log.error("Extra SSH keys must be provided as a list of strings.")
-                    raise Exception(
+                    raise ValidationError(
                         "Extra SSH keys must be provided as a list of strings."
                     )
             if not ssh_keys or len(ssh_keys) < 1:
-                raise Exception(
+                raise ValidationError(
                     "No SSH keys available. Provide extra_ssh_keys or "
                     "configure a default slice public key."
                 )
@@ -3638,5 +3646,5 @@ class Slice:
                     n.delete()
 
         if raise_exception and errors:
-            raise Exception(f"Slice validation failed - {errors}!")
+            raise ValidationError(f"Slice validation failed - {errors}!")
         return all_valid, errors

@@ -64,6 +64,12 @@ from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    SliceStateError,
+    SSHError,
+    ValidationError,
+)
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.utils.utils import Utils
 
@@ -1309,7 +1315,7 @@ class Node(TemplateMixin):
             fim_comp = fim_components.get(calculated_name) or fim_components.get(name)
 
             if not fim_comp:
-                raise Exception(f"Component not found in FIM: {name}")
+                raise ResourceNotFoundError(f"Component not found in FIM: {name}")
 
             # Create and cache new component
             key = calculated_name if fim_comp.name == calculated_name else name
@@ -1319,7 +1325,7 @@ class Node(TemplateMixin):
 
         except Exception as e:
             log.error(f"Error retrieving component '{name}': {e}", exc_info=True)
-            raise Exception(f"Component not found: {name}")
+            raise ResourceNotFoundError(f"Component not found: {name}")
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
@@ -1392,7 +1398,7 @@ class Node(TemplateMixin):
                 ):
                     return interface
 
-        raise Exception(f"Interface not found: {name or network_name}")
+        raise ResourceNotFoundError(f"Interface not found: {name or network_name}")
 
     def get_ssh_command(self) -> str:
         """
@@ -1474,7 +1480,7 @@ class Node(TemplateMixin):
             except:
                 pass
 
-        raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+        raise ValidationError(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
     def _get_ssh_connection(
         self,
@@ -1528,7 +1534,7 @@ class Node(TemplateMixin):
             elif ip_type == "IPv6":
                 src_addr = ("::", 22)
             else:
-                raise Exception(f"Invalid management IP: {management_ip}")
+                raise ValidationError(f"Invalid management IP: {management_ip}")
             dest_addr = (str(management_ip), 22)
 
             key = self.get_paramiko_key(
@@ -1712,11 +1718,11 @@ class Node(TemplateMixin):
         # Validate management IP
         management_ip = self.get_management_ip()
         if not management_ip:
-            raise Exception(f"Node {self.get_name()} has no valid management IP.")
+            raise SliceStateError(f"Node {self.get_name()} has no valid management IP.")
 
         # Ensure the node is active
         if self.get_reservation_state() != "Active":
-            raise Exception(
+            raise SliceStateError(
                 f"Node {self.get_name()} is in state {self.get_reservation_state()}, cannot execute command."
             )
 
@@ -1743,7 +1749,7 @@ class Node(TemplateMixin):
         elif ip_type == "IPv6":
             src_addr = ("::", 22)
         else:
-            raise Exception(f"Invalid management IP: {management_ip}")
+            raise ValidationError(f"Invalid management IP: {management_ip}")
 
         dest_addr = (str(management_ip), 22)
 
@@ -1836,7 +1842,7 @@ class Node(TemplateMixin):
                     raise
                 time.sleep(retry_interval)
 
-        raise Exception("ssh failed: Should not get here")
+        raise SSHError("ssh failed: Should not get here")
 
     def _interactive_execute(
         self,
@@ -1996,7 +2002,7 @@ class Node(TemplateMixin):
                     except Exception as e:
                         log.debug(f"Exception in ftp_client.close(): {e}")
 
-        raise Exception("scp upload failed")
+        raise SSHError("scp upload failed")
 
     def download_file_thread(
         self,
@@ -2115,7 +2121,7 @@ class Node(TemplateMixin):
                     except Exception as e:
                         log.debug(f"Exception in ftp_client.close(): {e}")
 
-        raise Exception("scp download failed")
+        raise SSHError("scp download failed")
 
     def upload_directory_thread(
         self,
@@ -3469,7 +3475,9 @@ class Node(TemplateMixin):
         elif self.validIPAddress(ip) == "IPv6":
             ip_command = "sudo ip -6"
         else:
-            raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
+            raise ValidationError(
+                f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string."
+            )
 
         # Bring up base iface
         log.debug(
@@ -3730,7 +3738,7 @@ class Node(TemplateMixin):
             return Component(self, self.get_fim().components[name])
         except Exception as e:
             log.error(e, exc_info=True)
-            raise Exception(f"Storage not found: {name}")
+            raise ResourceNotFoundError(f"Storage not found: {name}")
 
     def add_storage(self, name: str, auto_mount: bool = False) -> Component:
         """
@@ -4254,7 +4262,7 @@ class Node(TemplateMixin):
         )
 
         if status != Status.OK:
-            raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
+            raise SliceStateError(f"Failed to issue POA - {operation} Error {poa_info}")
 
         log.info(
             f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}"
@@ -4272,7 +4280,7 @@ class Node(TemplateMixin):
             )
             attempt += 1
             if status != Status.OK:
-                raise Exception(
+                raise SliceStateError(
                     f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}"
                 )
             poa_state = poa_info_status[0].state
@@ -4285,7 +4293,7 @@ class Node(TemplateMixin):
             time.sleep(10)
 
         if poa_info_status[0].state == "Failed":
-            raise Exception(
+            raise SliceStateError(
                 f"POA - {poa_info[0].poa_id}/{operation} failed with error: - {poa_info_status[0].error}"
             )
 
@@ -4337,7 +4345,7 @@ class Node(TemplateMixin):
         log.info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
         log.info(f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}")
         if cpu_info == "Failed":
-            raise Exception("POA Failed to get CPU INFO")
+            raise SliceStateError("POA Failed to get CPU INFO")
         return cpu_info
 
     def get_numa_info(self) -> dict:
@@ -4374,7 +4382,7 @@ class Node(TemplateMixin):
         log.info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
         log.info(f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}")
         if numa_info == "Failed":
-            raise Exception("POA Failed to get Numa INFO")
+            raise SliceStateError("POA Failed to get Numa INFO")
         return numa_info
 
     def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
@@ -4396,7 +4404,7 @@ class Node(TemplateMixin):
 
                 set_cpu = set(allocated_cpu_list)
                 if any(item not in set_cpu for item in result_list):
-                    raise Exception(
+                    raise ValidationError(
                         f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node"
                     )
 
@@ -4435,7 +4443,7 @@ class Node(TemplateMixin):
                 log.warning(msg)
                 number_of_cpus_to_pin = number_of_available_cpus
                 if not number_of_cpus_to_pin:
-                    raise Exception(msg)
+                    raise ValidationError(msg)
 
             # Build the VCPU to CPU Mapping
             vcpu_cpu_map = []
@@ -4453,7 +4461,7 @@ class Node(TemplateMixin):
             # Issue POA
             status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
             if status == "Failed":
-                raise Exception("POA Failed")
+                raise SliceStateError("POA Failed")
             log.info(f"CPU Pinning complete for node: {self.get_name()}")
         except Exception as e:
             log.error(traceback.format_exc())
@@ -4515,7 +4523,7 @@ class Node(TemplateMixin):
         """
         status = self.poa(operation="reboot")
         if status == "Failed":
-            raise Exception("Failed to reboot the server")
+            raise SliceStateError("Failed to reboot the server")
         log.info(f"Node: {self.get_name()} rebooted!")
 
     def numa_tune(self):
@@ -4575,7 +4583,7 @@ class Node(TemplateMixin):
             requested_vm_memory = self.get_ram() * 1024
 
             if requested_vm_memory > total_available_memory:
-                raise Exception(
+                raise ValidationError(
                     f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
                     f"{requested_vm_memory} exceeds available: {total_available_memory}"
                 )
@@ -4703,7 +4711,7 @@ class Node(TemplateMixin):
                         break
 
             if not found:
-                raise Exception(f"Sliver key: {sliver_key_name} not found!")
+                raise ResourceNotFoundError(f"Sliver key: {sliver_key_name} not found!")
             sliver_public_key = f"{found['ssh_key_type']} {found['public_key']}"
 
         operation = "addkey" if not remove else "removekey"
@@ -4712,7 +4720,7 @@ class Node(TemplateMixin):
 
         status = self.poa(operation=operation, keys=[key_dict])
         if status == "Failed":
-            raise Exception(f"Failed to {operation} the node")
+            raise SliceStateError(f"Failed to {operation} the node")
         log.info(f"{operation} to the node {self.get_name()} successful!")
         print(f"{operation} to the node {self.get_name()} successful!")
 
