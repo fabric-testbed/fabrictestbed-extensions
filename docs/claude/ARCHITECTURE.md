@@ -72,8 +72,7 @@ fabrictestbed_extensions/
 │   │   ├── config.py            # Config class — configuration management
 │   │   ├── fabric_rc            # Shell config template
 │   │   └── fabric_rc.yml        # YAML config template
-│   ├── fablib_old.py            # [DEPRECATED] Legacy FablibManager
-│   └── slice_old.py             # [DEPRECATED] Legacy Slice
+│   └── ...
 │
 ├── cli/                         # Command-line interface (2,400 LOC)
 │   ├── __init__.py

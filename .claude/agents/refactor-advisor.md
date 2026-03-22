@@ -16,7 +16,7 @@ well-structured refactoring plans that preserve backward compatibility.
 
 | Item | Priority | Notes |
 |---|---|---|
-| `fablib_old.py`, `slice_old.py` | High | Deprecated, ~6,200 LOC to remove |
+| ~~`fablib_old.py`, `slice_old.py`~~ | Done | Removed — 6,159 LOC deleted |
 | `node.py` at 4,800 LOC | Medium | Extract SSH ops into `ssh.py` |
 | `resources.py` vs `resources_v2.py` | Medium | Consolidate (v1 appears unused) |
 | Missing type annotations | Medium | Many methods lack type hints |
@@ -43,7 +43,7 @@ well-structured refactoring plans that preserve backward compatibility.
 - Tight coupling between modules
 
 ### 4. Dead Code
-- `fablib_old.py` and `slice_old.py` (deprecated)
+- ~~`fablib_old.py` and `slice_old.py`~~ (removed)
 - Unused imports
 - Commented-out code blocks
 - Unreachable branches

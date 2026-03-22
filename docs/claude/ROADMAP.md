@@ -13,7 +13,7 @@
 
 ### Areas for Improvement
 - Unit test coverage is minimal (1 test file, ~12 tests)
-- Legacy code still present (`fablib_old.py`, `slice_old.py`)
+- ~~Legacy code still present (`fablib_old.py`, `slice_old.py`)~~ (removed)
 - No type stubs or `py.typed` marker
 - No async/await support (all SSH is synchronous + thread pool)
 - Editor modules tightly coupled to Jupyter
@@ -33,7 +33,7 @@
 - [ ] Target: 60%+ unit test coverage
 
 ### Code Quality
-- [ ] Remove `fablib_old.py` and `slice_old.py` (deprecated legacy code)
+- [x] Remove `fablib_old.py` and `slice_old.py` (deprecated legacy code)
 - [ ] Add `py.typed` marker for PEP 561 compliance
 - [ ] Add type annotations to remaining untyped methods
 - [ ] Consolidate `resources.py` and `resources_v2.py` (v1 appears unused)
@@ -154,7 +154,7 @@
 
 | Item | Priority | Effort | Impact |
 |---|---|---|---|
-| Remove legacy `*_old.py` files | High | Low | Reduces confusion, -6,200 LOC |
+| ~~Remove legacy `*_old.py` files~~ | ~~High~~ | ~~Low~~ | Done — removed 6,159 LOC |
 | Add unit tests | High | Medium | Catches regressions, enables refactoring |
 | Type annotations | Medium | Medium | Better IDE support, catches bugs |
 | Extract SSH module | Medium | Medium | `node.py` is 4,800 LOC, hard to maintain |
