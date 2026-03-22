@@ -32,6 +32,36 @@
 - [ ] Mock-based tests for `Slice` and `Node` without network access
 - [ ] Target: 60%+ unit test coverage
 
+### Integration Testing
+Current state: 9 tests in `tests/integration/` but incomplete coverage, never run in CI, no shared fixtures.
+
+#### Smoke Test Suite (~10 min, run on every PR)
+- [ ] Basic slice lifecycle: create single node → submit → wait → execute → delete
+- [ ] Resource listing: sites, hosts, facility ports (no slice needed)
+- [ ] Bastion SSH connectivity probe
+- [ ] SSH connection pooling verification (execute multiple commands, confirm reuse)
+- [ ] Slice modify: add/remove node on existing slice
+
+#### Feature Test Suite (~30 min, run on release branches)
+- [ ] **Networking**: L2Bridge (single-site), L2PTP (cross-site), L2STS, FABNetv4, FABNetv6, FABNetv4Ext
+- [ ] **Storage**: CephFS mount, read/write, persistence across reboot
+- [ ] **Components**: GPU (TeslaT4, A30), SmartNIC (ConnectX-6, ConnectX-7), FPGA, NVMe — allocation and basic verification
+- [ ] **Multi-node**: 3+ node cluster with shared network, parallel SSH execution
+- [ ] **Slice lifecycle**: create → modify → renew → delete; verify state transitions
+- [ ] **Error recovery**: submit with insufficient resources, verify clean error messages
+
+#### Test Infrastructure
+- [ ] Shared pytest fixtures (`conftest.py`) for common topologies (single-node, two-node-L2, three-node-cluster)
+- [ ] Test categorization with pytest markers: `@pytest.mark.smoke`, `@pytest.mark.network`, `@pytest.mark.storage`, `@pytest.mark.component`
+- [ ] Automatic slice cleanup (tearDown / finalizers) to prevent resource leaks
+- [ ] Configurable test site selection (env var or config file, not hardcoded)
+- [ ] Test timeout enforcement (per-test and per-suite)
+- [ ] CI workflow for integration tests: smoke on PR, full suite on release
+
+#### `/smoke-test` Skill
+- [ ] Create a `/smoke-test` Claude Code skill that runs the smoke suite and reports results
+- [ ] Include: slice create/execute/delete, resource listing, SSH connectivity
+
 ### Code Quality
 - [x] Remove `fablib_old.py` and `slice_old.py` (deprecated legacy code)
 - [ ] Add `py.typed` marker for PEP 561 compliance
@@ -84,10 +114,12 @@
 - [ ] Event-driven model (webhooks/callbacks for state changes)
 
 ### Testing
-- [ ] Property-based testing for topology validation
-- [ ] Chaos testing framework for resilience
-- [ ] Performance regression benchmarks in CI
-- [ ] Integration test environment with mock FABRIC services
+- [ ] Property-based testing for topology validation (hypothesis)
+- [ ] Chaos testing framework for resilience (kill nodes mid-experiment, network partitions)
+- [ ] Performance regression benchmarks in CI (track SSH latency, slice creation time)
+- [ ] Recorded API responses for offline integration testing (VCR/responses library)
+- [ ] Nightly full integration suite against staging environment
+- [ ] Test result dashboard with historical trends
 
 ### Ecosystem
 - [ ] Terraform provider for FABRIC resources
