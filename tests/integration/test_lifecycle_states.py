@@ -32,9 +32,9 @@ class TestSliceStates:
         slice_name = s.get_name()
         s.delete()
 
-        # After deletion, getting the same slice should fail
-        with pytest.raises(Exception):
-            fablib.get_slice(name=slice_name)
+        # After deletion, slice should be in a terminal state
+        retrieved = fablib.get_slice(name=slice_name)
+        assert retrieved.get_state() in ("Closing", "Dead")
 
     def test_is_stable_true_after_submit(self, fablib, available_site, slice_factory):
         """Verify isStable() returns True after successful submit."""
