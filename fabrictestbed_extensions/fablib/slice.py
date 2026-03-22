@@ -112,6 +112,30 @@ def _setup_ceph_on_node(node, bundle: dict):
 
 
 class Slice:
+    """An experiment container on the FABRIC testbed.
+
+    Slice State Machine::
+
+        Nascent → Configuring → StableOK ──→ Closing → Dead
+                                  │    ↑
+                                  ↓    │
+                               ModifyOK/ModifyError
+
+        AllocatedOK = future-dated (lease_start > now)
+        StableError = provisioning failed (check get_error_messages())
+
+    Key states:
+        - **StableOK**: Slice is stable, all nodes active
+        - **StableError**: Slice stabilized but with errors
+        - **ModifyOK/ModifyError**: After slice modification
+        - **Closing/Dead**: Slice is being or has been removed
+        - **AllocatedOK**: Future allocation, not yet provisioned
+
+    Use :meth:`isStable` to check if the slice has reached a terminal
+    provisioning state (OK or error).  Use :meth:`is_dead_or_closing`
+    to check if the slice is being removed.
+    """
+
     def __init__(
         self,
         fablib_manager: FablibManagerV2,
@@ -1668,8 +1692,10 @@ class Slice:
                             node_obj = Node.get_node(self, fim_node)
                         self.nodes[node_name] = node_obj
                     else:
-                        # Update existing node's fim_node reference
+                        # Update existing node's fim_node reference and
+                        # invalidate cached properties (cores, ram, etc.)
                         self.nodes[node_name].update(fim_node=fim_node)
+                        self.nodes[node_name]._invalidate_cache()
                 except Exception as e:
                     log.warning(f"Error initializing node {node_name}: {e}")
 
@@ -1711,17 +1737,56 @@ class Slice:
             self.nodes.pop(node_name)
             log.debug(f"Removed extra node: {node_name}")
 
-    def get_nodes(self, refresh: bool = False) -> List[Node]:
-        """
-        Gets a list of all nodes in this slice.
+    def get_nodes(
+        self,
+        refresh: bool = False,
+        site: str = None,
+        filter_function=None,
+    ) -> List[Node]:
+        """Gets a list of nodes in this slice, optionally filtered.
 
+        :param refresh: force refresh from FIM topology
+        :type refresh: bool
+        :param site: filter nodes by site name (e.g. "RENC")
+        :type site: str
+        :param filter_function: custom filter function taking a Node and
+            returning bool (e.g. ``lambda n: n.get_cores() >= 4``)
+        :type filter_function: callable
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
         if not self.nodes or not len(self.nodes):
             refresh = True
         self.__initialize_nodes(refresh=refresh)
-        return list(self.nodes.values())
+        nodes = list(self.nodes.values())
+        if site:
+            nodes = [n for n in nodes if n.get_site() == site]
+        if filter_function:
+            nodes = [n for n in nodes if filter_function(n)]
+        return nodes
+
+    def execute_on_all_nodes(self, command: str, **kwargs) -> dict:
+        """Execute a command on all nodes in parallel.
+
+        Submits the command to each node's SSH thread pool and waits
+        for all results.  Additional keyword arguments are passed
+        through to :meth:`Node.execute`.
+
+        :param command: command to execute on each node
+        :type command: str
+        :return: dict mapping node name to (stdout, stderr) tuple
+        :rtype: dict
+        """
+        kwargs.setdefault("quiet", True)
+        threads = {}
+        for node in self.get_nodes():
+            t = node.execute_thread(command, **kwargs)
+            threads[node.get_name()] = t
+
+        results = {}
+        for name, t in threads.items():
+            results[name] = t.result()
+        return results
 
     def get_facility(self, name: str) -> FacilityPort:
         """
