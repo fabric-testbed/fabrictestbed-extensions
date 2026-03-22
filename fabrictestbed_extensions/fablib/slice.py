@@ -131,6 +131,7 @@ class Slice:
             self.topology.load(graph_string=self.sm_slice.model)
 
         self.slivers: List[SliverDTO] = []
+        self._sliver_map: Dict[str, SliverDTO] = {}
         self.nodes: Dict[str, Node] = {}
         self.facilities: Dict[str, FacilityPort] = {}
         self.interfaces: Dict[str, Interface] = {}
@@ -745,14 +746,18 @@ class Slice:
         self.slivers = self.fablib_manager.get_manager().list_slivers(
             slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
         )
+        self._sliver_map = {s.sliver_id: s for s in self.slivers}
 
     def get_sliver(self, reservation_id: str) -> SliverDTO:
         """
         Returns the sliver associated with the reservation ID.
+
+        Uses a dict cache for O(1) lookups instead of filtering the
+        full sliver list on each call.
         """
-        slivers = self.get_slivers()
-        sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
-        return sliver
+        if not self._sliver_map:
+            self.get_slivers()
+        return self._sliver_map.get(reservation_id)
 
     def get_slivers(self) -> List[SliverDTO]:
         """
