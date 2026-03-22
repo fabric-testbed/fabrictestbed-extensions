@@ -345,6 +345,14 @@ class FablibManager(Config):
                 # use fablib
             # resources automatically cleaned up
         """
+        # Close cached SSH connections on all slices
+        if hasattr(self, "slice_cache") and self.slice_cache:
+            for slice_obj in self.slice_cache.values():
+                try:
+                    slice_obj.close_ssh()
+                except Exception:
+                    pass
+
         if self.ssh_thread_pool_executor:
             self.ssh_thread_pool_executor.shutdown(wait=False)
             self.ssh_thread_pool_executor = None

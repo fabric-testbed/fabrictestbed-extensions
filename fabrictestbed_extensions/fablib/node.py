@@ -160,6 +160,11 @@ class Node(TemplateMixin):
         self._net_config_backend: Optional[str] = None
         self._persistent_config: bool = True
 
+        # SSH connection cache for reuse across execute/upload/download calls
+        self._ssh_bastion: Optional[paramiko.SSHClient] = None
+        self._ssh_client: Optional[paramiko.SSHClient] = None
+        self._ssh_lock = threading.Lock()
+
         try:
             self.set_username()
         except:
@@ -1470,6 +1475,116 @@ class Node(TemplateMixin):
 
         raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
+    def _get_ssh_connection(
+        self,
+        username: str = None,
+        private_key_file: str = None,
+        private_key_passphrase: str = None,
+    ) -> tuple:
+        """Get or create a cached SSH connection to this node via bastion.
+
+        Returns a (bastion, client) tuple. Thread-safe. If the cached
+        connection is still alive it is reused; otherwise a fresh one is
+        created and cached.
+
+        :param username: SSH username override
+        :type username: str
+        :param private_key_file: path to private key file override
+        :type private_key_file: str
+        :param private_key_passphrase: passphrase override
+        :type private_key_passphrase: str
+        :return: (bastion, client) tuple of paramiko.SSHClient
+        :rtype: tuple
+        """
+        with self._ssh_lock:
+            # Check if cached connection is still alive
+            if (
+                self._ssh_client
+                and self._ssh_client.get_transport()
+                and self._ssh_client.get_transport().is_active()
+                and self._ssh_bastion
+                and self._ssh_bastion.get_transport()
+                and self._ssh_bastion.get_transport().is_active()
+            ):
+                return self._ssh_bastion, self._ssh_client
+
+            # Close any stale connections
+            self._close_ssh_connections()
+
+            # Resolve credentials
+            fablib_manager = self.get_fablib_manager()
+            management_ip = str(self.get_management_ip())
+
+            node_username = username or self.username
+            node_key_file = private_key_file or self.get_private_key_file()
+            node_key_passphrase = (
+                private_key_passphrase or self.get_private_key_passphrase()
+            )
+
+            ip_type = self.validIPAddress(management_ip)
+            if ip_type == "IPv4":
+                src_addr = ("0.0.0.0", 22)
+            elif ip_type == "IPv6":
+                src_addr = ("::", 22)
+            else:
+                raise Exception(f"Invalid management IP: {management_ip}")
+            dest_addr = (str(management_ip), 22)
+
+            key = self.get_paramiko_key(
+                private_key_file=node_key_file,
+                get_private_key_passphrase=node_key_passphrase,
+            )
+
+            # Connect to bastion
+            bastion = paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(
+                fablib_manager.get_bastion_host(),
+                username=fablib_manager.get_bastion_username(),
+                key_filename=fablib_manager.get_bastion_key_location(),
+            )
+
+            bastion_transport = bastion.get_transport()
+            bastion_channel = bastion_transport.open_channel(
+                "direct-tcpip", dest_addr, src_addr
+            )
+
+            # Connect to node via bastion tunnel
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(
+                management_ip,
+                username=node_username,
+                pkey=key,
+                sock=bastion_channel,
+            )
+
+            # Cache the connections
+            self._ssh_bastion = bastion
+            self._ssh_client = client
+            return bastion, client
+
+    def _close_ssh_connections(self):
+        """Close cached SSH connections without acquiring the lock."""
+        for conn in (self._ssh_client, self._ssh_bastion):
+            if conn:
+                try:
+                    conn.close()
+                except Exception as e:
+                    log.debug(f"Exception closing SSH connection: {e}")
+        self._ssh_client = None
+        self._ssh_bastion = None
+
+    def close_ssh(self):
+        """Close cached SSH connections to this node.
+
+        Releases the cached bastion and node SSH connections. Safe to
+        call multiple times. New connections will be created
+        automatically on the next execute/upload/download call.
+        """
+        with self._ssh_lock:
+            self._close_ssh_connections()
+
     def execute_thread(
         self,
         command: str,
@@ -1649,37 +1764,11 @@ class Node(TemplateMixin):
 
         attempt = 0
         while attempt < max(1, retry):
-            client = None
-            bastion = None
-            bastion_channel = None
             try:
-                key = self.get_paramiko_key(
-                    private_key_file=node_key_file,
-                    get_private_key_passphrase=node_key_passphrase,
-                )
-
-                # Connect to bastion
-                bastion = paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(
-                    fablib_manager.get_bastion_host(),
-                    username=bastion_username,
-                    key_filename=bastion_key_file,
-                )
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel(
-                    "direct-tcpip", dest_addr, src_addr
-                )
-
-                # Connect to node
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(
-                    management_ip,
+                bastion, client = self._get_ssh_connection(
                     username=node_username,
-                    pkey=key,
-                    sock=bastion_channel,
+                    private_key_file=node_key_file,
+                    private_key_passphrase=node_key_passphrase,
                 )
 
                 # Handle interactive execution
@@ -1726,8 +1815,6 @@ class Node(TemplateMixin):
 
                 stdout.close()
                 stderr.close()
-                client.close()
-                bastion.close()
 
                 rtn_stdout = b"".join(stdout_chunks).decode()
                 rtn_stderr = b"".join(stderr_chunks).decode()
@@ -1742,25 +1829,11 @@ class Node(TemplateMixin):
 
             except Exception as e:
                 log.warning(f"Attempt {attempt + 1} failed: {e}")
-                if attempt + 1 == retry:
+                self.close_ssh()
+                attempt += 1
+                if attempt >= retry:
                     raise
                 time.sleep(retry_interval)
-            finally:
-                attempt += 1
-                try:
-                    client.close()
-                except Exception as e:
-                    log.debug(f"Exception in client.close(): {e}")
-
-                try:
-                    bastion_channel.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion_channel.close(): {e}")
-
-                try:
-                    bastion.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion.close(): {e}")
 
         raise Exception("ssh failed: Should not get here")
 
@@ -1889,47 +1962,10 @@ class Node(TemplateMixin):
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        # Get and test src and management_ips
-        management_ip = str(self.get_management_ip())
-        if self.validIPAddress(management_ip) == "IPv4":
-            src_addr = ("0.0.0.0", 22)
-        elif self.validIPAddress(management_ip) == "IPv6":
-            src_addr = ("0:0:0:0:0:0:0:0", 22)
-        else:
-            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
-        dest_addr = (management_ip, 22)
-
         for attempt in range(int(retry)):
+            ftp_client = None
             try:
-                key = self.get_paramiko_key(
-                    private_key_file=self.get_private_key_file(),
-                    get_private_key_passphrase=self.get_private_key_file(),
-                )
-
-                bastion = paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(
-                    self.get_fablib_manager().get_bastion_host(),
-                    username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
-                )
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel(
-                    "direct-tcpip", dest_addr, src_addr
-                )
-
-                client = paramiko.SSHClient()
-                client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-                client.connect(
-                    management_ip,
-                    username=self.username,
-                    pkey=key,
-                    sock=bastion_channel,
-                )
+                bastion, client = self._get_ssh_connection()
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
@@ -1945,38 +1981,19 @@ class Node(TemplateMixin):
 
             except Exception as e:
                 log.warning(f"Exception on upload_file() attempt #{attempt}: {e}")
+                self.close_ssh()
 
                 if attempt + 1 == retry:
                     raise e
 
-                # Fail, try again
-                log.warning(
-                    f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
-                )
-                # traceback.print_exc()
                 time.sleep(retry_interval)
-                pass
 
             finally:
-                try:
-                    ftp_client.close()
-                except Exception as e:
-                    log.debug(f"Exception in ftp_client.close(): {e}")
-
-                try:
-                    client.close()
-                except Exception as e:
-                    log.debug(f"Exception in client.close(): {e}")
-
-                try:
-                    bastion_channel.close()
-                except Exception as e:
-                    log.debug("Exception in bastion_channel.close(): {e}")
-
-                try:
-                    bastion.close()
-                except Exception as e:
-                    log.debug("Exception in bastion.close(): {e}")
+                if ftp_client:
+                    try:
+                        ftp_client.close()
+                    except Exception as e:
+                        log.debug(f"Exception in ftp_client.close(): {e}")
 
         raise Exception("scp upload failed")
 
@@ -2062,48 +2079,10 @@ class Node(TemplateMixin):
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        # Get and test src and management_ips
-        management_ip = str(self.get_management_ip())
-        if self.validIPAddress(management_ip) == "IPv4":
-            src_addr = ("0.0.0.0", 22)
-
-        elif self.validIPAddress(management_ip) == "IPv6":
-            src_addr = ("0:0:0:0:0:0:0:0", 22)
-        else:
-            raise Exception(f"download_file: Management IP Invalid: {management_ip}")
-        dest_addr = (management_ip, 22)
-
         for attempt in range(int(retry)):
+            ftp_client = None
             try:
-                key = self.get_paramiko_key(
-                    private_key_file=self.get_private_key_file(),
-                    get_private_key_passphrase=self.get_private_key_file(),
-                )
-
-                bastion = paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(
-                    self.get_fablib_manager().get_bastion_host(),
-                    username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
-                )
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel(
-                    "direct-tcpip", dest_addr, src_addr
-                )
-
-                client = paramiko.SSHClient()
-                client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-                client.connect(
-                    management_ip,
-                    username=self.username,
-                    pkey=key,
-                    sock=bastion_channel,
-                )
+                bastion, client = self._get_ssh_connection()
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.get(remote_file_path, local_file_path)
@@ -2121,38 +2100,19 @@ class Node(TemplateMixin):
                 log.warning(
                     f"Exception in download_file() (attempt #{attempt} of {retry}): {e}"
                 )
+                self.close_ssh()
 
                 if attempt + 1 == retry:
                     raise e
 
-                # Fail, try again
-                log.warning(
-                    f"SCP download fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
-                )
-                # traceback.print_exc()
                 time.sleep(retry_interval)
-                pass
 
             finally:
-                try:
-                    ftp_client.close()
-                except Exception as e:
-                    log.debug(f"Exception in ftp_client.close(): {e}")
-
-                try:
-                    client.close()
-                except Exception as e:
-                    log.debug(f"Exception in client.close(): {e}")
-
-                try:
-                    bastion_channel.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion_channel.close(): {e}")
-
-                try:
-                    bastion.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion.close(): {e}")
+                if ftp_client:
+                    try:
+                        ftp_client.close()
+                    except Exception as e:
+                        log.debug(f"Exception in ftp_client.close(): {e}")
 
         raise Exception("scp download failed")
 

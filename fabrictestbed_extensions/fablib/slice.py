@@ -2120,12 +2120,28 @@ class Slice:
         except Exception as e:
             log.info(e, exc_info=True)
 
+    def close_ssh(self):
+        """Close all cached SSH connections for nodes in this slice.
+
+        Iterates through all nodes and closes their cached bastion and
+        node SSH connections. Safe to call multiple times.
+        """
+        for node in self.get_nodes():
+            try:
+                node.close_ssh()
+            except Exception as e:
+                logging.getLogger("fablib").debug(
+                    f"Exception closing SSH for node {node.get_name()}: {e}"
+                )
+
     def delete(self):
         """
         Deletes this slice off of the slice manager and removes its topology.
 
         :raises Exception: if deleting the slice fails
         """
+        self.close_ssh()
+
         if self.get_fablib_manager():
             self.get_fablib_manager().remove_slice_from_cache(slice_object=self)
 
