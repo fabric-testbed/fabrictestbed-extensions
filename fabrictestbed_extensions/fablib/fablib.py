@@ -1373,6 +1373,35 @@ Host * !bastion.fabric-testbed.net
             includes=includes,
         )
 
+    def find_resource_slot(
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
+        duration: int,
+        resources: List[Dict[str, Any]],
+        max_results: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Find time windows where requested resources are simultaneously available.
+
+        :param start: start of the search window (UTC)
+        :param end: end of the search window (UTC)
+        :param duration: required slot length in hours
+        :param resources: list of resource requirement dicts
+        :param max_results: maximum number of slots to return
+        :return: dict with slot results
+        """
+        if start and end and (end - start) < datetime.timedelta(minutes=60):
+            raise Exception("Time range should be at least 60 minutes long!")
+
+        return self.get_manager().find_resource_slot(
+            start=start,
+            end=end,
+            duration=duration,
+            resources=resources,
+            max_results=max_results,
+        )
+
     def get_random_site(
         self,
         avoid: Optional[List[str]] = None,
