@@ -1402,9 +1402,13 @@ Host * !bastion.fabric-testbed.net
             entry["ram"] += node.get_requested_ram() or 0
             entry["disk"] += node.get_requested_disk() or 0
             for comp in node.get_components():
-                model = comp.get_model()
-                if model:
-                    entry["components"][model] = entry["components"].get(model, 0) + 1
+                comp_type = comp.get_type()
+                fim_model = comp.get_fim_model()
+                if comp_type and fim_model:
+                    # Build key matching the orchestrator summary format:
+                    # "{ComponentType}-{model}" e.g. "SmartNIC-ConnectX-5"
+                    comp_key = f"{comp_type}-{fim_model}"
+                    entry["components"][comp_key] = entry["components"].get(comp_key, 0) + 1
         for entry in site_compute.values():
             if not entry["components"]:
                 del entry["components"]
@@ -1440,6 +1444,38 @@ Host * !bastion.fabric-testbed.net
 
         return resources
 
+    @staticmethod
+    def _normalize_component_keys(resources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Normalize component keys in resource dicts to match the format used
+        by the reports DB: ``"{ComponentType}-{Model}"`` (e.g.
+        ``"SmartNIC-ConnectX-5"``).
+
+        Accepts both the DB format and the fablib model name format
+        (e.g. ``"NIC_ConnectX_5"``).  Unknown keys are passed through
+        unchanged.
+        """
+        from fabrictestbed_extensions.fablib.component import Component
+        from fim.slivers.component_catalog import ComponentModelTypeMap
+
+        # Build fablib-name -> DB-key mapping lazily
+        mapping: Dict[str, str] = {}
+        for fablib_name, model_type in Component.component_model_map.items():
+            catalog_entry = ComponentModelTypeMap.get(model_type)
+            if catalog_entry:
+                db_key = f"{catalog_entry['Type']}-{catalog_entry['Model']}"
+                mapping[fablib_name] = db_key
+
+        result = []
+        for r in resources:
+            if r.get("type") == "compute" and r.get("components"):
+                normalized = {}
+                for key, count in r["components"].items():
+                    normalized[mapping.get(key, key)] = count
+                r = {**r, "components": normalized}
+            result.append(r)
+        return result
+
     def find_resource_slot(
         self,
         start: datetime.datetime,
@@ -1455,6 +1491,12 @@ Host * !bastion.fabric-testbed.net
         Resources can be specified either by passing an unsubmitted Slice object
         (built with ``add_node()``, ``add_l2network()``, etc.) or by providing a
         raw list of resource requirement dicts.
+
+        When providing ``resources`` directly, component keys in the
+        ``"components"`` dict can use either the fablib model name
+        (e.g. ``"NIC_ConnectX_5"``) or the calendar/DB format
+        (e.g. ``"SmartNIC-ConnectX-5"``); they will be normalized
+        automatically.
 
         :param start: start of the search window (UTC)
         :param end: end of the search window (UTC)
@@ -1472,6 +1514,8 @@ Host * !bastion.fabric-testbed.net
 
         if slice is not None:
             resources = self._slice_to_resources(slice)
+
+        resources = self._normalize_component_keys(resources)
 
         if start and end and (end - start) < datetime.timedelta(minutes=60):
             raise Exception("Time range should be at least 60 minutes long!")
