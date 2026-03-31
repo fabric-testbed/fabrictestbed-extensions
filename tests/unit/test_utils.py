@@ -27,7 +27,9 @@ class TestNodeUtilsIPValidation(unittest.TestCase):
         self.assertEqual(self._validate("::1"), "IPv6")
 
     def test_valid_ipv6_full(self):
-        self.assertEqual(self._validate("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), "IPv6")
+        self.assertEqual(
+            self._validate("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), "IPv6"
+        )
 
     def test_invalid_ip(self):
         self.assertEqual(self._validate("not_an_ip"), "Invalid")

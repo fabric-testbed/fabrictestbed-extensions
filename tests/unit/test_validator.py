@@ -19,7 +19,13 @@ class TestCanAllocateNodeInHost(unittest.TestCase):
         return node
 
     def _make_host(
-        self, name="host1", state="Active", cores=32, ram=128, disk=1000, components=None
+        self,
+        name="host1",
+        state="Active",
+        cores=32,
+        ram=128,
+        disk=1000,
+        components=None,
     ):
         """Create a host dict matching ResourcesV2 format."""
         return {
@@ -256,9 +262,7 @@ class TestValidateNode(unittest.TestCase):
 
     def test_specific_host_not_found(self):
         node = self._make_node(host="nonexistent-host")
-        resources = self._make_resources(
-            site={"state": "Active"}, hosts={"host1": {}}
-        )
+        resources = self._make_resources(site={"state": "Active"}, hosts={"host1": {}})
 
         success, msg = NodeValidator.validate_node(node=node, resources=resources)
 
@@ -312,7 +316,9 @@ class TestValidateNodes(unittest.TestCase):
         resources.get_site.return_value = {"state": "Active"}
         resources.get_hosts_by_site.return_value = {"host1": host}
 
-        all_valid, errors = NodeValidator.validate_nodes(nodes=nodes, resources=resources)
+        all_valid, errors = NodeValidator.validate_nodes(
+            nodes=nodes, resources=resources
+        )
 
         self.assertTrue(all_valid)
         self.assertEqual(len(errors), 0)
