@@ -393,7 +393,8 @@ class TestFindResourceSlotManagerCall(FindResourceSlotTestBase):
             )
 
         mock_manager.find_resource_slot.assert_called_once_with(
-            start=start, end=end, duration=2, resources=resources, max_results=3
+            start=start, end=end, duration=2, resources=resources, max_results=3,
+            use_live_data=False,
         )
         self.assertEqual(result, expected)
 
