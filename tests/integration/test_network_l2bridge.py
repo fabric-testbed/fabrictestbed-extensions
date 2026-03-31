@@ -6,8 +6,9 @@ Run with::
     pytest tests/integration -m network -v
 """
 
-import pytest
 from ipaddress import IPv4Network
+
+import pytest
 
 pytestmark = [pytest.mark.network, pytest.mark.p1, pytest.mark.timeout(900)]
 
