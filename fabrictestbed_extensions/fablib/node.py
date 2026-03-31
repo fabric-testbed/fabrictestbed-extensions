@@ -4388,9 +4388,7 @@ class Node(TemplateMixin):
         :return: State of POA or Dictionary containing the info, in
                  case of INFO POAs
         """
-        retry = 20
-
-        status, poa_info = (
+        result = (
             self.get_fablib_manager()
             .get_manager()
             .poa(
@@ -4403,46 +4401,11 @@ class Node(TemplateMixin):
             )
         )
 
-        if status != Status.OK:
-            raise Exception(f"Failed to issue POA - {operation} Error {poa_info}")
-
         log.info(
-            f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}"
+            f"POA {operation} completed for {self.get_reservation_id()}/{self.get_name()}: {type(result)}"
         )
 
-        poa_state = "Nascent"
-        poa_info_status = None
-        attempt = 0
-        states = ["Success", "Failed"]
-        while poa_state not in states and attempt < retry:
-            status, poa_info_status = (
-                self.get_fablib_manager()
-                .get_manager()
-                .get_poas(poa_id=poa_info[0].poa_id)
-            )
-            attempt += 1
-            if status != Status.OK:
-                raise Exception(
-                    f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}"
-                )
-            poa_state = poa_info_status[0].state
-            log.info(
-                f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
-                f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}"
-            )
-            if poa_state in states:
-                break
-            time.sleep(10)
-
-        if poa_info_status[0].state == "Failed":
-            raise Exception(
-                f"POA - {poa_info[0].poa_id}/{operation} failed with error: - {poa_info_status[0].error}"
-            )
-
-        if poa_info_status[0].info.get(operation) is not None:
-            return poa_info_status[0].info.get(operation)
-        else:
-            return poa_info_status[0].state
+        return result
 
     def get_cpu_info(self) -> dict:
         """
@@ -4647,7 +4610,7 @@ class Node(TemplateMixin):
 
             # Perform the PCI rescan
             status = self.poa(operation="rescan", bdf=bdfs)
-            if not status or status.lower() == "failed":
+            if isinstance(status, str) and status.lower() == "failed":
                 raise RuntimeError("PCI rescan operation (POA) failed.")
 
             log.info(f"PCI rescan completed successfully for node: {self.get_name()}")
