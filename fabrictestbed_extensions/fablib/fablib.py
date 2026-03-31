@@ -1408,7 +1408,9 @@ Host * !bastion.fabric-testbed.net
                     # Build key matching the orchestrator summary format:
                     # "{ComponentType}-{model}" e.g. "SmartNIC-ConnectX-5"
                     comp_key = f"{comp_type}-{fim_model}"
-                    entry["components"][comp_key] = entry["components"].get(comp_key, 0) + 1
+                    entry["components"][comp_key] = (
+                        entry["components"].get(comp_key, 0) + 1
+                    )
         for entry in site_compute.values():
             if not entry["components"]:
                 del entry["components"]
@@ -1445,7 +1447,9 @@ Host * !bastion.fabric-testbed.net
         return resources
 
     @staticmethod
-    def _normalize_component_keys(resources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _normalize_component_keys(
+        resources: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """
         Normalize component keys in resource dicts to match the format used
         by the reports DB: ``"{ComponentType}-{Model}"`` (e.g.
@@ -1455,8 +1459,9 @@ Host * !bastion.fabric-testbed.net
         (e.g. ``"NIC_ConnectX_5"``).  Unknown keys are passed through
         unchanged.
         """
-        from fabrictestbed_extensions.fablib.component import Component
         from fim.slivers.component_catalog import ComponentModelTypeMap
+
+        from fabrictestbed_extensions.fablib.component import Component
 
         # Build fablib-name -> DB-key mapping lazily
         mapping: Dict[str, str] = {}

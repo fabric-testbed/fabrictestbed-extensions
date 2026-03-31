@@ -2989,9 +2989,7 @@ class Node(TemplateMixin):
                 break
 
         if iface_config is None:
-            raise RuntimeError(
-                f"Interface {ifname} not found in {config_file}"
-            )
+            raise RuntimeError(f"Interface {ifname} not found in {config_file}")
 
         # Build the new route entry
         new_route = {"to": subnet, "via": gateway}
@@ -4145,9 +4143,7 @@ class Node(TemplateMixin):
             if backend == "netplan" and target_iface is not None:
                 try:
                     device_name = target_iface.get_device_name()
-                    self._netplan_add_route(
-                        device_name, str(subnet), str(next_hop)
-                    )
+                    self._netplan_add_route(device_name, str(subnet), str(next_hop))
                     needs_netplan_apply = True
                     continue
                 except Exception as e:

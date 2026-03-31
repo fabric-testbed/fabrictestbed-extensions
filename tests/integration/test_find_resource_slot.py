@@ -46,7 +46,9 @@ class FindResourceSlotIntegrationTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.fablib = FablibManager(fabric_rc="/Users/kthare10/work/fabric_config_dev/fabric_rc")
+        cls.fablib = FablibManager(
+            fabric_rc="/Users/kthare10/work/fabric_config_dev/fabric_rc"
+        )
         cls.fablib.show_config()
 
         # Pick two random sites for all tests to use
@@ -303,7 +305,9 @@ class FindResourceSlotIntegrationTests(unittest.TestCase):
         start, end = self._search_window()
 
         slice_obj = self.fablib.new_slice(name="test-find-slot-gpu")
-        node = slice_obj.add_node(name="gpu-node", site=self.site1, cores=8, ram=32, disk=100)
+        node = slice_obj.add_node(
+            name="gpu-node", site=self.site1, cores=8, ram=32, disk=100
+        )
         node.add_component(model="GPU_TeslaT4", name="gpu1")
 
         result = self.fablib.find_resource_slot(
@@ -321,10 +325,14 @@ class FindResourceSlotIntegrationTests(unittest.TestCase):
         start, end = self._search_window()
 
         slice_obj = self.fablib.new_slice(name="test-find-slot-l2")
-        node1 = slice_obj.add_node(name="node1", site=self.site1, cores=2, ram=8, disk=10)
+        node1 = slice_obj.add_node(
+            name="node1", site=self.site1, cores=2, ram=8, disk=10
+        )
         iface1 = node1.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
 
-        node2 = slice_obj.add_node(name="node2", site=self.site2, cores=2, ram=8, disk=10)
+        node2 = slice_obj.add_node(
+            name="node2", site=self.site2, cores=2, ram=8, disk=10
+        )
         iface2 = node2.add_component(model="NIC_Basic", name="nic2").get_interfaces()[0]
 
         slice_obj.add_l2network(name="net1", interfaces=[iface1, iface2])
