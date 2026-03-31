@@ -233,15 +233,16 @@ class FablibManager(Config):
         self.last_resources_filtered_by_time = False
 
         self.setup_logging()
+        self._offline = offline
+        self._validate_config = validate_config
+        self._manager_built = False
+        self._execute_thread_pool_size = execute_thread_pool_size
 
         if not offline:
             if not self.get_no_ssh():
                 self.ssh_thread_pool_executor = ThreadPoolExecutor(
                     execute_thread_pool_size
                 )
-            self.__build_manager()
-            if validate_config and not self.get_no_ssh():
-                self.verify_and_configure(validate_only=True)
         self.required_check()
         self.lock = threading.Lock()
         # These dictionaries are maintained to keep cache of the slice objects created
@@ -345,6 +346,14 @@ class FablibManager(Config):
                 # use fablib
             # resources automatically cleaned up
         """
+        # Close cached SSH connections on all slices
+        if hasattr(self, "slice_cache") and self.slice_cache:
+            for slice_obj in self.slice_cache.values():
+                try:
+                    slice_obj.close_ssh()
+                except Exception:
+                    pass
+
         if self.ssh_thread_pool_executor:
             self.ssh_thread_pool_executor.shutdown(wait=False)
             self.ssh_thread_pool_executor = None
@@ -1697,15 +1706,19 @@ Host * !bastion.fabric-testbed.net
             bastion_client.close()
 
     def get_manager(self) -> FabricManagerV2:
-        """
-        Not intended as API call
+        """Gets the manager of this fablib object.
 
-
-        Gets the manager of this fablib object.
+        Lazily initializes the FabricManagerV2 on first access, avoiding
+        network calls during FablibManager construction.
 
         :return: the manager on this fablib object
         :rtype: FabricManagerV2
         """
+        if not self._manager_built and not self._offline:
+            self.__build_manager()
+            self._manager_built = True
+            if self._validate_config and not self.get_no_ssh():
+                self.verify_and_configure(validate_only=True)
         return self.manager
 
     def new_slice(

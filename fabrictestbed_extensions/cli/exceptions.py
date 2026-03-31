@@ -26,6 +26,8 @@
 
 
 class TokenExpiredException(Exception):
+    """Raised when a FABRIC authentication token has expired."""
+
     def __init__(self, text, data=None):
         super(TokenExpiredException, self).__init__()
         self.text = str(text)

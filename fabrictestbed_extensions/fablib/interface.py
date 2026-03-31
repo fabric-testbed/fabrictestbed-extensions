@@ -59,6 +59,8 @@ log = logging.getLogger("fablib")
 
 
 class Interface(TemplateMixin):
+    """Represents a network interface on a FABRIC node."""
+
     _show_title = "Interface"
 
     CONFIGURED = "configured"
@@ -559,9 +561,10 @@ class Interface(TemplateMixin):
         if vlan:
             vlan = str(vlan)
 
-        if_labels = self.get_fim().get_property(pname="labels")
+        fim = self.get_fim()
+        if_labels = fim.get_property(pname="labels")
         if_labels.vlan = str(vlan)
-        self.get_fim().set_properties(labels=if_labels)
+        fim.set_properties(labels=if_labels)
         self._invalidate_cache()
 
         return self
@@ -576,19 +579,17 @@ class Interface(TemplateMixin):
         if not bw:
             return None
 
-        if_capacities = self.get_fim().get_property(pname="capacities")
+        fim = self.get_fim()
+        if_capacities = fim.get_property(pname="capacities")
         if_capacities.bw = int(bw)
-        self.get_fim().set_properties(capacities=if_capacities)
+        fim.set_properties(capacities=if_capacities)
         self._invalidate_cache()
 
-        if (
-            self.get_fim().get_peers()
-            and self.get_fim().get_peers()[0]
-            and self.get_fim().get_peers()[0].capacities
-        ):
-            existing = self.get_fim().get_peers()[0].capacities
+        peers = fim.get_peers()
+        if peers and peers[0] and peers[0].capacities:
+            existing = peers[0].capacities
             existing.bw = int(bw)
-            self.get_fim().get_peers()[0].set_properties(capacities=existing)
+            peers[0].set_properties(capacities=existing)
 
         return self
 
@@ -1333,11 +1334,13 @@ class Interface(TemplateMixin):
         :rtype: String
         """
         if self._cached_subnet is None:
-            if self.get_fim() and self.get_fim().labels:
-                if self.get_fim().labels.ipv4_subnet:
-                    self._cached_subnet = self.get_fim().labels.ipv4_subnet
-                if self.get_fim().labels.ipv6_subnet:
-                    self._cached_subnet = self.get_fim().labels.ipv6_subnet
+            fim = self.get_fim()
+            if fim and fim.labels:
+                labels = fim.labels
+                if labels.ipv4_subnet:
+                    self._cached_subnet = labels.ipv4_subnet
+                if labels.ipv6_subnet:
+                    self._cached_subnet = labels.ipv6_subnet
         return self._cached_subnet
 
     def get_peer_subnet(self):
@@ -1348,11 +1351,13 @@ class Interface(TemplateMixin):
         :rtype: String
         """
         if self._cached_peer_subnet is None:
-            if self.get_fim() and self.get_fim().peer_labels:
-                if self.get_fim().peer_labels.ipv4_subnet:
-                    self._cached_peer_subnet = self.get_fim().peer_labels.ipv4_subnet
-                if self.get_fim().peer_labels.ipv6_subnet:
-                    self._cached_peer_subnet = self.get_fim().peer_labels.ipv6_subnet
+            fim = self.get_fim()
+            if fim and fim.peer_labels:
+                peer_labels = fim.peer_labels
+                if peer_labels.ipv4_subnet:
+                    self._cached_peer_subnet = peer_labels.ipv4_subnet
+                if peer_labels.ipv6_subnet:
+                    self._cached_peer_subnet = peer_labels.ipv6_subnet
         return self._cached_peer_subnet
 
     def get_peer_asn(self):
@@ -1363,8 +1368,9 @@ class Interface(TemplateMixin):
         :rtype: String
         """
         if self._cached_peer_asn is None:
-            if self.get_fim() and self.get_fim().peer_labels:
-                self._cached_peer_asn = self.get_fim().peer_labels.asn
+            fim = self.get_fim()
+            if fim and fim.peer_labels:
+                self._cached_peer_asn = fim.peer_labels.asn
         return self._cached_peer_asn
 
     def get_peer_bgp_key(self):
@@ -1375,8 +1381,9 @@ class Interface(TemplateMixin):
         :rtype: String
         """
         if self._cached_peer_bgp_key is None:
-            if self.get_fim() and self.get_fim().peer_labels:
-                self._cached_peer_bgp_key = self.get_fim().peer_labels.bgp_key
+            fim = self.get_fim()
+            if fim and fim.peer_labels:
+                self._cached_peer_bgp_key = fim.peer_labels.bgp_key
         return self._cached_peer_bgp_key
 
     def get_peer_account_id(self):
@@ -1387,8 +1394,9 @@ class Interface(TemplateMixin):
         :rtype: String
         """
         if self._cached_peer_account_id is None:
-            if self.get_fim() and self.get_fim().peer_labels:
-                self._cached_peer_account_id = self.get_fim().peer_labels.account_id
+            fim = self.get_fim()
+            if fim and fim.peer_labels:
+                self._cached_peer_account_id = fim.peer_labels.account_id
         return self._cached_peer_account_id
 
     def get_interfaces(

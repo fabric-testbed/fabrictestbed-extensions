@@ -65,6 +65,12 @@ from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    SliceStateError,
+    SliceTimeoutError,
+    ValidationError,
+)
 from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 
@@ -106,6 +112,30 @@ def _setup_ceph_on_node(node, bundle: dict):
 
 
 class Slice:
+    """An experiment container on the FABRIC testbed.
+
+    Slice State Machine::
+
+        Nascent → Configuring → StableOK ──→ Closing → Dead
+                                  │    ↑
+                                  ↓    │
+                               ModifyOK/ModifyError
+
+        AllocatedOK = future-dated (lease_start > now)
+        StableError = provisioning failed (check get_error_messages())
+
+    Key states:
+        - **StableOK**: Slice is stable, all nodes active
+        - **StableError**: Slice stabilized but with errors
+        - **ModifyOK/ModifyError**: After slice modification
+        - **Closing/Dead**: Slice is being or has been removed
+        - **AllocatedOK**: Future allocation, not yet provisioned
+
+    Use :meth:`isStable` to check if the slice has reached a terminal
+    provisioning state (OK or error).  Use :meth:`is_dead_or_closing`
+    to check if the slice is being removed.
+    """
+
     def __init__(
         self,
         fablib_manager: FablibManagerV2,
@@ -131,6 +161,7 @@ class Slice:
             self.topology.load(graph_string=self.sm_slice.model)
 
         self.slivers: List[SliverDTO] = []
+        self._sliver_map: Dict[str, SliverDTO] = {}
         self.nodes: Dict[str, Node] = {}
         self.facilities: Dict[str, FacilityPort] = {}
         self.interfaces: Dict[str, Interface] = {}
@@ -147,6 +178,7 @@ class Slice:
         self._storage_cluster: Optional[str] = None
 
     def get_fablib_manager(self) -> FablibManagerV2:
+        """Return the associated FablibManager instance."""
         return self.fablib_manager
 
     def __str__(self):
@@ -544,6 +576,7 @@ class Slice:
 
     @staticmethod
     def get_pretty_names_dict():
+        """Return the mapping of field names to display-friendly names."""
         return {
             "id": "ID",
             "name": "Name",
@@ -589,6 +622,7 @@ class Slice:
         return rtn_dict
 
     def get_template_context(self, base_object=None, skip=None):
+        """Build a Jinja2 template context for this slice and its nodes."""
         if skip is None:
             skip = []
 
@@ -675,6 +709,7 @@ class Slice:
             as_self=self.user_only,
             graph_format="NONE",
             return_fmt="dto",
+            limit=1,
         )
         if self.fablib_manager.get_log_level() == logging.DEBUG:
             end = time.time()
@@ -684,7 +719,7 @@ class Slice:
             )
 
         if len(slices) == 0:
-            raise Exception(
+            raise ResourceNotFoundError(
                 f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
             )
 
@@ -710,7 +745,7 @@ class Slice:
             slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
         )
         if len(slices) == 0:
-            raise Exception(
+            raise ResourceNotFoundError(
                 f"Failed to get slice topology {self.sm_slice.slice_id} from slice manager"
             )
 
@@ -744,14 +779,18 @@ class Slice:
         self.slivers = self.fablib_manager.get_manager().list_slivers(
             slice_id=self.sm_slice.slice_id, as_self=self.user_only, return_fmt="dto"
         )
+        self._sliver_map = {s.sliver_id: s for s in self.slivers}
 
     def get_sliver(self, reservation_id: str) -> SliverDTO:
         """
         Returns the sliver associated with the reservation ID.
+
+        Uses a dict cache for O(1) lookups instead of filtering the
+        full sliver list on each call.
         """
-        slivers = self.get_slivers()
-        sliver = list(filter(lambda x: x.sliver_id == reservation_id, slivers))[0]
-        return sliver
+        if not self._sliver_map:
+            self.get_slivers()
+        return self._sliver_map.get(reservation_id)
 
     def get_slivers(self) -> List[SliverDTO]:
         """
@@ -1539,7 +1578,7 @@ class Slice:
                     return iface
 
                     # TODO: test other resource types.
-        except:
+        except Exception:
             pass
 
         return None
@@ -1656,8 +1695,10 @@ class Slice:
                             node_obj = Node.get_node(self, fim_node)
                         self.nodes[node_name] = node_obj
                     else:
-                        # Update existing node's fim_node reference
+                        # Update existing node's fim_node reference and
+                        # invalidate cached properties (cores, ram, etc.)
                         self.nodes[node_name].update(fim_node=fim_node)
+                        self.nodes[node_name]._invalidate_cache()
                 except Exception as e:
                     log.warning(f"Error initializing node {node_name}: {e}")
 
@@ -1699,17 +1740,56 @@ class Slice:
             self.nodes.pop(node_name)
             log.debug(f"Removed extra node: {node_name}")
 
-    def get_nodes(self, refresh: bool = False) -> List[Node]:
-        """
-        Gets a list of all nodes in this slice.
+    def get_nodes(
+        self,
+        refresh: bool = False,
+        site: str = None,
+        filter_function=None,
+    ) -> List[Node]:
+        """Gets a list of nodes in this slice, optionally filtered.
 
+        :param refresh: force refresh from FIM topology
+        :type refresh: bool
+        :param site: filter nodes by site name (e.g. "RENC")
+        :type site: str
+        :param filter_function: custom filter function taking a Node and
+            returning bool (e.g. ``lambda n: n.get_cores() >= 4``)
+        :type filter_function: callable
         :return: a list of fablib nodes
         :rtype: List[Node]
         """
         if not self.nodes or not len(self.nodes):
             refresh = True
         self.__initialize_nodes(refresh=refresh)
-        return list(self.nodes.values())
+        nodes = list(self.nodes.values())
+        if site:
+            nodes = [n for n in nodes if n.get_site() == site]
+        if filter_function:
+            nodes = [n for n in nodes if filter_function(n)]
+        return nodes
+
+    def execute_on_all_nodes(self, command: str, **kwargs) -> dict:
+        """Execute a command on all nodes in parallel.
+
+        Submits the command to each node's SSH thread pool and waits
+        for all results.  Additional keyword arguments are passed
+        through to :meth:`Node.execute`.
+
+        :param command: command to execute on each node
+        :type command: str
+        :return: dict mapping node name to (stdout, stderr) tuple
+        :rtype: dict
+        """
+        kwargs.setdefault("quiet", True)
+        threads = {}
+        for node in self.get_nodes():
+            t = node.execute_thread(command, **kwargs)
+            threads[node.get_name()] = t
+
+        results = {}
+        for name, t in threads.items():
+            results[name] = t.result()
+        return results
 
     def get_facility(self, name: str) -> FacilityPort:
         """
@@ -1732,7 +1812,7 @@ class Slice:
             return facility
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Facility not found: {name}")
+            raise ResourceNotFoundError(f"Facility not found: {name}")
 
     def get_facilities(self, refresh: bool = False) -> List[FacilityPort]:
         """
@@ -1866,7 +1946,7 @@ class Slice:
             return aswitch
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Attestable Switch not found: {name}")
+            raise ResourceNotFoundError(f"Attestable Switch not found: {name}")
 
     def get_node(self, name: str) -> Node:
         """
@@ -1898,7 +1978,7 @@ class Slice:
             return node_obj
         except Exception as e:
             log.info(e, exc_info=True)
-            raise Exception(f"Node not found: {name}")
+            raise ResourceNotFoundError(f"Node not found: {name}")
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
@@ -1966,7 +2046,7 @@ class Slice:
         for interface in self.get_interfaces():
             if name.endswith(interface.get_name()):
                 return interface
-        raise Exception("Interface not found: {}".format(name))
+        raise ResourceNotFoundError("Interface not found: {}".format(name))
 
     def get_l3networks(self) -> List[NetworkService]:
         """
@@ -2120,12 +2200,28 @@ class Slice:
         except Exception as e:
             log.info(e, exc_info=True)
 
+    def close_ssh(self):
+        """Close all cached SSH connections for nodes in this slice.
+
+        Iterates through all nodes and closes their cached bastion and
+        node SSH connections. Safe to call multiple times.
+        """
+        for node in self.get_nodes():
+            try:
+                node.close_ssh()
+            except Exception as e:
+                logging.getLogger("fablib").debug(
+                    f"Exception closing SSH for node {node.get_name()}: {e}"
+                )
+
     def delete(self):
         """
         Deletes this slice off of the slice manager and removes its topology.
 
         :raises Exception: if deleting the slice fails
         """
+        self.close_ssh()
+
         if self.get_fablib_manager():
             self.get_fablib_manager().remove_slice_from_cache(slice_object=self)
 
@@ -2151,7 +2247,7 @@ class Slice:
         :raises Exception: if renewal fails
         """
         if end_date is None and days is None:
-            raise Exception("Either end_date or days must be specified!")
+            raise ValidationError("Either end_date or days must be specified!")
 
         if end_date is not None:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
@@ -2223,18 +2319,19 @@ class Slice:
                 as_self=self.user_only,
                 graph_format="NONE",
                 return_fmt="dto",
+                limit=1,
             )
-            if len(slices) > 0:
-                slice = list(filter(lambda x: x.slice_id == slice_id, slices))[0]
-                if slice.state == "StableOK" or slice.state == "ModifyOK":
+            if slices:
+                slice = slices[0]
+                if slice.state in ("StableOK", "ModifyOK"):
                     if progress:
                         print(" Slice state: {}".format(slice.state))
                     break
-                if (
-                    slice.state == "Closing"
-                    or slice.state == "Dead"
-                    or slice.state == "StableError"
-                    or slice.state == "ModifyError"
+                if slice.state in (
+                    "Closing",
+                    "Dead",
+                    "StableError",
+                    "ModifyError",
                 ):
                     if progress:
                         print(" Slice state: {}".format(slice.state))
@@ -2243,7 +2340,7 @@ class Slice:
                     except Exception as e:
                         exception_string = "Exception while getting error messages"
 
-                    raise Exception(str(exception_string))
+                    raise SliceStateError(str(exception_string))
             else:
                 print(f"Failure: {slices}")
 
@@ -2252,7 +2349,7 @@ class Slice:
             time.sleep(interval)
 
         if time.time() >= timeout_start + timeout:
-            raise Exception(
+            raise SliceTimeoutError(
                 " Timeout exceeded ({} sec). Slice: {} ({})".format(
                     timeout, slice.name, slice.state
                 )
@@ -2324,7 +2421,7 @@ class Slice:
                         print(
                             f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
                         )
-                    raise Exception(
+                    raise SliceTimeoutError(
                         f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
                     )
             except Exception as e:
@@ -2653,7 +2750,9 @@ class Slice:
         # while not self.isReady():
         while True:
             if time.time() > start + timeout:
-                raise Exception(f"Timeout {timeout} sec exceeded in Jupyter wait")
+                raise SliceTimeoutError(
+                    f"Timeout {timeout} sec exceeded in Jupyter wait"
+                )
 
             time.sleep(interval)
 
@@ -2895,11 +2994,11 @@ class Slice:
                     ssh_keys.extend(extra_ssh_keys)
                 else:
                     log.error("Extra SSH keys must be provided as a list of strings.")
-                    raise Exception(
+                    raise ValidationError(
                         "Extra SSH keys must be provided as a list of strings."
                     )
             if not ssh_keys or len(ssh_keys) < 1:
-                raise Exception(
+                raise ValidationError(
                     "No SSH keys available. Provide extra_ssh_keys or "
                     "configure a default slice public key."
                 )
@@ -3163,7 +3262,7 @@ class Slice:
 
                 reservation_info = json.loads(sliver.sliver["ReservationInfo"])
                 error = reservation_info["error_message"]
-            except:
+            except Exception:
                 error = ""
 
             if sliver.sliver_type == "NetworkServiceSliver":
@@ -3615,5 +3714,5 @@ class Slice:
                     n.delete()
 
         if raise_exception and errors:
-            raise Exception(f"Slice validation failed - {errors}!")
+            raise ValidationError(f"Slice validation failed - {errors}!")
         return all_valid, errors

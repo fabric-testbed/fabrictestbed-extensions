@@ -309,7 +309,7 @@ class Attestable_Switch(Node):
         """
         try:
             return Attestable_Switch.name(self.get_fim_node().name)
-        except:
+        except Exception:
             return None
 
     @staticmethod

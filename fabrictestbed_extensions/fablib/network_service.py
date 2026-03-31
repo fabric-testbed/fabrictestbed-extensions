@@ -740,7 +740,7 @@ class NetworkService(TemplateMixin):
                 self.sliver = self.slice.get_sliver(
                     reservation_id=self.get_reservation_id()
                 )
-        except:
+        except Exception:
             pass
 
         self.lock = threading.Lock()
@@ -852,6 +852,7 @@ class NetworkService(TemplateMixin):
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def generate_template_context(self, skip: List[str] = None):
+        """Build a Jinja2 template context dict for this network service."""
         context = self.toDict(skip=skip)
         context["interfaces"] = []
 
@@ -1128,7 +1129,7 @@ class NetworkService(TemplateMixin):
                 iface = self.get_slice().get_interface(name=interface.name)
                 self.interfaces.append(iface)
                 self._interfaces_cache[interface.name] = iface
-            except:
+            except Exception:
                 log.warning(f"interface not found: {interface.name}")
 
         return self.interfaces

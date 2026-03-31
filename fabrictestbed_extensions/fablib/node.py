@@ -64,6 +64,12 @@ from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    SliceStateError,
+    SSHError,
+    ValidationError,
+)
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.utils.utils import Utils
 
@@ -160,15 +166,21 @@ class Node(TemplateMixin):
         self._net_config_backend: Optional[str] = None
         self._persistent_config: bool = True
 
+        # SSH connection cache for reuse across execute/upload/download calls
+        self._ssh_bastion: Optional[paramiko.SSHClient] = None
+        self._ssh_client: Optional[paramiko.SSHClient] = None
+        self._ssh_lock = threading.Lock()
+
         try:
             self.set_username()
-        except:
+        except Exception as e:
+            log.debug(f"Could not set username during init: {e}")
             self.username = None
 
         try:
             if slice.isStable():
                 self.sliver = slice.get_sliver(reservation_id=self.get_reservation_id())
-        except:
+        except Exception:
             pass
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -379,6 +391,7 @@ class Node(TemplateMixin):
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def generate_template_context(self, skip: List[str] = None):
+        """Build a Jinja2 template context dict for this node."""
         if skip is None:
             skip = []
         if "ssh_command" not in skip:
@@ -911,11 +924,7 @@ class Node(TemplateMixin):
                         pname="capacity_allocations"
                     )
                     if capacities:
-                        self._cached_allocated_cores = (
-                            self.get_fim()
-                            .get_property(pname="capacity_allocations")
-                            .core
-                        )
+                        self._cached_allocated_cores = capacities.core
             except Exception:
                 self._cached_allocated_cores = None
         return self._cached_allocated_cores if self._cached_allocated_cores else 0
@@ -932,9 +941,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_cores = (
-                            self.get_fim().get_property(pname="capacities").core
-                        )
+                        self._cached_requested_cores = capacities.core
             except Exception:
                 self._cached_requested_cores = None
         return self._cached_requested_cores if self._cached_requested_cores else 0
@@ -953,11 +960,7 @@ class Node(TemplateMixin):
                         pname="capacity_allocations"
                     )
                     if capacities:
-                        self._cached_allocated_ram = (
-                            self.get_fim()
-                            .get_property(pname="capacity_allocations")
-                            .ram
-                        )
+                        self._cached_allocated_ram = capacities.ram
             except Exception:
                 self._cached_allocated_ram = None
         return self._cached_allocated_ram if self._cached_allocated_ram else 0
@@ -974,9 +977,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_ram = (
-                            self.get_fim().get_property(pname="capacities").ram
-                        )
+                        self._cached_requested_ram = capacities.ram
             except Exception:
                 self._cached_requested_ram = None
         return self._cached_requested_ram if self._cached_requested_ram else 0
@@ -995,11 +996,7 @@ class Node(TemplateMixin):
                         pname="capacity_allocations"
                     )
                     if capacities:
-                        self._cached_allocated_disk = (
-                            self.get_fim()
-                            .get_property(pname="capacity_allocations")
-                            .disk
-                        )
+                        self._cached_allocated_disk = capacities.disk
             except Exception:
                 self._cached_allocated_disk = None
         return self._cached_allocated_disk if self._cached_allocated_disk else 0
@@ -1016,9 +1013,7 @@ class Node(TemplateMixin):
                 if self.get_fim():
                     capacities = self.get_fim().get_property(pname="capacities")
                     if capacities:
-                        self._cached_requested_disk = (
-                            self.get_fim().get_property(pname="capacities").disk
-                        )
+                        self._cached_requested_disk = capacities.disk
             except Exception:
                 self._cached_requested_disk = None
         return self._cached_requested_disk if self._cached_requested_disk else 0
@@ -1075,7 +1070,7 @@ class Node(TemplateMixin):
                     labels = self.get_fim().get_property(pname="labels")
                     if labels:
                         self.host = labels.instance_parent
-            except:
+            except Exception:
                 return None
         return self.host
 
@@ -1321,7 +1316,7 @@ class Node(TemplateMixin):
             fim_comp = fim_components.get(calculated_name) or fim_components.get(name)
 
             if not fim_comp:
-                raise Exception(f"Component not found in FIM: {name}")
+                raise ResourceNotFoundError(f"Component not found in FIM: {name}")
 
             # Create and cache new component
             key = calculated_name if fim_comp.name == calculated_name else name
@@ -1331,7 +1326,7 @@ class Node(TemplateMixin):
 
         except Exception as e:
             log.error(f"Error retrieving component '{name}': {e}", exc_info=True)
-            raise Exception(f"Component not found: {name}")
+            raise ResourceNotFoundError(f"Component not found: {name}")
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
@@ -1404,7 +1399,7 @@ class Node(TemplateMixin):
                 ):
                     return interface
 
-        raise Exception(f"Interface not found: {name or network_name}")
+        raise ResourceNotFoundError(f"Interface not found: {name or network_name}")
 
     def get_ssh_command(self) -> str:
         """
@@ -1426,7 +1421,7 @@ class Node(TemplateMixin):
                     "networks",
                 ],
             )
-        except:
+        except Exception:
             return self.get_fablib_manager().get_ssh_command_line()
 
     def validIPAddress(self, IP: str) -> str:
@@ -1486,7 +1481,117 @@ class Node(TemplateMixin):
             except:
                 pass
 
-        raise Exception(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+        raise ValidationError(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+
+    def _get_ssh_connection(
+        self,
+        username: str = None,
+        private_key_file: str = None,
+        private_key_passphrase: str = None,
+    ) -> tuple:
+        """Get or create a cached SSH connection to this node via bastion.
+
+        Returns a (bastion, client) tuple. Thread-safe. If the cached
+        connection is still alive it is reused; otherwise a fresh one is
+        created and cached.
+
+        :param username: SSH username override
+        :type username: str
+        :param private_key_file: path to private key file override
+        :type private_key_file: str
+        :param private_key_passphrase: passphrase override
+        :type private_key_passphrase: str
+        :return: (bastion, client) tuple of paramiko.SSHClient
+        :rtype: tuple
+        """
+        with self._ssh_lock:
+            # Check if cached connection is still alive
+            if (
+                self._ssh_client
+                and self._ssh_client.get_transport()
+                and self._ssh_client.get_transport().is_active()
+                and self._ssh_bastion
+                and self._ssh_bastion.get_transport()
+                and self._ssh_bastion.get_transport().is_active()
+            ):
+                return self._ssh_bastion, self._ssh_client
+
+            # Close any stale connections
+            self._close_ssh_connections()
+
+            # Resolve credentials
+            fablib_manager = self.get_fablib_manager()
+            management_ip = str(self.get_management_ip())
+
+            node_username = username or self.username
+            node_key_file = private_key_file or self.get_private_key_file()
+            node_key_passphrase = (
+                private_key_passphrase or self.get_private_key_passphrase()
+            )
+
+            ip_type = self.validIPAddress(management_ip)
+            if ip_type == "IPv4":
+                src_addr = ("0.0.0.0", 22)
+            elif ip_type == "IPv6":
+                src_addr = ("::", 22)
+            else:
+                raise ValidationError(f"Invalid management IP: {management_ip}")
+            dest_addr = (str(management_ip), 22)
+
+            key = self.get_paramiko_key(
+                private_key_file=node_key_file,
+                get_private_key_passphrase=node_key_passphrase,
+            )
+
+            # Connect to bastion
+            bastion = paramiko.SSHClient()
+            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            bastion.connect(
+                fablib_manager.get_bastion_host(),
+                username=fablib_manager.get_bastion_username(),
+                key_filename=fablib_manager.get_bastion_key_location(),
+            )
+
+            bastion_transport = bastion.get_transport()
+            bastion_channel = bastion_transport.open_channel(
+                "direct-tcpip", dest_addr, src_addr
+            )
+
+            # Connect to node via bastion tunnel
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(
+                management_ip,
+                username=node_username,
+                pkey=key,
+                sock=bastion_channel,
+            )
+
+            # Cache the connections
+            self._ssh_bastion = bastion
+            self._ssh_client = client
+            return bastion, client
+
+    def _close_ssh_connections(self):
+        """Close cached SSH connections without acquiring the lock."""
+        for conn in (self._ssh_client, self._ssh_bastion):
+            if conn:
+                try:
+                    conn.close()
+                except Exception as e:
+                    log.debug(f"Exception closing SSH connection: {e}")
+        self._ssh_client = None
+        self._ssh_bastion = None
+
+    def close_ssh(self):
+        """Close cached SSH connections to this node.
+
+        Releases the cached bastion and node SSH connections. Safe to
+        call multiple times. New connections will be created
+        automatically on the next execute/upload/download call.
+        """
+        with self._ssh_lock:
+            self._close_ssh_connections()
 
     def execute_thread(
         self,
@@ -1614,11 +1719,11 @@ class Node(TemplateMixin):
         # Validate management IP
         management_ip = self.get_management_ip()
         if not management_ip:
-            raise Exception(f"Node {self.get_name()} has no valid management IP.")
+            raise SliceStateError(f"Node {self.get_name()} has no valid management IP.")
 
         # Ensure the node is active
         if self.get_reservation_state() != "Active":
-            raise Exception(
+            raise SliceStateError(
                 f"Node {self.get_name()} is in state {self.get_reservation_state()}, cannot execute command."
             )
 
@@ -1645,7 +1750,7 @@ class Node(TemplateMixin):
         elif ip_type == "IPv6":
             src_addr = ("::", 22)
         else:
-            raise Exception(f"Invalid management IP: {management_ip}")
+            raise ValidationError(f"Invalid management IP: {management_ip}")
 
         dest_addr = (str(management_ip), 22)
 
@@ -1667,37 +1772,11 @@ class Node(TemplateMixin):
 
         attempt = 0
         while attempt < max(1, retry):
-            client = None
-            bastion = None
-            bastion_channel = None
             try:
-                key = self.get_paramiko_key(
-                    private_key_file=node_key_file,
-                    get_private_key_passphrase=node_key_passphrase,
-                )
-
-                # Connect to bastion
-                bastion = paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(
-                    fablib_manager.get_bastion_host(),
-                    username=bastion_username,
-                    key_filename=bastion_key_file,
-                )
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel(
-                    "direct-tcpip", dest_addr, src_addr
-                )
-
-                # Connect to node
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(
-                    management_ip,
+                bastion, client = self._get_ssh_connection(
                     username=node_username,
-                    pkey=key,
-                    sock=bastion_channel,
+                    private_key_file=node_key_file,
+                    private_key_passphrase=node_key_passphrase,
                 )
 
                 # Handle interactive execution
@@ -1744,8 +1823,6 @@ class Node(TemplateMixin):
 
                 stdout.close()
                 stderr.close()
-                client.close()
-                bastion.close()
 
                 rtn_stdout = b"".join(stdout_chunks).decode()
                 rtn_stderr = b"".join(stderr_chunks).decode()
@@ -1760,27 +1837,13 @@ class Node(TemplateMixin):
 
             except Exception as e:
                 log.warning(f"Attempt {attempt + 1} failed: {e}")
-                if attempt + 1 == retry:
+                self.close_ssh()
+                attempt += 1
+                if attempt >= retry:
                     raise
                 time.sleep(retry_interval)
-            finally:
-                attempt += 1
-                try:
-                    client.close()
-                except Exception as e:
-                    log.debug(f"Exception in client.close(): {e}")
 
-                try:
-                    bastion_channel.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion_channel.close(): {e}")
-
-                try:
-                    bastion.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion.close(): {e}")
-
-        raise Exception("ssh failed: Should not get here")
+        raise SSHError("ssh failed: Should not get here")
 
     def _interactive_execute(
         self,
@@ -1907,47 +1970,10 @@ class Node(TemplateMixin):
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        # Get and test src and management_ips
-        management_ip = str(self.get_management_ip())
-        if self.validIPAddress(management_ip) == "IPv4":
-            src_addr = ("0.0.0.0", 22)
-        elif self.validIPAddress(management_ip) == "IPv6":
-            src_addr = ("0:0:0:0:0:0:0:0", 22)
-        else:
-            raise Exception(f"upload_file: Management IP Invalid: {management_ip}")
-        dest_addr = (management_ip, 22)
-
         for attempt in range(int(retry)):
+            ftp_client = None
             try:
-                key = self.get_paramiko_key(
-                    private_key_file=self.get_private_key_file(),
-                    get_private_key_passphrase=self.get_private_key_file(),
-                )
-
-                bastion = paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(
-                    self.get_fablib_manager().get_bastion_host(),
-                    username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
-                )
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel(
-                    "direct-tcpip", dest_addr, src_addr
-                )
-
-                client = paramiko.SSHClient()
-                client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-                client.connect(
-                    management_ip,
-                    username=self.username,
-                    pkey=key,
-                    sock=bastion_channel,
-                )
+                bastion, client = self._get_ssh_connection()
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.put(local_file_path, remote_file_path)
@@ -1963,40 +1989,21 @@ class Node(TemplateMixin):
 
             except Exception as e:
                 log.warning(f"Exception on upload_file() attempt #{attempt}: {e}")
+                self.close_ssh()
 
                 if attempt + 1 == retry:
                     raise e
 
-                # Fail, try again
-                log.warning(
-                    f"SCP upload fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
-                )
-                # traceback.print_exc()
                 time.sleep(retry_interval)
-                pass
 
             finally:
-                try:
-                    ftp_client.close()
-                except Exception as e:
-                    log.debug(f"Exception in ftp_client.close(): {e}")
+                if ftp_client:
+                    try:
+                        ftp_client.close()
+                    except Exception as e:
+                        log.debug(f"Exception in ftp_client.close(): {e}")
 
-                try:
-                    client.close()
-                except Exception as e:
-                    log.debug(f"Exception in client.close(): {e}")
-
-                try:
-                    bastion_channel.close()
-                except Exception as e:
-                    log.debug("Exception in bastion_channel.close(): {e}")
-
-                try:
-                    bastion.close()
-                except Exception as e:
-                    log.debug("Exception in bastion.close(): {e}")
-
-        raise Exception("scp upload failed")
+        raise SSHError("scp upload failed")
 
     def download_file_thread(
         self,
@@ -2080,48 +2087,10 @@ class Node(TemplateMixin):
         if self.get_fablib_manager().get_log_level() == logging.DEBUG:
             start = time.time()
 
-        # Get and test src and management_ips
-        management_ip = str(self.get_management_ip())
-        if self.validIPAddress(management_ip) == "IPv4":
-            src_addr = ("0.0.0.0", 22)
-
-        elif self.validIPAddress(management_ip) == "IPv6":
-            src_addr = ("0:0:0:0:0:0:0:0", 22)
-        else:
-            raise Exception(f"download_file: Management IP Invalid: {management_ip}")
-        dest_addr = (management_ip, 22)
-
         for attempt in range(int(retry)):
+            ftp_client = None
             try:
-                key = self.get_paramiko_key(
-                    private_key_file=self.get_private_key_file(),
-                    get_private_key_passphrase=self.get_private_key_file(),
-                )
-
-                bastion = paramiko.SSHClient()
-                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                bastion.connect(
-                    self.get_fablib_manager().get_bastion_host(),
-                    username=self.get_fablib_manager().get_bastion_username(),
-                    key_filename=self.get_fablib_manager().get_bastion_key_location(),
-                )
-
-                bastion_transport = bastion.get_transport()
-                bastion_channel = bastion_transport.open_channel(
-                    "direct-tcpip", dest_addr, src_addr
-                )
-
-                client = paramiko.SSHClient()
-                client.load_system_host_keys()
-                client.set_missing_host_key_policy(paramiko.MissingHostKeyPolicy())
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-                client.connect(
-                    management_ip,
-                    username=self.username,
-                    pkey=key,
-                    sock=bastion_channel,
-                )
+                bastion, client = self._get_ssh_connection()
 
                 ftp_client = client.open_sftp()
                 file_attributes = ftp_client.get(remote_file_path, local_file_path)
@@ -2139,40 +2108,21 @@ class Node(TemplateMixin):
                 log.warning(
                     f"Exception in download_file() (attempt #{attempt} of {retry}): {e}"
                 )
+                self.close_ssh()
 
                 if attempt + 1 == retry:
                     raise e
 
-                # Fail, try again
-                log.warning(
-                    f"SCP download fail. Slice: {self.get_slice().get_name()}, Node: {self.get_name()}, trying again. Exception: {e}"
-                )
-                # traceback.print_exc()
                 time.sleep(retry_interval)
-                pass
 
             finally:
-                try:
-                    ftp_client.close()
-                except Exception as e:
-                    log.debug(f"Exception in ftp_client.close(): {e}")
+                if ftp_client:
+                    try:
+                        ftp_client.close()
+                    except Exception as e:
+                        log.debug(f"Exception in ftp_client.close(): {e}")
 
-                try:
-                    client.close()
-                except Exception as e:
-                    log.debug(f"Exception in client.close(): {e}")
-
-                try:
-                    bastion_channel.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion_channel.close(): {e}")
-
-                try:
-                    bastion.close()
-                except Exception as e:
-                    log.debug(f"Exception in bastion.close(): {e}")
-
-        raise Exception("scp download failed")
+        raise SSHError("scp download failed")
 
     def upload_directory_thread(
         self,
@@ -3598,7 +3548,9 @@ class Node(TemplateMixin):
         elif self.validIPAddress(ip) == "IPv6":
             ip_command = "sudo ip -6"
         else:
-            raise Exception(f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string.")
+            raise ValidationError(
+                f"Invalid IP {ip}. IP must be vaild IPv4 or IPv6 string."
+            )
 
         # Bring up base iface
         log.debug(
@@ -3859,7 +3811,7 @@ class Node(TemplateMixin):
             return Component(self, self.get_fim().components[name])
         except Exception as e:
             log.error(e, exc_info=True)
-            raise Exception(f"Storage not found: {name}")
+            raise ResourceNotFoundError(f"Storage not found: {name}")
 
     def add_storage(self, name: str, auto_mount: bool = False) -> Component:
         """
@@ -4446,7 +4398,7 @@ class Node(TemplateMixin):
         log.info(f"HOST CPU INFO: {cpu_info.get(self.get_host())}")
         log.info(f"Instance CPU INFO: {cpu_info.get(self.get_instance_name())}")
         if cpu_info == "Failed":
-            raise Exception("POA Failed to get CPU INFO")
+            raise SliceStateError("POA Failed to get CPU INFO")
         return cpu_info
 
     def get_numa_info(self) -> dict:
@@ -4483,7 +4435,7 @@ class Node(TemplateMixin):
         log.info(f"HOST Numa INFO: {numa_info.get(self.get_host())}")
         log.info(f"Instance Numa INFO: {numa_info.get(self.get_instance_name())}")
         if numa_info == "Failed":
-            raise Exception("POA Failed to get Numa INFO")
+            raise SliceStateError("POA Failed to get Numa INFO")
         return numa_info
 
     def pin_cpu(self, component_name: str, cpu_range_to_pin: str = None):
@@ -4505,7 +4457,7 @@ class Node(TemplateMixin):
 
                 set_cpu = set(allocated_cpu_list)
                 if any(item not in set_cpu for item in result_list):
-                    raise Exception(
+                    raise ValidationError(
                         f"Requested CPU range outside the Cores allocated {self.get_cores()} to Node"
                     )
 
@@ -4544,7 +4496,7 @@ class Node(TemplateMixin):
                 log.warning(msg)
                 number_of_cpus_to_pin = number_of_available_cpus
                 if not number_of_cpus_to_pin:
-                    raise Exception(msg)
+                    raise ValidationError(msg)
 
             # Build the VCPU to CPU Mapping
             vcpu_cpu_map = []
@@ -4562,7 +4514,7 @@ class Node(TemplateMixin):
             # Issue POA
             status = self.poa(operation="cpupin", vcpu_cpu_map=vcpu_cpu_map)
             if status == "Failed":
-                raise Exception("POA Failed")
+                raise SliceStateError("POA Failed")
             log.info(f"CPU Pinning complete for node: {self.get_name()}")
         except Exception as e:
             log.error(traceback.format_exc())
@@ -4624,7 +4576,7 @@ class Node(TemplateMixin):
         """
         status = self.poa(operation="reboot")
         if status == "Failed":
-            raise Exception("Failed to reboot the server")
+            raise SliceStateError("Failed to reboot the server")
         log.info(f"Node: {self.get_name()} rebooted!")
 
     def numa_tune(self):
@@ -4684,7 +4636,7 @@ class Node(TemplateMixin):
             requested_vm_memory = self.get_ram() * 1024
 
             if requested_vm_memory > total_available_memory:
-                raise Exception(
+                raise ValidationError(
                     f"Cannot numatune VM to Numa Nodes {numa_nodes}; requested memory "
                     f"{requested_vm_memory} exceeds available: {total_available_memory}"
                 )
@@ -4812,7 +4764,7 @@ class Node(TemplateMixin):
                         break
 
             if not found:
-                raise Exception(f"Sliver key: {sliver_key_name} not found!")
+                raise ResourceNotFoundError(f"Sliver key: {sliver_key_name} not found!")
             sliver_public_key = f"{found['ssh_key_type']} {found['public_key']}"
 
         operation = "addkey" if not remove else "removekey"
@@ -4821,11 +4773,12 @@ class Node(TemplateMixin):
 
         status = self.poa(operation=operation, keys=[key_dict])
         if status == "Failed":
-            raise Exception(f"Failed to {operation} the node")
+            raise SliceStateError(f"Failed to {operation} the node")
         log.info(f"{operation} to the node {self.get_name()} successful!")
         print(f"{operation} to the node {self.get_name()} successful!")
 
     def update(self, fim_node: FimNode):
+        """Update this node with a new FIM node and refresh components/interfaces."""
         if fim_node:
             self.fim_node = fim_node
             self._invalidate_cache()

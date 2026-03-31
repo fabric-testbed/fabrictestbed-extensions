@@ -281,7 +281,9 @@ class Config:
             token_location = self.get_token_location()
             if not os.path.exists(token_location):
                 raise ConfigException(
-                    f"Token file does not exist, please provide the token at location: {token_location}!"
+                    f"Token file not found at: {token_location}\n"
+                    f"  Set FABRIC_TOKEN_LOCATION env var or token_location in fabric_rc.\n"
+                    f"  To get a token, run: fabric-cli tokens create"
                 )
 
     def __load_configuration(self, file_path, **kwargs):
@@ -390,15 +392,17 @@ class Config:
                 elif attr_props.get(Constants.DEFAULT) is None and partial:
                     continue
                 else:
-                    errors.append(f"{attr} is not set")
+                    env_var = attr_props.get(Constants.ENV_VAR, "N/A")
+                    errors.append(
+                        f"  - {attr}: set env var {env_var} or add to fabric_rc"
+                    )
 
         if errors:
             self.log.error(f"Failing Config: {self.runtime_config}")
-            # TODO: define custom exception class to report errors,
-            # and emit a more helpful error message with hints about
-            # setting up environment variables or configuration file.
-            raise AttributeError(
-                f"Error initializing {self.__class__.__name__}: {errors}"
+            hints = "\n".join(errors)
+            raise ConfigException(
+                f"Missing required configuration:\n{hints}\n"
+                f"  Run 'fabric-cli configure setup' for interactive setup."
             )
 
     def get_config(self) -> Dict[str, str]:

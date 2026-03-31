@@ -57,6 +57,8 @@ test = [
   "isort==5.*",
   "tox==4.*",
   "pytest",
+  "pytest-xdist",
+  "pytest-timeout",
   "coverage[toml]"
 ]
 
@@ -75,6 +77,24 @@ addopts = "-ra -q"
 # tests will require some manual setup (namely token acquisition), and
 # thus we can't run them on CI.
 testpaths = ["tests/unit/"]
+markers = [
+  "smoke: P0 smoke tests - basic connectivity and single-node lifecycle",
+  "network: P1 network tests - L2Bridge, L2PTP, L2STS, FABNet",
+  "compute: P1 compute tests - multi-node, parallel SSH, images",
+  "lifecycle: P1 lifecycle tests - modify, renew, delete, state transitions",
+  "error: P1 error handling tests - bad inputs, timeouts",
+  "storage: P2 storage tests - CephFS mount and read/write",
+  "component: P2 component tests - GPU, SmartNIC, FPGA, NVMe",
+  "p0: Priority 0 - must pass",
+  "p1: Priority 1 - important",
+  "p2: Priority 2 - nice to have",
+  "slow: Tests that take more than 10 minutes",
+  "gpu: Tests requiring GPU resources",
+  "smartnic: Tests requiring SmartNIC resources",
+  "fpga: Tests requiring FPGA resources",
+  "nvme: Tests requiring NVMe resources",
+  "cephfs: Tests requiring CephFS storage",
+]
 
 [tool.interrogate]
 ignore-init-method = true

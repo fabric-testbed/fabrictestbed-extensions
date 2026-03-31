@@ -318,3 +318,30 @@ class Constants:
     FABRIC_USER = "fabric"
     FABRIC_METADATA_URL = "https://raw.githubusercontent.com/fabric-testbed/fabric-global-metadata/{}/metadata"
     LOCAL_CACHE_DIR = os.path.expanduser("~/.fabric/cache")
+
+    # ── Slice State Constants ──────────────────────────────────────────
+    # State machine:
+    #   Nascent → Configuring → StableOK / StableError
+    #   StableOK → (modify) → ModifyOK / ModifyError
+    #   StableOK → (close) → Closing → Dead
+    #   AllocatedOK = future-dated slice (not yet active)
+    SLICE_STATE_NASCENT = "Nascent"
+    SLICE_STATE_CONFIGURING = "Configuring"
+    SLICE_STATE_STABLE_OK = "StableOK"
+    SLICE_STATE_STABLE_ERROR = "StableError"
+    SLICE_STATE_MODIFY_OK = "ModifyOK"
+    SLICE_STATE_MODIFY_ERROR = "ModifyError"
+    SLICE_STATE_ALLOCATED_OK = "AllocatedOK"
+    SLICE_STATE_ALLOCATED_ERROR = "AllocatedError"
+    SLICE_STATE_CLOSING = "Closing"
+    SLICE_STATE_DEAD = "Dead"
+
+    SLICE_STATES_STABLE = {
+        SLICE_STATE_STABLE_OK,
+        SLICE_STATE_STABLE_ERROR,
+        SLICE_STATE_MODIFY_OK,
+        SLICE_STATE_MODIFY_ERROR,
+        SLICE_STATE_CLOSING,
+        SLICE_STATE_DEAD,
+    }
+    SLICE_STATES_TERMINAL = {SLICE_STATE_CLOSING, SLICE_STATE_DEAD}
