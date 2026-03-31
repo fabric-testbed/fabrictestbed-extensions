@@ -19,7 +19,7 @@ dependencies = [
     "ipywidgets",
     "ipyleaflet",
     "tabulate",
-    "fabrictestbed==2.0.3",
+    "fabrictestbed==2.0.4",
     "paramiko",
     "jinja2>=3.0.0",
     "pandas",
