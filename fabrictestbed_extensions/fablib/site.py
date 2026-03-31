@@ -49,6 +49,8 @@ log = logging.getLogger("fablib")
 
 
 class ResourceConstants:
+    """Constants and mappings for FABRIC resource attributes and display names."""
+
     attribute_name_mappings = {
         Constants.CORES.lower(): {
             Constants.NON_PRETTY_NAME: Constants.CORES.lower(),
@@ -169,6 +171,8 @@ class ResourceConstants:
 
 
 class Switch:
+    """Represents a network switch at a FABRIC site."""
+
     def __init__(self, switch: node.Node, fablib_manager):
         """
         Initialize a Switch object.
@@ -227,6 +231,8 @@ class Switch:
 
 
 class Host:
+    """Represents a compute host at a FABRIC site."""
+
     def __init__(self, host: node.Node, state: str, ptp: bool, fablib_manager):
         """
         Initialize a Host object.
@@ -692,6 +698,8 @@ class Host:
 
 
 class Site:
+    """Represents a FABRIC testbed site with its hosts, switches, and resources."""
+
     def __init__(self, site: CompositeNode, fablib_manager):
         """
         Initialize a Site object.

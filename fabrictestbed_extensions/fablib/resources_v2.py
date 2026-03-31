@@ -365,13 +365,16 @@ class ResourcesV2:
     # ----------------------------------------------------------
 
     def get_fablib_manager(self):
+        """Return the associated FablibManager instance."""
         return self.fablib_manager
 
     def get_topology(self) -> AdvertisedTopology:
+        """Return the FIM advertised topology, loading lazily if needed."""
         self._ensure_topology_loaded()
         return self._topology
 
     def get_fim(self) -> AdvertisedTopology:
+        """Return the FIM advertised topology (alias for get_topology)."""
         self._ensure_topology_loaded()
         return self._topology
 
@@ -380,9 +383,11 @@ class ResourcesV2:
     # ----------------------------------------------------------
 
     def get_site_names(self) -> List[str]:
+        """Return a list of all available site names."""
         return list(self._sites_by_name.keys())
 
     def get_site(self, site_name: str) -> Optional[Dict[str, Any]]:
+        """Return the site data dict for the given site name, or None."""
         return self._sites_by_name.get(site_name)
 
     # ----------------------------------------------------------
@@ -390,39 +395,50 @@ class ResourcesV2:
     # ----------------------------------------------------------
 
     def _site_val(self, site_name: str, key: str, default: Any = 0) -> Any:
+        """Return a value from a site's data dict, or the default."""
         s = self._sites_by_name.get(site_name)
         if not s:
             return default
         return s.get(key, default)
 
     def get_core_capacity(self, site_name: str) -> int:
+        """Return total core capacity for the given site."""
         return self._site_val(site_name, "cores_capacity", 0)
 
     def get_core_allocated(self, site_name: str) -> int:
+        """Return allocated core count for the given site."""
         return self._site_val(site_name, "cores_allocated", 0)
 
     def get_core_available(self, site_name: str) -> int:
+        """Return available core count for the given site."""
         return self._site_val(site_name, "cores_available", 0)
 
     def get_ram_capacity(self, site_name: str) -> int:
+        """Return total RAM capacity (GB) for the given site."""
         return self._site_val(site_name, "ram_capacity", 0)
 
     def get_ram_allocated(self, site_name: str) -> int:
+        """Return allocated RAM (GB) for the given site."""
         return self._site_val(site_name, "ram_allocated", 0)
 
     def get_ram_available(self, site_name: str) -> int:
+        """Return available RAM (GB) for the given site."""
         return self._site_val(site_name, "ram_available", 0)
 
     def get_disk_capacity(self, site_name: str) -> int:
+        """Return total disk capacity (GB) for the given site."""
         return self._site_val(site_name, "disk_capacity", 0)
 
     def get_disk_allocated(self, site_name: str) -> int:
+        """Return allocated disk (GB) for the given site."""
         return self._site_val(site_name, "disk_allocated", 0)
 
     def get_disk_available(self, site_name: str) -> int:
+        """Return available disk (GB) for the given site."""
         return self._site_val(site_name, "disk_available", 0)
 
     def get_component_capacity(self, site_name: str, component_model_name: str) -> int:
+        """Return total capacity of a component type at the given site."""
         s = self._sites_by_name.get(site_name)
         if not s:
             return 0
@@ -431,6 +447,7 @@ class ResourcesV2:
         )
 
     def get_component_allocated(self, site_name: str, component_model_name: str) -> int:
+        """Return allocated count of a component type at the given site."""
         s = self._sites_by_name.get(site_name)
         if not s:
             return 0
@@ -441,6 +458,7 @@ class ResourcesV2:
         )
 
     def get_component_available(self, site_name: str, component_model_name: str) -> int:
+        """Return available count of a component type at the given site."""
         s = self._sites_by_name.get(site_name)
         if not s:
             return 0
@@ -451,15 +469,18 @@ class ResourcesV2:
         )
 
     def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
+        """Return (latitude, longitude) for the given site."""
         loc = self._site_val(site_name, "location", None)
         if isinstance(loc, (list, tuple)) and len(loc) == 2:
             return (loc[0], loc[1])
         return (0.0, 0.0)
 
     def get_location_postal(self, site_name: str) -> str:
+        """Return the postal address for the given site."""
         return self._site_val(site_name, "address", "") or ""
 
     def get_ptp_capable(self, site_name: str) -> bool:
+        """Return whether the given site supports PTP time synchronization."""
         return bool(self._site_val(site_name, "ptp_capable", False))
 
     # ----------------------------------------------------------
@@ -486,6 +507,7 @@ class ResourcesV2:
     # ----------------------------------------------------------
 
     def __str__(self) -> str:
+        """Return a text table of all sites."""
         return self.list_sites(output="text", quiet=True)
 
     def list_sites(
@@ -496,6 +518,7 @@ class ResourcesV2:
         filter_function: Optional[Callable] = None,
         pretty_names: bool = True,
     ) -> object:
+        """List all sites as a table."""
         table = []
         for site_data in self._sites_data:
             row = _site_summary_to_v1_dict(site_data)
@@ -520,6 +543,7 @@ class ResourcesV2:
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
+        """Show detailed information for a single site."""
         site_data = self._sites_by_name.get(site_name)
         if not site_data:
             return f"Site '{site_name}' not found."
@@ -546,6 +570,7 @@ class ResourcesV2:
         filter_function: Optional[Callable] = None,
         pretty_names: bool = True,
     ) -> object:
+        """List all hosts as a table."""
         table = [_host_summary_to_v1_dict(h) for h in self._hosts_data]
 
         return Utils.list_table(
@@ -568,6 +593,7 @@ class ResourcesV2:
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
+        """Show detailed information for a single host."""
         for h in self._hosts_data:
             if h.get("name") == host_name:
                 data = _host_summary_to_v1_dict(h)
@@ -595,6 +621,7 @@ class ResourcesV2:
         filter_function: Optional[Callable] = None,
         pretty_names: bool = True,
     ) -> object:
+        """List all inter-site links as a table."""
         return Utils.list_table(
             self._links_data,
             fields=fields,
@@ -613,6 +640,7 @@ class ResourcesV2:
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
+        """Show detailed information for a single link."""
         for link in self._links_data:
             if link.get("name") == link_name:
                 return Utils.show_table(
@@ -626,6 +654,7 @@ class ResourcesV2:
         return f"Link '{link_name}' not found."
 
     def get_link_list(self) -> List[str]:
+        """Return a list of all link names."""
         return [l.get("name") for l in self._links_data if l.get("name")]
 
     # ----------------------------------------------------------
@@ -640,6 +669,7 @@ class ResourcesV2:
         filter_function: Optional[Callable] = None,
         pretty_names: bool = True,
     ) -> object:
+        """List all facility ports as a table."""
         return Utils.list_table(
             self._facility_ports_data,
             fields=fields,
@@ -658,6 +688,7 @@ class ResourcesV2:
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
+        """Show detailed information for a single facility port."""
         for fp in self._facility_ports_data:
             if fp.get("name") == fp_name:
                 return Utils.show_table(
@@ -679,6 +710,7 @@ class ResourcesV2:
     def validate_requested_ero_path(
         self, source: str, end: str, hops: List[str]
     ) -> None:
+        """Validate an ERO path between source and end via the given hops."""
         self._ensure_topology_loaded()
 
         hop_sites_node_ids = []

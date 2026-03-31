@@ -178,6 +178,7 @@ class Slice:
         self._storage_cluster: Optional[str] = None
 
     def get_fablib_manager(self) -> FablibManagerV2:
+        """Return the associated FablibManager instance."""
         return self.fablib_manager
 
     def __str__(self):
@@ -575,6 +576,7 @@ class Slice:
 
     @staticmethod
     def get_pretty_names_dict():
+        """Return the mapping of field names to display-friendly names."""
         return {
             "id": "ID",
             "name": "Name",
@@ -620,6 +622,7 @@ class Slice:
         return rtn_dict
 
     def get_template_context(self, base_object=None, skip=None):
+        """Build a Jinja2 template context for this slice and its nodes."""
         if skip is None:
             skip = []
 

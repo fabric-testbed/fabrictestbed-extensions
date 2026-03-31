@@ -753,6 +753,7 @@ def _print_facility_ports(fp_list):
 @click.option("-v", "--verbose", is_flag=True)
 @click.pass_context
 def cli(ctx, verbose):
+    """FABRIC testbed command-line interface."""
     ctx.ensure_object(dict)
     ctx.obj["VERBOSE"] = verbose
 

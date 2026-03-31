@@ -42,6 +42,8 @@ from fabrictestbed.util.constants import Constants
 
 
 class AbcUtils(ABC):
+    """Abstract base class for FABRIC utility helpers."""
+
     bastion_username = os.environ["FABRIC_BASTION_USERNAME"]
 
     bastion_public_addr = os.environ["FABRIC_BASTION_HOST"]
@@ -56,6 +58,7 @@ class AbcUtils(ABC):
 
     @staticmethod
     def create_slice_manager():
+        """Create and initialize a SliceManager from environment variables."""
         credmgr_host = os.environ[Constants.FABRIC_CREDMGR_HOST]
         orchestrator_host = os.environ[Constants.FABRIC_ORCHESTRATOR_HOST]
         project_id = os.environ[Constants.FABRIC_PROJECT_ID]

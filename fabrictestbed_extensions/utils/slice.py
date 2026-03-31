@@ -32,6 +32,8 @@ from .abc_utils import AbcUtils
 
 
 class SliceUtils(AbcUtils):
+    """Utility helpers for FABRIC slice operations."""
+
     def __init__(self):
         """
         Constructor
@@ -41,6 +43,7 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def delete_all_with_substring(string):
+        """Delete all slices whose name contains the given substring."""
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(
@@ -61,6 +64,7 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def delete_all():
+        """Delete all active slices."""
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(
@@ -79,6 +83,7 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def delete_slice(slice_name=None, slice_id=None):
+        """Delete a slice by name or ID."""
         slice = SliceUtils.get_slice(slice_name=slice_name, slice_id=slice_id)
 
         slice_manager = AbcUtils.create_slice_manager()
@@ -91,6 +96,7 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def get_slice(slice_name=None, slice_id=None, slice_manager=None):
+        """Get a slice object by name or ID."""
         if not slice_manager:
             slice_manager = AbcUtils.create_slice_manager()
 
@@ -121,6 +127,7 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def list_all_slices(excludes=[SliceState.Dead, SliceState.Closing]):
+        """List all slices, excluding Dead and Closing by default."""
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(
@@ -146,6 +153,7 @@ class SliceUtils(AbcUtils):
 
     @staticmethod
     def get_slice_error(slice_id):
+        """Get error details for slivers in the given slice."""
         slice_manager = AbcUtils.create_slice_manager()
 
         return_status, slices = slice_manager.slices(
@@ -189,6 +197,7 @@ class SliceUtils(AbcUtils):
     def wait_for_slice(
         slice_name=None, slice_id=None, timeout=360, interval=10, progress=False
     ):
+        """Wait for a slice to reach a stable state, polling at the given interval."""
         slice_manager = AbcUtils.create_slice_manager()
         slice = SliceUtils.get_slice(slice_name=slice_name, slice_id=slice_id)
 

@@ -59,6 +59,8 @@ log = logging.getLogger("fablib")
 
 
 class Interface(TemplateMixin):
+    """Represents a network interface on a FABRIC node."""
+
     _show_title = "Interface"
 
     CONFIGURED = "configured"

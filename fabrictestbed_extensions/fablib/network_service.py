@@ -852,6 +852,7 @@ class NetworkService(TemplateMixin):
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def generate_template_context(self, skip: List[str] = None):
+        """Build a Jinja2 template context dict for this network service."""
         context = self.toDict(skip=skip)
         context["interfaces"] = []
 

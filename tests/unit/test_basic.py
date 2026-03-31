@@ -52,12 +52,14 @@ class FablibManagerTests(unittest.TestCase):
     def test_fablib_manager_test_only_cm_host(self):
         os.environ[Constants.FABRIC_CREDMGR_HOST] = "dummy"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.DUMMY_TOKEN_LOCATION
-        self.assertRaises(ConnectionError, FablibManager, fabric_rc=self.rcfile.name)
+        # required_check fails because project_id and bastion_username have no defaults
+        self.assertRaises(ConfigException, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_orchestrator_host(self):
         os.environ[Constants.FABRIC_ORCHESTRATOR_HOST] = "dummy"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.DUMMY_TOKEN_LOCATION
-        self.assertRaises(ConnectionError, FablibManager, fabric_rc=self.rcfile.name)
+        # required_check fails because project_id and bastion_username have no defaults
+        self.assertRaises(ConfigException, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_only_project_id(self):
         os.environ[Constants.FABRIC_PROJECT_ID] = "dummy"
@@ -82,22 +84,18 @@ class FablibManagerTests(unittest.TestCase):
         self.assertRaises(ConfigException, FablibManager, fabric_rc=self.rcfile.name)
 
     def test_fablib_manager_test_with_dummy_token(self):
-        # TODO: That FablibManager() calls build_slice_manager()
-        # complicates writing a test for it.  It eventually makes a
-        # network call to credential manager API, but it is not right
-        # for a unit test to do such a thing.  We could probably
-        # somehow mock a CM here?
-
-        # set all required env vars.
+        # With all required env vars set and a valid token file,
+        # FablibManager should construct successfully (manager is lazy).
+        # The actual network call happens on first get_manager() access.
         for var in self.required_env_vars:
             os.environ[var] = "dummy"
 
-        # '.invalid' is an invalid host per RFC 6761, so this test
-        # must fail without ever making a successful network call.
         os.environ[Constants.FABRIC_CREDMGR_HOST] = ".invalid"
         os.environ[Constants.FABRIC_TOKEN_LOCATION] = self.DUMMY_TOKEN_LOCATION
 
-        self.assertRaises(ValueError, FablibManager, fabric_rc=self.rcfile.name)
+        # Should not raise — manager construction is now lazy
+        fablib = FablibManager(fabric_rc=self.rcfile.name)
+        self.assertIsNotNone(fablib)
 
     def test_fablib_manager_with_empty_config(self):
         # Check that an empty configuration file will cause
@@ -127,11 +125,11 @@ class FablibManagerTests(unittest.TestCase):
         # Check that the error is what we expected.
         self.assertIsInstance(ctx.exception, ConfigException)
 
-        # Check that the error message is what we expected: the only
-        # error should be about missing token.
+        # Check that the error message indicates token file not found.
+        # The default token location won't exist in the test environment.
         self.assertTrue(
-            "Token file does not exist, please provide the token at location"
-            in str(ctx.exception)
+            "Token file not found at" in str(ctx.exception),
+            f"Unexpected error message: {ctx.exception}",
         )
 
     def test_FablibManager_no_config_no_env_var(self):
@@ -146,39 +144,40 @@ class FablibManagerTests(unittest.TestCase):
 
     def test_FablibManager_no_config_no_env_var_token_location(self):
         # Instantiate Fablib manager without any config or environment variables
+        # but with a token_location. required_check() fails because
+        # project_id and bastion_username have no defaults and aren't set.
 
-        with self.assertRaises(Exception) as ctx:
+        with self.assertRaises(ConfigException) as ctx:
             FablibManager(
                 token_location=self.DUMMY_TOKEN_LOCATION,
                 fabric_rc=self.FABRIC_RC_LOCATION,
             )
 
-        # Check that the error is what we expected.
-        self.assertIsInstance(ctx.exception, Exception)
-
-        # Check that the error message indicates an authentication failure.
-        # V1 raised "Unable to validate provided token: ValidateCode.UNPARSABLE_TOKEN/..."
-        # V2 sends the token to the Core API which returns a 401 Unauthorized.
+        # Check that the error message indicates missing config.
         error_msg = str(ctx.exception)
         self.assertTrue(
-            "UNPARSABLE_TOKEN" in error_msg
-            or "401" in error_msg
-            or "Unauthorized" in error_msg,
+            "project_id" in error_msg or "bastion_username" in error_msg,
             f"Unexpected error message: {error_msg}",
         )
 
     def test_FablibManager_no_config_no_env_var_token_location_offline(self):
         # Instantiate Fablib manager without any config or environment variables
+        # Even in offline mode, required_check() validates that project_id
+        # and bastion_username are present.
 
-        with self.assertRaises(AttributeError) as ctx:
+        with self.assertRaises(ConfigException) as ctx:
             FablibManager(
                 token_location=self.DUMMY_TOKEN_LOCATION,
                 offline=True,
                 fabric_rc=self.FABRIC_RC_LOCATION,
             )
 
-        # Check that the error is what we expected.
-        self.assertIsInstance(ctx.exception, AttributeError)
+        # Check that the error message indicates missing config.
+        error_msg = str(ctx.exception)
+        self.assertTrue(
+            "project_id" in error_msg or "bastion_username" in error_msg,
+            f"Unexpected error message: {error_msg}",
+        )
 
     def test_FablibManager_no_config_no_env_var_token_location_offline_project_id_bastion_user_name(
         self,

@@ -99,6 +99,7 @@ class TestSliceSliverMap(unittest.TestCase):
         s.update_slivers_count = 0
         s.slivers = []
         s._sliver_map = {}
+        s.slice_name = "test-slice"
 
         # Mock the API call
         mock_sliver1 = MagicMock()

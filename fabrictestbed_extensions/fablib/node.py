@@ -391,6 +391,7 @@ class Node(TemplateMixin):
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def generate_template_context(self, skip: List[str] = None):
+        """Build a Jinja2 template context dict for this node."""
         if skip is None:
             skip = []
         if "ssh_command" not in skip:
@@ -4777,6 +4778,7 @@ class Node(TemplateMixin):
         print(f"{operation} to the node {self.get_name()} successful!")
 
     def update(self, fim_node: FimNode):
+        """Update this node with a new FIM node and refresh components/interfaces."""
         if fim_node:
             self.fim_node = fim_node
             self._invalidate_cache()
