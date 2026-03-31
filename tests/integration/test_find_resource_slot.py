@@ -46,9 +46,7 @@ class FindResourceSlotIntegrationTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.fablib = FablibManager(
-            fabric_rc="/Users/kthare10/work/fabric_config_dev/fabric_rc"
-        )
+        cls.fablib = FablibManager()
         cls.fablib.show_config()
 
         # Pick two random sites for all tests to use
