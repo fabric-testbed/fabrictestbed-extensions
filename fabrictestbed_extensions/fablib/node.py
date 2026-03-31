@@ -2902,6 +2902,66 @@ class Node(TemplateMixin):
         """
         self.execute("sudo netplan apply", quiet=True)
 
+    def _netplan_add_route(self, ifname: str, subnet: str, gateway: str):
+        """
+        Add a route to an existing netplan config for a FABRIC interface.
+
+        Reads the current netplan YAML, merges the new route entry, and
+        rewrites the file.  Idempotent — skips if the exact route already
+        exists.  Does NOT call ``_netplan_apply()``; the caller is
+        responsible (to allow batching multiple routes).
+
+        :param ifname: OS interface name (e.g. ``enp7s0`` or ``enp7s0.100``)
+        :param subnet: destination network in CIDR notation (e.g. ``10.128.0.0/10``)
+        :param gateway: next-hop gateway address (e.g. ``10.130.1.1``)
+        """
+        import yaml
+
+        safe_name = ifname.replace(".", "-")
+        config_file = f"/etc/netplan/90-fabric-{safe_name}.yaml"
+
+        # Read existing config
+        stdout, stderr = self.execute(f"sudo cat {config_file}", quiet=True)
+        config = yaml.safe_load(stdout)
+        if not config or "network" not in config:
+            raise RuntimeError(
+                f"No valid netplan config found at {config_file} for {ifname}"
+            )
+
+        network = config["network"]
+
+        # Find interface config block in ethernets or vlans
+        iface_config = None
+        for section in ("ethernets", "vlans"):
+            if section in network and ifname in network[section]:
+                iface_config = network[section][ifname]
+                break
+
+        if iface_config is None:
+            raise RuntimeError(f"Interface {ifname} not found in {config_file}")
+
+        # Build the new route entry
+        new_route = {"to": subnet, "via": gateway}
+
+        # Ensure routes list exists
+        if "routes" not in iface_config:
+            iface_config["routes"] = []
+
+        # Skip if exact route already present (idempotent)
+        for existing in iface_config["routes"]:
+            if existing.get("to") == subnet and existing.get("via") == gateway:
+                return
+
+        iface_config["routes"].append(new_route)
+
+        # Rewrite the config file
+        yaml_str = yaml.dump(config, default_flow_style=False)
+        yaml_str_escaped = yaml_str.replace("'", "'\\''")
+        self.execute(
+            f"echo '{yaml_str_escaped}' | sudo tee {config_file} > /dev/null && sudo chmod 600 {config_file}",
+            quiet=True,
+        )
+
     def _netplan_remove_config(self, ifname: str):
         """
         Remove a netplan config file for a FABRIC interface.
@@ -3000,6 +3060,10 @@ class Node(TemplateMixin):
         backend = self._get_effective_backend(persistent)
         ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
 
+        # Auto-discover interface from gateway when not explicitly provided
+        if interface is None:
+            interface = self._find_interface_for_gateway(gateway)
+
         if backend == "nmcli" and interface is not None:
             try:
                 device_name = interface.get_device_name()
@@ -3009,6 +3073,14 @@ class Node(TemplateMixin):
                 return
             except Exception as e:
                 log.warning(f"nmcli route add failed, falling back to ip: {e}")
+        elif backend == "netplan" and interface is not None:
+            try:
+                device_name = interface.get_device_name()
+                self._netplan_add_route(device_name, str(subnet), str(gateway))
+                self._netplan_apply()
+                return
+            except Exception as e:
+                log.warning(f"netplan route add failed, falling back to ip: {e}")
 
         # Legacy ip route add
         self._ip_route_add_legacy(subnet, gateway)
@@ -3997,6 +4069,8 @@ class Node(TemplateMixin):
             This method is for fablib internal use, and will be made private in the future.
         """
         routes = self.get_routes()
+        backend = self._get_effective_backend()
+        needs_netplan_apply = False
 
         for route in routes:
             try:
@@ -4013,14 +4087,29 @@ class Node(TemplateMixin):
                 net_name = route["subnet"].split(".")[0]
                 subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
 
-            # Find the interface for this gateway so nmcli can add the route
-            # to the correct connection
+            # Find the interface for this gateway so the route can be added
+            # to the correct connection/config
             target_iface = self._find_interface_for_gateway(next_hop)
+
+            if backend == "netplan" and target_iface is not None:
+                try:
+                    device_name = target_iface.get_device_name()
+                    self._netplan_add_route(device_name, str(subnet), str(next_hop))
+                    needs_netplan_apply = True
+                    continue
+                except Exception as e:
+                    log.warning(
+                        f"netplan route add failed for {subnet}, falling back: {e}"
+                    )
+
             self.ip_route_add(
                 subnet=ipaddress.ip_network(subnet),
                 gateway=next_hop,
                 interface=target_iface,
             )
+
+        if needs_netplan_apply:
+            self._netplan_apply()
 
     def run_post_boot_tasks(self, log_dir: str = "."):
         """
@@ -4246,9 +4335,7 @@ class Node(TemplateMixin):
         :return: State of POA or Dictionary containing the info, in
                  case of INFO POAs
         """
-        retry = 20
-
-        status, poa_info = (
+        result = (
             self.get_fablib_manager()
             .get_manager()
             .poa(
@@ -4261,46 +4348,11 @@ class Node(TemplateMixin):
             )
         )
 
-        if status != Status.OK:
-            raise SliceStateError(f"Failed to issue POA - {operation} Error {poa_info}")
-
         log.info(
-            f"POA {poa_info[0].poa_id}/{operation} submitted for {self.get_reservation_id()}/{self.get_name()}"
+            f"POA {operation} completed for {self.get_reservation_id()}/{self.get_name()}: {type(result)}"
         )
 
-        poa_state = "Nascent"
-        poa_info_status = None
-        attempt = 0
-        states = ["Success", "Failed"]
-        while poa_state not in states and attempt < retry:
-            status, poa_info_status = (
-                self.get_fablib_manager()
-                .get_manager()
-                .get_poas(poa_id=poa_info[0].poa_id)
-            )
-            attempt += 1
-            if status != Status.OK:
-                raise SliceStateError(
-                    f"Failed to get POA Status - {poa_info[0].poa_id}/{operation} Error {poa_info_status}"
-                )
-            poa_state = poa_info_status[0].state
-            log.info(
-                f"Waiting for POA {poa_info[0].poa_id}/{operation} to complete! "
-                f"Checking POA Status (attempt #{attempt} of {retry}) current state: {poa_state}"
-            )
-            if poa_state in states:
-                break
-            time.sleep(10)
-
-        if poa_info_status[0].state == "Failed":
-            raise SliceStateError(
-                f"POA - {poa_info[0].poa_id}/{operation} failed with error: - {poa_info_status[0].error}"
-            )
-
-        if poa_info_status[0].info.get(operation) is not None:
-            return poa_info_status[0].info.get(operation)
-        else:
-            return poa_info_status[0].state
+        return result
 
     def get_cpu_info(self) -> dict:
         """
@@ -4505,7 +4557,7 @@ class Node(TemplateMixin):
 
             # Perform the PCI rescan
             status = self.poa(operation="rescan", bdf=bdfs)
-            if not status or status.lower() == "failed":
+            if isinstance(status, str) and status.lower() == "failed":
                 raise RuntimeError("PCI rescan operation (POA) failed.")
 
             log.info(f"PCI rescan completed successfully for node: {self.get_name()}")

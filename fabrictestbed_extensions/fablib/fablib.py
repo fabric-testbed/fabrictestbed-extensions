@@ -84,7 +84,7 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import paramiko
 
@@ -1380,6 +1380,166 @@ Host * !bastion.fabric-testbed.net
             end=end,
             avoid=avoid,
             includes=includes,
+        )
+
+    @staticmethod
+    def _slice_to_resources(slice_object: "Slice") -> List[Dict[str, Any]]:
+        """
+        Convert an unsubmitted Slice object into the resource requirement
+        list expected by the find-slot API.
+
+        :param slice_object: a fablib Slice built with add_node/add_l2network/etc.
+        :return: list of resource dicts
+        """
+        resources: List[Dict[str, Any]] = []
+
+        # --- Compute nodes: aggregate by site ---
+        site_compute: Dict[str, Dict[str, Any]] = {}
+        for node in slice_object.get_nodes():
+            site = node.get_site()
+            if site not in site_compute:
+                site_compute[site] = {
+                    "type": "compute",
+                    "site": site,
+                    "cores": 0,
+                    "ram": 0,
+                    "disk": 0,
+                    "components": {},
+                }
+            entry = site_compute[site]
+            entry["cores"] += node.get_requested_cores() or 0
+            entry["ram"] += node.get_requested_ram() or 0
+            entry["disk"] += node.get_requested_disk() or 0
+            for comp in node.get_components():
+                comp_type = comp.get_type()
+                fim_model = comp.get_fim_model()
+                if comp_type and fim_model:
+                    # Build key matching the orchestrator summary format:
+                    # "{ComponentType}-{model}" e.g. "SmartNIC-ConnectX-5"
+                    comp_key = f"{comp_type}-{fim_model}"
+                    entry["components"][comp_key] = (
+                        entry["components"].get(comp_key, 0) + 1
+                    )
+        for entry in site_compute.values():
+            if not entry["components"]:
+                del entry["components"]
+            resources.append(entry)
+
+        # --- L2 inter-site links ---
+        for net in slice_object.get_l2networks():
+            net_type = net.get_type()
+            if net_type not in ("L2PTP", "L2STS"):
+                continue
+            ifaces = net.get_interfaces()
+            sites = list({iface.get_site() for iface in ifaces})
+            if len(sites) == 2:
+                resources.append(
+                    {
+                        "type": "link",
+                        "site_a": sites[0],
+                        "site_b": sites[1],
+                        "bandwidth": net.get_bandwidth(),
+                    }
+                )
+
+        # --- Facility ports ---
+        for fp in slice_object.get_facilities():
+            resources.append(
+                {
+                    "type": "facility_port",
+                    "name": fp.get_name(),
+                    "site": fp.get_site(),
+                    "vlans": len(fp.get_interfaces()),
+                }
+            )
+
+        return resources
+
+    @staticmethod
+    def _normalize_component_keys(
+        resources: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Normalize component keys in resource dicts to match the format used
+        by the reports DB: ``"{ComponentType}-{Model}"`` (e.g.
+        ``"SmartNIC-ConnectX-5"``).
+
+        Accepts both the DB format and the fablib model name format
+        (e.g. ``"NIC_ConnectX_5"``).  Unknown keys are passed through
+        unchanged.
+        """
+        from fim.slivers.component_catalog import ComponentModelTypeMap
+
+        from fabrictestbed_extensions.fablib.component import Component
+
+        # Build fablib-name -> DB-key mapping lazily
+        mapping: Dict[str, str] = {}
+        for fablib_name, model_type in Component.component_model_map.items():
+            catalog_entry = ComponentModelTypeMap.get(model_type)
+            if catalog_entry:
+                db_key = f"{catalog_entry['Type']}-{catalog_entry['Model']}"
+                mapping[fablib_name] = db_key
+
+        result = []
+        for r in resources:
+            if r.get("type") == "compute" and r.get("components"):
+                normalized = {}
+                for key, count in r["components"].items():
+                    normalized[mapping.get(key, key)] = count
+                r = {**r, "components": normalized}
+            result.append(r)
+        return result
+
+    def find_resource_slot(
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
+        duration: int,
+        slice: Optional["Slice"] = None,
+        resources: Optional[List[Dict[str, Any]]] = None,
+        max_results: int = 1,
+    ) -> Dict[str, Any]:
+        """
+        Find time windows where requested resources are simultaneously available.
+
+        Resources can be specified either by passing an unsubmitted Slice object
+        (built with ``add_node()``, ``add_l2network()``, etc.) or by providing a
+        raw list of resource requirement dicts.
+
+        When providing ``resources`` directly, component keys in the
+        ``"components"`` dict can use either the fablib model name
+        (e.g. ``"NIC_ConnectX_5"``) or the calendar/DB format
+        (e.g. ``"SmartNIC-ConnectX-5"``); they will be normalized
+        automatically.
+
+        :param start: start of the search window (UTC)
+        :param end: end of the search window (UTC)
+        :param duration: required slot length in hours
+        :param slice: an unsubmitted Slice whose topology will be converted
+            to resource requirements automatically
+        :param resources: list of resource requirement dicts (advanced usage)
+        :param max_results: maximum number of slots to return
+        :return: dict with slot results
+        :raises ValueError: if both or neither of ``slice`` and ``resources``
+            are provided
+        """
+        if (slice is None) == (resources is None):
+            raise ValueError("Exactly one of 'slice' or 'resources' must be provided.")
+
+        if slice is not None:
+            resources = self._slice_to_resources(slice)
+
+        resources = self._normalize_component_keys(resources)
+
+        if start and end and (end - start) < datetime.timedelta(minutes=60):
+            raise Exception("Time range should be at least 60 minutes long!")
+
+        return self.get_manager().find_resource_slot(
+            start=start,
+            end=end,
+            duration=duration,
+            resources=resources,
+            max_results=max_results,
         )
 
     def get_random_site(
