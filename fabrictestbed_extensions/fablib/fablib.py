@@ -1498,6 +1498,7 @@ Host * !bastion.fabric-testbed.net
         slice: Optional["Slice"] = None,
         resources: Optional[List[Dict[str, Any]]] = None,
         max_results: int = 1,
+        use_live_data: bool = False,
     ) -> Dict[str, Any]:
         """
         Find time windows where requested resources are simultaneously available.
@@ -1519,6 +1520,8 @@ Host * !bastion.fabric-testbed.net
             to resource requirements automatically
         :param resources: list of resource requirement dicts (advanced usage)
         :param max_results: maximum number of slots to return
+        :param use_live_data: when True, use live orchestrator data instead of
+            Reports API for more accurate, real-time availability
         :return: dict with slot results
         :raises ValueError: if both or neither of ``slice`` and ``resources``
             are provided
@@ -1534,12 +1537,101 @@ Host * !bastion.fabric-testbed.net
         if start and end and (end - start) < datetime.timedelta(minutes=60):
             raise Exception("Time range should be at least 60 minutes long!")
 
+        if start and end and (end - start).days > 30:
+            raise Exception("Search range must not exceed 30 days")
+
         return self.get_manager().find_resource_slot(
             start=start,
             end=end,
             duration=duration,
             resources=resources,
             max_results=max_results,
+            use_live_data=use_live_data,
+        )
+
+    def resources_calendar(
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
+        interval: str = "day",
+        site: Optional[List[str]] = None,
+        host: Optional[List[str]] = None,
+        exclude_site: Optional[List[str]] = None,
+        exclude_host: Optional[List[str]] = None,
+        output: Optional[str] = None,
+        fields: Optional[List[str]] = None,
+        quiet: bool = False,
+        filter_function=None,
+    ):
+        """
+        Fetch and display resource availability calendar over time slots.
+
+        There are several output options: ``"text"``, ``"pandas"``, and
+        ``"json"`` that determine the format of the output that is
+        returned and (optionally) displayed/printed.
+
+        output:  ``'text'``: string formatted with tabulate
+                 ``'pandas'``: pandas dataframe (default in Jupyter)
+                 ``'json'``: string in json format
+                 ``'list'``: raw list of dicts
+
+        fields: list of columns to include in the output table.
+
+        Example: ``fields=['Date', 'Site', 'Cores (avail/cap)', 'RAM GB (avail/cap)']``
+
+        filter_function: A lambda to filter the flattened rows.
+
+        Example: ``filter_function=lambda r: r['Site'] == 'RENC'``
+
+        :param start: start of the calendar window (UTC)
+        :type start: datetime.datetime
+        :param end: end of the calendar window (UTC)
+        :type end: datetime.datetime
+        :param interval: time slot granularity: hour, day, or week
+        :type interval: str
+        :param site: list of site names to include
+        :type site: list[str]
+        :param host: list of host names to include
+        :type host: list[str]
+        :param exclude_site: list of site names to exclude
+        :type exclude_site: list[str]
+        :param exclude_host: list of host names to exclude
+        :type exclude_host: list[str]
+        :param output: output format
+        :type output: str
+        :param fields: list of fields (table columns) to show
+        :type fields: list[str]
+        :param quiet: True to suppress printing/display
+        :type quiet: bool
+        :param filter_function: lambda function to filter rows
+        :type filter_function: callable
+        :return: table in format specified by output parameter
+        """
+        if start and end and start >= end:
+            raise ValueError("start must be before end")
+
+        if start and end and (end - start) < datetime.timedelta(minutes=60):
+            raise Exception("Time range should be at least 60 minutes long!")
+
+        if start and end and (end - start).days > 30:
+            raise Exception("Search range must not exceed 30 days")
+
+        calendar_data = self.get_manager().resources_calendar(
+            start=start,
+            end=end,
+            interval=interval,
+            site=site,
+            host=host,
+            exclude_site=exclude_site,
+            exclude_host=exclude_host,
+        )
+
+        return Utils.show_calendar(
+            calendar_data,
+            fields=fields,
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
         )
 
     def get_random_site(

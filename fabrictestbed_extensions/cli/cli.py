@@ -1716,6 +1716,198 @@ def facility_ports(
         raise click.ClickException(str(e))
 
 
+@resources.command()
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--location",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ~/work/fabric_config/id_token.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--start",
+    required=True,
+    help="Start date (ISO 8601, e.g. 2025-07-01T00:00:00+00:00)",
+)
+@click.option(
+    "--end", required=True, help="End date (ISO 8601, e.g. 2025-07-04T00:00:00+00:00)"
+)
+@click.option(
+    "--interval",
+    type=click.Choice(["hour", "day", "week"], case_sensitive=False),
+    default="day",
+    help="Time slot granularity (default: day)",
+)
+@click.option("--site", multiple=True, help="Include site (repeatable)")
+@click.option("--host", multiple=True, help="Include host (repeatable)")
+@click.option("--exclude-site", multiple=True, help="Exclude site (repeatable)")
+@click.option("--exclude-host", multiple=True, help="Exclude host (repeatable)")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Output JSON instead of table",
+)
+@click.pass_context
+def calendar(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    location: str,
+    projectid: str,
+    scope: str,
+    start: str,
+    end: str,
+    interval: str,
+    site: tuple,
+    host: tuple,
+    exclude_site: tuple,
+    exclude_host: tuple,
+    as_json: bool,
+):
+    """Resource availability calendar
+
+    Show resource capacity, allocation, and availability per site/host
+    over time slots. Use --interval to control granularity.
+    """
+    try:
+        from datetime import datetime, timezone
+
+        start_dt = datetime.fromisoformat(start)
+        end_dt = datetime.fromisoformat(end)
+
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=location,
+        )
+        fablib.resources_calendar(
+            start=start_dt,
+            end=end_dt,
+            interval=interval,
+            site=list(site) or None,
+            host=list(host) or None,
+            exclude_site=list(exclude_site) or None,
+            exclude_host=list(exclude_host) or None,
+            output="json" if as_json else "text",
+        )
+    except click.ClickException:
+        raise
+    except Exception as e:
+        raise click.ClickException(str(e))
+
+
+@resources.command(name="find-slot")
+@click.option("--cmhost", help="Credential Manager host", default=None)
+@click.option("--ochost", help="Orchestrator host", default=None)
+@click.option(
+    "--location",
+    help="Path to token JSON file (defaults to $FABRIC_TOKEN_LOCATION or ~/work/fabric_config/id_token.json)",
+    default=None,
+)
+@click.option("--projectid", default=None, help="Project UUID")
+@click.option(
+    "--scope",
+    type=click.Choice(["cf", "mf", "all"], case_sensitive=False),
+    default="all",
+    help="Token scope",
+)
+@click.option(
+    "--start",
+    required=True,
+    help="Start date (ISO 8601, e.g. 2025-07-01T00:00:00+00:00)",
+)
+@click.option(
+    "--end", required=True, help="End date (ISO 8601, e.g. 2025-07-04T00:00:00+00:00)"
+)
+@click.option("--duration", required=True, type=int, help="Consecutive hours needed")
+@click.option(
+    "--resources",
+    "resources_json",
+    required=True,
+    help='JSON array of resource requests, e.g. \'[{"type":"compute","site":"RENC","cores":2,"ram":8,"disk":10}]\'',
+)
+@click.option(
+    "--max-results",
+    type=int,
+    default=1,
+    help="Maximum number of windows to return (default: 1)",
+)
+@click.option(
+    "--live",
+    "use_live_data",
+    is_flag=True,
+    default=False,
+    help="Use live orchestrator data instead of Reports API",
+)
+@click.pass_context
+def find_slot(
+    ctx,
+    cmhost: str,
+    ochost: str,
+    location: str,
+    projectid: str,
+    scope: str,
+    start: str,
+    end: str,
+    duration: int,
+    resources_json: str,
+    max_results: int,
+    use_live_data: bool,
+):
+    """Find available time slots
+
+    Find time windows where all requested resources are simultaneously
+    available. Use --live for real-time data from the orchestrator instead
+    of the Reports API.
+    """
+    try:
+        import json as json_mod
+        from datetime import datetime, timezone
+
+        start_dt = datetime.fromisoformat(start)
+        end_dt = datetime.fromisoformat(end)
+
+        try:
+            resources_list = json_mod.loads(resources_json)
+        except json_mod.JSONDecodeError as exc:
+            raise click.ClickException(f"Invalid JSON for --resources: {exc}")
+
+        if not isinstance(resources_list, list):
+            raise click.ClickException("--resources must be a JSON array")
+
+        fablib = __get_fablib_manager(
+            cm_host=cmhost,
+            oc_host=ochost,
+            project_id=projectid,
+            scope=scope,
+            token_location=location,
+        )
+        result = fablib.find_resource_slot(
+            start=start_dt,
+            end=end_dt,
+            duration=duration,
+            resources=resources_list,
+            max_results=max_results,
+            use_live_data=use_live_data,
+        )
+        click.echo(json_mod.dumps(result, indent=2))
+    except click.ClickException:
+        raise
+    except Exception as e:
+        raise click.ClickException(str(e))
+
+
 @click.group()
 @click.pass_context
 def configure(ctx):

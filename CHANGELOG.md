@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add `find_resource_slot()` to FablibManager for finding time windows where specific resources are simultaneously available
+- Add resources_calendar() to FablibManager for querying resource availability over time
 
 ### Changed
 - Remove unused dependencies: `numpy`, `recordclass`, duplicate `ipycytoscape`
