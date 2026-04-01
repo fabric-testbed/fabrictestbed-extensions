@@ -1731,8 +1731,14 @@ def facility_ports(
     default="all",
     help="Token scope",
 )
-@click.option("--start", required=True, help="Start date (ISO 8601, e.g. 2025-07-01T00:00:00+00:00)")
-@click.option("--end", required=True, help="End date (ISO 8601, e.g. 2025-07-04T00:00:00+00:00)")
+@click.option(
+    "--start",
+    required=True,
+    help="Start date (ISO 8601, e.g. 2025-07-01T00:00:00+00:00)",
+)
+@click.option(
+    "--end", required=True, help="End date (ISO 8601, e.g. 2025-07-04T00:00:00+00:00)"
+)
 @click.option(
     "--interval",
     type=click.Choice(["hour", "day", "week"], case_sensitive=False),
@@ -1816,14 +1822,34 @@ def calendar(
     default="all",
     help="Token scope",
 )
-@click.option("--start", required=True, help="Start date (ISO 8601, e.g. 2025-07-01T00:00:00+00:00)")
-@click.option("--end", required=True, help="End date (ISO 8601, e.g. 2025-07-04T00:00:00+00:00)")
+@click.option(
+    "--start",
+    required=True,
+    help="Start date (ISO 8601, e.g. 2025-07-01T00:00:00+00:00)",
+)
+@click.option(
+    "--end", required=True, help="End date (ISO 8601, e.g. 2025-07-04T00:00:00+00:00)"
+)
 @click.option("--duration", required=True, type=int, help="Consecutive hours needed")
-@click.option("--resources", "resources_json", required=True,
-              help='JSON array of resource requests, e.g. \'[{"type":"compute","site":"RENC","cores":2,"ram":8,"disk":10}]\'')
-@click.option("--max-results", type=int, default=1, help="Maximum number of windows to return (default: 1)")
-@click.option("--live", "use_live_data", is_flag=True, default=False,
-              help="Use live orchestrator data instead of Reports API")
+@click.option(
+    "--resources",
+    "resources_json",
+    required=True,
+    help='JSON array of resource requests, e.g. \'[{"type":"compute","site":"RENC","cores":2,"ram":8,"disk":10}]\'',
+)
+@click.option(
+    "--max-results",
+    type=int,
+    default=1,
+    help="Maximum number of windows to return (default: 1)",
+)
+@click.option(
+    "--live",
+    "use_live_data",
+    is_flag=True,
+    default=False,
+    help="Use live orchestrator data instead of Reports API",
+)
 @click.pass_context
 def find_slot(
     ctx,
