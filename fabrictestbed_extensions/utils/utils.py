@@ -717,6 +717,85 @@ class Utils:
         return table
 
     @staticmethod
+    def calendar_to_rows(
+        calendar_data: Dict[str, Any],
+    ) -> List[Dict[str, str]]:
+        """
+        Flatten a ``resources_calendar()`` response into tabular rows.
+
+        Each row represents one (time-slot, site) pair with columns for
+        date, site name, cores, ram, disk (as ``"available/capacity"``),
+        and one column per component type.
+
+        :param calendar_data: The dict returned by
+            ``fablib.resources_calendar()`` or the orchestrator.
+        :return: A list of row dicts suitable for :py:meth:`list_table`.
+        :rtype: list[dict]
+        """
+        interval = calendar_data.get("interval", "day")
+        rows: List[Dict[str, str]] = []
+        for slot in calendar_data.get("data", []):
+            start = slot.get("start", "")
+            end = slot.get("end", "")
+            # Show date only for day/week, datetime for hour
+            if interval in ("day", "week"):
+                slot_label = start[:10] if len(start) >= 10 else start
+            else:
+                slot_label = start[:16] if len(start) >= 16 else start
+
+            for site in slot.get("sites", []):
+                row: Dict[str, str] = {
+                    "Date": slot_label,
+                    "Site": site.get("name", ""),
+                    "Cores (avail/cap)": f"{site.get('cores_available', '—')}/{site.get('cores_capacity', '—')}",
+                    "RAM GB (avail/cap)": f"{site.get('ram_available', '—')}/{site.get('ram_capacity', '—')}",
+                    "Disk GB (avail/cap)": f"{site.get('disk_available', '—')}/{site.get('disk_capacity', '—')}",
+                }
+                for comp_name, comp in site.get("components", {}).items():
+                    cap = comp.get("capacity", 0)
+                    if cap and cap > 0:
+                        row[comp_name] = f"{comp.get('available', 0)}/{cap}"
+                rows.append(row)
+        return rows
+
+    @staticmethod
+    def show_calendar(
+        calendar_data: Dict[str, Any],
+        fields: Union[List[str], None] = None,
+        output: Union[str, None] = None,
+        quiet: bool = False,
+        filter_function: Union[Callable[[Iterable], bool], None] = None,
+    ):
+        """
+        Display a resource calendar as a formatted table.
+
+        Converts the ``resources_calendar()`` response into rows and
+        renders them using :py:meth:`list_table`.
+
+        :param calendar_data: The dict returned by
+            ``fablib.resources_calendar()``.
+        :param fields: Columns to include.  ``None`` means all.
+        :param output: Output format (``"text"``, ``"json"``,
+            ``"pandas"``, ``"list"``).  Auto-detected if ``None``.
+        :param quiet: Suppress printing when ``True``.
+        :param filter_function: A lambda to filter the flattened rows.
+        :return: Formatted table.
+        """
+        rows = Utils.calendar_to_rows(calendar_data)
+        interval = calendar_data.get("interval", "day")
+        q_start = calendar_data.get("query_start", "")[:10]
+        q_end = calendar_data.get("query_end", "")[:10]
+        title = f"Resource Calendar ({interval} interval, {q_start} to {q_end})"
+        return Utils.list_table(
+            data=rows,
+            fields=fields,
+            title=title,
+            output=output,
+            quiet=quiet,
+            filter_function=filter_function,
+        )
+
+    @staticmethod
     def _determine_output_type(output: Union[str, None]) -> str:
         """
         Determine the output format based on the running environment.
