@@ -719,20 +719,26 @@ class Utils:
     @staticmethod
     def calendar_to_rows(
         calendar_data: Dict[str, Any],
+        show: str = "all",
     ) -> List[Dict[str, str]]:
         """
         Flatten a ``resources_calendar()`` response into tabular rows.
 
-        Each row represents one (time-slot, site) pair with columns for
-        date, site name, cores, ram, disk (as ``"available/capacity"``),
+        Each row represents one (time-slot, site/host) pair with columns for
+        date, site or host name, cores, ram, disk (as ``"available/capacity"``),
         and one column per component type.
 
         :param calendar_data: The dict returned by
             ``fablib.resources_calendar()`` or the orchestrator.
+        :param show: Which resource types to include: ``"sites"``,
+            ``"hosts"``, or ``"all"`` (default).
+        :type show: str
         :return: A list of row dicts suitable for :py:meth:`list_table`.
         :rtype: list[dict]
         """
         interval = calendar_data.get("interval", "day")
+        include_sites = show in ("all", "sites")
+        include_hosts = show in ("all", "hosts")
         rows: List[Dict[str, str]] = []
         for slot in calendar_data.get("data", []):
             start = slot.get("start", "")
@@ -743,24 +749,43 @@ class Utils:
             else:
                 slot_label = start[:16] if len(start) >= 16 else start
 
-            for site in slot.get("sites", []):
-                row: Dict[str, str] = {
-                    "Date": slot_label,
-                    "Site": site.get("name", ""),
-                    "Cores (avail/cap)": f"{site.get('cores_available', '—')}/{site.get('cores_capacity', '—')}",
-                    "RAM GB (avail/cap)": f"{site.get('ram_available', '—')}/{site.get('ram_capacity', '—')}",
-                    "Disk GB (avail/cap)": f"{site.get('disk_available', '—')}/{site.get('disk_capacity', '—')}",
-                }
-                for comp_name, comp in site.get("components", {}).items():
-                    cap = comp.get("capacity", 0)
-                    if cap and cap > 0:
-                        row[comp_name] = f"{comp.get('available', 0)}/{cap}"
-                rows.append(row)
+            if include_sites:
+                for site in slot.get("sites", []):
+                    row: Dict[str, str] = {
+                        "Date": slot_label,
+                        "Type": "site",
+                        "Name": site.get("name", ""),
+                        "Cores (avail/cap)": f"{site.get('cores_available', '—')}/{site.get('cores_capacity', '—')}",
+                        "RAM GB (avail/cap)": f"{site.get('ram_available', '—')}/{site.get('ram_capacity', '—')}",
+                        "Disk GB (avail/cap)": f"{site.get('disk_available', '—')}/{site.get('disk_capacity', '—')}",
+                    }
+                    for comp_name, comp in site.get("components", {}).items():
+                        cap = comp.get("capacity", 0)
+                        if cap and cap > 0:
+                            row[comp_name] = f"{comp.get('available', 0)}/{cap}"
+                    rows.append(row)
+
+            if include_hosts:
+                for host in slot.get("hosts", []):
+                    row: Dict[str, str] = {
+                        "Date": slot_label,
+                        "Type": "host",
+                        "Name": host.get("name", ""),
+                        "Cores (avail/cap)": f"{host.get('cores_available', '—')}/{host.get('cores_capacity', '—')}",
+                        "RAM GB (avail/cap)": f"{host.get('ram_available', '—')}/{host.get('ram_capacity', '—')}",
+                        "Disk GB (avail/cap)": f"{host.get('disk_available', '—')}/{host.get('disk_capacity', '—')}",
+                    }
+                    for comp_name, comp in host.get("components", {}).items():
+                        cap = comp.get("capacity", 0)
+                        if cap and cap > 0:
+                            row[comp_name] = f"{comp.get('available', 0)}/{cap}"
+                    rows.append(row)
         return rows
 
     @staticmethod
     def show_calendar(
         calendar_data: Dict[str, Any],
+        show: str = "all",
         fields: Union[List[str], None] = None,
         output: Union[str, None] = None,
         quiet: bool = False,
@@ -774,6 +799,9 @@ class Utils:
 
         :param calendar_data: The dict returned by
             ``fablib.resources_calendar()``.
+        :param show: Which resource types to include: ``"sites"``,
+            ``"hosts"``, or ``"all"`` (default).
+        :type show: str
         :param fields: Columns to include.  ``None`` means all.
         :param output: Output format (``"text"``, ``"json"``,
             ``"pandas"``, ``"list"``).  Auto-detected if ``None``.
@@ -781,7 +809,7 @@ class Utils:
         :param filter_function: A lambda to filter the flattened rows.
         :return: Formatted table.
         """
-        rows = Utils.calendar_to_rows(calendar_data)
+        rows = Utils.calendar_to_rows(calendar_data, show=show)
         interval = calendar_data.get("interval", "day")
         q_start = calendar_data.get("query_start", "")[:10]
         q_end = calendar_data.get("query_end", "")[:10]

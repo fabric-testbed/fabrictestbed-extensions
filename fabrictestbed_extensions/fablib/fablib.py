@@ -1558,6 +1558,7 @@ Host * !bastion.fabric-testbed.net
         host: Optional[List[str]] = None,
         exclude_site: Optional[List[str]] = None,
         exclude_host: Optional[List[str]] = None,
+        show: str = "all",
         output: Optional[str] = None,
         fields: Optional[List[str]] = None,
         quiet: bool = False,
@@ -1577,11 +1578,11 @@ Host * !bastion.fabric-testbed.net
 
         fields: list of columns to include in the output table.
 
-        Example: ``fields=['Date', 'Site', 'Cores (avail/cap)', 'RAM GB (avail/cap)']``
+        Example: ``fields=['Date', 'Name', 'Cores (avail/cap)', 'RAM GB (avail/cap)']``
 
         filter_function: A lambda to filter the flattened rows.
 
-        Example: ``filter_function=lambda r: r['Site'] == 'RENC'``
+        Example: ``filter_function=lambda r: r['Name'] == 'RENC'``
 
         :param start: start of the calendar window (UTC)
         :type start: datetime.datetime
@@ -1597,6 +1598,9 @@ Host * !bastion.fabric-testbed.net
         :type exclude_site: list[str]
         :param exclude_host: list of host names to exclude
         :type exclude_host: list[str]
+        :param show: which resource types to display: ``"sites"``,
+            ``"hosts"``, or ``"all"`` (default)
+        :type show: str
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
@@ -1628,6 +1632,7 @@ Host * !bastion.fabric-testbed.net
 
         return Utils.show_calendar(
             calendar_data,
+            show=show,
             fields=fields,
             output=output,
             quiet=quiet,
