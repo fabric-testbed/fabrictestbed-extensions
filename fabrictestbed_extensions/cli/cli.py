@@ -1750,6 +1750,12 @@ def facility_ports(
 @click.option("--exclude-site", multiple=True, help="Exclude site (repeatable)")
 @click.option("--exclude-host", multiple=True, help="Exclude host (repeatable)")
 @click.option(
+    "--show",
+    type=click.Choice(["all", "sites", "hosts"], case_sensitive=False),
+    default="all",
+    help="Show sites, hosts, or all (default: all)",
+)
+@click.option(
     "--json",
     "as_json",
     is_flag=True,
@@ -1771,6 +1777,7 @@ def calendar(
     host: tuple,
     exclude_site: tuple,
     exclude_host: tuple,
+    show: str,
     as_json: bool,
 ):
     """Resource availability calendar
@@ -1799,6 +1806,7 @@ def calendar(
             host=list(host) or None,
             exclude_site=list(exclude_site) or None,
             exclude_host=list(exclude_host) or None,
+            show=show,
             output="json" if as_json else "text",
         )
     except click.ClickException:
