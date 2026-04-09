@@ -334,11 +334,87 @@ class ResourcesV2:
             valid = set(self._sites_by_name.keys())
             self._hosts_data = [h for h in self._hosts_data if h.get("site") in valid]
 
+        # ---- recompute site-level totals from host data ----
+        # The orchestrator's site-level aggregates can be inaccurate
+        # (e.g. reporting 0 cores_available while hosts have cores).
+        # Recompute from hosts which have accurate per-node data.
+        if self._hosts_data:
+            self._recompute_site_totals_from_hosts()
+
         # ---- links ----
         self._links_data = summary.get("links") or []
 
         # ---- facility ports ----
         self._facility_ports_data = summary.get("facility_ports") or []
+
+    def _recompute_site_totals_from_hosts(self) -> None:
+        """Recompute site-level resource totals by aggregating from host data.
+
+        The orchestrator's site-level aggregates can be inaccurate (e.g.
+        reporting ``cores_available=0`` while individual hosts have cores).
+        This method sums host-level values for each site and patches the
+        site dicts in-place so all downstream accessors return correct data.
+        """
+        from collections import defaultdict
+
+        # Group hosts by site
+        hosts_by_site: dict = defaultdict(list)
+        for h in self._hosts_data:
+            site_name = h.get("site")
+            if site_name:
+                hosts_by_site[site_name].append(h)
+
+        for site_name, site_hosts in hosts_by_site.items():
+            site = self._sites_by_name.get(site_name)
+            if site is None:
+                continue
+
+            # Sum host-level resources
+            cores_cap = sum((h.get("cores_capacity", 0) or 0) for h in site_hosts)
+            cores_alloc = sum((h.get("cores_allocated", 0) or 0) for h in site_hosts)
+            cores_avail = sum((h.get("cores_available", 0) or 0) for h in site_hosts)
+            ram_cap = sum((h.get("ram_capacity", 0) or 0) for h in site_hosts)
+            ram_alloc = sum((h.get("ram_allocated", 0) or 0) for h in site_hosts)
+            ram_avail = sum((h.get("ram_available", 0) or 0) for h in site_hosts)
+            disk_cap = sum((h.get("disk_capacity", 0) or 0) for h in site_hosts)
+            disk_alloc = sum((h.get("disk_allocated", 0) or 0) for h in site_hosts)
+            disk_avail = sum((h.get("disk_available", 0) or 0) for h in site_hosts)
+
+            # Aggregate components from hosts
+            comp_agg: dict = defaultdict(
+                lambda: {"capacity": 0, "allocated": 0, "available": 0}
+            )
+            for h in site_hosts:
+                for comp_key, comp_val in (h.get("components") or {}).items():
+                    if isinstance(comp_val, dict):
+                        comp_agg[comp_key]["capacity"] += (
+                            comp_val.get("capacity", 0) or 0
+                        )
+                        comp_agg[comp_key]["allocated"] += (
+                            comp_val.get("allocated", 0) or 0
+                        )
+                        comp_agg[comp_key]["available"] += (
+                            comp_val.get("available", 0) or 0
+                        )
+
+            # Patch site dict in-place
+            site["cores_capacity"] = cores_cap
+            site["cores_allocated"] = cores_alloc
+            site["cores_available"] = cores_avail
+            site["ram_capacity"] = ram_cap
+            site["ram_allocated"] = ram_alloc
+            site["ram_available"] = ram_avail
+            site["disk_capacity"] = disk_cap
+            site["disk_allocated"] = disk_alloc
+            site["disk_available"] = disk_avail
+
+            # Merge component data: host-aggregated values take precedence
+            existing_comps = site.get("components") or {}
+            merged = dict(comp_agg)
+            for ck, cv in existing_comps.items():
+                if ck not in merged and isinstance(cv, dict):
+                    merged[ck] = cv
+            site["components"] = dict(merged)
 
     # ----------------------------------------------------------
     # Lazy FIM topology (for ERO validation only)
