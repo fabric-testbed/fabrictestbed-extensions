@@ -381,13 +381,21 @@ class ResourcesV2:
             disk_avail = sum((h.get("disk_available", 0) or 0) for h in site_hosts)
 
             # Aggregate components from hosts
-            comp_agg: dict = defaultdict(lambda: {"capacity": 0, "allocated": 0, "available": 0})
+            comp_agg: dict = defaultdict(
+                lambda: {"capacity": 0, "allocated": 0, "available": 0}
+            )
             for h in site_hosts:
                 for comp_key, comp_val in (h.get("components") or {}).items():
                     if isinstance(comp_val, dict):
-                        comp_agg[comp_key]["capacity"] += comp_val.get("capacity", 0) or 0
-                        comp_agg[comp_key]["allocated"] += comp_val.get("allocated", 0) or 0
-                        comp_agg[comp_key]["available"] += comp_val.get("available", 0) or 0
+                        comp_agg[comp_key]["capacity"] += (
+                            comp_val.get("capacity", 0) or 0
+                        )
+                        comp_agg[comp_key]["allocated"] += (
+                            comp_val.get("allocated", 0) or 0
+                        )
+                        comp_agg[comp_key]["available"] += (
+                            comp_val.get("available", 0) or 0
+                        )
 
             # Patch site dict in-place
             site["cores_capacity"] = cores_cap
