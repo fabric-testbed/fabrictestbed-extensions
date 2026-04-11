@@ -1115,21 +1115,33 @@ class Node(TemplateMixin):
         """
         Gets the management IP of the node (IPv6).
 
+        First attempts to read from the FIM topology. If the topology
+        does not have the IP populated, falls back to the sliver info
+        returned by the orchestrator.
+
         Results are cached for performance.
 
         :return: management IP
         :rtype: String
         """
         if self._cached_management_ip is None:
+            # Try FIM topology first
             try:
-                self._cached_management_ip = str(self.fim_node.management_ip)
+                ip = self.fim_node.management_ip
+                if ip is not None:
+                    self._cached_management_ip = str(ip)
             except Exception:
-                self._cached_management_ip = None
-        return (
-            self._cached_management_ip
-            if self._cached_management_ip is not None
-            else None
-        )
+                pass
+
+            # Fall back to sliver info from orchestrator
+            if self._cached_management_ip is None:
+                try:
+                    if self.sliver is not None and self.sliver.mgmt_ip:
+                        self._cached_management_ip = str(self.sliver.mgmt_ip)
+                except Exception:
+                    pass
+
+        return self._cached_management_ip
 
     def get_username(self) -> str:
         """
