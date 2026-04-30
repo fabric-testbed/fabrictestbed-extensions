@@ -9,15 +9,11 @@ import re
 import shutil
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from IPython.core.display_functions import display
 
 if TYPE_CHECKING:
-    from fabric_cf.orchestrator.swagger_client import (
-        Slice as OrchestratorSlice,
-        Sliver as OrchestratorSliver,
-    )
     from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 from concurrent import futures
@@ -29,7 +25,6 @@ from fabrictestbed.slice_editor import Node as FimNode
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
-from fabrictestbed_extensions.fablib.site import Host, Site
 from fabrictestbed_extensions.fablib.slice import Slice
 from fabrictestbed_extensions.fablib.validator import NodeValidator
 
@@ -83,7 +78,7 @@ class CrinkleAnalyzer(Node):
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: list[str] = [],
+        avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
     ):
@@ -174,7 +169,7 @@ class CrinkleMonitor(Node):
             net_name: str = None,
             net_type: str = None,
             cnet_iface: Interface = None,
-            iface_mappings: dict[str, tuple[str, Interface, bool, int]] = {},
+            iface_mappings: Dict[str, Tuple[str, Interface, bool, int]] = {},
             monitor_id: int = None,
         ):
             self.port_nums = port_nums
@@ -196,14 +191,14 @@ class CrinkleMonitor(Node):
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
         self.get_monitor_data()
-        self.creation_data: list[tuple[str, str, str, bool, int]] = []  # see MonNetData
+        self.creation_data: List[Tuple[str, str, str, bool, int]] = []  # see MonNetData
 
     @staticmethod
     def new_node(
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: list[str] = [],
+        avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
     ):
@@ -340,10 +335,10 @@ class CrinkleSlice(Slice):
         analyzer_name: str = None,
     ):
         super().__init__(fablib_manager=fablib_manager, name=name, user_only=user_only)
-        self.monitors: dict[str, CrinkleMonitor] = {}
+        self.monitors: Dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
-        self.cnets: dict[str, NetworkService] = {}
+        self.cnets: Dict[str, NetworkService] = {}
         self.analyzer_cnet: NetworkService = None
         self.analyzer_iface: Interface = None
         self.pcaps_dir = pcaps_dir
@@ -513,7 +508,7 @@ class CrinkleSlice(Slice):
         instance_type: str = None,
         host: str = None,
         user_data: dict = {},
-        avoid: list[str] = [],
+        avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
     ) -> CrinkleAnalyzer:
@@ -634,7 +629,7 @@ class CrinkleSlice(Slice):
         instance_type: str = None,
         host: str = None,
         user_data: dict = {},
-        avoid: list[str] = [],
+        avoid: List[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
         net_name: str = None,
@@ -737,12 +732,12 @@ class CrinkleSlice(Slice):
     def add_monitored_l2network(
         self,
         name: str = None,
-        interfaces: list[Interface] = [],
+        interfaces: List[Interface] = [],
         type: str = None,
         subnet: ipaddress = None,
         gateway: ipaddress = None,
         user_data: dict = {},
-        sinks: list[Interface] = [],
+        sinks: List[Interface] = [],
         host: str = None,
         site: str = None,
         cores: int = CrinkleMonitor.default_cores,
@@ -780,7 +775,7 @@ class CrinkleSlice(Slice):
 
         :param sinks: A set of interfaces which should have any Crinkle packet trailers
             stripped before entering.
-        :type sinks: list[Interface]
+        :type sinks: List[Interface]
 
         :return: a new CrinkleMonitor
         :rtype: CrinkleMonitor
@@ -889,11 +884,11 @@ class CrinkleSlice(Slice):
         logging.info(
             "Allocating Monitors and their connected Nodes to different worker hosts"
         )
-        sitenames_to_sites: dict[str, Site] = {}
-        sitenames_to_hosts: dict[str, dict[str, Host]] = {}
+        sitenames_to_sites: Dict[str, Dict[str, Any]] = {}
+        sitenames_to_hosts: Dict[str, Dict[str, Dict[str, Any]]] = {}
         fablib = self.get_fablib_manager()
         fabresources = fablib.get_resources()
-        validated_nodes: dict[str, bool] = {}
+        validated_nodes: Dict[str, bool] = {}
 
         for node in self.get_all_nodes():
             host_name = node.get_host()
@@ -1031,7 +1026,7 @@ class CrinkleSlice(Slice):
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
-        extra_ssh_keys: list[str] = None,
+        extra_ssh_keys: List[str] = None,
         lease_start_time: datetime = None,
         lease_end_time: datetime = None,
         lease_in_hours: int = None,
@@ -1260,7 +1255,7 @@ class CrinkleSlice(Slice):
                 network_name=self.analyzer_cnet.get_name()
             )
             self.cnets[site] = self.analyzer_cnet
-            jobs: list[futures.Future] = []
+            jobs: List[futures.Future] = []
             counter = 0
             self.monitor_string = f"{self.analyzer_iface.get_device_name()} {self.analyzer.get_cores() - 1}"
             for key, monitor in self.monitors.items():
@@ -1396,7 +1391,7 @@ class CrinkleSlice(Slice):
             logging.info(f"Crinkle post_boot_config done")
             print("Crinkle post_boot_config done")
 
-    def get_nodes(self, refresh: bool = False) -> list[Node]:
+    def get_nodes(self, refresh: bool = False) -> List[Node]:
         """
         Gets a list of all non-Crinkle nodes in this slice.
 
@@ -1451,7 +1446,7 @@ class CrinkleSlice(Slice):
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> Union[Dict[str, Interface], List[Interface]]:
         """
         Gets all non-Crinkle interfaces in this slice.
 
@@ -1465,7 +1460,7 @@ class CrinkleSlice(Slice):
         :type output: str
 
         :return: a list of interfaces on this slice
-        :rtype: Union[dict[str, Interface], list[Interface]]
+        :rtype: Union[Dict[str, Interface], List[Interface]]
         """
         return super().get_interfaces(
             include_subs=include_subs, refresh=refresh, output=output
@@ -1473,7 +1468,7 @@ class CrinkleSlice(Slice):
 
     def get_all_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> Union[Dict[str, Interface], List[Interface]]:
         """
         Gets all interfaces in this slice.
 
@@ -1487,7 +1482,7 @@ class CrinkleSlice(Slice):
         :type output: str
 
         :return: a list of interfaces on this slice
-        :rtype: Union[dict[str, Interface], list[Interface]]
+        :rtype: Union[Dict[str, Interface], List[Interface]]
         """
         if len(self.all_interfaces) == 0 or refresh:
             for node in self.get_all_nodes(refresh=refresh):
@@ -1532,7 +1527,7 @@ class CrinkleSlice(Slice):
         :param mac: IPv6 address
         :type mac: String
         :return: A tuple of the integer values of the front and back halves
-        :rtype: tuple[int, int]
+        :rtype: Tuple[int, int]
         """
         ip6 = IPv6Address(ip6)
         return (int(ip6) // (2**64), int(ip6) % (2**64))
@@ -1626,12 +1621,12 @@ class CrinkleSlice(Slice):
         )
         self.probe_id += 1
 
-    def dump_counters(self) -> dict[str, dict[str, tuple[str, int, int]]]:
+    def dump_counters(self) -> Dict[str, Dict[str, Tuple[str, int, int]]]:
         """
         Runs through each non-crinkle Node, gets the rx_packets and tx_packets count for
-        each interface, then returns a dict of form dict[node name, dict[iface name, (dev name, rx, tx)]].
+        each interface, then returns a dict of form Dict[node name, Dict[iface name, (dev name, rx, tx)]].
         """
-        rdict: dict[str, dict[str, tuple[str, int, int]]] = {}
+        rdict: Dict[str, Dict[str, Tuple[str, int, int]]] = {}
         for node in self.get_nodes():
             if node.get_image() in UBUNTU_IMAGES:
                 nodename = node.get_name()
@@ -1889,7 +1884,7 @@ class CrinkleSlice(Slice):
     ):
         """
         Query the provenance database and return the results as a dict of the form
-        dict[pkt_id, list[pkt_info]],
+        Dict[pkt_id, List[pkt_info]],
         where pkt_info is a dict of the following fields:
             - time
             - tx_host
@@ -1912,10 +1907,10 @@ class CrinkleSlice(Slice):
             download=False,
         )
         self.analyzer.download_file(f"{name}.dot", f"{REMOTEWORKDIR}/{name}.dot")
-        prov_dict: dict[str, list[dict[str, str]]] = {}
-        iface_host_map: dict[str, str] = {}
-        flow_map: dict[str, dict[str, str]] = {}
-        flow_tx_map: dict[str, dict[str, dict[str, str]]] = {}
+        prov_dict: Dict[str, List[Dict[str, str]]] = {}
+        iface_host_map: Dict[str, str] = {}
+        flow_map: Dict[str, Dict[str, str]] = {}
+        flow_tx_map: Dict[str, Dict[str, Dict[str, str]]] = {}
         flow_keys = [
             "eth.type",
             "ip.prot",
@@ -2135,7 +2130,7 @@ class CrinkleSlice(Slice):
 
     def start_monitor(
         self, monitor: CrinkleMonitor, wait: bool = True, quiet: bool = False
-    ) -> futures.Future | None:
+    ) -> Optional[futures.Future]:
         """
         Start the DPDK script on a monitor.
 
@@ -2165,7 +2160,7 @@ class CrinkleSlice(Slice):
 
     def start_all_monitors(
         self, wait: bool = True, no_return: bool = True
-    ) -> list[futures.Future] | None:
+    ) -> Optional[List[futures.Future]]:
         """
         Start the DPDK script on all monitors.
 
@@ -2174,9 +2169,9 @@ class CrinkleSlice(Slice):
         :param no_return: Whether to return None instead of the list of jobs
         :type no_return: bool
         :return: The futures of all started jobs
-        :rtype: list[concurrent.futures.Future]
+        :rtype: List[concurrent.futures.Future]
         """
-        start_list: list[futures.Future] = []
+        start_list: List[futures.Future] = []
         for monitor in self.monitors.values():
             start_list.append(self.start_monitor(monitor=monitor, wait=False))
         if wait:
