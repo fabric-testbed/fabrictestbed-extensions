@@ -31,6 +31,7 @@ from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.fablib.node import Node
 from fabrictestbed_extensions.fablib.site import Host, Site
 from fabrictestbed_extensions.fablib.slice import Slice
+from fabrictestbed_extensions.fablib.validator import NodeValidator
 
 CAPERSTART = "./caper/caper.byte -q -p -e"
 PCAPDIR = "/home/ubuntu/pcaps/"
@@ -904,9 +905,9 @@ class CrinkleSlice(Slice):
             site = sitenames_to_sites.setdefault(
                 site_name, fabresources.get_site(site_name)
             )
-            hosts = sitenames_to_hosts.setdefault(site_name, site.get_hosts())
+            hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
             host = hosts[host_name]
-            if fablib._FablibManager__can_allocate_node_in_host(
+            if NodeValidator.can_allocate_node_in_host(
                 host=host, node=node, allocated=allocated_comps, site=site
             )[0]:
                 validated_nodes[node.get_name()] = True
@@ -925,7 +926,7 @@ class CrinkleSlice(Slice):
                 site = sitenames_to_sites.setdefault(
                     site_name, fabresources.get_site(site_name)
                 )
-                hosts = sitenames_to_hosts.setdefault(site_name, site.get_hosts())
+                hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
                 hostlist = list(hosts.items())
                 hostlist = sorted(hostlist)
                 endhosts = {}
@@ -940,7 +941,7 @@ class CrinkleSlice(Slice):
                     # TODO: instead, traverse hostlist in reverse
                     for host_name, host in hostlist[1:]:
                         allocated_comps = allocated.setdefault(host_name, {})
-                        if fablib._FablibManager__can_allocate_node_in_host(
+                        if NodeValidator.can_allocate_node_in_host(
                             host=host,
                             node=endpoint,
                             allocated=allocated_comps,
@@ -967,7 +968,7 @@ class CrinkleSlice(Slice):
                     if host_name in endhosts:
                         continue
                     allocated_comps = allocated.setdefault(host_name, {})
-                    if fablib._FablibManager__can_allocate_node_in_host(
+                    if NodeValidator.can_allocate_node_in_host(
                         host=host, node=monitor, allocated=allocated_comps, site=site
                     )[0]:
                         monitor.set_host(host_name=host_name)
@@ -987,12 +988,12 @@ class CrinkleSlice(Slice):
             site = sitenames_to_sites.setdefault(
                 site_name, fabresources.get_site(site_name)
             )
-            hosts = sitenames_to_hosts.setdefault(site_name, site.get_hosts())
+            hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
             hostlist = list(hosts.items())
             hostlist = sorted(hostlist)
             for host_name, host in hostlist:
                 allocated_comps = allocated.setdefault(host_name, {})
-                if fablib._FablibManager__can_allocate_node_in_host(
+                if NodeValidator.can_allocate_node_in_host(
                     host=host, node=node, allocated=allocated_comps, site=site
                 )[0]:
                     node.set_host(host_name=host_name)
@@ -1012,7 +1013,7 @@ class CrinkleSlice(Slice):
             site = sitenames_to_sites.setdefault(
                 site_name, fabresources.get_site(site_name)
             )
-            hosts = sitenames_to_hosts.setdefault(site_name, site.get_hosts())
+            hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
             host = hosts[host_name]
             allocated_comps = allocated[host_name]
             logging.info(
