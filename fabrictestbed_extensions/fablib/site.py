@@ -43,11 +43,14 @@ from fim.user.composite_node import CompositeNode
 from fim.view_only_dict import ViewOnlyDict
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.utils.utils import Utils
 
 log = logging.getLogger("fablib")
 
 
 class ResourceConstants:
+    """Constants and mappings for FABRIC resource attributes and display names."""
+
     attribute_name_mappings = {
         Constants.CORES.lower(): {
             Constants.NON_PRETTY_NAME: Constants.CORES.lower(),
@@ -158,8 +161,18 @@ class ResourceConstants:
                 f"{pretty_name} {Constants.CAPACITY}"
             )
 
+    _hosts_remove_exact = {Constants.HOSTS.lower(), Constants.CPUS.lower()}
+    _hosts_remove_prefix = Constants.P4_SWITCH.lower()
+    pretty_names_hosts = {}
+    for _k, _v in pretty_names.items():
+        if _k in _hosts_remove_exact or _k.startswith(_hosts_remove_prefix):
+            continue
+        pretty_names_hosts[_k] = _v
+
 
 class Switch:
+    """Represents a network switch at a FABRIC site."""
+
     def __init__(self, switch: node.Node, fablib_manager):
         """
         Initialize a Switch object.
@@ -218,6 +231,8 @@ class Switch:
 
 
 class Host:
+    """Represents a compute host at a FABRIC site."""
+
     def __init__(self, host: node.Node, state: str, ptp: bool, fablib_manager):
         """
         Initialize a Host object.
@@ -422,7 +437,7 @@ class Host:
         else:
             pretty_names_dict = {}
 
-        host_table = self.get_fablib_manager().show_table(
+        host_table = Utils.show_table(
             data,
             fields=fields,
             title="Host",
@@ -683,6 +698,8 @@ class Host:
 
 
 class Site:
+    """Represents a FABRIC testbed site with its hosts, switches, and resources."""
+
     def __init__(self, site: CompositeNode, fablib_manager):
         """
         Initialize a Site object.
@@ -1029,7 +1046,7 @@ class Site:
         else:
             pretty_names_dict = {}
 
-        site_table = self.get_fablib_manager().show_table(
+        site_table = Utils.show_table(
             data,
             fields=fields,
             title="Site",

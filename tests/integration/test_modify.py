@@ -28,7 +28,7 @@ import time
 import unittest
 from ipaddress import IPv4Network
 
-from fabrictestbed_extensions.fablib.fablib import fablib
+from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 
 class ModifyTests(unittest.TestCase):
@@ -37,11 +37,12 @@ class ModifyTests(unittest.TestCase):
     # https://github.com/fabric-testbed/fabrictestbed-extensions/issues/261
 
     def setUp(self):
+        self.fablib = FablibManager()
         # Create a slice
         time_stamp = time.strftime("%Y-%m-%d %H:%M:%S")
         host = socket.gethostname()
         slice_name = f"integration test @ {time_stamp} on {host}"
-        self._slice = fablib.new_slice(name=slice_name)
+        self._slice = self.fablib.new_slice(name=slice_name)
 
     def tearDown(self):
         self._slice.delete()
@@ -50,7 +51,7 @@ class ModifyTests(unittest.TestCase):
         # Add nodes with L2 network, submit, add a third node with L3
         # network, add L3 network to the first two nodes, submit again.
 
-        [site1, site2, site3] = fablib.get_random_sites(count=3)
+        [site1, site2, site3] = self.fablib.get_random_sites(count=3)
         print(f"Sites: {site1}, {site2}, {site3}")
 
         print(f"Adding nodes to slice at {site1} and {site2}")
@@ -75,7 +76,7 @@ class ModifyTests(unittest.TestCase):
         # then submit.
 
         print("Adding nodes, no modify")
-        [site1, site2, site3] = fablib.get_random_sites(count=3)
+        [site1, site2, site3] = self.fablib.get_random_sites(count=3)
         print(f"Sites: {site1}, {site2}, {site3}")
 
         print(f"Adding nodes and L2 network to slice at {site1} and {site2}")

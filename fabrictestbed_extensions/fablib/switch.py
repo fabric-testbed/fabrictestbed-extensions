@@ -31,12 +31,9 @@ functionality for programmable data planes.
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import jinja2
-from IPython.core.display_functions import display
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
@@ -62,6 +59,8 @@ class Switch(Node):
     :ivar str username: Set to :data:`~fabrictestbed_extensions.fablib.constants.Constants.FABRIC_USER`
         for system-level access.
     """
+
+    _show_title = "Switch"
 
     def __init__(
         self,
@@ -91,6 +90,27 @@ class Switch(Node):
         )
         self.username = Constants.FABRIC_USER
 
+        # Cached interfaces
+        self._interfaces_cache: Dict[str, Interface] = {}
+
+    def _invalidate_cache(self):
+        """Invalidate all cached properties including interfaces."""
+        super()._invalidate_cache()
+        self._interfaces_cache = {}
+
+    def update(self, fim_node: FimNode = None):
+        """
+        Update the switch with new FIM data.
+
+        :param fim_node: The new FIM node data
+        :type fim_node: FimNode
+        """
+        if fim_node:
+            self.fim_node = fim_node
+            self._invalidate_cache()
+            self.get_interfaces(refresh=True)
+            self._fim_dirty = False
+
     def __str__(self):
         """
         Creates a tabulated string describing the properties of the
@@ -114,6 +134,22 @@ class Switch(Node):
         return tabulate(table)  # , headers=["Property", "Value"])
 
     @staticmethod
+    def get_switch(slice: Slice, node: FimNode) -> Switch:
+        """
+        Factory method to create a Switch from a FIM node.
+
+        :param slice: the slice this switch belongs to
+        :type slice: Slice
+        :param node: the FIM node
+        :type node: FimNode
+        :return: a Switch instance
+        :rtype: Switch
+        """
+        switch = Switch(slice=slice, node=node)
+        switch.get_interfaces()
+        return switch
+
+    @staticmethod
     def new_switch(
         slice: Slice = None,
         name: str = None,
@@ -123,61 +159,45 @@ class Switch(Node):
         raise_exception: bool = False,
     ) -> Switch:
         """
-        Not intended for API call.  See: Slice.add_node()
+        Creates a new FABRIC switch on the slice.
 
-        Creates a new FABRIC node and returns a fablib node with the
-        new node.
+        Not intended for API use. Use slice.add_switch() instead.
 
-        :param slice: the fablib slice to build the new node on
+        :param slice: the fablib slice to build the new switch on
         :type slice: Slice
-
-        :param name: the name of the new node
+        :param name: the name of the new switch
         :type name: str
-
-        :param site: the name of the site to build the node on
+        :param site: the name of the site to build the switch on
         :type site: str
-
-        :param avoid: a list of node names to avoid
+        :param avoid: a list of site names to avoid
         :type avoid: List[str]
-
-        :param validate: Validate node can be allocated w.r.t available resources
+        :param validate: Validate switch can be allocated w.r.t available resources
         :type validate: bool
-
-        :param raise_exception: Raise exception in case of failure
+        :param raise_exception: Raise exception if validation fails
         :type raise_exception: bool
-
-        :return: a new fablib node
-        :rtype: Node
+        :return: a new Switch
+        :rtype: Switch
         """
-        if not avoid:
+        if avoid is None:
             avoid = []
 
         if site is None:
-            [site] = slice.get_fablib_manager().get_random_sites(
-                avoid=avoid,
-            )
+            [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
 
-        log.info(f"Adding node: {name}, slice: {slice.get_name()}, site: {site}")
-        node = Switch(
+        log.info(f"Adding switch: {name}, slice: {slice.get_name()}, site: {site}")
+
+        switch = Switch(
             slice,
             slice.topology.add_switch(name=name, site=site),
             validate=validate,
             raise_exception=raise_exception,
         )
-        node.__set_capacities(unit=1)
+        # Set capacities
+        cap = Capacities(unit=1)
+        switch.get_fim().set_properties(capacities=cap)
+        switch.init_fablib_data()
 
-        node.init_fablib_data()
-
-        return node
-
-    def toJson(self):
-        """
-        Returns the node attributes as a JSON string
-
-        :return: slice attributes as JSON string
-        :rtype: str
-        """
-        return json.dumps(self.toDict(), indent=4)
+        return switch
 
     @staticmethod
     def get_pretty_name_dict():
@@ -205,186 +225,66 @@ class Switch(Node):
 
     def toDict(self, skip: list = None):
         """
-        Returns the node attributes as a dictionary
+        Returns the node attributes as a dictionary.
 
-        :return: slice attributes as  dictionary
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: list
+        :return: switch attributes as dictionary
         :rtype: dict
         """
-        if not skip:
+        if skip is None:
             skip = []
 
-        rtn_dict = {}
-
-        if "id" not in skip:
-            rtn_dict["id"] = str(self.get_reservation_id())
-        if "name" not in skip:
-            rtn_dict["name"] = str(self.get_name())
-        if "site" not in skip:
-            rtn_dict["site"] = str(self.get_site())
-        if "username" not in skip:
-            rtn_dict["username"] = str(self.get_username())
-        if "management_ip" not in skip:
-            rtn_dict["management_ip"] = (
+        if self._cached_dict is None:
+            d = {}
+            d["id"] = str(self.get_reservation_id())
+            d["name"] = str(self.get_name())
+            d["site"] = str(self.get_site())
+            d["username"] = str(self.get_username())
+            d["management_ip"] = (
                 str(self.get_management_ip()).strip()
                 if str(self.get_reservation_state()) == "Active"
                 and self.get_management_ip()
                 else ""
-            )  # str(self.get_management_ip())
-        if "state" not in skip:
-            rtn_dict["state"] = str(self.get_reservation_state())
-        if "error" not in skip:
-            rtn_dict["error"] = str(self.get_error_message())
-        if "ssh_command" not in skip:
+            )
+            d["state"] = str(self.get_reservation_state())
+            d["error"] = str(self.get_error_message())
             if str(self.get_reservation_state()) == "Active":
-                rtn_dict["ssh_command"] = str(self.get_ssh_command())
+                d["ssh_command"] = str(self.get_ssh_command())
             else:
-                rtn_dict["ssh_command"] = ""
-        if "public_ssh_key_file" not in skip:
-            rtn_dict["public_ssh_key_file"] = str(self.get_public_key_file())
-        if "private_ssh_key_file" not in skip:
-            rtn_dict["private_ssh_key_file"] = str(self.get_private_key_file())
+                d["ssh_command"] = ""
+            d["public_ssh_key_file"] = str(self.get_public_key_file())
+            d["private_ssh_key_file"] = str(self.get_private_key_file())
+            self._cached_dict = d
 
-        return rtn_dict
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def generate_template_context(self):
+    def generate_template_context(self, skip: list = None):
         """
         Generate the base template context for this switch.
 
         Creates a dictionary context suitable for Jinja2 template rendering,
         excluding the SSH command and setting an empty components list.
 
+        :param skip: list of keys to exclude
+        :type skip: list
         :return: Template context dictionary with switch attributes
         :rtype: dict
         """
-        context = self.toDict(skip=["ssh_command"])
+        if skip is None:
+            skip = ["ssh_command"]
+        else:
+            skip = list(skip)
+            if "ssh_command" not in skip:
+                skip.append("ssh_command")
+        context = self.toDict(skip=skip)
         context["components"] = []
         return context
-
-    def get_template_context(self, skip: List[str] = None):
-        """
-        Get the full Jinja2 template context for this switch from the slice.
-
-        Retrieves the template rendering context from the slice, which includes
-        switch variables and configuration. By default, excludes SSH command.
-
-        :param skip: List of field names to exclude from the context
-        :type skip: List[str]
-
-        :return: Template context dictionary for Jinja2 rendering
-        :rtype: dict
-        """
-        if not skip:
-            skip = ["ssh_command"]
-
-        return self.get_slice().get_template_context(self, skip=skip)
-
-    def render_template(self, input_string, skip: List[str] = None):
-        """
-        Render a Jinja2 template string using the switch's context.
-
-        Processes the input template string with the switch's template
-        context variables and returns the rendered result. By default,
-        excludes SSH command from the context.
-
-        :param input_string: Jinja2 template string to render
-        :type input_string: str
-
-        :param skip: List of field names to exclude from the context
-        :type skip: List[str]
-
-        :return: Rendered template output string
-        :rtype: str
-        """
-        if not skip:
-            skip = ["ssh_command"]
-
-        environment = jinja2.Environment()
-        # environment.json_encoder = json.JSONEncoder(ensure_ascii=False)
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context(skip=skip))
-
-        return output_string
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Show a table containing the current node attributes.
-
-        There are several output options: ``"text"``, ``"pandas"``,
-        and ``"json"`` that determine the format of the output that is
-        returned and (optionally) displayed/printed.
-
-        :param output: output format.  Options are:
-
-                - ``"text"``: string formatted with tabular
-
-                - ``"pandas"``: pandas dataframe
-
-                - ``"json"``: string in json format
-
-        :type output: str
-
-        :param fields: List of fields to show.  JSON output will
-            include all available fields.
-        :type fields: List[str]
-
-        :param quiet: True to specify printing/display
-        :type quiet: bool
-
-        :param colors: True to specify state colors for pandas output
-        :type colors: bool
-
-        :return: table in format specified by output parameter
-        :rtype: Object
-
-        Here's an example of ``fields``::
-
-            fields=['Name','State']
-        """
-
-        data = self.toDict()
-
-        def state_color(val):
-            if val == "Active":
-                color = f"{self.get_fablib_manager().SUCCESS_LIGHT_COLOR}"
-            elif val == "Configuring":
-                color = f"{self.get_fablib_manager().IN_PROGRESS_LIGHT_COLOR}"
-            elif val == "Closed":
-                color = f"{self.get_fablib_manager().ERROR_LIGHT_COLOR}"
-            else:
-                color = ""
-            return "background-color: %s" % color
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        if colors and self.get_fablib_manager().is_jupyter_notebook():
-            table = self.get_fablib_manager().show_table(
-                data,
-                fields=fields,
-                title="Switch",
-                output="pandas",
-                quiet=True,
-                pretty_names_dict=pretty_names_dict,
-            )
-            table.applymap(state_color)
-
-            if not quiet:
-                display(table)
-        else:
-            table = self.get_fablib_manager().show_table(
-                data,
-                fields=fields,
-                title="Switch",
-                output=output,
-                quiet=quiet,
-                pretty_names_dict=pretty_names_dict,
-            )
-
-        return table
 
     def get_fim(self) -> FimNode:
         """
@@ -414,9 +314,11 @@ class Switch(Node):
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> Union[Dict[str, Interface], List[Interface]]:
         """
         Gets a list of the interfaces associated with the FABRIC node.
+
+        Results are cached. Use refresh=True to force reload.
 
         :param include_subs: Flag indicating if sub interfaces should be included
         :type include_subs: bool
@@ -424,24 +326,58 @@ class Switch(Node):
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
 
-        :return: a list of interfaces on the node
-        :rtype: List[Interface]
+        :param output: return type - 'list' or 'dict'
+        :type output: str
+
+        :return: interfaces on the node
+        :rtype: Union[Dict[str, Interface], List[Interface]]
         """
-        if refresh or len(self.interfaces) == 0:
-            # Add them to the list in sorted order
-            for name, ifs in self.get_fim().interfaces.items():
-                self.interfaces[name] = Interface(
-                    node=self, fim_interface=ifs, model="NIC_P4"
-                )
+        if self._interfaces_cache and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self._interfaces_cache
+            return [
+                self._interfaces_cache[key]
+                for key in sorted(self._interfaces_cache.keys())
+            ]
+
+        self._interfaces_cache = {}
+
+        try:
+            if self.fim_node and hasattr(self.fim_node, "interfaces"):
+                for name, fim_iface in self.fim_node.interfaces.items():
+                    self._interfaces_cache[name] = Interface(
+                        node=self, fim_interface=fim_iface, model="NIC_P4"
+                    )
+        except Exception as e:
+            log.debug(f"Error getting interfaces: {e}")
+
+        # Keep self.interfaces in sync for backward compatibility
+        self.interfaces = dict(self._interfaces_cache)
 
         if output == "dict":
-            return self.interfaces
+            return self._interfaces_cache
 
-        # Extract and sort interface names numerically
-        sorted_interfaces = [
-            self.interfaces[key] for key in sorted(self.interfaces.keys())
+        return [
+            self._interfaces_cache[key] for key in sorted(self._interfaces_cache.keys())
         ]
-        return sorted_interfaces
+
+    def get_interface(
+        self, name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
+        """
+        Gets a specific interface by name.
+
+        :param name: the interface name
+        :type name: str
+        :param refresh: force refresh from FIM
+        :type refresh: bool
+        :return: the interface
+        :rtype: Interface
+        """
+        if not self._interfaces_cache or refresh or self._fim_dirty:
+            self.get_interfaces(refresh=refresh, output="dict")
+
+        return self._interfaces_cache.get(name)
 
     @staticmethod
     def get_node(slice: Slice = None, node=None):

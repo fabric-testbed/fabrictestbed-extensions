@@ -32,40 +32,57 @@ This module contains methods to work with FABRIC `facility ports`_.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, List, Union
+import logging
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import jinja2
 from fabrictestbed.slice_editor import Capacities, Labels
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.interface import Interface
+from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 if TYPE_CHECKING:
     from fim.user.node import Node as FimNode
 
     from fabrictestbed_extensions.fablib.slice import Slice
 
+log = logging.getLogger("fablib")
 
-class FacilityPort:
+
+class FacilityPort(TemplateMixin):
     """
     A class for working with FABRIC facility ports.
     """
 
-    fim_interface = None
+    _show_title = "Facility Port"
+
+    fim_object = None
     slice = None
 
-    def __init__(self, slice: Slice, fim_interface: FimNode):
+    def __init__(self, slice: Slice, fim_object: FimNode):
         """
         :param slice: the fablib slice to have this node on
         :type slice: Slice
 
-        :param fim_interface:
-        :type fim_interface: FimNode
+        :param fim_object:
+        :type fim_object: FimNode
         """
         super().__init__()
-        self.fim_interface = fim_interface
-        self.slice = slice
-        self.interfaces = {}
+        self.fim_object: FimNode = fim_object
+        self.slice: Slice = slice
+        self.interfaces: Dict[str, Interface] = {}
+
+        self._cached_site: Optional[str] = None
+
+        # V2 specific: cached interfaces
+        self._interfaces_cache: Dict[str, Interface] = {}
+
+    def _invalidate_cache(self):
+        """Invalidate all cached properties."""
+        super(FacilityPort, self)._invalidate_cache()
+
+        self._cached_site = None
+        self._interfaces_cache = {}
 
     def __str__(self):
         """
@@ -79,12 +96,6 @@ class FacilityPort:
 
         return tabulate(table)
 
-    def toJson(self):
-        """
-        Return a JSON representation of the facility port.
-        """
-        return json.dumps(self.toDict(), indent=4)
-
     @staticmethod
     def get_pretty_name_dict():
         """
@@ -94,85 +105,27 @@ class FacilityPort:
             "name": "Name",
         }
 
-    def toDict(self, skip=[]):
+    def toDict(self, skip: list = None):
         """
         Return a Python `dict` representation of the facility port.
+
+        Results are cached. Cache is invalidated when ``_invalidate_cache()``
+        is called.
+
+        :param skip: list of keys to exclude
+        :type skip: list
         """
-        return {"name": str(self.get_name())}
+        if skip is None:
+            skip = []
 
-    def get_template_context(self):
-        """
-        Get the Jinja2 template context for this facility port.
+        if self._cached_dict is None:
+            d = {}
+            d["name"] = str(self.get_name())
+            self._cached_dict = d
 
-        Retrieves the template rendering context from the slice, which includes
-        variables and configuration that can be used in Jinja2 templates.
-
-        :return: Template context dictionary for Jinja2 rendering.
-        :rtype: dict
-        """
-        return self.get_slice().get_template_context(self)
-
-    def render_template(self, input_string):
-        """
-        Render a Jinja2 template string using the facility port's context.
-
-        Processes the input template string with the facility port's template
-        context variables and returns the rendered result.
-
-        :param input_string: Jinja2 template string to render.
-        :type input_string: str
-
-        :return: Rendered template output string.
-        :rtype: str
-        """
-        environment = jinja2.Environment()
-        template = environment.from_string(input_string)
-        output_string = template.render(self.get_template_context())
-
-        return output_string
-
-    def show(
-        self, fields=None, output=None, quiet=False, colors=False, pretty_names=True
-    ):
-        """
-        Get a human-readable representation of the facility port.
-        """
-        data = self.toDict()
-
-        # fields = ["Name",
-        #         ]
-
-        if pretty_names:
-            pretty_names_dict = self.get_pretty_name_dict()
-        else:
-            pretty_names_dict = {}
-
-        table = self.get_fablib_manager().show_table(
-            data,
-            fields=fields,
-            title="Facility Port",
-            output=output,
-            quiet=quiet,
-            pretty_names_dict=pretty_names_dict,
-        )
-
-        return table
-
-    def get_fablib_manager(self):
-        """
-        Get a reference to :py:class:`.FablibManager`.
-        """
-        return self.slice.get_fablib_manager()
-
-    def get_fim_interface(self) -> FimNode:
-        """
-        .. warning::
-            Not recommended for most users.
-
-        Gets the node's FABRIC Information Model (fim) object.  This
-        method is used to access data at a lower level than FABlib.
-        """
-        return self.fim_interface
+        if not skip:
+            return dict(self._cached_dict)
+        return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
     def get_fim(self):
         """
@@ -181,7 +134,7 @@ class FacilityPort:
         This method is used to access data at a lower level than
         FABlib.
         """
-        return self.get_fim_interface()
+        return self.fim_object
 
     def get_model(self) -> str:
         """
@@ -189,20 +142,22 @@ class FacilityPort:
         """
         return "Facility_Port"
 
-    def get_name(self) -> str:
-        """
-        Gets the name of the FABRIC node.
-
-        :return: the name of the node
-        :rtype: String
-        """
-        return self.get_fim_interface().name
-
     def get_site(self) -> str:
         """
-        Gets the site associated with the facility port.
+        Gets the site where the facility port is located.
+
+        Results are cached for performance.
+
+        :return: the site name
+        :rtype: str
         """
-        return self.fim_interface.site
+        if self._cached_site is None:
+            try:
+                if self.fim_object and self.fim_object.site:
+                    self._cached_site = self.fim_object.site
+            except Exception:
+                pass
+        return self._cached_site if self._cached_site else ""
 
     @staticmethod
     def new_facility_port(
@@ -280,7 +235,7 @@ class FacilityPort:
         :return: FacilityPort object wrapping the FIM facility port.
         :rtype: FacilityPort
         """
-        return FacilityPort(slice, facility_port)
+        return FacilityPort(slice=slice, fim_object=facility_port)
 
     def get_slice(self) -> Slice:
         """
@@ -293,42 +248,74 @@ class FacilityPort:
 
     def get_interfaces(
         self, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> Union[Dict[str, Interface], List[Interface]]:
         """
-        Gets a interface associated with a FABRIC Facility Port.
+        Gets interfaces associated with this facility port.
 
-        :param refresh: Refresh the interface object with latest Fim info
+        Results are cached. Use refresh=True to force reload.
+
+        :param refresh: force refresh from FIM
         :type refresh: bool
-
-        :param output: Specify how the return type is expected; Possible values: list or dict
+        :param output: return type - 'list' or 'dict'
         :type output: str
-
-        :return: a list or dict of interfaces on the node
-        :rtype: Union[dict[str, Interface], list[Interface]]
+        :return: interfaces
+        :rtype: Union[Dict[str, Interface], List[Interface]]
         """
-        if refresh or len(self.interfaces) == 0:
-            self.interfaces = {}
-            for fim_interface in self.get_fim_interface().interface_list:
-                iface = Interface(node=self, fim_interface=fim_interface)
-                self.interfaces[iface.get_name()] = iface
+        from fabrictestbed_extensions.fablib.interface import Interface
+
+        if self._interfaces_cache and not refresh and not self._fim_dirty:
+            if output == "dict":
+                return self._interfaces_cache
+            return list(self._interfaces_cache.values())
+
+        self._interfaces_cache = {}
+
+        try:
+            if self.fim_object and hasattr(self.fim_object, "interfaces"):
+                for iface in self.fim_object.interfaces.values():
+                    interface = Interface(fim_interface=iface, node=self)
+                    self._interfaces_cache[interface.get_name()] = interface
+        except Exception as e:
+            log.debug(f"Error getting interfaces: {e}")
 
         if output == "dict":
-            return self.interfaces
-        else:
-            return list(self.interfaces.values())
+            return self._interfaces_cache
+        return list(self._interfaces_cache.values())
 
-    def update(self, fim_node: FimNode):
+    def get_interface(
+        self, name: str = None, refresh: bool = False
+    ) -> Optional[Interface]:
         """
-        Update the facility port with new FIM node information.
+        Gets a specific interface by name.
 
-        Refreshes the internal FIM interface reference with updated data
-        from the FABRIC Information Model.
+        :param name: the interface name
+        :type name: str
+        :param refresh: force refresh from FIM
+        :type refresh: bool
+        :rtype: Interface
+        """
+        # Ensure cache is populated
+        interfaces = self.get_interfaces(refresh=refresh, output="dict")
+        return interfaces.get(name)
 
-        :param fim_node: Updated FIM node/interface object.
+    def update(self, fim_node: FimNode = None):
+        """
+        Update the facility port with new FIM data.
+
+        :param fim_node: The new FIM node data
         :type fim_node: FimNode
         """
         if fim_node:
-            self.fim_interface = fim_node
+            self.fim_object = fim_node
+            self._invalidate_cache()
+            try:
+                self.get_interfaces(refresh=True)
+            except Exception as e:
+                log.debug(
+                    f"FacilityPort {self.get_name()}: error refreshing "
+                    f"caches during update: {e}"
+                )
+            self._fim_dirty = False
 
     def delete(self):
         """

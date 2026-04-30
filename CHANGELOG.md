@@ -6,13 +6,56 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.9.7
+## 2.0.3
+
+### Added
+- Add a new `SliceNotFoundError` and use it instead of `Exception` in the `get_slice` method.
+
+## 2.0.3
+
+### Added
+- Update to logging in the dependencies
+
+### Fixed
+- Fall back to sliver info (`mgmt_ip`) for node management IP when FIM topology does not have it populated
+- Add `find_resource_slot()` to FablibManager for finding time windows where specific resources are simultaneously available
+- Add resources_calendar() to FablibManager for querying resource availability over time
+- Add host support to resource calendar with `show` parameter to filter by sites, hosts, or all
+
+### Changed
+- Remove unused dependencies: `numpy`, `recordclass`, duplicate `ipycytoscape`
+
+## 2.0.2
+
+### Added
+- Add `storage=True` API for automatic distributed shared storage mounting on slices and nodes (Issue [#485](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/485), PR [#484](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/484))
+- Add `node.enable_storage()`, `node.has_storage()`, `node.get_storage_cluster()` methods
+- Auto-discover Ceph clusters, generate credentials, and mount CephFS during `post_boot_config()`
+
+### Fixed
+- Fix `get_storage_cluster()` returning `None` after `post_boot_config` — persist storage metadata back to orchestrator (Issue [#487](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/487), PR [#486](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/486))
+- Auto-detect user's Ceph clusters instead of using all available clusters, preventing `ValueError` when user lacks credentials on some clusters
+
+### Changed
+- Move default ceph artifacts directory from `~/ceph-artifacts` to `~/.ceph`
+- Update default Ceph manager host to DNS name `ceph-mgr.fabric-testbed.net`
+- Improve CephFS path slugs to be human-friendly with collision disambiguation
+- Handle Rocky 8/9 and Ubuntu ceph-common installation with correct repos
+
+## 2.0.1
+
+### Changed
+- Incorrect route for FabNetv4/FabNetv6 on rocky images (Issue [#481](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/481))
+
+## 2.0.0
 
 ### Changed
 - Fix for when reporting management interface from OS for IPv6 on rocky nodes (Issue [#471] PR [#470](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/470)
 - Missed tab spaces from PR#470. This is resolved using PR [#472]
 - Improve the performance of several get_ calls through caching (Issue [#453](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/453))
 - Enable Fabric token creation via CLI (Issue [#473](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/473))
+- MCP friendly API, persistent network config, and bug fixes (Issue [#477](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/477))
+- Param to control SSH calls (Issue [#479](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/479))
 
 
 ## 1.9.6

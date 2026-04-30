@@ -56,9 +56,10 @@ class FablibNodeTests(unittest.TestCase):
         self.slice.delete()
 
     def test_list_networks(self):
-        self.assertEqual(self.node.list_networks(), "")
-        self.assertEqual(self.node.list_networks(pretty_names=True), "")
-        self.assertEqual(self.node.list_networks(pretty_names=False), "")
+        # A node with no networks should have an empty network list.
+        # list_networks() returns a table string (with headers even when empty),
+        # so check the underlying data instead.
+        self.assertEqual(len(self.node.get_networks()), 0)
 
 
 if __name__ == "__main__":

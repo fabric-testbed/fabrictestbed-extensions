@@ -1,0 +1,195 @@
+# FABlib Development Roadmap
+
+## Current State (v2.0.2)
+
+### Strengths
+- Comprehensive slice lifecycle API (create, submit, modify, renew, delete)
+- 14 hardware component models supported
+- 9 network service types (L2/L3/VPN/Mirror)
+- CephFS distributed storage integration
+- Full CLI with interactive setup
+- Sphinx API docs with 92.6%+ docstring coverage
+- CI/CD with multi-platform testing
+
+### Areas for Improvement
+- Unit test coverage is minimal (1 test file, ~12 tests)
+- ~~Legacy code still present (`fablib_old.py`, `slice_old.py`)~~ (removed)
+- No type stubs or `py.typed` marker
+- No async/await support (all SSH is synchronous + thread pool)
+- Editor modules tightly coupled to Jupyter
+
+---
+
+## Short-Term (Next 1-2 Releases)
+
+### Testing Expansion
+- [ ] Add unit tests for `Config` class (precedence, validation, edge cases)
+- [ ] Add unit tests for `NodeValidator` (allocation logic)
+- [ ] Add unit tests for `CephFsUtils` (keyring parsing, mount script generation)
+- [ ] Add unit tests for `TemplateMixin` (rendering, caching, dirty flags)
+- [ ] Add unit tests for `Utils` (table display, IP helpers, reachability)
+- [ ] Add unit tests for CLI commands (Click testing)
+- [ ] Mock-based tests for `Slice` and `Node` without network access
+- [ ] Target: 60%+ unit test coverage
+
+### Integration Testing
+Current state: 9 tests in `tests/integration/` but incomplete coverage, never run in CI, no shared fixtures.
+
+#### Smoke Test Suite (~10 min, run on every PR)
+- [ ] Basic slice lifecycle: create single node → submit → wait → execute → delete
+- [ ] Resource listing: sites, hosts, facility ports (no slice needed)
+- [ ] Bastion SSH connectivity probe
+- [ ] SSH connection pooling verification (execute multiple commands, confirm reuse)
+- [ ] Slice modify: add/remove node on existing slice
+
+#### Feature Test Suite (~30 min, run on release branches)
+- [ ] **Networking**: L2Bridge (single-site), L2PTP (cross-site), L2STS, FABNetv4, FABNetv6, FABNetv4Ext
+- [ ] **Storage**: CephFS mount, read/write, persistence across reboot
+- [ ] **Components**: GPU (TeslaT4, A30), SmartNIC (ConnectX-6, ConnectX-7), FPGA, NVMe — allocation and basic verification
+- [ ] **Multi-node**: 3+ node cluster with shared network, parallel SSH execution
+- [ ] **Slice lifecycle**: create → modify → renew → delete; verify state transitions
+- [ ] **Error recovery**: submit with insufficient resources, verify clean error messages
+
+#### Test Infrastructure
+- [ ] Shared pytest fixtures (`conftest.py`) for common topologies (single-node, two-node-L2, three-node-cluster)
+- [ ] Test categorization with pytest markers: `@pytest.mark.smoke`, `@pytest.mark.network`, `@pytest.mark.storage`, `@pytest.mark.component`
+- [ ] Automatic slice cleanup (tearDown / finalizers) to prevent resource leaks
+- [ ] Configurable test site selection (env var or config file, not hardcoded)
+- [ ] Test timeout enforcement (per-test and per-suite)
+- [ ] CI workflow for integration tests: smoke on PR, full suite on release
+
+#### `/smoke-test` Skill
+- [ ] Create a `/smoke-test` Claude Code skill that runs the smoke suite and reports results
+- [ ] Include: slice create/execute/delete, resource listing, SSH connectivity
+
+### Code Quality
+- [x] Remove `fablib_old.py` and `slice_old.py` (deprecated legacy code)
+- [x] Add `py.typed` marker for PEP 561 compliance
+- [ ] Add type annotations to remaining untyped methods
+- [x] Consolidate `resources.py` and `resources_v2.py` (removed unused v1)
+- [ ] Extract SSH operations into dedicated `ssh.py` module from `node.py`
+
+### Documentation
+- [ ] Add usage examples in Sphinx docs (not just API reference)
+- [ ] Document common error scenarios and troubleshooting
+- [ ] Add architecture diagrams to RTD
+
+---
+
+## Medium-Term (v2.1 - v2.2)
+
+### API Improvements
+- [ ] Async slice operations (`async submit()`, `async wait()`)
+- [ ] Context manager for slices (`with fablib.slice("name") as s:`)
+- [ ] Structured logging with correlation IDs per slice/node
+- [ ] Retry decorators for transient SSH/API failures
+- [ ] Progress callbacks (not just boolean `progress` flag)
+
+### CLI Enhancements
+- [ ] `fabric-cli ssh <node>` — direct SSH to a node
+- [ ] `fabric-cli watch <slice>` — live status updates
+- [ ] `fabric-cli template apply <file>` — create slice from YAML/JSON template
+- [ ] Tab completion for site names, slice names, component models
+- [ ] JSON/CSV output for all commands (machine-readable)
+
+### Storage
+- [ ] Multi-cluster CephFS mounts per node
+- [ ] Storage quota management
+- [ ] Persistent volume lifecycle tied to slice lifecycle
+
+### Observability
+- [ ] Structured JSON logging option
+- [ ] OpenTelemetry traces for slice operations
+- [ ] Metrics collection (operation latency, success rate)
+
+---
+
+## Long-Term (v3.0)
+
+### Architecture
+- [ ] Full async/await rewrite (aioparamiko or asyncssh)
+- [ ] Plugin system for custom component types
+- [ ] Declarative slice definitions (YAML/TOML → slice)
+- [ ] Diff-based slice modification (detect changes, apply delta)
+- [ ] Event-driven model (webhooks/callbacks for state changes)
+
+### Testing
+- [ ] Property-based testing for topology validation (hypothesis)
+- [ ] Chaos testing framework for resilience (kill nodes mid-experiment, network partitions)
+- [ ] Performance regression benchmarks in CI (track SSH latency, slice creation time)
+- [ ] Recorded API responses for offline integration testing (VCR/responses library)
+- [ ] Nightly full integration suite against staging environment
+- [ ] Test result dashboard with historical trends
+
+### Ecosystem
+- [ ] Terraform provider for FABRIC resources
+- [ ] GitHub Actions for FABRIC experiments
+- [ ] VS Code extension for slice visualization
+- [ ] REST API wrapper for non-Python users
+
+---
+
+## Performance Optimizations
+
+### Quick Wins (1-2 sprints)
+- [ ] Fix redundant FIM property lookups in `node.py` — `get_cores()` etc. call `get_fim().get_property()` twice instead of storing result (~30% speedup for node queries)
+- [ ] Implement SSH connection pooling in `node.py` — every `execute()` creates a new bastion+node connection; cache and reuse (~40% latency reduction for parallel commands)
+- [ ] Lightweight slice polling in `slice.py` — `wait()` fetches full slice state every 10s; use lightweight state-only query (~80% reduction in polling overhead)
+- [ ] Avoid unnecessary `dict()` copy in `toDict()` — return cached dict directly when no skip filter is applied
+
+### Medium-Term (2-3 sprints)
+- [ ] Bulk sliver fetch — Node constructor individually fetches its sliver (N+1 pattern); bulk-fetch at Slice level and cache by reservation_id
+- [x] Lazy FablibManager initialization — `get_manager()` defers `__build_manager()` to first access
+- [x] Automatic cache invalidation — `_invalidate_cache()` called on nodes when topology refreshes
+
+### Advanced (large slice scale, 100+ nodes)
+- [ ] Parallel component/interface discovery — `Node.update()` fetches FIM data sequentially; parallelize across nodes using ThreadPoolExecutor
+- [ ] Configurable thread pool sizing — expose `ssh_thread_pool_executor` size for runtime adjustment, allow auto-scaling
+- [ ] Batch SSH operations helper — CephFS setup and post-boot config should reuse connections across multiple commands per node
+
+---
+
+## Usability Improvements
+
+### API Consistency (High Priority)
+- [ ] Standardize `show_*()` vs `list_*()` — currently `show_site()` returns `str` while `show_config()` returns a table object; unify return types
+- [ ] Clarify `get_*()` vs `list_*()` — `get_nodes()` returns `List[Node]` but `list_nodes()` returns a table; rename or document clearly to avoid confusion
+- [ ] Replace `print()` with `logging` — `submit()`, `wait()`, `post_boot_config()` print progress directly to stdout; use `logging.getLogger("fablib")` instead so scripting/automation isn't polluted
+- [ ] Add global output format config — `fablib.set_default_output("json")` to avoid passing `output=` to every method
+
+### Error Handling & Feedback (High Priority)
+- [x] Add specific exception types — `FablibException`, `ResourceNotFoundError`, `SliceTimeoutError`, `SliceStateError`, `SSHError`, `ValidationError` (39 generic raises replaced)
+- [ ] Improve error messages — timeout errors should include last known sliver states and troubleshooting hints, not just "Timeout exceeded"
+- [ ] Eliminate bare `except:` clauses — `node.py` silently swallows exceptions (e.g., `set_username()` failure); catch specific exceptions and log warnings
+- [ ] Enforce state transitions — raise exceptions when methods are called in wrong state (e.g., `execute()` before `wait()`) instead of failing with cryptic errors
+
+### Workflow Simplification (Medium Priority)
+- [ ] Track post-boot-config state — add `slice.is_configured()` method; raise error if `post_boot_config()` called twice; make it automatic even for non-blocking submit
+- [ ] Simplify `submit()` signature — 12 parameters is too many; group lease options separately or use a config object
+- [x] Add convenience methods — `slice.execute_on_all_nodes(cmd)` for parallel execution across all nodes
+- [x] Add node filter methods — `slice.get_nodes(site="RENC")`, `slice.get_nodes(filter_function=...)` for custom filtering
+
+### Discoverability & Onboarding (Medium Priority)
+- [ ] Add resource browser — `fablib.resources.sites()`, `.images()`, `.components()`, `.find_sites(has_gpu=True)` for unified discovery
+- [x] Better config setup errors — ConfigException now includes env var names, fabric_rc hints, and "how to fix" guidance
+- [ ] Add `FablibManager.interactive_setup()` — walk through configuration from Python REPL (complement to `fabric-cli configure`)
+- [x] Document state machine — Slice class docstring + SliceState constants in constants.py
+
+### Output Consistency (Low Priority)
+- [ ] Standardize JSON output — always return parsed `dict` for `output="json"`, let user serialize if needed
+- [ ] Document output schemas per method
+- [ ] Ensure table outputs fit standard 120-char terminals
+
+---
+
+## Technical Debt Tracker
+
+| Item | Priority | Effort | Impact |
+|---|---|---|---|
+| ~~Remove legacy `*_old.py` files~~ | ~~High~~ | ~~Low~~ | Done — removed 6,159 LOC |
+| Add unit tests | High | Medium | Catches regressions, enables refactoring |
+| Type annotations | Medium | Medium | Better IDE support, catches bugs |
+| Extract SSH module | Medium | Medium | `node.py` is 4,800 LOC, hard to maintain |
+| Consolidate resources v1/v2 | Medium | Low | Simpler API surface |
+| Async SSH support | Low | High | Better performance for large slices |
+| Plugin system | Low | High | Extensibility for new hardware |
