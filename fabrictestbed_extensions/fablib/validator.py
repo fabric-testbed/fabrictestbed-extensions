@@ -30,7 +30,7 @@ Provides :class:`NodeValidatorV2` with static methods for checking whether
 requested nodes can be allocated on FABRIC hosts, working entirely with
 the plain dicts returned by :class:`ResourcesV2`.
 
-Extracted from ``FablibManagerV2`` to separate validation concerns from
+Extracted from ``FablibManager`` to separate validation concerns from
 the manager facade.
 """
 
@@ -144,7 +144,7 @@ class NodeValidator:
     ) -> Tuple[bool, str]:
         """Validate a single node against available resources.
 
-        Unlike the former ``FablibManagerV2.validate_node``, this accepts
+        Unlike the former ``FablibManager.validate_node``, this accepts
         a :class:`ResourcesV2` instance directly rather than calling
         ``self.get_resources()``.
 

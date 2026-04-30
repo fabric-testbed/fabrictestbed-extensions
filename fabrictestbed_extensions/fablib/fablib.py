@@ -341,10 +341,10 @@ class FablibManager(Config):
         """
         Clean up resources including the SSH thread pool executor.
 
-        Call this when done using the FablibManagerV2 instance, or use
+        Call this when done using the FablibManager instance, or use
         the context manager protocol instead::
 
-            with FablibManagerV2() as fablib:
+            with FablibManager() as fablib:
                 # use fablib
             # resources automatically cleaned up
         """
@@ -2383,7 +2383,7 @@ Host * !bastion.fabric-testbed.net
         Validate a node w.r.t available resources on a site before submission.
 
         Delegates to :class:`NodeValidatorV2` with pre-fetched resources.
-        This method must remain on ``FablibManagerV2`` because
+        This method must remain on ``FablibManager`` because
         ``Node.add_component()`` calls ``self.get_fablib_manager().validate_node()``.
 
         :return: Tuple indicating status for validation and error message in case of failure
