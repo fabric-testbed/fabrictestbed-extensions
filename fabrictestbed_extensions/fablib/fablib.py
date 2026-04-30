@@ -1459,7 +1459,7 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def _normalize_component_keys(
-        resources: List[Dict[str, Any]]
+        resources: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """
         Normalize component keys in resource dicts to match the format used
@@ -2266,12 +2266,12 @@ Host * !bastion.fabric-testbed.net
         return_slices = []
         for slice in slices:
             slice_object = CrinkleSlice.get_slice(
-                    self,
-                    sm_slice=slice,
-                    user_only=user_only,
-                    pcaps_dir=pcaps_dir,
-                    name_prefix=name_prefix,
-                )
+                self,
+                sm_slice=slice,
+                user_only=user_only,
+                pcaps_dir=pcaps_dir,
+                name_prefix=name_prefix,
+            )
             return_slices.append(slice_object)
         return return_slices
 

@@ -900,7 +900,9 @@ class CrinkleSlice(Slice):
             site = sitenames_to_sites.setdefault(
                 site_name, fabresources.get_site(site_name)
             )
-            hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
+            hosts = sitenames_to_hosts.setdefault(
+                site_name, fabresources.get_hosts_by_site(site_name)
+            )
             host = hosts[host_name]
             if NodeValidator.can_allocate_node_in_host(
                 host=host, node=node, allocated=allocated_comps, site=site
@@ -921,7 +923,9 @@ class CrinkleSlice(Slice):
                 site = sitenames_to_sites.setdefault(
                     site_name, fabresources.get_site(site_name)
                 )
-                hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
+                hosts = sitenames_to_hosts.setdefault(
+                    site_name, fabresources.get_hosts_by_site(site_name)
+                )
                 hostlist = list(hosts.items())
                 hostlist = sorted(hostlist)
                 endhosts = {}
@@ -983,7 +987,9 @@ class CrinkleSlice(Slice):
             site = sitenames_to_sites.setdefault(
                 site_name, fabresources.get_site(site_name)
             )
-            hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
+            hosts = sitenames_to_hosts.setdefault(
+                site_name, fabresources.get_hosts_by_site(site_name)
+            )
             hostlist = list(hosts.items())
             hostlist = sorted(hostlist)
             for host_name, host in hostlist:
@@ -1008,7 +1014,9 @@ class CrinkleSlice(Slice):
             site = sitenames_to_sites.setdefault(
                 site_name, fabresources.get_site(site_name)
             )
-            hosts = sitenames_to_hosts.setdefault(site_name, fabresources.get_hosts_by_site(site_name))
+            hosts = sitenames_to_hosts.setdefault(
+                site_name, fabresources.get_hosts_by_site(site_name)
+            )
             host = hosts[host_name]
             allocated_comps = allocated[host_name]
             logging.info(
