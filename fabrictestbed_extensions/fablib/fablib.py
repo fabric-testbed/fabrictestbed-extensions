@@ -2229,6 +2229,10 @@ Host * !bastion.fabric-testbed.net
         """
         import time
 
+        # Handle default for excludes (avoid mutable default argument)
+        if excludes is None:
+            excludes = [SliceState.Dead, SliceState.Closing]
+
         if self.get_log_level() == logging.DEBUG:
             start = time.time()
 
@@ -2240,33 +2244,35 @@ Host * !bastion.fabric-testbed.net
             return_slices = [existing_slice]
             return return_slices
 
-        return_status, slices = self.get_manager().slices(
-            excludes=excludes,
+        excludes_states = []
+        for exclude in excludes:
+            excludes_states.append(str(exclude))
+
+        slices = self.get_manager().list_slices(
+            exclude_states=excludes_states,
             name=slice_name,
             slice_id=slice_id,
             limit=200,
             as_self=user_only,
+            return_fmt="dto",
         )
 
         if self.get_log_level() == logging.DEBUG:
             end = time.time()
-            logging.debug(
+            log.debug(
                 f"Running self.get_slice_manager().slices(): elapsed time: {end - start} seconds"
             )
 
         return_slices = []
-        if return_status == Status.OK:
-            for slice in slices:
-                slice_object = CrinkleSlice.get_slice(
+        for slice in slices:
+            slice_object = CrinkleSlice.get_slice(
                     self,
                     sm_slice=slice,
                     user_only=user_only,
                     pcaps_dir=pcaps_dir,
                     name_prefix=name_prefix,
                 )
-                return_slices.append(slice_object)
-        else:
-            raise Exception(f"Failed to get slices: {slices}")
+            return_slices.append(slice_object)
         return return_slices
 
     def get_crinkle_slice(
