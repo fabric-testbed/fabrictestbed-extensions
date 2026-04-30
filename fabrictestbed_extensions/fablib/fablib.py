@@ -90,6 +90,7 @@ import paramiko
 
 from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import SliceNotFoundError
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
@@ -2152,7 +2153,7 @@ Host * !bastion.fabric-testbed.net
             if len(slices) > 0:
                 return slices[0]
             else:
-                raise Exception(
+                raise SliceNotFoundError(
                     f'Unable to find slice "{name}" for this project. Check slice name spelling and project id.'
                 )
         else:

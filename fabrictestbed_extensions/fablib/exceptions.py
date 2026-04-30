@@ -25,6 +25,12 @@ class SliceTimeoutError(FablibException, TimeoutError):
     pass
 
 
+class SliceNotFoundError(FablibException, KeyError):
+    """The requested slice was not found."""
+
+    pass
+
+
 class SliceStateError(FablibException, RuntimeError):
     """A slice or node is in an invalid state for the requested operation."""
 
