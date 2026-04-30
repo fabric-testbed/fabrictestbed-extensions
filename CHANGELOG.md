@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.3
 
 ### Added
+- Add a new `SliceNotFoundError` and use it instead of `Exception` in the `get_slice` method.
+
+## 2.0.3
+
+### Added
 - Update to logging in the dependencies
 
 ### Fixed
