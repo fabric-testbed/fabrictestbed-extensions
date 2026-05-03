@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from fabrictestbed.slice_editor import Capacities, Labels
 from tabulate import tabulate
 
+from fabrictestbed_extensions.fablib.exceptions import ResourceNotFoundError
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
@@ -296,7 +297,10 @@ class FacilityPort(TemplateMixin):
         """
         # Ensure cache is populated
         interfaces = self.get_interfaces(refresh=refresh, output="dict")
-        return interfaces.get(name)
+        result = interfaces.get(name)
+        if result is not None:
+            return result
+        raise ResourceNotFoundError(f"Interface not found: {name}")
 
     def update(self, fim_node: FimNode = None):
         """

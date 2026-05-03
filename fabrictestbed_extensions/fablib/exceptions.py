@@ -8,9 +8,20 @@ with existing ``except Exception:`` handlers.
 
 
 class FablibException(Exception):
-    """Base exception for all FABlib errors."""
+    """Base exception for all FABlib errors.
 
-    pass
+    All FABlib exceptions accept an optional ``payload`` keyword argument
+    that carries structured error data (e.g. a list of validation errors
+    or an erring object) alongside the human-readable message::
+
+        raise ValidationError("Slice validation failed", payload=errors)
+
+    Callers can access it via ``exc.payload``.
+    """
+
+    def __init__(self, *args, payload=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.payload = payload
 
 
 class ResourceNotFoundError(FablibException, KeyError):

@@ -46,6 +46,10 @@ from typing import TYPE_CHECKING, Optional, Union
 from fim.user import ComponentType
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    SliceStateError,
+)
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 from fabrictestbed_extensions.utils.utils import Utils
 
@@ -461,7 +465,7 @@ class Component(TemplateMixin):
                 ):
                     return interface
 
-        raise Exception(f"Interface not found: {name or network_name}")
+        raise ResourceNotFoundError(f"Interface not found: {name or network_name}")
 
     def get_slice(self) -> Optional[Slice]:
         """
@@ -691,8 +695,16 @@ class Component(TemplateMixin):
 
     def configure(self, commands: List[str] = []):
         """
-        Configure a component by executing a set of commands provided by the user or run any default commands
+        Configure a component by executing a set of commands provided by the user or run any default commands.
+
+        :raises SliceStateError: if the node is not in Active state
         """
+        if self.node.get_reservation_state() != "Active":
+            raise SliceStateError(
+                f"Node {self.node.get_name()} must be in Active state to "
+                f"configure components. Current state: {self.node.get_reservation_state()}. "
+                f"Submit the slice and wait for it to be ready first."
+            )
         output = []
         start = time.time()
         try:
@@ -723,7 +735,15 @@ class Component(TemplateMixin):
 
         :param mount_point: The mount point in the filesystem. Default = "" later reassigned to /mnt/{linux device name}
         :type mount_point: String
+
+        :raises SliceStateError: if the node is not in Active state
         """
+        if self.node.get_reservation_state() != "Active":
+            raise SliceStateError(
+                f"Node {self.node.get_name()} must be in Active state to "
+                f"configure NVMe. Current state: {self.node.get_reservation_state()}. "
+                f"Submit the slice and wait for it to be ready first."
+            )
         output = []
         try:
             device_pci_id = self.get_pci_addr()[0]

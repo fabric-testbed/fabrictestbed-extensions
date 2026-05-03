@@ -65,6 +65,18 @@ class Constants:
     Image Metadata:
         - IMAGE_NAMES - Dictionary mapping image names to descriptions and default users
 
+    Public Validation Collections (no authentication required):
+        - COMPONENT_MODELS - frozenset of valid component model strings for
+          ``Node.add_component(model=...)``.
+        - IMAGE_NAMES - Dictionary of valid image names with user/description.
+
+    .. note::
+
+        Site names are dynamic and require authentication to query via
+        ``FablibManager.get_site_names()``.  If you need site names for
+        offline validation, use the FABRIC metadata endpoint or cache the
+        result of ``get_site_names()``.
+
     All constants are class attributes and should be accessed as Constants.CONSTANT_NAME.
     """
 
@@ -314,6 +326,31 @@ class Constants:
     CMP_FPGA_Xilinx_U280 = "FPGA_Xilinx_U280"
     CMP_FPGA_Xilinx_SN1022 = "FPGA_Xilinx_SN1022"
     P4_DedicatedPort = "P4_DedicatedPort"
+
+    # ── Component Model Names ─────────────────────────────────────────
+    # Convenience collection of all valid component model strings that can
+    # be passed to ``Node.add_component(model=...)``.  External tools
+    # (e.g. EnOSlib) can use this for input validation without requiring
+    # FABRIC authentication.
+    COMPONENT_MODELS = frozenset(
+        {
+            CMP_NIC_Basic,
+            CMP_NIC_ConnectX_5,
+            CMP_NIC_ConnectX_6,
+            CMP_NIC_ConnectX_7_100,
+            CMP_NIC_ConnectX_7_400,
+            CMP_NIC_BlueField2_ConnectX_6,
+            CMP_NIC_P4,
+            CMP_NIC_OpenStack,
+            CMP_NVME_P4510,
+            CMP_GPU_TeslaT4,
+            CMP_GPU_RTX6000,
+            CMP_GPU_A30,
+            CMP_GPU_A40,
+            CMP_FPGA_Xilinx_U280,
+            CMP_FPGA_Xilinx_SN1022,
+        }
+    )
 
     FABRIC_USER = "fabric"
     FABRIC_METADATA_URL = "https://raw.githubusercontent.com/fabric-testbed/fabric-global-metadata/{}/metadata"

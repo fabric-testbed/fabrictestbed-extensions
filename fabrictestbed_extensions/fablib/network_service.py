@@ -40,6 +40,7 @@ from fim.slivers.path_info import Path
 from fim.user import ERO, Gateway
 from tabulate import tabulate
 
+from fabrictestbed_extensions.fablib.exceptions import ResourceNotFoundError
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
@@ -1160,7 +1161,7 @@ class NetworkService(TemplateMixin):
             if name in iface_name:
                 return iface
 
-        return None
+        raise ResourceNotFoundError(f"Interface not found: {name}")
 
     def has_interface(self, interface: Interface) -> bool:
         """

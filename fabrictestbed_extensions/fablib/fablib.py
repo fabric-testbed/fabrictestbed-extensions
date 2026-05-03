@@ -360,6 +360,14 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor.shutdown(wait=False)
             self.ssh_thread_pool_executor = None
 
+        # Close log handlers to avoid ResourceWarning from unclosed file handles
+        for handler in self.log.handlers[:]:
+            try:
+                handler.close()
+                self.log.removeHandler(handler)
+            except Exception:
+                pass
+
     def __enter__(self):
         """Context manager entry point."""
         return self
@@ -428,6 +436,7 @@ class FablibManager(Config):
             "This function is deprecated and will be removed in future releases, "
             "please use 'verify_and_configure' instead.",
             DeprecationWarning,
+            stacklevel=2,
         )
         self.verify_and_configure()
 
@@ -2701,7 +2710,7 @@ Host * !bastion.fabric-testbed.net
         Ceph Manager base URL and token file.
 
         :param bool verify: Verify TLS certificates when calling the API.
-                            Defaults to ``False`` (set to ``True`` in production).
+                            Defaults to ``True``.
         :return: List of cluster name
         :rtype: list
         :raises RuntimeError: If the API call fails.
@@ -2758,13 +2767,13 @@ Host * !bastion.fabric-testbed.net
              ``ceph.client.<user>.keyring``, and a mount script
              ``mount_<user>.sh`` that mounts every path found in the MDS caps.
 
-        :param str region: Target cluster name (e.g., ``"europe"``).
+        :param str cluster: Target cluster name (e.g., ``"europe"``).
         :param str out_base: Output root directory for artifacts
                              (default: ``"~/.ceph"``).
         :param str mount_root: Mount prefix used by the generated script
                                (default: ``"/mnt/cephfs"``).
         :param bool verify: Verify TLS certificates when calling the API.
-                            Defaults to ``False`` (set to ``True`` in production).
+                            Defaults to ``True``.
         :return: Details of the generated bundle, for example::
 
             {
@@ -2785,7 +2794,7 @@ Host * !bastion.fabric-testbed.net
               ]
             }
         :rtype: dict
-        :raises ValueError: If ``region`` is unknown or the user name is empty.
+        :raises ValueError: If ``cluster`` is unknown or the user name is empty.
         :raises RuntimeError: If no clusters are discovered or keyring is unavailable.
         """
         # Accept either "alice" or "client.alice" from your accessor
