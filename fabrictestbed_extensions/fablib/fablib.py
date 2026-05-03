@@ -440,70 +440,139 @@ class FablibManager(Config):
         )
         self.verify_and_configure()
 
-    def verify_and_configure(self, validate_only: bool = False):
+    def verify_configuration(self) -> tuple:
         """
-        Validate and create Fablib config - checks if all the required configuration exists for slice
-        provisioning to work successfully
+        Verify the FABlib configuration without modifying any state.
 
-        - Checks Credential Manager Host is configured properly
+        Checks **all** configuration aspects and collects every error
+        rather than stopping at the first failure.  This makes it easy to
+        present a complete list of issues to the user in one pass.
 
-        - Checks Orchestrator Host is configured properly
+        Checks performed:
 
-        - Checks Core API Host is configured properly
+        - Credential Manager host is reachable
+        - Orchestrator host is reachable
+        - Core API host is reachable
+        - Bastion host is reachable
+        - Sliver and bastion key files are different
+        - Sliver keys exist
+        - Bastion username is configured
+        - Project ID is configured
 
-        - Checks Bastion Host is configured properly
-
-        - Check Sliver keys exist; create sliver keys if they do not exist
-
-        - Check Bastion keys exist and are not expired; update/create bastion keys if expired or do not exist
-
-        - Check Bastion Username is configured
-
-        - Check Project Id is configured
-
-        :param validate_only: flag to specify to only do config validation
-        :type validate_only: bool
-
-        :raises Exception if the configuration is invalid
+        :return: ``(True, [])`` when valid, ``(False, errors)`` otherwise
+        :rtype: tuple[bool, list[str]]
         """
-        Utils.is_reachable(hostname=self.get_credmgr_host(), port=443)
-        Utils.is_reachable(hostname=self.get_orchestrator_host(), port=443)
-        Utils.is_reachable(hostname=self.get_core_api_host(), port=443)
-        Utils.is_reachable(hostname=self.get_bastion_host(), port=22)
+        errors = []
 
+        # --- Host reachability checks ---
+        host_checks = [
+            (self.get_credmgr_host(), 443, "Credential Manager"),
+            (self.get_orchestrator_host(), 443, "Orchestrator"),
+            (self.get_core_api_host(), 443, "Core API"),
+            (self.get_bastion_host(), 22, "Bastion Host"),
+        ]
+        for hostname, port, label in host_checks:
+            try:
+                Utils.is_reachable(hostname=hostname, port=port)
+            except Exception as e:
+                errors.append(f"{label} ({hostname}:{port}) is not reachable: {e}")
+
+        # --- Key conflict check ---
         if (
             self.get_default_slice_private_key_file() is not None
             and self.get_bastion_key_location() is not None
             and self.get_default_slice_private_key_file()
             == self.get_bastion_key_location()
         ):
-            log.error(
-                "Sliver Key and Bastion key can not be same! Please use different key names!"
-            )
-            raise Exception(
-                "Sliver Key and Bastion key can not be same! Please use different key names!"
+            errors.append(
+                "Sliver key and bastion key cannot be the same file — "
+                "please use different key names"
             )
 
-        self.validate_and_update_bastion_keys(validate_only=validate_only)
+        # --- Sliver keys existence ---
+        if (
+            self.get_default_slice_public_key() is None
+            or self.get_default_slice_private_key() is None
+        ):
+            errors.append("Sliver keys do not exist — please create sliver keys")
+
+        # --- Required settings ---
+        if self.get_bastion_username() is None:
+            errors.append("Bastion username is not configured")
+
+        if self.get_project_id() is None:
+            errors.append("Project ID is not configured")
+
+        success = len(errors) == 0
+        return (success, errors)
+
+    def generate_configuration(self):
+        """
+        Apply configuration: create missing keys and SSH config.
+
+        Call this after :meth:`verify_configuration` confirms the config
+        is valid (or to auto-fix fixable issues like missing keys).
+
+        Actions performed:
+
+        - Validate and update bastion keys (create if missing/expired)
+        - Create sliver keys if they do not exist
+        - Generate the bastion SSH config file
+
+        :return: list of actions that were taken
+        :rtype: list[str]
+        """
+        actions = []
+
+        self.validate_and_update_bastion_keys(validate_only=False)
+        actions.append("Validated and updated bastion keys")
 
         if (
             self.get_default_slice_public_key() is None
             or self.get_default_slice_private_key() is None
         ):
-            log.info("Sliver keys do not exist! Please create sliver keys")
             self.create_sliver_keys()
+            actions.append("Created sliver keys")
 
-        if self.get_bastion_username() is None:
-            log.info("Bastion User name is not specified")
-            raise Exception("Bastion User name is not specified")
+        self.create_ssh_config(overwrite=True)
+        actions.append("Created SSH config")
 
-        if self.get_project_id() is None:
-            log.info("Project ID is not specified")
-            raise Exception("Project ID is not specified")
+        return actions
+
+    def verify_and_configure(self, validate_only: bool = False):
+        """
+        Validate and optionally apply FABlib configuration.
+
+        This is a convenience method that delegates to
+        :meth:`verify_configuration` and :meth:`generate_configuration`.
+
+        - Checks Credential Manager Host is reachable
+        - Checks Orchestrator Host is reachable
+        - Checks Core API Host is reachable
+        - Checks Bastion Host is reachable
+        - Checks sliver/bastion key separation
+        - Validates bastion keys; creates if missing/expired
+        - Creates sliver keys if missing
+        - Checks bastion username and project ID
+        - Creates SSH config (unless ``validate_only=True``)
+
+        :param validate_only: if ``True``, only verify without applying changes
+        :type validate_only: bool
+
+        :raises Exception: if the configuration is invalid
+        """
+        success, errors = self.verify_configuration()
+        if not success:
+            msg = "Configuration validation failed:\n" + "\n".join(
+                f"  - {e}" for e in errors
+            )
+            log.error(msg)
+            raise Exception(msg)
 
         print("Configuration is valid")
+
         if not validate_only:
-            self.create_ssh_config(overwrite=True)
+            self.generate_configuration()
             print("Please save the config!")
 
     def get_user_info(self) -> dict:
