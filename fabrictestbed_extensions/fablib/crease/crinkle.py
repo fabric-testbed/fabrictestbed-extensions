@@ -317,8 +317,6 @@ class CrinkleMonitor(Node):
         }
         logging.info(f"Writing monitor config to user data: {data_dict}")
         user_data["monitor_config"] = data_dict
-        # logging.info(f"Writing monitor iface mappings to user data: {iface_mappings}")
-        # user_data["iface_mappings"] = iface_mappings
         self.set_user_data(user_data=user_data)
 
 
@@ -391,8 +389,6 @@ class CrinkleSlice(Slice):
         logging.info(f"get_crinkle_data()")
         if "crinkle_slice_config" in analyzer.get_user_data():
             data = self.analyzer.get_user_data()["crinkle_slice_config"]
-            # data_iface_mappings = self.get_user_data()["iface_mappings"]
-            # logging.info(f"Retrieved monitor iface mappings as: {data_iface_mappings}")
             self.analyzer_name = data["analyzer_name"]
             self.prefix = data["prefix"]
             self.monitor_string = data["monitor_string"]
@@ -421,8 +417,6 @@ class CrinkleSlice(Slice):
         }
         logging.info(f"Writing crinkle slice config to user data: {data_dict}")
         user_data["crinkle_slice_config"] = data_dict
-        # logging.info(f"Writing monitor iface mappings to user data: {iface_mappings}")
-        # user_data["iface_mappings"] = iface_mappings
         self.analyzer.set_user_data(user_data=user_data)
 
     @staticmethod
@@ -937,7 +931,6 @@ class CrinkleSlice(Slice):
                         )
                         endhosts.setdefault(endpoint.get_host(), True)
                         continue
-                    # TODO: instead, traverse hostlist in reverse
                     for host_name, host in hostlist[1:]:
                         allocated_comps = allocated.setdefault(host_name, {})
                         if NodeValidator.can_allocate_node_in_host(
