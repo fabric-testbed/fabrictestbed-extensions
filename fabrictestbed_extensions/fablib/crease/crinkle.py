@@ -1020,9 +1020,9 @@ class CrinkleSlice(Slice):
             host = hosts[host_name]
             allocated_comps = allocated[host_name]
             logging.info(
-                f"{host_name}: CPU {allocated_comps['core']}/{host.get_core_available()} "
-                f"RAM {allocated_comps['ram']}/{host.get_ram_available()} "
-                f"DISK {allocated_comps['disk']}/{host.get_disk_available()}"
+                f"{host_name}: CPU {allocated_comps['core']}/{host.get('cores_available', 0)} "
+                f"RAM {allocated_comps['ram']}/{host.get('ram_available', 0)} "
+                f"DISK {allocated_comps['disk']}/{host.get('disk_available', 0)}"
             )
 
     def submit(
@@ -1129,7 +1129,7 @@ class CrinkleSlice(Slice):
             monitor_site = monitor.get_site()
             site_ad = site_ads.setdefault(
                 monitor_site,
-                self.get_fablib_manager().get_site_advertisement(monitor_site),
+                self.get_fablib_manager().get_resources().get_ptp_capable(site_name=monitor_site),
             )
             if not site_ad.flags.ptp:
                 logging.warning(
