@@ -31,9 +31,9 @@ Methods to manage FABRIC `slices`_.
 You would create and use a slice like so::
 
     from ipaddress import IPv4Address
-    from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
 
-    fablib = FablibManagerV2()
+    fablib = FablibManager()
 
     # Create a slice and add resources to it, creating a topology.
     slice = fablib.new_slice(name="MySlice")
@@ -75,7 +75,7 @@ from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.fablib import FablibManagerV2
+    from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 import concurrent.futures
 import os
@@ -138,7 +138,7 @@ class Slice:
 
     def __init__(
         self,
-        fablib_manager: FablibManagerV2,
+        fablib_manager: FablibManager,
         name: str = None,
         user_only: bool = True,
         sm_slice: Optional[SliceDTO] = None,
@@ -151,7 +151,7 @@ class Slice:
         """
         super().__init__()
 
-        self.fablib_manager: FablibManagerV2 = fablib_manager
+        self.fablib_manager: FablibManager = fablib_manager
         self.network_iface_map = None
         self.sm_slice: Optional[SliceDTO] = sm_slice
         self.slice_name = sm_slice.name if sm_slice else name
@@ -177,7 +177,7 @@ class Slice:
         self._storage: bool = False
         self._storage_cluster: Optional[str] = None
 
-    def get_fablib_manager(self) -> FablibManagerV2:
+    def get_fablib_manager(self) -> FablibManager:
         """Return the associated FablibManager instance."""
         return self.fablib_manager
 
@@ -498,7 +498,7 @@ class Slice:
 
     @staticmethod
     def new_slice(
-        fablib_manager: FablibManagerV2,
+        fablib_manager: FablibManager,
         name: str = None,
         storage: bool = False,
         storage_cluster: str = None,
@@ -525,7 +525,7 @@ class Slice:
 
     @staticmethod
     def get_slice(
-        fablib_manager: FablibManagerV2,
+        fablib_manager: FablibManager,
         sm_slice: SliceDTO,
         user_only: bool = True,
     ):
