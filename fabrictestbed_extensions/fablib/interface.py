@@ -962,9 +962,7 @@ class Interface(TemplateMixin):
 
             return None
         except Exception as e:
-            log.warning(
-                f"get_ip_addr_ssh failed for interface {self.get_name()}: {e}"
-            )
+            log.warning(f"get_ip_addr_ssh failed for interface {self.get_name()}: {e}")
             return None
 
     def _get_ip_addr_json(self) -> Optional[dict]:
@@ -1020,9 +1018,7 @@ class Interface(TemplateMixin):
 
             return_ips = parse_ip_addr_json(addr_json, family=family)
         except Exception as e:
-            log.warning(
-                f"get_ips failed for interface {self.get_name()}: {e}"
-            )
+            log.warning(f"get_ips failed for interface {self.get_name()}: {e}")
 
         return return_ips
 
