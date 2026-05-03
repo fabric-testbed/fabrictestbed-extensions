@@ -1202,7 +1202,6 @@ class CrinkleSlice(Slice):
                 )
                 logging.error(e, exc_info=True)
 
-
         start = time.time()
 
         my_thread_pool_executor = futures.ThreadPoolExecutor(32)

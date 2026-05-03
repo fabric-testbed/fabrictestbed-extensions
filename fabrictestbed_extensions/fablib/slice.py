@@ -2697,8 +2697,10 @@ class Slice:
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
                     if (
-                        type(net.get_subnet()) not in [ipaddress.IPv4Network, ipaddress.IPv6Network]
-                        or type(net.get_gateway()) not in [ipaddress.IPv4Address, ipaddress.IPv6Address]
+                        type(net.get_subnet())
+                        not in [ipaddress.IPv4Network, ipaddress.IPv6Network]
+                        or type(net.get_gateway())
+                        not in [ipaddress.IPv4Address, ipaddress.IPv6Address]
                         or net.get_available_ips() is None
                     ):
                         log.warning(

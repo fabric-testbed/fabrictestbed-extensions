@@ -3451,9 +3451,7 @@ class Node(TemplateMixin):
             log.warning(f"Failed to up link: {e}")
             raise e
 
-    def ip_link_down(
-        self, subnet: IPv4Network | IPv6Network, interface: Interface
-    ):
+    def ip_link_down(self, subnet: IPv4Network | IPv6Network, interface: Interface):
         """
         Bring down a link on an interface on the node.
 
