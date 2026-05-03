@@ -1441,9 +1441,7 @@ class Node(TemplateMixin):
                     "networks",
                 ],
             )
-            bastion_config = (
-                self.get_fablib_manager().get_bastion_ssh_config_file()
-            )
+            bastion_config = self.get_fablib_manager().get_bastion_ssh_config_file()
             if bastion_config and not os.path.exists(bastion_config):
                 ssh_cmd += (
                     f" (WARNING: SSH config file '{bastion_config}' "

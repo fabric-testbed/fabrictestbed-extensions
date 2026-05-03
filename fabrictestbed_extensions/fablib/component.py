@@ -46,7 +46,10 @@ from typing import TYPE_CHECKING, Optional, Union
 from fim.user import ComponentType
 
 from fabrictestbed_extensions.fablib.constants import Constants
-from fabrictestbed_extensions.fablib.exceptions import ResourceNotFoundError, SliceStateError
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    SliceStateError,
+)
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 from fabrictestbed_extensions.utils.utils import Utils
 
