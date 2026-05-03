@@ -8,9 +8,9 @@ Run with::
 """
 
 import logging
+from ipaddress import IPv4Network
 
 import pytest
-from ipaddress import IPv4Network
 
 pytestmark = [pytest.mark.lifecycle, pytest.mark.p1]
 
