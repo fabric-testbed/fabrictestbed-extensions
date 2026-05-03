@@ -59,6 +59,26 @@ from fim.user.interface import Interface as FimInterface
 log = logging.getLogger("fablib")
 
 
+def parse_ip_addr_json(addr_entry: dict, family: str = None) -> list:
+    """
+    Extract IP addresses from a single ``ip -j addr show`` entry.
+
+    :param addr_entry: one element from the JSON output of ``ip -j addr show``
+    :type addr_entry: dict
+    :param family: optional filter — ``"inet"`` for IPv4, ``"inet6"`` for IPv6
+    :type family: str or None
+    :return: list of IP address strings
+    :rtype: list[str]
+    """
+    ips = []
+    for info in addr_entry.get("addr_info", []):
+        if family is None or info.get("family") == family:
+            local = info.get("local")
+            if local:
+                ips.append(local)
+    return ips
+
+
 class Interface(TemplateMixin):
     """Represents a network interface on a FABRIC node."""
 
@@ -935,35 +955,74 @@ class Interface(TemplateMixin):
 
             for addr in addrs:
                 if addr["ifname"] == dev:
-                    return str(ipaddress.ip_address(addr["addr_info"][0]["local"]))
+                    addr_info = addr.get("addr_info", [])
+                    if not addr_info:
+                        return None
+                    return str(ipaddress.ip_address(addr_info[0]["local"]))
 
             return None
         except Exception as e:
-            log.warning(f"{e}")
+            log.warning(
+                f"get_ip_addr_ssh failed for interface {self.get_name()}: {e}"
+            )
+            return None
+
+    def _get_ip_addr_json(self) -> Optional[dict]:
+        """
+        Get the full ``ip -j addr show`` JSON dict for this interface's device.
+
+        Returns the matching entry from ``ip -j addr show <dev>`` as a dict,
+        or ``None`` if the device cannot be resolved or the command fails.
+
+        :return: JSON dict for the device or None
+        :rtype: dict or None
+        """
+        try:
+            dev = self.get_device_name()
+            if not dev:
+                return None
+
+            stdout, stderr = self.get_node().execute(
+                f"ip -j addr show {dev}", quiet=True
+            )
+            if not stdout:
+                return None
+
+            entries = json.loads(stdout)
+            if entries and isinstance(entries, list):
+                return entries[0]
+            return None
+        except Exception as e:
+            log.warning(
+                f"_get_ip_addr_json failed for interface {self.get_name()}: {e}"
+            )
             return None
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):
         """
-        Gets a list of ips assigned to this interface.
+        Gets a list of IP addresses assigned to this interface.
 
-        :return: list of ips
+        Queries the node via SSH to retrieve all addresses on the device.
+        Optionally filters by address family (``"inet"`` for IPv4 or
+        ``"inet6"`` for IPv6).
+
+        :param family: address family filter, e.g. ``"inet"`` or ``"inet6"``
+        :type family: str, optional
+        :return: list of IP address strings
         :rtype: list[str]
         """
         return_ips = []
         try:
-            ip_addr = self.get_ip_addr()
+            addr_json = self._get_ip_addr_json()
+            if addr_json is None:
+                return return_ips
 
-            # print(f"{ip_addr}")
-
-            for addr_info in ip_addr["addr_info"]:
-                if family is None:
-                    return_ips.append(addr_info["local"])
-                else:
-                    if addr_info["family"] == family:
-                        return_ips.append(addr_info["local"])
+            return_ips = parse_ip_addr_json(addr_json, family=family)
         except Exception as e:
-            log.warning(f"{e}")
+            log.warning(
+                f"get_ips failed for interface {self.get_name()}: {e}"
+            )
 
         return return_ips
 
@@ -1044,7 +1103,11 @@ class Interface(TemplateMixin):
         if self.ADDR in fablib_data:
             try:
                 addr = ipaddress.ip_address(fablib_data[self.ADDR])
-            except:
+            except (ValueError, TypeError) as e:
+                log.debug(
+                    f"Could not parse IP address '{fablib_data[self.ADDR]}' "
+                    f"for interface {self.get_name()}: {e}"
+                )
                 addr = fablib_data[self.ADDR]
             return addr
         else:

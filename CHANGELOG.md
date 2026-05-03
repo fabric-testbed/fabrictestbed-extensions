@@ -6,6 +6,17 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Fix `Interface.get_ips()` to correctly parse `ip -j addr show` output via new `_get_ip_addr_json()` helper (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix bare `except:` in `Interface.get_ip_addr()` — now catches only `ValueError`/`TypeError` and logs to debug (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix `Interface.get_ip_addr_ssh()` crash when `addr_info` is empty (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+
+### Added
+- Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+
 ## 2.0.4
 
 ### Added
