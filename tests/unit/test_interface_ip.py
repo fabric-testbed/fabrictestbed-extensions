@@ -4,7 +4,6 @@ import pytest
 
 from fabrictestbed_extensions.fablib.interface import parse_ip_addr_json
 
-
 # Sample data mimicking `ip -j addr show` output
 SAMPLE_ADDR_ENTRY = {
     "ifindex": 3,
