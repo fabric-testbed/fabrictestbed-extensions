@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import enum
 import ipaddress
-import json
 import logging
-import random
 import re
-import shutil
-import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
@@ -18,6 +14,8 @@ if TYPE_CHECKING:
 
 from concurrent import futures
 from ipaddress import IPv6Address, ip_address
+
+from fabrictestbed.external_api.orchestrator_client import SliceDTO
 
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_editor import Node as FimNode
@@ -330,11 +328,12 @@ class CrinkleSlice(Slice):
         fablib_manager: FablibManager,
         name: str = None,
         user_only: bool = True,
+        sm_slice: Optional[SliceDTO] = None,
         pcaps_dir: str = None,
         name_prefix: str = None,
         analyzer_name: str = None,
     ):
-        super().__init__(fablib_manager=fablib_manager, name=name, user_only=user_only)
+        super().__init__(fablib_manager=fablib_manager, name=name, sm_slice=sm_slice, user_only=user_only)
         self.monitors: Dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
@@ -355,6 +354,8 @@ class CrinkleSlice(Slice):
     def new_slice(
         fablib_manager: FablibManager,
         name: str = None,
+        storage: bool = False,
+        storage_cluster: str = None,
         pcaps_dir: str = ".query_analysis_pcaps",
         name_prefix: str = "C",
     ):
@@ -377,7 +378,8 @@ class CrinkleSlice(Slice):
             pcaps_dir=pcaps_dir,
             name_prefix=name_prefix,
         )
-        slice.topology = ExperimentTopology()
+        slice._storage = storage
+        slice._storage_cluster = storage_cluster
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
         return slice
@@ -426,7 +428,7 @@ class CrinkleSlice(Slice):
     @staticmethod
     def get_slice(
         fablib_manager: FablibManager,
-        sm_slice: OrchestratorSlice = None,
+        sm_slice: SliceDTO,
         user_only: bool = True,
         pcaps_dir: str = ".query_analysis_pcaps",
         name_prefix: str = "C",
@@ -444,16 +446,14 @@ class CrinkleSlice(Slice):
         :return: CrinkleSlice
         """
         logging.info("crinkleslice.get_slice()")
+
         slice = CrinkleSlice(
             fablib_manager=fablib_manager,
-            name=sm_slice.name,
+            sm_slice=sm_slice,
+            user_only=user_only,
             pcaps_dir=pcaps_dir,
             name_prefix=name_prefix,
         )
-        slice.sm_slice = sm_slice
-        slice.slice_id = sm_slice.slice_id
-        slice.slice_name = sm_slice.name
-        slice.user_only = user_only
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
 
