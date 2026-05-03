@@ -9,7 +9,8 @@ import pathlib
 import tempfile
 import unittest
 
-from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
+from fabrictestbed_extensions.fablib.config.config import (Config,
+                                                           ConfigException)
 from fabrictestbed_extensions.fablib.constants import Constants
 
 

@@ -29,14 +29,9 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from fabric_cf.orchestrator.orchestrator_proxy import SliceState
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentCatalog,
-    ComponentModelType,
-    ComponentType,
-    ExperimentTopology,
-    ServiceType,
-)
+from fabrictestbed.slice_editor import (Capacities, ComponentCatalog,
+                                        ComponentModelType, ComponentType,
+                                        ExperimentTopology, ServiceType)
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fabrictestbed.util.constants import Constants
 

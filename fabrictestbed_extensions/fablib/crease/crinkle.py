@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import enum
 import ipaddress
-import json
 import logging
-import random
 import re
-import shutil
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 from IPython.core.display_functions import display
 
@@ -17,7 +14,7 @@ if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 from concurrent import futures
-from ipaddress import IPv6Address, ip_address
+from ipaddress import IPv6Address
 
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_editor import Node as FimNode
@@ -78,7 +75,7 @@ class CrinkleAnalyzer(Node):
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
     ):
@@ -98,7 +95,7 @@ class CrinkleAnalyzer(Node):
         :type site: str
 
         :param avoid: a list of node names to avoid
-        :type avoid: List[str]
+        :type avoid: list[str]
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
@@ -169,7 +166,7 @@ class CrinkleMonitor(Node):
             net_name: str = None,
             net_type: str = None,
             cnet_iface: Interface = None,
-            iface_mappings: Dict[str, Tuple[str, Interface, bool, int]] = {},
+            iface_mappings: dict[str, tuple[str, Interface, bool, int]] = {},
             monitor_id: int = None,
         ):
             self.port_nums = port_nums
@@ -191,14 +188,14 @@ class CrinkleMonitor(Node):
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
         self.get_monitor_data()
-        self.creation_data: List[Tuple[str, str, str, bool, int]] = []  # see MonNetData
+        self.creation_data: list[tuple[str, str, str, bool, int]] = []  # see MonNetData
 
     @staticmethod
     def new_node(
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
     ):
@@ -287,7 +284,7 @@ class CrinkleMonitor(Node):
             logging.info(f"Retrieved monitor config as: {self.data.__dict__}")
         else:
             self.data = self.MonitorData()
-            logging.info(f"Did not retrieve stored monitor data, initializing")
+            logging.info("Did not retrieve stored monitor data, initializing")
 
     def set_monitor_data(self):
         """
@@ -335,10 +332,10 @@ class CrinkleSlice(Slice):
         analyzer_name: str = None,
     ):
         super().__init__(fablib_manager=fablib_manager, name=name, user_only=user_only)
-        self.monitors: Dict[str, CrinkleMonitor] = {}
+        self.monitors: dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
-        self.cnets: Dict[str, NetworkService] = {}
+        self.cnets: dict[str, NetworkService] = {}
         self.analyzer_cnet: NetworkService = None
         self.analyzer_iface: Interface = None
         self.pcaps_dir = pcaps_dir
@@ -386,7 +383,7 @@ class CrinkleSlice(Slice):
         """
         Get slice-wide crinkle data.
         """
-        logging.info(f"get_crinkle_data()")
+        logging.info("get_crinkle_data()")
         if "crinkle_slice_config" in analyzer.get_user_data():
             data = self.analyzer.get_user_data()["crinkle_slice_config"]
             # data_iface_mappings = self.get_user_data()["iface_mappings"]
@@ -401,13 +398,13 @@ class CrinkleSlice(Slice):
                 f"Retrieved crinkle slice config as:\n{self.analyzer_name}\n{self.prefix}\n{self.monitor_string}"
             )
         else:
-            logging.info(f"Did not retrieve stored crinkle slice config")
+            logging.info("Did not retrieve stored crinkle slice config")
 
     def set_crinkle_data(self):
         """
         Set slice-wide crinkle data.
         """
-        logging.info(f"set_crinkle_data()")
+        logging.info("set_crinkle_data()")
         user_data = self.analyzer.get_user_data()
         data_dict = {
             "analyzer_name": self.analyzer_name,
@@ -508,7 +505,7 @@ class CrinkleSlice(Slice):
         instance_type: str = None,
         host: str = None,
         user_data: dict = {},
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
     ) -> CrinkleAnalyzer:
@@ -545,7 +542,7 @@ class CrinkleSlice(Slice):
 
         :param avoid: (Optional) A list of sites to avoid is allowing
             random site.
-        :type avoid: List[String]
+        :type avoid: list[String]
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
@@ -629,7 +626,7 @@ class CrinkleSlice(Slice):
         instance_type: str = None,
         host: str = None,
         user_data: dict = {},
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
         net_name: str = None,
@@ -652,7 +649,7 @@ class CrinkleSlice(Slice):
         """
         if self.analyzer is None:
             raise Exception(
-                f"Analyzer must be created before adding monitors using add_analyzer()"
+                "Analyzer must be created before adding monitors using add_analyzer()"
             )
 
         monitor = CrinkleMonitor.new_node(
@@ -732,12 +729,12 @@ class CrinkleSlice(Slice):
     def add_monitored_l2network(
         self,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: list[Interface] = [],
         type: str = None,
         subnet: ipaddress = None,
         gateway: ipaddress = None,
         user_data: dict = {},
-        sinks: List[Interface] = [],
+        sinks: list[Interface] = [],
         host: str = None,
         site: str = None,
         cores: int = CrinkleMonitor.default_cores,
@@ -758,7 +755,7 @@ class CrinkleSlice(Slice):
 
         :param interfaces: a list of interfaces to build the network
             with
-        :type interfaces: List[Interface]
+        :type interfaces: list[Interface]
 
         :param type: optional L2 network type "L2Bridge", "L2STS", or
             "L2PTP"
@@ -775,7 +772,7 @@ class CrinkleSlice(Slice):
 
         :param sinks: A set of interfaces which should have any Crinkle packet trailers
             stripped before entering.
-        :type sinks: List[Interface]
+        :type sinks: list[Interface]
 
         :return: a new CrinkleMonitor
         :rtype: CrinkleMonitor
@@ -884,11 +881,11 @@ class CrinkleSlice(Slice):
         logging.info(
             "Allocating Monitors and their connected Nodes to different worker hosts"
         )
-        sitenames_to_sites: Dict[str, Dict[str, Any]] = {}
-        sitenames_to_hosts: Dict[str, Dict[str, Dict[str, Any]]] = {}
+        sitenames_to_sites: dict[str, dict[str, Any]] = {}
+        sitenames_to_hosts: dict[str, dict[str, dict[str, Any]]] = {}
         fablib = self.get_fablib_manager()
         fabresources = fablib.get_resources()
-        validated_nodes: Dict[str, bool] = {}
+        validated_nodes: dict[str, bool] = {}
 
         for node in self.get_all_nodes():
             host_name = node.get_host()
@@ -1008,7 +1005,7 @@ class CrinkleSlice(Slice):
 
         self.do_allocate_hosts = False
         self.set_crinkle_data()
-        logging.info(f"Hosts allocated")
+        logging.info("Hosts allocated")
         for host_name in allocated:
             site_name = host_name.split("-")[0].upper()
             site = sitenames_to_sites.setdefault(
@@ -1034,7 +1031,7 @@ class CrinkleSlice(Slice):
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
-        extra_ssh_keys: List[str] = None,
+        extra_ssh_keys: list[str] = None,
         lease_start_time: datetime = None,
         lease_end_time: datetime = None,
         lease_in_hours: int = None,
@@ -1068,7 +1065,7 @@ class CrinkleSlice(Slice):
         :type wait_ssh: bool
 
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
-        :type extra_ssh_keys: List[str]
+        :type extra_ssh_keys: list[str]
 
         :param lease_start_time: Optional lease start time in UTC format: %Y-%m-%d %H:%M:%S %z.
                            Specifies the beginning of the time range to search for available resources valid for `lease_in_hours`.
@@ -1091,7 +1088,7 @@ class CrinkleSlice(Slice):
         logging.info("Crinkle submit()")
         if self.analyzer is None:
             raise Exception(
-                f"Analyzer must be added before Crinkle slice submission using add_analyzer()"
+                "Analyzer must be added before Crinkle slice submission using add_analyzer()"
             )
 
         if self.do_allocate_hosts:
@@ -1113,14 +1110,14 @@ class CrinkleSlice(Slice):
         )
 
     def setup_ptp(self):
-        prereq_cmd = f"sudo apt update && sudo apt install -y ansible git"
+        prereq_cmd = "sudo apt update && sudo apt install -y ansible git"
         git_cmd = (
             f"cd {REMOTEWORKDIR} && git clone https://github.com/fabric-testbed/ptp.git"
         )
         ansible_cmd = f"cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml"
         jobs = []
         site_ads = {}
-        logging.info(f"Setting up PTP on Crinkle nodes")
+        logging.info("Setting up PTP on Crinkle nodes")
         print("Setting up PTP on Crinkle nodes")
         jobs.append(
             self.analyzer.execute_thread(f"{prereq_cmd} && {git_cmd} && {ansible_cmd}")
@@ -1176,12 +1173,12 @@ class CrinkleSlice(Slice):
         # Make sure we have the latest topology
         self.update()
 
-        logging.info(f"post_boot_config: get_networks")
+        logging.info("post_boot_config: get_networks")
         for network in self.get_networks():
             logging.info(f"post_boot_config: network {network.get_name()}")
             network.config()
 
-        logging.info(f"post_boot_config: get_interfaces")
+        logging.info("post_boot_config: get_interfaces")
         for interface in self.get_all_interfaces():
             try:
                 logging.info(f"post_boot_config: interface {interface.get_name()}")
@@ -1190,7 +1187,7 @@ class CrinkleSlice(Slice):
                 logging.error(f"Interface: {interface.get_name()} failed to config")
                 logging.error(e, exc_info=True)
 
-        logging.info(f"post_boot_config: unmanage interfaces")
+        logging.info("post_boot_config: unmanage interfaces")
         for interface in self.get_all_interfaces():
             try:
                 logging.info(f"post_boot_config: unmanage {interface.get_name()}")
@@ -1204,8 +1201,6 @@ class CrinkleSlice(Slice):
                     f"Interface: {interface.get_name()} failed to become unmanaged"
                 )
                 logging.error(e, exc_info=True)
-
-        import time
 
         start = time.time()
 
@@ -1254,7 +1249,7 @@ class CrinkleSlice(Slice):
                 aswitch.switch_config()
 
         # Custom Crinkle logic
-        logging.info(f"Crinkle post_boot_config")
+        logging.info("Crinkle post_boot_config")
         if self.do_post_boot:
             self.analyzer = self.get_node(name=self.analyzer_name)
             site = self.analyzer.get_site()
@@ -1263,7 +1258,7 @@ class CrinkleSlice(Slice):
                 network_name=self.analyzer_cnet.get_name()
             )
             self.cnets[site] = self.analyzer_cnet
-            jobs: List[futures.Future] = []
+            jobs: list[futures.Future] = []
             counter = 0
             self.monitor_string = f"{self.analyzer_iface.get_device_name()} {self.analyzer.get_cores() - 1}"
             for key, monitor in self.monitors.items():
@@ -1337,14 +1332,14 @@ class CrinkleSlice(Slice):
                 self.monitors[key] = refreshed_monitor
                 refreshed_monitor.set_monitor_data()
                 counter += 1
-            logging.info(f"Crinkle post_boot_config waiting on jobs to finish")
+            logging.info("Crinkle post_boot_config waiting on jobs to finish")
             print("Configuring Crinkle Resources")
             ctr = 0
             for _ in futures.as_completed(jobs):
                 ctr += 1
                 logging.info(f"{ctr}/{len(jobs)} jobs finished")
                 print(f"{ctr}/{len(jobs)} jobs finished")
-            logging.info(f"Starting SPADE")
+            logging.info("Starting SPADE")
             self.analyzer.execute_thread(f"./{REMOTEWORKDIR}/SPADE/bin/spade debug")
             time.sleep(5)
             spade_control_commands = (
@@ -1365,26 +1360,26 @@ class CrinkleSlice(Slice):
             self.analyzer.execute_thread(
                 f"sudo ./{REMOTEWORKDIR}/spade_reader.py {self.monitor_string}"
             )
-            logging.info(f"Saving slice data before rebooting monitors")
+            logging.info("Saving slice data before rebooting monitors")
             print("Saving slice data before rebooting monitors")
             self.do_post_boot = False
             if self.do_ptp_setup:
                 self.setup_ptp()
-            logging.info(f"Saving Crinkle Data")
+            logging.info("Saving Crinkle Data")
             self.set_crinkle_data()
             self.submit(
                 wait=True, progress=False, post_boot_config=False, wait_ssh=False
             )
             self.update()
 
-            logging.info(f"Rebooting Crinkle monitors")
+            logging.info("Rebooting Crinkle monitors")
             print("Rebooting Crinkle Resources")
             for monitor in self.monitors.values():
                 monitor.execute("sudo reboot")
-            logging.info(f"Waiting on Crinkle monitors to finish reboot")
+            logging.info("Waiting on Crinkle monitors to finish reboot")
             self.wait_ssh(progress=True)
             jobs = []
-            logging.info(f"Enabling Crinkle monitor interfaces")
+            logging.info("Enabling Crinkle monitor interfaces")
             for monitor in self.monitors.values():
                 cmd = f"sudo ip link set {monitor.data.cnet_iface.get_device_name()} up; sudo ip link set {monitor.data.cnet_iface.get_device_name()} promisc on; "
                 for _, iface, _, _ in monitor.data.iface_mappings.values():
@@ -1396,15 +1391,15 @@ class CrinkleSlice(Slice):
                 ctr += 1
                 logging.info(f"{ctr}/{len(jobs)} jobs finished")
                 print(f"{ctr}/{len(jobs)} jobs finished")
-            logging.info(f"Crinkle post_boot_config done")
+            logging.info("Crinkle post_boot_config done")
             print("Crinkle post_boot_config done")
 
-    def get_nodes(self, refresh: bool = False) -> List[Node]:
+    def get_nodes(self, refresh: bool = False) -> list[Node]:
         """
         Gets a list of all non-Crinkle nodes in this slice.
 
         :return: a list of fablib nodes
-        :rtype: List[Node]
+        :rtype: list[Node]
         """
         if not self.nodes or not len(self.nodes):
             refresh = True
@@ -1429,7 +1424,7 @@ class CrinkleSlice(Slice):
         Gets a list of all nodes in this slice.
 
         :return: a list of fablib nodes
-        :rtype: List[Node]
+        :rtype: list[Node]
         """
         return super().get_nodes(refresh=refresh)
 
@@ -1449,12 +1444,12 @@ class CrinkleSlice(Slice):
         """
         ret_val = self.get_all_interfaces(refresh=refresh, output="dict").get(name)
         if not ret_val:
-            raise Exception("Interface not found: {}".format(name))
+            raise Exception(f"Interface not found: {name}")
         return ret_val
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[Dict[str, Interface], List[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets all non-Crinkle interfaces in this slice.
 
@@ -1468,7 +1463,7 @@ class CrinkleSlice(Slice):
         :type output: str
 
         :return: a list of interfaces on this slice
-        :rtype: Union[Dict[str, Interface], List[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
         return super().get_interfaces(
             include_subs=include_subs, refresh=refresh, output=output
@@ -1476,7 +1471,7 @@ class CrinkleSlice(Slice):
 
     def get_all_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[Dict[str, Interface], List[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets all interfaces in this slice.
 
@@ -1490,7 +1485,7 @@ class CrinkleSlice(Slice):
         :type output: str
 
         :return: a list of interfaces on this slice
-        :rtype: Union[Dict[str, Interface], List[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
         if len(self.all_interfaces) == 0 or refresh:
             for node in self.get_all_nodes(refresh=refresh):
@@ -1535,7 +1530,7 @@ class CrinkleSlice(Slice):
         :param mac: IPv6 address
         :type mac: String
         :return: A tuple of the integer values of the front and back halves
-        :rtype: Tuple[int, int]
+        :rtype: tuple[int, int]
         """
         ip6 = IPv6Address(ip6)
         return (int(ip6) // (2**64), int(ip6) % (2**64))
@@ -1629,12 +1624,12 @@ class CrinkleSlice(Slice):
         )
         self.probe_id += 1
 
-    def dump_counters(self) -> Dict[str, Dict[str, Tuple[str, int, int]]]:
+    def dump_counters(self) -> dict[str, dict[str, tuple[str, int, int]]]:
         """
         Runs through each non-crinkle Node, gets the rx_packets and tx_packets count for
-        each interface, then returns a dict of form Dict[node name, Dict[iface name, (dev name, rx, tx)]].
+        each interface, then returns a dict of form dict[node name, dict[iface name, (dev name, rx, tx)]].
         """
-        rdict: Dict[str, Dict[str, Tuple[str, int, int]]] = {}
+        rdict: dict[str, dict[str, tuple[str, int, int]]] = {}
         for node in self.get_nodes():
             if node.get_image() in UBUNTU_IMAGES:
                 nodename = node.get_name()
@@ -1892,7 +1887,7 @@ class CrinkleSlice(Slice):
     ):
         """
         Query the provenance database and return the results as a dict of the form
-        Dict[pkt_id, List[pkt_info]],
+        dict[pkt_id, list[pkt_info]],
         where pkt_info is a dict of the following fields:
             - time
             - tx_host
@@ -1915,10 +1910,10 @@ class CrinkleSlice(Slice):
             download=False,
         )
         self.analyzer.download_file(f"{name}.dot", f"{REMOTEWORKDIR}/{name}.dot")
-        prov_dict: Dict[str, List[Dict[str, str]]] = {}
-        iface_host_map: Dict[str, str] = {}
-        flow_map: Dict[str, Dict[str, str]] = {}
-        flow_tx_map: Dict[str, Dict[str, Dict[str, str]]] = {}
+        prov_dict: dict[str, list[dict[str, str]]] = {}
+        iface_host_map: dict[str, str] = {}
+        flow_map: dict[str, dict[str, str]] = {}
+        flow_tx_map: dict[str, dict[str, dict[str, str]]] = {}
         flow_keys = [
             "eth.type",
             "ip.prot",
@@ -1927,7 +1922,7 @@ class CrinkleSlice(Slice):
             "prot.sport",
             "prot.dport",
         ]
-        with open(f"{name}.dot", "r") as f:
+        with open(f"{name}.dot") as f:
             lines = f.readlines()
             for line in lines:
                 if "->" not in line:
@@ -2138,7 +2133,7 @@ class CrinkleSlice(Slice):
 
     def start_monitor(
         self, monitor: CrinkleMonitor, wait: bool = True, quiet: bool = False
-    ) -> Optional[futures.Future]:
+    ) -> futures.Future | None:
         """
         Start the DPDK script on a monitor.
 
@@ -2168,7 +2163,7 @@ class CrinkleSlice(Slice):
 
     def start_all_monitors(
         self, wait: bool = True, no_return: bool = True
-    ) -> Optional[List[futures.Future]]:
+    ) -> list[futures.Future] | None:
         """
         Start the DPDK script on all monitors.
 
@@ -2177,13 +2172,13 @@ class CrinkleSlice(Slice):
         :param no_return: Whether to return None instead of the list of jobs
         :type no_return: bool
         :return: The futures of all started jobs
-        :rtype: List[concurrent.futures.Future]
+        :rtype: list[concurrent.futures.Future]
         """
-        start_list: List[futures.Future] = []
+        start_list: list[futures.Future] = []
         for monitor in self.monitors.values():
             start_list.append(self.start_monitor(monitor=monitor, wait=False))
         if wait:
-            logging.info(f"Waiting for monitors to finish starting")
+            logging.info("Waiting for monitors to finish starting")
             ctr = 0
             max = len(start_list)
             while ctr < max:

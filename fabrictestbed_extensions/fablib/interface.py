@@ -35,7 +35,7 @@ import logging
 import re
 import warnings
 from ipaddress import IPv4Address, IPv6Address
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from fabrictestbed.slice_editor import Flags
 from fim.user import Capacities, InterfaceType, Labels
@@ -43,17 +43,15 @@ from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
-from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.slice import Slice
-    from fabrictestbed_extensions.fablib.node import Node
-    from fabrictestbed_extensions.fablib.network_service import NetworkService
     from fabrictestbed_extensions.fablib.component import Component
     from fabrictestbed_extensions.fablib.facility_port import FacilityPort
+    from fabrictestbed_extensions.fablib.network_service import NetworkService
+    from fabrictestbed_extensions.fablib.node import Node
+    from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.switch import Switch
 
-from fabrictestbed.slice_editor import UserData
 from fim.user.interface import Interface as FimInterface
 
 log = logging.getLogger("fablib")
@@ -75,7 +73,7 @@ class Interface(TemplateMixin):
         self,
         component: Component = None,
         fim_interface: FimInterface = None,
-        node: Union[Switch, FacilityPort] = None,
+        node: Switch | FacilityPort = None,
         model: str = None,
         parent: Interface = None,
     ):
@@ -105,25 +103,25 @@ class Interface(TemplateMixin):
         self.parent = parent
 
         # V2 specific: cached FIM properties
-        self._cached_mac: Optional[str] = None
-        self._cached_vlan: Optional[str] = None
-        self._cached_bandwidth: Optional[int] = None
-        self._cached_site: Optional[str] = None
-        self._cached_physical_os_interface: Optional[str] = None
-        self._cached_switch_port: Optional[str] = None
-        self._cached_flag: Optional[bool] = False
-        self._cached_peer_port_name: Optional[str] = None
-        self._cached_fim_type: Optional[str] = None
-        self._cached_peer_account_id: Optional[str] = None
-        self._cached_peer_bgp_key: Optional[str] = None
-        self._cached_peer_asn: Optional[str] = None
-        self._cached_peer_subnet: Optional[str] = None
-        self._cached_subnet: Optional[str] = None
-        self._cached_peer_port_vlan: Optional[str] = None
+        self._cached_mac: str | None = None
+        self._cached_vlan: str | None = None
+        self._cached_bandwidth: int | None = None
+        self._cached_site: str | None = None
+        self._cached_physical_os_interface: str | None = None
+        self._cached_switch_port: str | None = None
+        self._cached_flag: bool | None = False
+        self._cached_peer_port_name: str | None = None
+        self._cached_fim_type: str | None = None
+        self._cached_peer_account_id: str | None = None
+        self._cached_peer_bgp_key: str | None = None
+        self._cached_peer_asn: str | None = None
+        self._cached_peer_subnet: str | None = None
+        self._cached_subnet: str | None = None
+        self._cached_peer_port_vlan: str | None = None
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        super(Interface, self)._invalidate_cache()
+        super()._invalidate_cache()
 
         self._cached_mac = None
         self._cached_vlan = None
@@ -224,7 +222,7 @@ class Interface(TemplateMixin):
             "switch_port": "Switch Port",
         }
 
-    def toDict(self, skip: Optional[List[str]] = None) -> dict[str, str]:
+    def toDict(self, skip: list[str] | None = None) -> dict[str, str]:
         """
         Returns the interface attributes as a dictionary.
 
@@ -232,7 +230,7 @@ class Interface(TemplateMixin):
         is called.
 
         :param skip: list of keys to exclude
-        :type skip: List[str]
+        :type skip: list[str]
         :return: interface attributes as dictionary
         :rtype: dict
         """
@@ -305,7 +303,7 @@ class Interface(TemplateMixin):
             return dict(self._cached_dict)
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def get_switch_port(self) -> Optional[str]:
+    def get_switch_port(self) -> str | None:
         """
         Get the name of the port on the switch corresponding to this interface
 
@@ -324,7 +322,7 @@ class Interface(TemplateMixin):
                     self._cached_switch_port = ifs.labels.local_name
         return self._cached_switch_port
 
-    def get_numa_node(self) -> Optional[str]:
+    def get_numa_node(self) -> str | None:
         """
         Retrieve the NUMA node of the component linked to the interface.
 
@@ -363,7 +361,7 @@ class Interface(TemplateMixin):
         fim_iface.flags = Flags(auto_config=False)
         self._cached_flag = False
 
-    def get_peer_port_name(self) -> Optional[str]:
+    def get_peer_port_name(self) -> str | None:
         """
         If available provide the name of the attached port on the dataplane switch.
         Only possible once the slice has been instantiated.
@@ -379,7 +377,7 @@ class Interface(TemplateMixin):
                 ].labels.local_name
         return self._cached_peer_port_name
 
-    def get_peer_port_vlan(self) -> Optional[str]:
+    def get_peer_port_vlan(self) -> str | None:
         """
         Returns the VLAN associated with the interface.
         For shared NICs extracts it from label_allocations.
@@ -398,7 +396,7 @@ class Interface(TemplateMixin):
 
         return self._cached_peer_port_vlan
 
-    def get_device_name(self) -> Optional[str]:
+    def get_device_name(self) -> str | None:
         """
         Gets a name of the device name on the node
 
@@ -462,7 +460,7 @@ class Interface(TemplateMixin):
         )
         return self.get_device_name()
 
-    def get_os_dev(self) -> Optional[dict[str, str]]:
+    def get_os_dev(self) -> dict[str, str] | None:
         """
         Gets json output of 'ip addr list' for the interface.
 
@@ -497,8 +495,8 @@ class Interface(TemplateMixin):
 
     def ip_addr_add(
         self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network],
+        addr: IPv4Address | IPv6Address,
+        subnet: ipaddress.IPv4Network | ipaddress.IPv6Network,
     ):
         """
         Add an IP address to the interface in the node.
@@ -512,8 +510,8 @@ class Interface(TemplateMixin):
 
     def ip_addr_del(
         self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[ipaddress.IPv4Network, ipaddress.IPv6Network],
+        addr: IPv4Address | IPv6Address,
+        subnet: ipaddress.IPv4Network | ipaddress.IPv6Network,
     ):
         """
         Delete an IP address to the interface in the node.
@@ -613,7 +611,7 @@ class Interface(TemplateMixin):
             return self.get_node().get_reservation_id()
         return None
 
-    def get_reservation_state(self) -> Optional[str]:
+    def get_reservation_state(self) -> str | None:
         """
         Gets the reservation state
 
@@ -817,7 +815,7 @@ class Interface(TemplateMixin):
         """
         return self.get_node().get_slice()
 
-    def get_node(self) -> Union[Node, FacilityPort]:
+    def get_node(self) -> Node | FacilityPort:
         """
         Gets the node this interface's component is on.
 
@@ -829,7 +827,7 @@ class Interface(TemplateMixin):
         else:
             return self.get_component().get_node()
 
-    def get_network(self) -> Optional[NetworkService]:
+    def get_network(self) -> NetworkService | None:
         """
         Gets the network this interface is on.
 
@@ -909,7 +907,7 @@ class Interface(TemplateMixin):
             )
 
     # fablib.Interface.get_ip_addr()
-    def get_ip_addr_ssh(self, dev=None) -> Optional[Union[str, list]]:
+    def get_ip_addr_ssh(self, dev=None) -> str | list | None:
         """
         Gets the ip addr info for this interface.
 
@@ -919,7 +917,7 @@ class Interface(TemplateMixin):
         when no output is available or the device is not found.
 
         :return: IP address string, list of addr dicts, or None
-        :rtype: Optional[Union[str, list]]
+        :rtype: str | list | None
         """
         try:
             stdout, stderr = self.get_node().execute("ip -j addr list", quiet=True)
@@ -998,7 +996,7 @@ class Interface(TemplateMixin):
 
         return self
 
-    def set_ip_addr(self, addr: Optional[ipaddress] = None, mode: str = None):
+    def set_ip_addr(self, addr: ipaddress | None = None, mode: str = None):
         """
         Set the IP address for the interface.
 
@@ -1124,7 +1122,6 @@ class Interface(TemplateMixin):
 
         :return: None
         """
-        from fabrictestbed.slice_editor import ServiceType
 
         self.config_vlan_iface()
         network = self.get_network()
@@ -1413,7 +1410,7 @@ class Interface(TemplateMixin):
 
     def get_interfaces(
         self, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
@@ -1424,7 +1421,7 @@ class Interface(TemplateMixin):
         :type output: str
 
         :return: a list or dict of the interfaces on this component.
-        :rtype: Union[dict[str, Interface], list[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
 
         if self.interfaces and not refresh and not self._fim_dirty:
@@ -1498,7 +1495,7 @@ class Interface(TemplateMixin):
             return ch_iface
         return None
 
-    def get_type(self) -> Optional[str]:
+    def get_type(self) -> str | None:
         """
         Get Interface type
 

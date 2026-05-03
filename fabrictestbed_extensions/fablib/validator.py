@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from fim.user import ComponentType
 
@@ -57,11 +57,11 @@ class NodeValidator:
 
     @staticmethod
     def can_allocate_node_in_host(
-        host: Dict[str, Any],
+        host: dict[str, Any],
         node: Node,
         allocated: dict,
-        site: Dict[str, Any],
-    ) -> Tuple[bool, str]:
+        site: dict[str, Any],
+    ) -> tuple[bool, str]:
         """Check if a node fits on a specific host given current allocations.
 
         :param host: Host dict from ResourcesV2 (keys: name, state,
@@ -147,8 +147,8 @@ class NodeValidator:
     def validate_node(
         node: Node,
         resources,
-        allocated: Optional[dict] = None,
-    ) -> Tuple[bool, str]:
+        allocated: dict | None = None,
+    ) -> tuple[bool, str]:
         """Validate a single node against available resources.
 
         Unlike the former ``FablibManager.validate_node``, this accepts
@@ -240,9 +240,9 @@ class NodeValidator:
 
     @staticmethod
     def validate_nodes(
-        nodes: List[Node],
+        nodes: list[Node],
         resources,
-    ) -> Tuple[bool, Dict[str, str]]:
+    ) -> tuple[bool, dict[str, str]]:
         """Batch-validate multiple nodes sharing a single allocated dict.
 
         Resources are fetched once by the caller and passed in.
@@ -252,8 +252,8 @@ class NodeValidator:
         :param resources: A ``ResourcesV2`` instance (pre-fetched)
         :return: (all_valid, errors) where errors maps node_name to message
         """
-        allocated: Dict[str, dict] = {}
-        errors: Dict[str, str] = {}
+        allocated: dict[str, dict] = {}
+        errors: dict[str, str] = {}
         for node in nodes:
             status, error = NodeValidator.validate_node(
                 node=node, resources=resources, allocated=allocated

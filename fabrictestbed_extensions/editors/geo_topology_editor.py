@@ -31,29 +31,13 @@ import traceback
 from typing import List
 
 import ipywidgets as widgets
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentCatalog,
-    ComponentModelType,
-    ComponentType,
-    ExperimentTopology,
-    ServiceType,
-)
+from fabrictestbed.slice_editor import (Capacities, ComponentCatalog,
+                                        ComponentModelType, ComponentType,
+                                        ExperimentTopology, ServiceType)
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
-from ipyleaflet import (
-    AntPath,
-    CircleMarker,
-    DrawControl,
-    FullScreenControl,
-    Icon,
-    LayerGroup,
-    Map,
-    Marker,
-    Rectangle,
-    WidgetControl,
-    ZoomControl,
-    basemaps,
-)
+from ipyleaflet import (AntPath, CircleMarker, DrawControl, FullScreenControl,
+                        Icon, LayerGroup, Map, Marker, Rectangle,
+                        WidgetControl, ZoomControl, basemaps)
 from ipywidgets import HTML, Layout
 
 from .. import images

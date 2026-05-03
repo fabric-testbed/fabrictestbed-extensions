@@ -6,6 +6,18 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Add ruff linter configuration with `E`, `F`, `W`, `I`, `UP` rule sets (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+- Add `[testenv:lint]` tox environment for ruff linting checks (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+- Add gradual mypy configuration in `pyproject.toml` (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+
+### Changed
+- Replace black + isort with ruff for code formatting and import sorting (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+- Modernize type annotations: `List[X]` → `list[X]`, `Dict[K,V]` → `dict[K,V]`, `Tuple[...]` → `tuple[...]`, `Optional[X]` → `X | None`, `Union[A, B]` → `A | B` across all fablib source files (Issue [#372](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/372))
+- Add `from __future__ import annotations` to `config/config.py` (Issue [#372](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/372))
+
 ## 2.0.4
 
 ### Added
