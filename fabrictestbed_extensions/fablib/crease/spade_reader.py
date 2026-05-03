@@ -4,16 +4,15 @@ import getopt
 import queue
 import sys
 import threading
-from concurrent import futures
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address
 
 from scapy.all import sniff
 from scapy.fields import IntField, LongField, ShortField, XShortField
 from scapy.layers.inet import IP
-from scapy.layers.inet6 import IPv6, IPv6ExtHdrDestOpt
+from scapy.layers.inet6 import IPv6
 from scapy.layers.l2 import Ether
-from scapy.packet import Packet, Raw, bind_layers
+from scapy.packet import Packet, bind_layers
 
 PROT_CMA = 254
 CMA_ID = b"\x65\x87"

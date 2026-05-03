@@ -54,10 +54,9 @@ import select
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import paramiko
-from fabric_cf.orchestrator.orchestrator_proxy import Status
 from fabrictestbed.external_api.orchestrator_client import SliverDTO
 from fim.user import ComponentType, NodeType
 from IPython.core.display_functions import display
@@ -79,9 +78,13 @@ if TYPE_CHECKING:
 
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
-from fabrictestbed.slice_editor import Capacities, CapacityHints, Labels
+from fabrictestbed.slice_editor import (
+    Capacities,
+    CapacityHints,
+    Labels,
+    ServiceType,
+)
 from fabrictestbed.slice_editor import Node as FimNode
-from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component
@@ -150,26 +153,26 @@ class Node(TemplateMixin):
 
         # V2 specific: cached FIM properties (None means not yet cached)
         # Must be initialized before set_username() which calls get_image()
-        self._cached_site: Optional[str] = None
-        self._cached_management_ip: Optional[str] = None
-        self._cached_image_type: Optional[str] = None
-        self._cached_image_ref: Optional[str] = None
-        self._cached_requested_disk: Optional[int] = None
-        self._cached_allocated_disk: Optional[int] = None
-        self._cached_requested_ram: Optional[int] = None
-        self._cached_allocated_ram: Optional[int] = None
-        self._cached_requested_cores: Optional[int] = None
-        self._cached_allocated_cores: Optional[int] = None
-        self._cached_instance_name: Optional[str] = None
-        self._cached_type: Optional[NodeType] = None
+        self._cached_site: str | None = None
+        self._cached_management_ip: str | None = None
+        self._cached_image_type: str | None = None
+        self._cached_image_ref: str | None = None
+        self._cached_requested_disk: int | None = None
+        self._cached_allocated_disk: int | None = None
+        self._cached_requested_ram: int | None = None
+        self._cached_allocated_ram: int | None = None
+        self._cached_requested_cores: int | None = None
+        self._cached_allocated_cores: int | None = None
+        self._cached_instance_name: str | None = None
+        self._cached_type: NodeType | None = None
 
         # Persistent network configuration backend: 'nmcli', 'netplan', or 'ip'
-        self._net_config_backend: Optional[str] = None
+        self._net_config_backend: str | None = None
         self._persistent_config: bool = True
 
         # SSH connection cache for reuse across execute/upload/download calls
-        self._ssh_bastion: Optional[paramiko.SSHClient] = None
-        self._ssh_client: Optional[paramiko.SSHClient] = None
+        self._ssh_bastion: paramiko.SSHClient | None = None
+        self._ssh_client: paramiko.SSHClient | None = None
         self._ssh_lock = threading.Lock()
 
         try:
@@ -192,7 +195,7 @@ class Node(TemplateMixin):
 
         Called when the FIM node is updated.
         """
-        super(Node, self)._invalidate_cache()
+        super()._invalidate_cache()
 
         self._cached_site = None
         self._cached_management_ip = None
@@ -250,7 +253,7 @@ class Node(TemplateMixin):
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = None,
+        avoid: list[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
     ) -> Node:
@@ -266,7 +269,7 @@ class Node(TemplateMixin):
         :param site: the name of the site to build the node on
         :type site: str
         :param avoid: a list of site names to avoid
-        :type avoid: List[str]
+        :type avoid: list[str]
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
         :param raise_exception: Raise exception if validation fails
@@ -341,7 +344,7 @@ class Node(TemplateMixin):
             "private_ssh_key_file": "Private SSH Key File",
         }
 
-    def toDict(self, skip: Optional[List[str]] = None):
+    def toDict(self, skip: list[str] | None = None):
         """
         Returns the node attributes as a dictionary.
 
@@ -349,7 +352,7 @@ class Node(TemplateMixin):
         is called.
 
         :param skip: list of keys to exclude
-        :type skip: List[str]
+        :type skip: list[str]
         :return: node attributes as dictionary
         :rtype: dict
         """
@@ -391,7 +394,7 @@ class Node(TemplateMixin):
             return dict(self._cached_dict)
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def generate_template_context(self, skip: List[str] = None):
+    def generate_template_context(self, skip: list[str] = None):
         """Build a Jinja2 template context dict for this node."""
         if skip is None:
             skip = []
@@ -423,7 +426,7 @@ class Node(TemplateMixin):
 
         :param fields: List of fields to show.  JSON output will
             include all available fields.
-        :type fields: List[str]
+        :type fields: list[str]
 
         :param quiet: True to specify printing/display
         :type quiet: bool
@@ -517,7 +520,7 @@ class Node(TemplateMixin):
 
         :param fields: list of fields (table columns) to show.  JSON
             output will include all available fields/columns.
-        :type fields: List[str]
+        :type fields: list[str]
 
         :param quiet: True to specify printing/display
         :type quiet: bool
@@ -601,7 +604,7 @@ class Node(TemplateMixin):
 
         :param fields: List of fields (table columns) to show.  JSON
             output will include all available fields/columns.
-        :type fields: List[str]
+        :type fields: list[str]
 
         :param quiet: True to specify printing/display
         :type quiet: bool
@@ -685,7 +688,7 @@ class Node(TemplateMixin):
 
         :param fields: List of fields (table columns) to show.  JSON
             output will include all available fields/columns.
-        :type fields: List[str]
+        :type fields: list[str]
 
         :param quiet: True to specify printing/display
         :type quiet: bool
@@ -892,7 +895,7 @@ class Node(TemplateMixin):
         """
         return self.slice
 
-    def get_instance_name(self) -> Optional[str]:
+    def get_instance_name(self) -> str | None:
         """
         Gets the instance name of the FABRIC node.
 
@@ -911,7 +914,7 @@ class Node(TemplateMixin):
                 self._cached_instance_name = None
         return self._cached_instance_name
 
-    def get_cores(self) -> Optional[int]:
+    def get_cores(self) -> int | None:
         """
         Gets the number of cores on the FABRIC node.
 
@@ -930,7 +933,7 @@ class Node(TemplateMixin):
                 self._cached_allocated_cores = None
         return self._cached_allocated_cores if self._cached_allocated_cores else 0
 
-    def get_requested_cores(self) -> Optional[int]:
+    def get_requested_cores(self) -> int | None:
         """
         Gets the requested number of cores on the FABRIC node.
 
@@ -947,7 +950,7 @@ class Node(TemplateMixin):
                 self._cached_requested_cores = None
         return self._cached_requested_cores if self._cached_requested_cores else 0
 
-    def get_ram(self) -> Optional[int]:
+    def get_ram(self) -> int | None:
         """
         Gets the amount of RAM on the FABRIC node.
 
@@ -966,7 +969,7 @@ class Node(TemplateMixin):
                 self._cached_allocated_ram = None
         return self._cached_allocated_ram if self._cached_allocated_ram else 0
 
-    def get_requested_ram(self) -> Optional[int]:
+    def get_requested_ram(self) -> int | None:
         """
         Gets the requested amount of RAM on the FABRIC node.
 
@@ -983,7 +986,7 @@ class Node(TemplateMixin):
                 self._cached_requested_ram = None
         return self._cached_requested_ram if self._cached_requested_ram else 0
 
-    def get_disk(self) -> Optional[int]:
+    def get_disk(self) -> int | None:
         """
         Gets the amount of disk space on the FABRIC node.
 
@@ -1002,7 +1005,7 @@ class Node(TemplateMixin):
                 self._cached_allocated_disk = None
         return self._cached_allocated_disk if self._cached_allocated_disk else 0
 
-    def get_requested_disk(self) -> Optional[int]:
+    def get_requested_disk(self) -> int | None:
         """
         Gets the amount of disk space on the FABRIC node.
 
@@ -1019,7 +1022,7 @@ class Node(TemplateMixin):
                 self._cached_requested_disk = None
         return self._cached_requested_disk if self._cached_requested_disk else 0
 
-    def get_image(self) -> Optional[str]:
+    def get_image(self) -> str | None:
         """
         Gets the image reference on the FABRIC node.
 
@@ -1036,7 +1039,7 @@ class Node(TemplateMixin):
                 self._cached_image_ref = None
         return self._cached_image_ref
 
-    def get_image_type(self) -> Optional[str]:
+    def get_image_type(self) -> str | None:
         """
         Gets the image type on the FABRIC node.
 
@@ -1053,7 +1056,7 @@ class Node(TemplateMixin):
                 self._cached_image_type = None
         return self._cached_image_type
 
-    def get_host(self) -> Optional[str]:
+    def get_host(self) -> str | None:
         """
         Gets the hostname on the FABRIC node.
 
@@ -1091,7 +1094,7 @@ class Node(TemplateMixin):
                 self._cached_site = None
         return self._cached_site if self._cached_site is not None else ""
 
-    def get_type(self) -> Optional[NodeType]:
+    def get_type(self) -> NodeType | None:
         """
         Gets the type of the network services.
 
@@ -1271,7 +1274,7 @@ class Node(TemplateMixin):
             self.interfaces.update(component.get_interfaces(output="dict"))
         return component
 
-    def get_components(self, refresh: bool = False) -> List[Component]:
+    def get_components(self, refresh: bool = False) -> list[Component]:
         """
         Gets a list of components associated with this node.
 
@@ -1280,7 +1283,7 @@ class Node(TemplateMixin):
         :param refresh: Refresh the component objects with latest FIM info
         :type refresh: bool
         :return: a list of components on this node
-        :rtype: List[Component]
+        :rtype: list[Component]
         """
         # Skip refresh if cache is valid
         if self.components and not refresh and not self._fim_dirty:
@@ -1350,7 +1353,7 @@ class Node(TemplateMixin):
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[Dict[str, Interface], List[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -1363,7 +1366,7 @@ class Node(TemplateMixin):
         :param output: Return type - 'list' or 'dict'
         :type output: str
         :return: interfaces on the node
-        :rtype: Union[Dict[str, Interface], List[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
         # Skip refresh if cache is valid
         if self.interfaces and not refresh and not self._fim_dirty:
@@ -1385,7 +1388,7 @@ class Node(TemplateMixin):
 
     def get_interface(
         self, name: str = None, network_name: str = None, refresh: bool = False
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a particular interface associated with a FABRIC node.
 
@@ -1508,7 +1511,7 @@ class Node(TemplateMixin):
             except:
                 pass
 
-        raise ValidationError(f"ssh key invalid: FABRIC requires RSA or ECDSA keys")
+        raise ValidationError("ssh key invalid: FABRIC requires RSA or ECDSA keys")
 
     def _get_ssh_connection(
         self,
@@ -1648,7 +1651,7 @@ class Node(TemplateMixin):
         :param private_key_passphrase: pass phrase
         :type private_key_passphrase: str
         :param output_file: path to a file where the stdout/stderr will be written. None for no file output
-        :type output_file: List[str]
+        :type output_file: list[str]
         :return: a thread that called node.execute()
         :raise Exception: if management IP is invalid
         """
@@ -1729,7 +1732,7 @@ class Node(TemplateMixin):
         :type display: bool
 
         :return: A tuple (stdout, stderr).
-        :rtype: Tuple[str, str]
+        :rtype: tuple[str, str]
 
         :raises Exception: If SSH connection fails.
         :raises RuntimeError: If no_ssh mode is enabled.
@@ -1919,7 +1922,7 @@ class Node(TemplateMixin):
         :type output_file: str
 
         :return: A tuple (stdout, stderr).
-        :rtype: Tuple[str, str]
+        :rtype: tuple[str, str]
         """
         with SSHClientInteraction(client, timeout=10, display=display) as interact:
             for cmd, new_prompt, timeout in commands:
@@ -2426,13 +2429,13 @@ class Node(TemplateMixin):
             return False
         return True
 
-    def get_management_os_interface(self) -> Optional[str]:
+    def get_management_os_interface(self) -> str | None:
         """
         Gets the name of the management interface used by the node's
         operating system, based on the default route.
 
         :return: Name of the management interface or None if not found
-        :rtype: Optional[str]
+        :rtype: str | None
         """
         log.debug(f"{self.get_name()}->get_management_os_interface")
 
@@ -2447,7 +2450,7 @@ class Node(TemplateMixin):
         )
         return None
 
-    def _get_default_interface(self, ip_version: str) -> Optional[str]:
+    def _get_default_interface(self, ip_version: str) -> str | None:
         """
         Helper method to get the default interface for a given IP version.
 
@@ -2484,13 +2487,13 @@ class Node(TemplateMixin):
 
         return None
 
-    def get_dataplane_os_interfaces(self) -> List[dict]:
+    def get_dataplane_os_interfaces(self) -> list[dict]:
         """
         Gets a list of all the dataplane interface names used by the
         node's operating system.
 
         :return: interface names
-        :rtype: List[String]
+        :rtype: list[String]
         """
         management_dev = self.get_management_os_interface()
 
@@ -2550,7 +2553,7 @@ class Node(TemplateMixin):
         log.info(f"{self.get_name()}: falling back to ip backend")
         return self._net_config_backend
 
-    def _get_effective_backend(self, persistent: Optional[bool] = None) -> str:
+    def _get_effective_backend(self, persistent: bool | None = None) -> str:
         """
         Return the effective backend considering the persistent flag.
 
@@ -2670,9 +2673,9 @@ class Node(TemplateMixin):
         ip_version: str,
         addresses: str,
         conn_type: str = "ethernet",
-        vlan_id: Optional[str] = None,
-        vlan_parent: Optional[str] = None,
-        mtu: Optional[str] = None,
+        vlan_id: str | None = None,
+        vlan_parent: str | None = None,
+        mtu: str | None = None,
     ):
         """
         Create or modify an nmcli connection.
@@ -2872,13 +2875,13 @@ class Node(TemplateMixin):
     def _netplan_write_config(
         self,
         ifname: str,
-        addresses: List[str],
-        routes: Optional[List[dict]] = None,
-        routing_policy: Optional[List[dict]] = None,
+        addresses: list[str],
+        routes: list[dict] | None = None,
+        routing_policy: list[dict] | None = None,
         is_vlan: bool = False,
-        vlan_id: Optional[str] = None,
-        vlan_link: Optional[str] = None,
-        mtu: Optional[str] = None,
+        vlan_id: str | None = None,
+        vlan_link: str | None = None,
+        mtu: str | None = None,
     ):
         """
         Write a netplan YAML config for a FABRIC interface.
@@ -3031,7 +3034,7 @@ class Node(TemplateMixin):
         for iface in self.get_dataplane_os_interfaces():
             self.flush_os_interface(iface["ifname"])
 
-    def flush_os_interface(self, os_iface: str, persistent: Optional[bool] = None):
+    def flush_os_interface(self, os_iface: str, persistent: bool | None = None):
         """
         Flush the configuration of an interface in the node
 
@@ -3073,11 +3076,11 @@ class Node(TemplateMixin):
                 return self.ip_addr_list_json
             else:
                 if output == "json":
-                    stdout, stderr = self.execute(f"sudo  ip -j addr list", quiet=True)
+                    stdout, stderr = self.execute("sudo  ip -j addr list", quiet=True)
                     self.ip_addr_list_json = json.loads(stdout)
                     return self.ip_addr_list_json
                 else:
-                    stdout, stderr = self.execute(f"sudo ip addr list", quiet=True)
+                    stdout, stderr = self.execute("sudo ip addr list", quiet=True)
                     return stdout
         except Exception as e:
             log.debug(f"Failed to get ip addr list: {e}")
@@ -3085,10 +3088,10 @@ class Node(TemplateMixin):
 
     def ip_route_add(
         self,
-        subnet: Union[IPv4Network, IPv6Network],
-        gateway: Union[IPv4Address, IPv6Address],
+        subnet: IPv4Network | IPv6Network,
+        gateway: IPv4Address | IPv6Address,
         interface: Interface = None,
-        persistent: Optional[bool] = None,
+        persistent: bool | None = None,
     ):
         """
         Add a route on the node.
@@ -3135,8 +3138,8 @@ class Node(TemplateMixin):
 
     def _ip_route_add_legacy(
         self,
-        subnet: Union[IPv4Network, IPv6Network],
-        gateway: Union[IPv4Address, IPv6Address],
+        subnet: IPv4Network | IPv6Network,
+        gateway: IPv4Address | IPv6Address,
     ):
         """Legacy ip route add using raw ip commands."""
         ip_command = ""
@@ -3157,7 +3160,7 @@ class Node(TemplateMixin):
         """
         try:
             stdout, stderr = self.execute(
-                f"sudo systemctl stop NetworkManager", quiet=True
+                "sudo systemctl stop NetworkManager", quiet=True
             )
             log.info(
                 f"Stopped NetworkManager with 'sudo systemctl stop "
@@ -3173,7 +3176,7 @@ class Node(TemplateMixin):
         """
         try:
             stdout, stderr = self.execute(
-                f"sudo systemctl restart NetworkManager", quiet=True
+                "sudo systemctl restart NetworkManager", quiet=True
             )
             log.info(
                 f"Started NetworkManager with 'sudo systemctl start NetworkManager': stdout: {stdout}\nstderr: {stderr}"
@@ -3208,8 +3211,8 @@ class Node(TemplateMixin):
 
     def ip_route_del(
         self,
-        subnet: Union[IPv4Network, IPv6Network],
-        gateway: Union[IPv4Address, IPv6Address],
+        subnet: IPv4Network | IPv6Network,
+        gateway: IPv4Address | IPv6Address,
     ):
         """
         Delete a route on the node.
@@ -3234,10 +3237,10 @@ class Node(TemplateMixin):
 
     def ip_addr_add(
         self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[IPv4Network, IPv6Network],
+        addr: IPv4Address | IPv6Address,
+        subnet: IPv4Network | IPv6Network,
         interface: Interface,
-        persistent: Optional[bool] = None,
+        persistent: bool | None = None,
     ):
         """
         Add an IP to an interface on the node.
@@ -3288,8 +3291,8 @@ class Node(TemplateMixin):
 
     def _ip_addr_add_legacy(
         self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[IPv4Network, IPv6Network],
+        addr: IPv4Address | IPv6Address,
+        subnet: IPv4Network | IPv6Network,
         interface: Interface,
     ):
         """Legacy ip addr add using raw ip commands."""
@@ -3310,8 +3313,8 @@ class Node(TemplateMixin):
 
     def ip_addr_del(
         self,
-        addr: Union[IPv4Address, IPv6Address],
-        subnet: Union[IPv4Network, IPv6Network],
+        addr: IPv4Address | IPv6Address,
+        subnet: IPv4Network | IPv6Network,
         interface: Interface,
     ):
         """
@@ -3367,7 +3370,7 @@ class Node(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to mark interface as unmanaged: {e}")
 
-    def ip_link_up(self, subnet: Union[IPv4Network, IPv6Network], interface: Interface):
+    def ip_link_up(self, subnet: IPv4Network | IPv6Network, interface: Interface):
         """
         Bring up a link on an interface on the node.
 
@@ -3402,7 +3405,7 @@ class Node(TemplateMixin):
         self._ip_link_up_legacy(subnet, interface)
 
     def _ip_link_up_legacy(
-        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+        self, subnet: IPv4Network | IPv6Network, interface: Interface
     ):
         """Legacy ip link up using raw ip commands."""
         if not interface:
@@ -3449,7 +3452,7 @@ class Node(TemplateMixin):
             raise e
 
     def ip_link_down(
-        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+        self, subnet: IPv4Network | IPv6Network, interface: Interface
     ):
         """
         Bring down a link on an interface on the node.
@@ -3475,7 +3478,7 @@ class Node(TemplateMixin):
         self._ip_link_down_legacy(subnet, interface)
 
     def _ip_link_down_legacy(
-        self, subnet: Union[IPv4Network, IPv6Network], interface: Interface
+        self, subnet: IPv4Network | IPv6Network, interface: Interface
     ):
         """Legacy ip link down using raw ip commands."""
         ip_command = None
@@ -3494,7 +3497,7 @@ class Node(TemplateMixin):
                     ip_command = "sudo ip"
             else:
                 ip_command = "sudo ip"
-        except Exception as e:
+        except Exception:
             # log.warning(f"Failed to down link: {e}")
             return
 
@@ -3514,7 +3517,7 @@ class Node(TemplateMixin):
         ip: str = None,
         cidr: str = None,
         mtu: str = None,
-        persistent: Optional[bool] = None,
+        persistent: bool | None = None,
     ):
         """
         Configure IP Address on network interface as seen inside the VM
@@ -3657,7 +3660,7 @@ class Node(TemplateMixin):
                 self.remove_vlan_os_interface(os_iface=i["ifname"])
 
     def remove_vlan_os_interface(
-        self, os_iface: str = None, persistent: Optional[bool] = None
+        self, os_iface: str = None, persistent: bool | None = None
     ):
         """
         Remove one VLAN OS interface
@@ -3699,7 +3702,7 @@ class Node(TemplateMixin):
         cidr: str = None,
         mtu: str = None,
         interface: Interface = None,
-        persistent: Optional[bool] = None,
+        persistent: bool | None = None,
     ):
         """
         Add VLAN tagged interface for a given interface and set IP address on it
@@ -3958,7 +3961,7 @@ class Node(TemplateMixin):
         """
         return bool(self.get_fablib_data().get("storage", False))
 
-    def get_storage_cluster(self) -> Optional[str]:
+    def get_storage_cluster(self) -> str | None:
         """
         Return the Ceph cluster name associated with this node,
         or ``None`` if none was specified.
@@ -3981,8 +3984,8 @@ class Node(TemplateMixin):
 
     def add_route(
         self,
-        subnet: Union[IPv4Network, IPv6Network],
-        next_hop: Union[IPv4Address, IPv6Address, NetworkService],
+        subnet: IPv4Network | IPv6Network,
+        next_hop: IPv4Address | IPv6Address | NetworkService,
     ):
         """
         Add a route.
@@ -4098,10 +4101,10 @@ class Node(TemplateMixin):
         """
         try:
             return self.get_fablib_data()["routes"]
-        except Exception as e:
+        except Exception:
             return []
 
-    def _find_interface_for_gateway(self, gateway) -> Optional[Interface]:
+    def _find_interface_for_gateway(self, gateway) -> Interface | None:
         """
         Find the interface whose network gateway matches the given gateway.
 
@@ -4134,7 +4137,7 @@ class Node(TemplateMixin):
         for route in routes:
             try:
                 next_hop = ipaddress.ip_address(route["next_hop"])
-            except Exception as e:
+            except Exception:
                 net_name = route["next_hop"].split(".")[0]
                 next_hop = (
                     self.get_slice().get_network(name=str(net_name)).get_gateway()
@@ -4142,7 +4145,7 @@ class Node(TemplateMixin):
 
             try:
                 subnet = ipaddress.ip_network(route["subnet"])
-            except Exception as e:
+            except Exception:
                 net_name = route["subnet"].split(".")[0]
                 subnet = self.get_slice().get_network(name=str(net_name)).get_subnet()
 
@@ -4326,7 +4329,7 @@ class Node(TemplateMixin):
         net_type="IPv4",
         nic_type="NIC_Basic",
         routes=None,
-        subnet: Optional[ipaddress.ip_network] = None,
+        subnet: ipaddress.ip_network | None = None,
     ):
         """
         Add a simple layer 3 network to this node.
@@ -4375,11 +4378,11 @@ class Node(TemplateMixin):
     def poa(
         self,
         operation: str,
-        vcpu_cpu_map: List[Dict[str, str]] = None,
-        node_set: List[str] = None,
-        keys: List[Dict[str, str]] = None,
-        bdf: List[str] = None,
-    ) -> Union[Dict, str]:
+        vcpu_cpu_map: list[dict[str, str]] = None,
+        node_set: list[str] = None,
+        keys: list[dict[str, str]] = None,
+        bdf: list[str] = None,
+    ) -> dict | str:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
 

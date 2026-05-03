@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from fabrictestbed.external_api.orchestrator_client import SliverDTO
 from fim.slivers.path_info import Path
@@ -41,19 +41,17 @@ from fim.user import ERO, Gateway
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.exceptions import ResourceNotFoundError
-from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.slice import Slice
     from fabrictestbed_extensions.fablib.interface import Interface
+    from fabrictestbed_extensions.fablib.slice import Slice
 
 import ipaddress
 import json
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
-from fabrictestbed.slice_editor import Capacities, Labels
+from fabrictestbed.slice_editor import Capacities, Labels, ServiceType
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
-from fabrictestbed.slice_editor import ServiceType, UserData
 from fim.slivers.network_service import NetworkServiceSliver, NSLayer, ServiceType
 from fim.user.network_service import MirrorDirection
 
@@ -94,42 +92,42 @@ class NetworkService(TemplateMixin):
     fim_special_service_types = ["PortMirror"]
 
     @staticmethod
-    def __get_fim_l2network_service_types() -> List[str]:
+    def __get_fim_l2network_service_types() -> list[str]:
         """
         Not intended for API use. Returns a list of FIM L2 network service types.
 
         :return: List of FIM L2 network service types.
-        :rtype: List[str]
+        :rtype: list[str]
         """
         return NetworkService.fim_l2network_service_types
 
     @staticmethod
-    def __get_fim_l3network_service_types() -> List[str]:
+    def __get_fim_l3network_service_types() -> list[str]:
         """
         Not intended for API use. Returns a list of FIM L3 network service types.
 
         :return: List of FIM L3 network service types.
-        :rtype: List[str]
+        :rtype: list[str]
         """
         return NetworkService.fim_l3network_service_types
 
     @staticmethod
-    def __get_fim_special_service_types() -> List[str]:
+    def __get_fim_special_service_types() -> list[str]:
         """
         Not intended for API use. Returns a list of FIM special service types.
 
         :return: List of FIM special service types.
-        :rtype: List[str]
+        :rtype: list[str]
         """
         return NetworkService.fim_special_service_types
 
     @staticmethod
-    def get_fim_network_service_types() -> List[str]:
+    def get_fim_network_service_types() -> list[str]:
         """
         Not intended for API use. Returns a list of all FIM network service types.
 
         :return: List of all FIM network service types.
-        :rtype: List[str]
+        :rtype: list[str]
         """
         return (
             NetworkService.__get_fim_l2network_service_types()
@@ -139,7 +137,7 @@ class NetworkService(TemplateMixin):
 
     @staticmethod
     def __calculate_l2_nstype(
-        interfaces: List[Interface] = None, ero_enabled: bool = False
+        interfaces: list[Interface] = None, ero_enabled: bool = False
     ) -> ServiceType:
         """
         Not inteded for API use
@@ -228,7 +226,7 @@ class NetworkService(TemplateMixin):
                 sites.add(interface.get_site())
                 nics.add(interface.get_model())
                 nodes.add(interface.get_node())
-            except Exception as e:
+            except Exception:
                 log.info(
                     f"validate_nstype: skipping interface {interface.get_name()}, likely its a facility port"
                 )
@@ -303,7 +301,7 @@ class NetworkService(TemplateMixin):
         name: str = None,
         mirror_interface_name: str = None,
         mirror_interface_vlan: str = None,
-        receive_interface: Optional[Interface] = None,
+        receive_interface: Interface | None = None,
         mirror_direction: str = "both",
     ) -> NetworkService:
         """
@@ -315,16 +313,16 @@ class NetworkService(TemplateMixin):
         # decode the direction
         if not isinstance(mirror_interface_name, str):
             raise Exception(
-                f"When creating a PortMirror service mirror_interface is specified by name"
+                "When creating a PortMirror service mirror_interface is specified by name"
             )
         if not isinstance(mirror_direction, str):
             raise Exception(
-                f'When creating a PortMirror service mirror_direction is a string "rx", "tx" or "both"'
-                f'defaulting to "both"'
+                'When creating a PortMirror service mirror_direction is a string "rx", "tx" or "both"'
+                'defaulting to "both"'
             )
         if not receive_interface:
             raise Exception(
-                f"For PortMirror service the receiving interface must be specified upfront"
+                "For PortMirror service the receiving interface must be specified upfront"
             )
         direction = MirrorDirection.Both
         # enable below when we are officially off python 3.9 and into 3.10 or higher
@@ -372,11 +370,11 @@ class NetworkService(TemplateMixin):
     def new_l3network(
         slice: Slice = None,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: list[Interface] = [],
         type: str = None,
         user_data: dict = {},
         technology: str = None,
-        subnet: Optional[ipaddress.ip_network] = None,
+        subnet: ipaddress.ip_network | None = None,
         site: str = None,
     ):
         """
@@ -416,7 +414,7 @@ class NetworkService(TemplateMixin):
     def new_l2network(
         slice: Slice = None,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: list[Interface] = [],
         type: str = None,
         user_data: dict = {},
     ):
@@ -487,10 +485,10 @@ class NetworkService(TemplateMixin):
         slice: Slice = None,
         name: str = None,
         nstype: ServiceType = None,
-        interfaces: List[Interface] = [],
+        interfaces: list[Interface] = [],
         user_data: dict = {},
         technology: str = None,
-        subnet: Optional[ipaddress.ip_network] = None,
+        subnet: ipaddress.ip_network | None = None,
         site: str = None,
     ):
         """
@@ -574,7 +572,7 @@ class NetworkService(TemplateMixin):
         Gets all L3 networks services in this slice
 
         :return: List of all network services in this slice
-        :rtype: List[NetworkService]
+        :rtype: list[NetworkService]
         """
         topology = slice.get_fim_topology()
 
@@ -747,16 +745,16 @@ class NetworkService(TemplateMixin):
         self.lock = threading.Lock()
 
         # Caching support
-        self._cached_type: Optional[str] = None
-        self._cached_layer: Optional[str] = None
-        self._cached_subnet: Optional[Union[IPv4Network, IPv6Network]] = None
-        self._cached_gateway: Optional[Union[IPv4Address, IPv6Address]] = None
+        self._cached_type: str | None = None
+        self._cached_layer: str | None = None
+        self._cached_subnet: IPv4Network | IPv6Network | None = None
+        self._cached_gateway: IPv4Address | IPv6Address | None = None
 
-        self._interfaces_cache: Dict[str, Interface] = {}
+        self._interfaces_cache: dict[str, Interface] = {}
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        super(NetworkService, self)._invalidate_cache()
+        super()._invalidate_cache()
 
         self._cached_type = None
         self._cached_layer = None
@@ -820,7 +818,7 @@ class NetworkService(TemplateMixin):
             "error": "Error",
         }
 
-    def toDict(self, skip: List[str] = None):
+    def toDict(self, skip: list[str] = None):
         """
         Returns the network attributes as a dictionary.
 
@@ -828,7 +826,7 @@ class NetworkService(TemplateMixin):
         is called.
 
         :param skip: list of keys to skip
-        :type skip: List[str]
+        :type skip: list[str]
         :return: network attributes as dictionary
         :rtype: dict
         """
@@ -852,7 +850,7 @@ class NetworkService(TemplateMixin):
             return dict(self._cached_dict)
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def generate_template_context(self, skip: List[str] = None):
+    def generate_template_context(self, skip: list[str] = None):
         """Build a Jinja2 template context dict for this network service."""
         context = self.toDict(skip=skip)
         context["interfaces"] = []
@@ -871,7 +869,7 @@ class NetworkService(TemplateMixin):
         """
         return self.slice
 
-    def get_site(self) -> Optional[str]:
+    def get_site(self) -> str | None:
         """
         Gets site name on network service.
         """
@@ -885,7 +883,7 @@ class NetworkService(TemplateMixin):
         else:
             return None
 
-    def get_layer(self) -> Optional[str]:
+    def get_layer(self) -> str | None:
         """
         Gets the layer of the network services (L2 or L3).
 
@@ -937,7 +935,7 @@ class NetworkService(TemplateMixin):
             )
         return self.sliver
 
-    def get_gateway(self) -> Optional[Union[IPv4Address, IPv6Address]]:
+    def get_gateway(self) -> IPv4Address | IPv6Address | None:
         """
         Gets the assigned gateway for a FABnetv L3 IPv6 or IPv4 network.
 
@@ -974,7 +972,7 @@ class NetworkService(TemplateMixin):
                     fablib_data = self.get_fablib_data()
                     try:
                         gateway = ipaddress.ip_address(fablib_data["subnet"]["gateway"])
-                    except Exception as e:
+                    except Exception:
                         gateway = None
             else:
                 # Not yet instantiated — check if gateway was explicitly
@@ -997,7 +995,7 @@ class NetworkService(TemplateMixin):
 
     def get_available_ips(
         self, count: int = 256
-    ) -> Optional[List[IPv4Address or IPv6Address]]:
+    ) -> list[IPv4Address or IPv6Address] | None:
         """
         Gets the IPs available for a FABnet L3 network
 
@@ -1008,7 +1006,7 @@ class NetworkService(TemplateMixin):
         :param count: number of addresse to include
         :type slice: Slice
         :return: gateway IP
-        :rtype: List[IPv4Address]
+        :rtype: list[IPv4Address]
         """
         try:
             ip_list = []
@@ -1020,12 +1018,12 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to get_available_ips: {e}")
 
-    def get_public_ips(self) -> Optional[Union[List[IPv4Address] or List[IPv6Address]]]:
+    def get_public_ips(self) -> list[IPv4Address] or list[IPv6Address] | None:
         """
         Get list of public IPs assigned to the FabNetv*Ext service
 
         :return: List of Public IPs
-        :rtype: List[IPv4Address] or List[IPv6Address] or None
+        :rtype: list[IPv4Address] or list[IPv6Address] or None
         """
         if self.get_fim().labels is not None:
             if self.get_fim().labels.ipv4 is not None:
@@ -1040,7 +1038,7 @@ class NetworkService(TemplateMixin):
                 return result
         return None
 
-    def get_subnet(self) -> Optional[Union[IPv4Network, IPv6Network]]:
+    def get_subnet(self) -> IPv4Network | IPv6Network | None:
         """
         Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network.
 
@@ -1106,7 +1104,7 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to get subnet: {e}")
 
-    def get_interfaces(self, refresh: bool = False) -> List[Interface]:
+    def get_interfaces(self, refresh: bool = False) -> list[Interface]:
         """
         Gets the interfaces on this network service.
 
@@ -1115,7 +1113,7 @@ class NetworkService(TemplateMixin):
         :param refresh: force refresh from FIM
         :type refresh: bool
         :return: the interfaces on this network service
-        :rtype: List[Interfaces]
+        :rtype: list[Interfaces]
         """
         if self._interfaces_cache and not refresh and not self._fim_dirty:
             return list(self._interfaces_cache.values())
@@ -1137,7 +1135,7 @@ class NetworkService(TemplateMixin):
 
     def get_interface(
         self, name: str = None, refresh: bool = False
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a particular interface on this network service.
 
@@ -1331,7 +1329,7 @@ class NetworkService(TemplateMixin):
         # get refreshed on next access
         self.get_slice()._topology_dirty = True
 
-    def set_subnet(self, subnet: Union[IPv4Network, IPv6Network]):
+    def set_subnet(self, subnet: IPv4Network | IPv6Network):
         """
         Add subnet info to the network service.
         """
@@ -1343,7 +1341,7 @@ class NetworkService(TemplateMixin):
         self.set_fablib_data(fablib_data)
         self._cached_subnet = None
 
-    def set_gateway(self, gateway: Union[IPv4Address, IPv6Address]):
+    def set_gateway(self, gateway: IPv4Address | IPv6Address):
         """
         Add gateway info to the network service.
         """
@@ -1364,10 +1362,10 @@ class NetworkService(TemplateMixin):
                 allocated_ips.append(ipaddress.ip_address(addr))
 
             return allocated_ips
-        except Exception as e:
+        except Exception:
             return []
 
-    def set_allocated_ip(self, addr: Optional[Union[IPv4Address, IPv6Address]] = None):
+    def set_allocated_ip(self, addr: IPv4Address | IPv6Address | None = None):
         """
         Add ``addr`` to the list of allocated IPs.
         """
@@ -1378,7 +1376,7 @@ class NetworkService(TemplateMixin):
         allocated_ips.append(str(addr))
         self.set_fablib_data(fablib_data)
 
-    def allocate_ip(self, addr: Optional[Union[IPv4Address, IPv6Address]] = None):
+    def allocate_ip(self, addr: IPv4Address | IPv6Address | None = None):
         """
         Allocate an IP for the network service.
         """
@@ -1405,7 +1403,7 @@ class NetworkService(TemplateMixin):
         finally:
             self.lock.release()
 
-    def set_allocated_ips(self, allocated_ips: list[Union[IPv4Address, IPv6Address]]):
+    def set_allocated_ips(self, allocated_ips: list[IPv4Address | IPv6Address]):
         """
         Set a list of IPs to be "allocated IPs".
         """
@@ -1420,7 +1418,7 @@ class NetworkService(TemplateMixin):
         fablib_data["subnet"]["allocated_ips"] = allocated_ips_strs
         self.set_fablib_data(fablib_data)
 
-    def free_ip(self, addr: Union[IPv4Address, IPv6Address]):
+    def free_ip(self, addr: IPv4Address | IPv6Address):
         """
         Remove an IP from the list of allocated IPs.
         """
@@ -1539,7 +1537,7 @@ class NetworkService(TemplateMixin):
             capacities=capacities,
         )
 
-    def set_l2_route_hops(self, hops: List[str]):
+    def set_l2_route_hops(self, hops: list[str]):
         """
         Define the sequence of sites or hops to be used for a layer 2 connection.
 
@@ -1547,7 +1545,7 @@ class NetworkService(TemplateMixin):
         in the Network Service configuration.
 
         :param hops: A list of site names to be used as hops.
-        :type hops: List[str]
+        :type hops: list[str]
         """
         if not hops:
             return  # Skip if no hops provided

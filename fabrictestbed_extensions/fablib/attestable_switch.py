@@ -54,7 +54,7 @@ import json
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from tabulate import tabulate
 
@@ -91,7 +91,7 @@ class Attestable_Switch(Node):
         node: FimNode,
         validate: bool = False,
         raise_exception: bool = False,
-        ports: List[str] = None,
+        ports: list[str] = None,
         from_raw_image=False,
         setup_and_configure=True,
     ):
@@ -111,7 +111,7 @@ class Attestable_Switch(Node):
         :type raise_exception: bool
 
         :param ports: names of ports that the switch will have.
-        :type ports: List[str]
+        :type ports: list[str]
 
         :param from_raw_image: start from a raw image and install all dependencies -- this takes longer.
         :type from_raw_image: bool
@@ -300,7 +300,7 @@ class Attestable_Switch(Node):
             result = as_name_prefix + orig_name
         return result
 
-    def get_name(self) -> Optional[str]:
+    def get_name(self) -> str | None:
         """
         Gets the name of the FABRIC node.
 
@@ -317,10 +317,10 @@ class Attestable_Switch(Node):
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
-        ports: List[str] = None,
+        ports: list[str] = None,
         from_raw_image=False,
         setup_and_configure=True,
     ):
@@ -339,7 +339,7 @@ class Attestable_Switch(Node):
         :type site: str
 
         :param avoid: a list of node names to avoid
-        :type avoid: List[str]
+        :type avoid: list[str]
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
@@ -348,7 +348,7 @@ class Attestable_Switch(Node):
         :type raise_exception: bool
 
         :param ports: names of ports that the switch will have.
-        :type ports: List[str]
+        :type ports: list[str]
 
         :param from_raw_image: start from a raw image and install all dependencies -- this takes longer.
         :type from_raw_image: bool
@@ -438,7 +438,7 @@ class Attestable_Switch(Node):
 
             if not from_raw_image:
                 log.info(
-                    f"Image already contains Attestable Switch: skipping compilation."
+                    "Image already contains Attestable Switch: skipping compilation."
                 )
             else:
                 print(f"Compiling Attestable Switch {self.get_name()}, ", end="")
@@ -789,7 +789,7 @@ V1Switch(
         commands = [
             f"p4c --target bmv2 --arch v1model ~/{os.path.basename(filename)}",
             f'echo "load_new_config_file {output_file}" | simple_switch_CLI',
-            f'echo "swap_configs" | simple_switch_CLI',
+            'echo "swap_configs" | simple_switch_CLI',
         ]
 
         stdout = []
@@ -879,7 +879,7 @@ V1Switch(
         """
 
         commands = [
-            f"simple_switch -v",
+            "simple_switch -v",
         ]
 
         stdout = []

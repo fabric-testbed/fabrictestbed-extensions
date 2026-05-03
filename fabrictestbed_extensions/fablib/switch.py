@@ -32,7 +32,7 @@ functionality for programmable data planes.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from tabulate import tabulate
 
@@ -86,13 +86,13 @@ class Switch(Node):
         :type raise_exception: bool
 
         """
-        super(Switch, self).__init__(
+        super().__init__(
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
         self.username = Constants.FABRIC_USER
 
         # Cached interfaces
-        self._interfaces_cache: Dict[str, Interface] = {}
+        self._interfaces_cache: dict[str, Interface] = {}
 
     def _invalidate_cache(self):
         """Invalidate all cached properties including interfaces."""
@@ -155,7 +155,7 @@ class Switch(Node):
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        avoid: List[str] = None,
+        avoid: list[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
     ) -> Switch:
@@ -171,7 +171,7 @@ class Switch(Node):
         :param site: the name of the site to build the switch on
         :type site: str
         :param avoid: a list of site names to avoid
-        :type avoid: List[str]
+        :type avoid: list[str]
         :param validate: Validate switch can be allocated w.r.t available resources
         :type validate: bool
         :param raise_exception: Raise exception if validation fails
@@ -315,7 +315,7 @@ class Switch(Node):
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[Dict[str, Interface], List[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets a list of the interfaces associated with the FABRIC node.
 
@@ -331,7 +331,7 @@ class Switch(Node):
         :type output: str
 
         :return: interfaces on the node
-        :rtype: Union[Dict[str, Interface], List[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
         if self._interfaces_cache and not refresh and not self._fim_dirty:
             if output == "dict":
@@ -364,7 +364,7 @@ class Switch(Node):
 
     def get_interface(
         self, name: str = None, refresh: bool = False
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a specific interface by name.
 

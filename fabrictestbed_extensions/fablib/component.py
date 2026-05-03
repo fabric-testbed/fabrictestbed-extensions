@@ -39,9 +39,8 @@ like so::
 
 from __future__ import annotations
 
-import json
 import time
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 from fim.user import ComponentType
 
@@ -51,18 +50,16 @@ from fabrictestbed_extensions.fablib.exceptions import (
     SliceStateError,
 )
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
-from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
-    from fabrictestbed_extensions.fablib.slice import Slice
-    from fabrictestbed_extensions.fablib.node import Node
     from fabrictestbed_extensions.fablib.interface import Interface
+    from fabrictestbed_extensions.fablib.node import Node
+    from fabrictestbed_extensions.fablib.slice import Slice
 
 import logging
-from typing import List
 
 from fabrictestbed.slice_editor import Component as FimComponent
-from fabrictestbed.slice_editor import ComponentModelType, Flags, Labels, UserData
+from fabrictestbed.slice_editor import ComponentModelType, Flags, Labels
 from tabulate import tabulate
 
 log = logging.getLogger("fablib")
@@ -158,7 +155,7 @@ class Component(TemplateMixin):
             "numa": "Numa Node",
         }
 
-    def toDict(self, skip: Optional[List[str]] = None):
+    def toDict(self, skip: list[str] | None = None):
         """
         Returns the component attributes as a dictionary.
 
@@ -166,7 +163,7 @@ class Component(TemplateMixin):
         is called.
 
         :param skip: list of keys to exclude
-        :type skip: List[str]
+        :type skip: list[str]
         :return: component attributes as dictionary
         :rtype: dict
         """
@@ -192,7 +189,7 @@ class Component(TemplateMixin):
             return dict(self._cached_dict)
         return {k: v for k, v in self._cached_dict.items() if k not in skip}
 
-    def generate_template_context(self, skip: Optional[List[str]] = None):
+    def generate_template_context(self, skip: list[str] | None = None):
         """
         Generate the base template context for this component.
 
@@ -200,7 +197,7 @@ class Component(TemplateMixin):
         including component attributes and an empty interfaces list.
 
         :param skip: list of keys to exclude
-        :type skip: List[str]
+        :type skip: list[str]
         :return: Template context dictionary with component attributes
         :rtype: dict
         """
@@ -237,7 +234,7 @@ class Component(TemplateMixin):
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -341,18 +338,18 @@ class Component(TemplateMixin):
         }
 
         # V2 specific: cached FIM properties
-        self._cached_details: Optional[str] = None
-        self._cached_numa_node: Optional[str] = None
-        self._cached_disk: Optional[int] = None
-        self._cached_unit: Optional[int] = None
-        self._cached_bdf: Optional[str] = None
-        self._cached_fim_model: Optional[str] = None
-        self._cached_fim_type: Optional[str] = None
-        self._cached_device_name: Optional[str] = None
+        self._cached_details: str | None = None
+        self._cached_numa_node: str | None = None
+        self._cached_disk: int | None = None
+        self._cached_unit: int | None = None
+        self._cached_bdf: str | None = None
+        self._cached_fim_model: str | None = None
+        self._cached_fim_type: str | None = None
+        self._cached_device_name: str | None = None
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        super(Component, self)._invalidate_cache()
+        super()._invalidate_cache()
 
         self._cached_details = None
         self._cached_numa_node = None
@@ -377,7 +374,7 @@ class Component(TemplateMixin):
             "numa": "",
         }
 
-    def update(self, fim_component: Optional[FimComponent] = None):
+    def update(self, fim_component: FimComponent | None = None):
         """
         Update the component with new FIM data.
 
@@ -391,7 +388,7 @@ class Component(TemplateMixin):
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets the interfaces attached to this fablib component's FABRIC component.
 
@@ -407,7 +404,7 @@ class Component(TemplateMixin):
         :type output: str
 
         :return: a list or dict of the interfaces on this component.
-        :rtype: Union[dict[str, Interface], list[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
 
         from fabrictestbed_extensions.fablib.interface import Interface
@@ -432,7 +429,7 @@ class Component(TemplateMixin):
 
     def get_interface(
         self, name: str = None, network_name: str = None, refresh: bool = False
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a particular interface attached to this component.
 
@@ -467,7 +464,7 @@ class Component(TemplateMixin):
 
         raise ResourceNotFoundError(f"Interface not found: {name or network_name}")
 
-    def get_slice(self) -> Optional[Slice]:
+    def get_slice(self) -> Slice | None:
         """
         Gets the fablib slice associated with this component's node.
 
@@ -631,7 +628,7 @@ class Component(TemplateMixin):
         else:
             raise ValueError(f"Unsupported component type: {component_type}")
 
-    def get_reservation_id(self) -> Optional[str]:
+    def get_reservation_id(self) -> str | None:
         """
         Get reservation ID for this component.
 
@@ -642,7 +639,7 @@ class Component(TemplateMixin):
             return self.get_node().get_reservation_id()
         return None
 
-    def get_reservation_state(self) -> Optional[str]:
+    def get_reservation_state(self) -> str | None:
         """
         Get reservation state for this component.
 
@@ -653,7 +650,7 @@ class Component(TemplateMixin):
             return self.get_node().get_reservation_state()
         return None
 
-    def get_error_message(self) -> Optional[str]:
+    def get_error_message(self) -> str | None:
         """
         Get error message for this component.
 
@@ -693,7 +690,7 @@ class Component(TemplateMixin):
                 self._cached_fim_type = None
         return self._cached_fim_type
 
-    def configure(self, commands: List[str] = []):
+    def configure(self, commands: list[str] = []):
         """
         Configure a component by executing a set of commands provided by the user or run any default commands.
 
@@ -794,7 +791,7 @@ class Component(TemplateMixin):
                 )
             )
             output.append(self.node.execute(f"df -h {mount_point}"))
-        except Exception as e:
+        except Exception:
             log.error(f"config_nvme Fail: {self.get_name()}:", exc_info=True)
             raise Exception(str(output))
 

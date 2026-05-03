@@ -31,9 +31,8 @@ This module contains methods to work with FABRIC `facility ports`_.
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from fabrictestbed.slice_editor import Capacities, Labels
 from tabulate import tabulate
@@ -71,16 +70,16 @@ class FacilityPort(TemplateMixin):
         super().__init__()
         self.fim_object: FimNode = fim_object
         self.slice: Slice = slice
-        self.interfaces: Dict[str, Interface] = {}
+        self.interfaces: dict[str, Interface] = {}
 
-        self._cached_site: Optional[str] = None
+        self._cached_site: str | None = None
 
         # V2 specific: cached interfaces
-        self._interfaces_cache: Dict[str, Interface] = {}
+        self._interfaces_cache: dict[str, Interface] = {}
 
     def _invalidate_cache(self):
         """Invalidate all cached properties."""
-        super(FacilityPort, self)._invalidate_cache()
+        super()._invalidate_cache()
 
         self._cached_site = None
         self._interfaces_cache = {}
@@ -165,7 +164,7 @@ class FacilityPort(TemplateMixin):
         slice: Slice = None,
         name: str = None,
         site: str = None,
-        vlan: Union[List, str] = None,
+        vlan: list | str = None,
         bandwidth: int = None,
         mtu: int = None,
         labels: Labels = None,
@@ -249,7 +248,7 @@ class FacilityPort(TemplateMixin):
 
     def get_interfaces(
         self, refresh: bool = False, output: str = "list"
-    ) -> Union[Dict[str, Interface], List[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets interfaces associated with this facility port.
 
@@ -260,7 +259,7 @@ class FacilityPort(TemplateMixin):
         :param output: return type - 'list' or 'dict'
         :type output: str
         :return: interfaces
-        :rtype: Union[Dict[str, Interface], List[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
         from fabrictestbed_extensions.fablib.interface import Interface
 
@@ -285,7 +284,7 @@ class FacilityPort(TemplateMixin):
 
     def get_interface(
         self, name: str = None, refresh: bool = False
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a specific interface by name.
 

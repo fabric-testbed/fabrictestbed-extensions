@@ -22,6 +22,8 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -29,8 +31,6 @@ import re
 import time
 from functools import lru_cache
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
-from typing import Dict, List, Union
 
 import requests
 import yaml
@@ -318,7 +318,7 @@ class Config:
         :rtype bool
         """
         try:
-            with open(file_path, "r") as file:
+            with open(file_path) as file:
                 config = yaml.safe_load(file)
                 if (
                     isinstance(config, dict)
@@ -346,7 +346,7 @@ class Config:
         :rtype bool
         """
         ret_val = False
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             lines = file.readlines()
 
         export_pattern = re.compile(r"^export\s+([^=]+)=(.*)$", re.IGNORECASE)
@@ -405,13 +405,13 @@ class Config:
                 f"  Run 'fabric-cli configure setup' for interactive setup."
             )
 
-    def get_config(self) -> Dict[str, str]:
+    def get_config(self) -> dict[str, str]:
         """
         Gets a dictionary mapping keywords to configured FABRIC environment
         variable values.
 
         :return: dictionary mapping keywords to FABRIC values
-        :rtype: Dict[String, String]
+        :rtype: dict[String, String]
         """
         return self.runtime_config
 
@@ -617,7 +617,7 @@ class Config:
         """
         return self.runtime_config.get(Constants.BASTION_KEY_PASSPHRASE)
 
-    def get_bastion_key(self) -> Union[str, None]:
+    def get_bastion_key(self) -> str | None:
         """
         Reads the FABRIC Bastion private key file and returns the key.
 
@@ -630,7 +630,7 @@ class Config:
             return None
         return Utils.read_file_contents(file_path=self.get_bastion_key_location())
 
-    def get_bastion_public_key(self) -> Union[str, None]:
+    def get_bastion_public_key(self) -> str | None:
         """
         Reads the FABRIC Bastion public key file and returns the key.
 
@@ -737,7 +737,7 @@ class Config:
             return Constants.DEFAULT_LOG_PROPAGATE
         return bool(val)
 
-    def set_log_propagate(self, log_propagate: Union[bool, str, int]):
+    def set_log_propagate(self, log_propagate: bool | str | int):
         """
         Sets whether fablib logs propagate to the root logger.
 
@@ -801,7 +801,7 @@ class Config:
         """
         return self.runtime_config.get(Constants.AVOID)
 
-    def set_avoid(self, avoid: List[str]):
+    def set_avoid(self, avoid: list[str]):
         """
         Sets the avoid list
 
@@ -843,7 +843,7 @@ class Config:
 
         self.set_avoid(avoid)
 
-    def get_default_slice_private_key(self) -> Union[str, None]:
+    def get_default_slice_private_key(self) -> str | None:
         """
         Gets the current default_slice_keys as a dictionary containg the
         public and private slice keys.
@@ -852,7 +852,7 @@ class Config:
         functionality will likely change going forward.
 
         :return: default_slice_key dictionary from superclass
-        :rtype: Dict[String, String]
+        :rtype: dict[String, String]
         """
         if self.get_default_slice_private_key_file() is not None and os.path.exists(
             self.get_default_slice_private_key_file()
@@ -862,7 +862,7 @@ class Config:
             )
         return None
 
-    def get_default_slice_public_key(self) -> Union[str, None]:
+    def get_default_slice_public_key(self) -> str | None:
         """
         Gets the current default_slice_keys as a dictionary containg the
         public and private slice keys.
@@ -871,7 +871,7 @@ class Config:
         functionality will likely change going forward.
 
         :return: default_slice_key dictionary from superclass
-        :rtype: Dict[String, String]
+        :rtype: dict[String, String]
         """
         if self.get_default_slice_public_key_file() is not None and os.path.exists(
             self.get_default_slice_public_key_file()
@@ -893,12 +893,12 @@ class Config:
         """
         return Constants.IMAGE_NAMES
 
-    def get_config_pretty_names_dict(self) -> Dict[str, str]:
+    def get_config_pretty_names_dict(self) -> dict[str, str]:
         """
         Return PRETTY Names for the config
 
         :return: Dict of Pretty Names
-        :rtype: Dict[str, str]
+        :rtype: dict[str, str]
         """
         return self.REQUIRED_ATTRS_PRETTY_NAMES
 
@@ -955,7 +955,7 @@ class Config:
 
         if self.get_log_file() and RotatingFileHandler not in existing_handler_types:
             file_handler = RotatingFileHandler(
-                self.get_log_file(), backupCount=int(5), maxBytes=int(1024 * 1024 * 5)
+                self.get_log_file(), backupCount=5, maxBytes=int(1024 * 1024 * 5)
             )
             file_handler.setFormatter(
                 logging.Formatter(default_log_format, datefmt=default_date_format)
@@ -1012,7 +1012,7 @@ class Config:
         if os.path.exists(local_file):
             age = time.time() - os.path.getmtime(local_file)
             if age < ttl:
-                with open(local_file, "r") as f:
+                with open(local_file) as f:
                     return json.load(f)
 
         try:
@@ -1024,7 +1024,7 @@ class Config:
             return data
         except Exception:
             if os.path.exists(local_file):
-                with open(local_file, "r") as f:
+                with open(local_file) as f:
                     return json.load(f)
             elif fallback_default is not None:
                 return fallback_default

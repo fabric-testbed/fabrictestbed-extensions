@@ -55,8 +55,8 @@ import logging
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Optional, Tuple
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from fabrictestbed.external_api.orchestrator_client import SliceDTO, SliverDTO
@@ -80,7 +80,6 @@ if TYPE_CHECKING:
 import concurrent.futures
 import os
 from ipaddress import IPv4Address, ip_address
-from typing import Dict, List, Union
 
 from fabrictestbed.slice_editor import ExperimentTopology
 from tabulate import tabulate
@@ -141,7 +140,7 @@ class Slice:
         fablib_manager: FablibManager,
         name: str = None,
         user_only: bool = True,
-        sm_slice: Optional[SliceDTO] = None,
+        sm_slice: SliceDTO | None = None,
     ):
         """
         Create a FABRIC slice, and set its state to be callable.
@@ -153,19 +152,19 @@ class Slice:
 
         self.fablib_manager: FablibManager = fablib_manager
         self.network_iface_map = None
-        self.sm_slice: Optional[SliceDTO] = sm_slice
+        self.sm_slice: SliceDTO | None = sm_slice
         self.slice_name = sm_slice.name if sm_slice else name
-        self.slice_id: Optional[str] = sm_slice.slice_id if sm_slice else None
-        self.topology: Optional[ExperimentTopology] = ExperimentTopology()
+        self.slice_id: str | None = sm_slice.slice_id if sm_slice else None
+        self.topology: ExperimentTopology | None = ExperimentTopology()
         if self.sm_slice and self.sm_slice.model and len(self.sm_slice.model) > 0:
             self.topology.load(graph_string=self.sm_slice.model)
 
-        self.slivers: List[SliverDTO] = []
-        self._sliver_map: Dict[str, SliverDTO] = {}
-        self.nodes: Dict[str, Node] = {}
-        self.facilities: Dict[str, FacilityPort] = {}
-        self.interfaces: Dict[str, Interface] = {}
-        self.network_services: Dict[str, NetworkService] = {}
+        self.slivers: list[SliverDTO] = []
+        self._sliver_map: dict[str, SliverDTO] = {}
+        self.nodes: dict[str, Node] = {}
+        self.facilities: dict[str, FacilityPort] = {}
+        self.interfaces: dict[str, Interface] = {}
+        self.network_services: dict[str, NetworkService] = {}
         self.update_topology_count: int = 0
         self.update_slivers_count: int = 0
         self.update_slice_count: int = 0
@@ -175,7 +174,7 @@ class Slice:
         self._topology_dirty: bool = True
         # CephFS storage defaults applied to every new node via add_node()
         self._storage: bool = False
-        self._storage_cluster: Optional[str] = None
+        self._storage_cluster: str | None = None
 
     def get_fablib_manager(self) -> FablibManager:
         """Return the associated FablibManager instance."""
@@ -248,7 +247,7 @@ class Slice:
         :param output: output format
         :type output: str
         :param fields: list of fields to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param colors: True to specify state colors for pandas output
@@ -316,7 +315,7 @@ class Slice:
     def list_components(
         self,
         output: str = None,
-        fields: List[str] = None,
+        fields: list[str] = None,
         quiet: bool = False,
         filter_function=None,
         pretty_names=True,
@@ -343,7 +342,7 @@ class Slice:
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -380,7 +379,7 @@ class Slice:
     def list_interfaces(
         self,
         output: str = None,
-        fields: List[str] = None,
+        fields: list[str] = None,
         quiet: bool = False,
         filter_function=None,
         pretty_names: bool = True,
@@ -407,7 +406,7 @@ class Slice:
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -792,12 +791,12 @@ class Slice:
             self.get_slivers()
         return self._sliver_map.get(reservation_id)
 
-    def get_slivers(self) -> List[SliverDTO]:
+    def get_slivers(self) -> list[SliverDTO]:
         """
         Returns slivers associated with the slice.
         """
         if not self.slivers:
-            log.debug(f"get_slivers", stack_info=False)
+            log.debug("get_slivers", stack_info=False)
             self.update_slivers()
 
         return self.slivers
@@ -906,7 +905,7 @@ class Slice:
         :return: True if slice is Allocated and starts in future, False otherwise
         :rtype: Bool
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         lease_start = (
             datetime.strptime(self.get_lease_start(), Constants.LEASE_TIME_FORMAT)
             if self.get_lease_start()
@@ -952,7 +951,7 @@ class Slice:
         else:
             return False
 
-    def get_state(self) -> Optional[str]:
+    def get_state(self) -> str | None:
         """
         Gets the slice state.
 
@@ -986,7 +985,7 @@ class Slice:
         """
         return self.slice_id
 
-    def get_lease_end(self) -> Optional[str]:
+    def get_lease_end(self) -> str | None:
         """
         Gets the timestamp at which the slice lease ends.
 
@@ -1002,7 +1001,7 @@ class Slice:
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
 
-    def get_lease_start(self) -> Optional[str]:
+    def get_lease_start(self) -> str | None:
         """
         Gets the timestamp at which the slice lease starts.
 
@@ -1017,7 +1016,7 @@ class Slice:
                 f"Exception in get_lease_end from non-None sm_slice. Returning None state: {e}"
             )
 
-    def get_email(self) -> Optional[str]:
+    def get_email(self) -> str | None:
         """
         Gets the owner's email of the slice.
 
@@ -1028,7 +1027,7 @@ class Slice:
             return self.sm_slice.owner_email
         return None
 
-    def get_user_id(self) -> Optional[str]:
+    def get_user_id(self) -> str | None:
         """
         Gets the owner's user id of the slice.
 
@@ -1039,7 +1038,7 @@ class Slice:
             return self.sm_slice.owner_user_id
         return None
 
-    def get_project_id(self) -> Optional[str]:
+    def get_project_id(self) -> str | None:
         """
         Gets the project id of the slice.
 
@@ -1054,9 +1053,9 @@ class Slice:
         self,
         name: str,
         mirror_interface_name: str,
-        receive_interface: Optional[Interface] = None,
-        mirror_interface_vlan: Optional[str] = None,
-        mirror_direction: Optional[str] = "both",
+        receive_interface: Interface | None = None,
+        mirror_interface_vlan: str | None = None,
+        mirror_direction: str | None = "both",
     ) -> NetworkService:
         """
         Adds a special PortMirror service.
@@ -1089,7 +1088,7 @@ class Slice:
     def add_l2network(
         self,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: list[Interface] = [],
         type: str = None,
         subnet: ipaddress = None,
         gateway: ipaddress = None,
@@ -1129,7 +1128,7 @@ class Slice:
 
         :param interfaces: a list of interfaces to build the network
             with
-        :type interfaces: List[Interface]
+        :type interfaces: list[Interface]
 
         :param type: optional L2 network type "L2Bridge", "L2STS", or
             "L2PTP"
@@ -1163,7 +1162,7 @@ class Slice:
     def add_l3network(
         self,
         name: str = None,
-        interfaces: List[Interface] = [],
+        interfaces: list[Interface] = [],
         type: str = "IPv4",
         user_data: dict = {},
         technology: str = None,
@@ -1210,7 +1209,7 @@ class Slice:
 
         :param interfaces: a list of interfaces to build the network
             with
-        :type interfaces: List[Interface]
+        :type interfaces: list[Interface]
 
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
@@ -1251,7 +1250,7 @@ class Slice:
         self,
         name: str = None,
         site: str = None,
-        vlan: Union[str, list] = None,
+        vlan: str | list = None,
         labels: Labels = None,
         peer_labels: Labels = None,
         bandwidth: int = None,
@@ -1299,7 +1298,7 @@ class Slice:
         instance_type: str = None,
         host: str = None,
         user_data: dict = {},
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
         storage: bool = False,
@@ -1345,7 +1344,7 @@ class Slice:
 
         :param avoid: (Optional) A list of sites to avoid is allowing
             random site.
-        :type avoid: List[String]
+        :type avoid: list[String]
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
@@ -1418,11 +1417,11 @@ class Slice:
         ram: int = 8,
         disk: int = 50,
         image: str = Attestable_Switch.default_image,
-        ports: List[str] = None,
+        ports: list[str] = None,
         instance_type: str = None,
         host: str = None,
         user_data: dict = {},
-        avoid: List[str] = [],
+        avoid: list[str] = [],
         validate: bool = False,
         raise_exception: bool = False,
         from_raw_image: bool = False,
@@ -1490,7 +1489,7 @@ class Slice:
         name: str,
         site: str = None,
         user_data: dict = None,
-        avoid: List[str] = None,
+        avoid: list[str] = None,
         validate: bool = False,
         raise_exception: bool = False,
     ) -> Switch:
@@ -1509,7 +1508,7 @@ class Slice:
 
         :param avoid: (Optional) A list of sites to avoid is allowing
             random site.
-        :type avoid: List[String]
+        :type avoid: list[String]
 
         :param validate: Validate node can be allocated w.r.t available resources
         :type validate: bool
@@ -1556,7 +1555,7 @@ class Slice:
 
     def get_object_by_reservation(
         self, reservation_id: str
-    ) -> Union[Node, NetworkService, Interface, None]:
+    ) -> Node | NetworkService | Interface | None:
         """
         Gets an object associated with this slice by its reservation ID.
 
@@ -1583,12 +1582,12 @@ class Slice:
 
         return None
 
-    def get_error_messages(self) -> List[dict]:
+    def get_error_messages(self) -> list[dict]:
         """
         Gets the error messages found in the sliver notices.
 
         :return: a list of error messages
-        :rtype: List[Dict[String, String]]
+        :rtype: list[dict[String, String]]
         """
         # strings to ignore
         cascade_notice_string1 = "Closing reservation due to failure in slice"
@@ -1609,7 +1608,7 @@ class Slice:
 
         return origin_notices
 
-    def get_notices(self) -> Dict[str, str]:
+    def get_notices(self) -> dict[str, str]:
         """
         Gets a dictionary all sliver notices keyed by reservation id.
 
@@ -1630,7 +1629,7 @@ class Slice:
 
         return notices
 
-    def get_components(self, refresh: bool = False) -> List[Component]:
+    def get_components(self, refresh: bool = False) -> list[Component]:
         """
         Gets all components in this slice.
 
@@ -1638,7 +1637,7 @@ class Slice:
         :type refresh: bool
 
         :return: List of all components in this slice
-        :rtype: List[Component]
+        :rtype: list[Component]
         """
         return_components = []
 
@@ -1745,7 +1744,7 @@ class Slice:
         refresh: bool = False,
         site: str = None,
         filter_function=None,
-    ) -> List[Node]:
+    ) -> list[Node]:
         """Gets a list of nodes in this slice, optionally filtered.
 
         :param refresh: force refresh from FIM topology
@@ -1756,7 +1755,7 @@ class Slice:
             returning bool (e.g. ``lambda n: n.get_cores() >= 4``)
         :type filter_function: callable
         :return: a list of fablib nodes
-        :rtype: List[Node]
+        :rtype: list[Node]
         """
         if not self.nodes or not len(self.nodes):
             refresh = True
@@ -1814,12 +1813,12 @@ class Slice:
             log.info(e, exc_info=True)
             raise ResourceNotFoundError(f"Facility not found: {name}")
 
-    def get_facilities(self, refresh: bool = False) -> List[FacilityPort]:
+    def get_facilities(self, refresh: bool = False) -> list[FacilityPort]:
         """
         Gets a list of all nodes in this slice.
 
         :return: a list of fablib nodes
-        :rtype: List[FacilityPort]
+        :rtype: list[FacilityPort]
         """
         if not self.facilities or not len(self.facilities):
             refresh = True
@@ -1905,7 +1904,7 @@ class Slice:
             self.facilities.pop(fac_name)
             log.debug(f"Removed extra facility: {fac_name}")
 
-    def get_attestable_switches(self) -> List[Attestable_Switch]:
+    def get_attestable_switches(self) -> list[Attestable_Switch]:
         """
         Get list of attestable switches in the fablib slice.
         """
@@ -1982,7 +1981,7 @@ class Slice:
 
     def get_interfaces(
         self, include_subs: bool = True, refresh: bool = False, output: str = "list"
-    ) -> Union[dict[str, Interface], list[Interface]]:
+    ) -> dict[str, Interface] | list[Interface]:
         """
         Gets all interfaces in this slice.
 
@@ -1996,7 +1995,7 @@ class Slice:
         :type output: str
 
         :return: a list of interfaces on this slice
-        :rtype: Union[dict[str, Interface], list[Interface]]
+        :rtype: dict[str, Interface] | list[Interface]
         """
         if self.interfaces and not refresh and not self._topology_dirty:
             pass
@@ -2046,14 +2045,14 @@ class Slice:
         for interface in self.get_interfaces():
             if name.endswith(interface.get_name()):
                 return interface
-        raise ResourceNotFoundError("Interface not found: {}".format(name))
+        raise ResourceNotFoundError(f"Interface not found: {name}")
 
-    def get_l3networks(self) -> List[NetworkService]:
+    def get_l3networks(self) -> list[NetworkService]:
         """
         Gets all L3 networks services in this slice
 
         :return: List of all network services in this slice
-        :rtype: List[NetworkService]
+        :rtype: list[NetworkService]
         """
         try:
             return NetworkService.get_l3network_services(self)
@@ -2062,7 +2061,7 @@ class Slice:
 
         return []
 
-    def get_l3network(self, name: str = None) -> Union[NetworkService or None]:
+    def get_l3network(self, name: str = None) -> NetworkService or None:
         """
         Gets a particular L3 network service from this slice.
 
@@ -2077,7 +2076,7 @@ class Slice:
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_l2networks(self) -> List[NetworkService]:
+    def get_l2networks(self) -> list[NetworkService]:
         """
         Gets a list of the L2 network services on this slice.
 
@@ -2091,7 +2090,7 @@ class Slice:
 
         return []
 
-    def get_l2network(self, name: str = None) -> Optional[NetworkService]:
+    def get_l2network(self, name: str = None) -> NetworkService | None:
         """
         Gets a particular L2 network service from this slice.
 
@@ -2105,7 +2104,7 @@ class Slice:
         except Exception as e:
             log.info(e, exc_info=True)
 
-    def get_network_services(self, force_refresh: bool = False) -> List[NetworkService]:
+    def get_network_services(self, force_refresh: bool = False) -> list[NetworkService]:
         """
         Not intended for API use. See: slice.get_networks()
 
@@ -2115,7 +2114,7 @@ class Slice:
         :param force_refresh: Force refresh from topology even if cached
         :type force_refresh: bool
         :return: List of all network services in this slice
-        :rtype: List[NetworkService]
+        :rtype: list[NetworkService]
         """
         # Return cached results if valid
         if self.network_services and not self._topology_dirty and not force_refresh:
@@ -2159,14 +2158,14 @@ class Slice:
 
     def get_networks(
         self, refresh: bool = True, output: str = "list"
-    ) -> List[NetworkService]:
+    ) -> list[NetworkService]:
         """
         Gets all network services (L2 and L3) in this slice.
 
         Results are cached for performance.
 
         :return: List of all network services in this slice
-        :rtype: List[NetworkService]
+        :rtype: list[NetworkService]
         """
         if not self.network_services or refresh or self._topology_dirty:
             try:
@@ -2256,7 +2255,7 @@ class Slice:
 
         if end_date is not None:
             end = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S %z")
-            days = (end - datetime.now(timezone.utc)).days
+            days = (end - datetime.now(UTC)).days
 
         # Directly pass the kwargs to submit
         self.submit(lease_in_hours=(days * 24), post_boot_config=False, **kwargs)
@@ -2330,7 +2329,7 @@ class Slice:
                 slice = slices[0]
                 if slice.state in ("StableOK", "ModifyOK"):
                     if progress:
-                        print(" Slice state: {}".format(slice.state))
+                        print(f" Slice state: {slice.state}")
                     break
                 if slice.state in (
                     "Closing",
@@ -2339,10 +2338,10 @@ class Slice:
                     "ModifyError",
                 ):
                     if progress:
-                        print(" Slice state: {}".format(slice.state))
+                        print(f" Slice state: {slice.state}")
                     try:
                         exception_string = self.build_error_exception_string()
-                    except Exception as e:
+                    except Exception:
                         exception_string = "Exception while getting error messages"
 
                     raise SliceStateError(
@@ -2358,9 +2357,7 @@ class Slice:
 
         if time.time() >= timeout_start + timeout:
             raise SliceTimeoutError(
-                " Timeout exceeded ({} sec). Slice: {} ({})".format(
-                    timeout, slice.name, slice.state
-                )
+                f" Timeout exceeded ({timeout} sec). Slice: {slice.name} ({slice.state})"
             )
 
         # Update the fim topology (wait to avoid get topology bug)
@@ -2540,7 +2537,7 @@ class Slice:
                     threads[thread] = node
 
             print(
-                f"Running post boot config threads ..."
+                "Running post boot config threads ..."
             )  # ({time.time() - start:.0f} sec)")
 
             for thread in concurrent.futures.as_completed(threads.keys()):
@@ -2700,10 +2697,8 @@ class Slice:
             if net.get_type() in ["FABNetv4", "FABNetv6", "FABNetv4Ext", "FABNetv6Ext"]:
                 try:
                     if (
-                        not type(net.get_subnet())
-                        in [ipaddress.IPv4Network, ipaddress.IPv6Network]
-                        or not type(net.get_gateway())
-                        in [ipaddress.IPv4Address, ipaddress.IPv6Address]
+                        type(net.get_subnet()) not in [ipaddress.IPv4Network, ipaddress.IPv6Network]
+                        or type(net.get_gateway()) not in [ipaddress.IPv4Address, ipaddress.IPv6Address]
                         or net.get_available_ips() is None
                     ):
                         log.warning(
@@ -2893,7 +2888,7 @@ class Slice:
         wait_jupyter: str = "text",
         post_boot_config: bool = True,
         wait_ssh: bool = True,
-        extra_ssh_keys: List[str] = None,
+        extra_ssh_keys: list[str] = None,
         lease_start_time: datetime = None,
         lease_end_time: datetime = None,
         lease_in_hours: int = None,
@@ -2931,7 +2926,7 @@ class Slice:
         :type wait_ssh: bool
 
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
-        :type extra_ssh_keys: List[str]
+        :type extra_ssh_keys: list[str]
 
         :param lease_start_time: Optional lease start time in UTC format: %Y-%m-%d %H:%M:%S %z.
                            Specifies the beginning of the time range to search for available resources valid for `lease_in_hours`.
@@ -2978,7 +2973,7 @@ class Slice:
         # Create slice now or Renew slice
         if lease_in_hours and not lease_start_time and not lease_end_time:
             end_time_str = (
-                datetime.now(timezone.utc) + timedelta(hours=lease_in_hours)
+                datetime.now(UTC) + timedelta(hours=lease_in_hours)
             ).strftime("%Y-%m-%d %H:%M:%S %z")
 
         # Request slice from Orchestrator
@@ -3102,7 +3097,7 @@ class Slice:
         :type output: str
 
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
 
         :param colors: True to add colors to the table when possible
         :type colors: bool
@@ -3123,7 +3118,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
@@ -3219,7 +3214,7 @@ class Slice:
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -3370,7 +3365,7 @@ class Slice:
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -3386,7 +3381,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
@@ -3481,7 +3476,7 @@ class Slice:
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -3497,7 +3492,7 @@ class Slice:
 
         def error_color(val):
             # if 'Failure' in val:
-            if val != "" and not "TicketReviewPolicy" in val:
+            if val != "" and "TicketReviewPolicy" not in val:
                 color = f"{Constants.ERROR_LIGHT_COLOR}"
             else:
                 color = ""
@@ -3691,7 +3686,7 @@ class Slice:
         else:
             return True
 
-    def validate(self, raise_exception: bool = True) -> Tuple[bool, Dict[str, str]]:
+    def validate(self, raise_exception: bool = True) -> tuple[bool, dict[str, str]]:
         """
         Validate the slice w.r.t available resources before submission.
 
@@ -3703,7 +3698,7 @@ class Slice:
 
         :return: Tuple indicating status for validation and dictionary of the errors corresponding to
                  each requested node
-        :rtype: Tuple[bool, Dict[str, str]]
+        :rtype: tuple[bool, dict[str, str]]
         """
         from fabrictestbed_extensions.fablib.validator import NodeValidator
 
