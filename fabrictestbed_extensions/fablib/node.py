@@ -48,6 +48,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import os
 import re
 import select
 import threading
@@ -1238,6 +1239,13 @@ class Node(TemplateMixin):
 
         - FPGA_Xilinx_U280: Xilinx U280 FPGA card
 
+        .. note::
+
+            Some component types (e.g. ``NVME_P4510``, GPUs, FPGAs)
+            require specific project-level permissions.  If your project
+            lacks the necessary permissions, the slice submission will
+            fail with an error from the orchestrator.
+
         :param model: the name of the component model to add
         :type model: String
 
@@ -1422,7 +1430,7 @@ class Node(TemplateMixin):
         """
 
         try:
-            return self.render_template(
+            ssh_cmd = self.render_template(
                 self.get_fablib_manager().get_ssh_command_line(),
                 skip=[
                     "ssh_command",
@@ -1433,6 +1441,15 @@ class Node(TemplateMixin):
                     "networks",
                 ],
             )
+            bastion_config = (
+                self.get_fablib_manager().get_bastion_ssh_config_file()
+            )
+            if bastion_config and not os.path.exists(bastion_config):
+                ssh_cmd += (
+                    f" (WARNING: SSH config file '{bastion_config}' "
+                    f"not found. Run fablib.create_ssh_config() first.)"
+                )
+            return ssh_cmd
         except Exception:
             return self.get_fablib_manager().get_ssh_command_line()
 
@@ -1562,6 +1579,7 @@ class Node(TemplateMixin):
                 fablib_manager.get_bastion_host(),
                 username=fablib_manager.get_bastion_username(),
                 key_filename=fablib_manager.get_bastion_key_location(),
+                passphrase=fablib_manager.get_bastion_key_passphrase(),
             )
 
             bastion_transport = bastion.get_transport()
@@ -1847,12 +1865,31 @@ class Node(TemplateMixin):
 
                 return rtn_stdout, rtn_stderr
 
+            except paramiko.ssh_exception.PasswordRequiredException as e:
+                self.close_ssh()
+                raise SSHError(
+                    f"SSH key is encrypted and no passphrase was provided. "
+                    f"Set the private key passphrase in your fablib configuration "
+                    f"or use an unencrypted key. Original error: {e}"
+                ) from e
+            except paramiko.AuthenticationException as e:
+                self.close_ssh()
+                raise SSHError(
+                    f"SSH authentication failed for node {self.get_name()} "
+                    f"({management_ip}): {e}"
+                ) from e
             except Exception as e:
-                log.warning(f"Attempt {attempt + 1} failed: {e}")
+                log.warning(
+                    f"SSH attempt {attempt + 1}/{retry} failed for node "
+                    f"{self.get_name()} ({management_ip}): {e}"
+                )
                 self.close_ssh()
                 attempt += 1
                 if attempt >= retry:
-                    raise
+                    raise SSHError(
+                        f"SSH connection to node {self.get_name()} ({management_ip}) "
+                        f"failed after {retry} attempts. Last error: {e}"
+                    ) from e
                 time.sleep(retry_interval)
 
         raise SSHError("ssh failed: Should not get here")
@@ -3827,12 +3864,23 @@ class Node(TemplateMixin):
 
     def add_storage(self, name: str, auto_mount: bool = False) -> Component:
         """
-        Creates a new FABRIC Storage component and attaches it to the
-        Node
+        Creates a new FABRIC NAS Storage component and attaches it to the
+        Node.
+
+        The ``auto_mount`` flag is passed to the orchestrator via FIM.
+        If the orchestrator does not honour the flag, the storage volume
+        will need to be mounted manually after the slice reaches
+        ``StableOK``.
+
+        For CephFS persistent storage that is automatically mounted
+        during post-boot configuration, use :meth:`enable_storage`
+        instead.
 
         :param name: Name of the Storage volume created for the
             project outside the scope of the Slice
-        :param auto_mount: Mount the storage volume
+        :param auto_mount: Request the orchestrator to mount the
+            storage volume automatically.
+        :type auto_mount: bool
 
         :rtype: Component
         """

@@ -40,6 +40,8 @@ import logging
 import traceback
 from typing import Any, Dict, List, Optional, Tuple
 
+from fim.user import ComponentType
+
 from fabrictestbed_extensions.fablib.node import Node
 
 log = logging.getLogger("fablib")
@@ -108,6 +110,11 @@ class NodeValidator:
         # Check if there are enough components available
         host_components = host.get("components") or {}
         for c in node.get_components():
+            # NAS storage is provisioned at the site level, not on
+            # individual hosts — skip host-level component checks for it.
+            if c.get_type() == ComponentType.Storage:
+                continue
+
             comp_model_type = f"{c.get_type()}-{c.get_fim_model()}"
             comp_data = host_components.get(comp_model_type)
             if not comp_data:

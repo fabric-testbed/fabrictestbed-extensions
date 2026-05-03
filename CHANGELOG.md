@@ -6,6 +6,31 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.0.4
+
+### Added
+- Add `Constants.COMPONENT_MODELS` frozenset for offline validation by external tools (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
+- Add `payload` keyword argument to `FablibException` so exceptions can carry structured error data (Issue [#465](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/465))
+- Add slice state checks to `Component.configure()` and `Component.configure_nvme()` — raise `SliceStateError` if node is not Active (Issue [#464](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/464))
+- Add `DeprecationWarning` to `Interface.get_os_interface()` with `stacklevel=2` (Issue [#293](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/293))
+- Add `stacklevel=2` to existing `DeprecationWarning` in `verify_and_setup()` (Issue [#293](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/293))
+- Add bastion SSH config file existence warning in `Node.get_ssh_command()` (Issue [#297](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/297))
+- Add bastion key passphrase to SSH connection in `Node._get_ssh_connection()` (Issue [#135](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/135))
+
+### Fixed
+- Fix `Slice.build_error_exception_string()` string duplication bug (was prepending `exception_string` to itself)
+- Fix `Interface.get_ip_addr_ssh()` return type annotation — now `Optional[Union[str, list]]` with explicit `return None` in except block (Issue [#295](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/295))
+- Fix `Node.add_storage()` failing validation when `validate=True` — skip NAS storage in host-level component checks (Issue [#460](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/460))
+- Fix SSH error handling in `Node.execute()` — catch `PasswordRequiredException` and `AuthenticationException` immediately instead of retrying (Issues [#292](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/292), [#298](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/298))
+- Fix log handler cleanup in `FablibManager.close()` to avoid `ResourceWarning` from unclosed file handles (Issue [#201](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/201))
+- Fix inconsistent singular getter behavior — `Slice.get_network()`, `NetworkService.get_interface()`, `FacilityPort.get_interface()`, `Switch.get_interface()` now raise `ResourceNotFoundError` instead of returning `None` (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+- Fix `Component.get_interface()` to raise `ResourceNotFoundError` instead of plain `Exception` (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+
+### Changed
+- Improve `Node.add_storage()` docstring to document `auto_mount` limitation and suggest `enable_storage()` for CephFS (Issue [#461](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/461))
+- Improve `Node.add_component()` docstring to note project-level permission requirements (Issue [#463](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/463))
+- Update `Constants` class docstring to highlight public validation collections (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
+
 ## 2.0.3
 
 ### Added

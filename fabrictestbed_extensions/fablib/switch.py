@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import ResourceNotFoundError
 from fabrictestbed_extensions.fablib.interface import Interface
 from fabrictestbed_extensions.fablib.node import Node
 
@@ -377,7 +378,10 @@ class Switch(Node):
         if not self._interfaces_cache or refresh or self._fim_dirty:
             self.get_interfaces(refresh=refresh, output="dict")
 
-        return self._interfaces_cache.get(name)
+        result = self._interfaces_cache.get(name)
+        if result is not None:
+            return result
+        raise ResourceNotFoundError(f"Interface not found: {name}")
 
     @staticmethod
     def get_node(slice: Slice = None, node=None):

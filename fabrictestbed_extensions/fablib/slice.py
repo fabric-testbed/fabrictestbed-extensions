@@ -2181,7 +2181,7 @@ class Slice:
         else:
             return list(self.network_services.values())
 
-    def get_network(self, name: str = None) -> Optional[NetworkService]:
+    def get_network(self, name: str = None) -> NetworkService:
         """
         Gets a particular network service from this slice.
 
@@ -2189,6 +2189,7 @@ class Slice:
         :type name: str
         :return: a particular network service
         :rtype: NetworkService
+        :raises ResourceNotFoundError: if the network is not found
         """
         try:
             # Check cache first
@@ -2196,9 +2197,13 @@ class Slice:
                 return self.network_services[name]
             # Ensure cache is populated, then lookup
             self.get_network_services()
-            return self.network_services.get(name)
+            result = self.network_services.get(name)
+            if result is not None:
+                return result
         except Exception as e:
             log.info(e, exc_info=True)
+
+        raise ResourceNotFoundError(f"Network not found: {name}")
 
     def close_ssh(self):
         """Close all cached SSH connections for nodes in this slice.
@@ -2285,7 +2290,7 @@ class Slice:
             if "Closing reservation due to failure in slice" in notice:
                 continue
 
-            exception_string += f"{exception_string}{sliver_extra}{notice}\n"
+            exception_string += f"{sliver_extra}{notice}\n"
 
         return exception_string
 
@@ -2340,7 +2345,10 @@ class Slice:
                     except Exception as e:
                         exception_string = "Exception while getting error messages"
 
-                    raise SliceStateError(str(exception_string))
+                    raise SliceStateError(
+                        str(exception_string),
+                        payload=self.get_error_messages(),
+                    )
             else:
                 print(f"Failure: {slices}")
 
@@ -3714,5 +3722,7 @@ class Slice:
                     n.delete()
 
         if raise_exception and errors:
-            raise ValidationError(f"Slice validation failed - {errors}!")
+            raise ValidationError(
+                f"Slice validation failed - {errors}!", payload=errors
+            )
         return all_valid, errors

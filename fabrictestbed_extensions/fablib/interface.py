@@ -33,6 +33,7 @@ import ipaddress
 import json
 import logging
 import re
+import warnings
 from ipaddress import IPv4Address, IPv6Address
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
@@ -453,6 +454,12 @@ class Interface(TemplateMixin):
         .. deprecated:: 1.6.5
            Use `get_device_name()` instead.
         """
+        warnings.warn(
+            "get_os_interface() is deprecated and will be removed in a future release, "
+            "please use 'get_device_name()' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.get_device_name()
 
     def get_os_dev(self) -> Optional[dict[str, str]]:
@@ -902,12 +909,17 @@ class Interface(TemplateMixin):
             )
 
     # fablib.Interface.get_ip_addr()
-    def get_ip_addr_ssh(self, dev=None):
+    def get_ip_addr_ssh(self, dev=None) -> Optional[Union[str, list]]:
         """
         Gets the ip addr info for this interface.
 
-        :return: ip addr info
-        :rtype: str
+        When the device name can be resolved, returns the first IP address
+        as a string. When the device name is ``None``, returns the full
+        ``ip -j addr list`` output as a list of dicts. Returns ``None``
+        when no output is available or the device is not found.
+
+        :return: IP address string, list of addr dicts, or None
+        :rtype: Optional[Union[str, list]]
         """
         try:
             stdout, stderr = self.get_node().execute("ip -j addr list", quiet=True)
@@ -923,12 +935,12 @@ class Interface(TemplateMixin):
 
             for addr in addrs:
                 if addr["ifname"] == dev:
-                    # Hack to make it backward compatible. Should return an object
                     return str(ipaddress.ip_address(addr["addr_info"][0]["local"]))
 
             return None
         except Exception as e:
             log.warning(f"{e}")
+            return None
 
     # fablib.Interface.get_ip_addr()
     def get_ips(self, family=None):

@@ -360,6 +360,14 @@ class FablibManager(Config):
             self.ssh_thread_pool_executor.shutdown(wait=False)
             self.ssh_thread_pool_executor = None
 
+        # Close log handlers to avoid ResourceWarning from unclosed file handles
+        for handler in self.log.handlers[:]:
+            try:
+                handler.close()
+                self.log.removeHandler(handler)
+            except Exception:
+                pass
+
     def __enter__(self):
         """Context manager entry point."""
         return self
@@ -428,6 +436,7 @@ class FablibManager(Config):
             "This function is deprecated and will be removed in future releases, "
             "please use 'verify_and_configure' instead.",
             DeprecationWarning,
+            stacklevel=2,
         )
         self.verify_and_configure()
 
