@@ -16,9 +16,7 @@ pytestmark = [pytest.mark.network, pytest.mark.p2, pytest.mark.slow]
 
 
 @pytest.mark.timeout(1200)
-def test_reconfig_post_reboot(
-    fablib, available_site_with_shared_nic, slice_factory
-):
+def test_reconfig_post_reboot(fablib, available_site_with_shared_nic, slice_factory):
     """Create L2 bridge, verify ping, reboot both nodes, reconfigure, verify again."""
     site = available_site_with_shared_nic
     s = slice_factory("l2-reconfig-reboot")
@@ -28,21 +26,15 @@ def test_reconfig_post_reboot(
     node2_name = "Node2"
 
     # Build topology
-    net1 = s.add_l2network(
-        name=network_name, subnet=IPv4Network("192.168.1.0/24")
-    )
+    net1 = s.add_l2network(name=network_name, subnet=IPv4Network("192.168.1.0/24"))
 
     node1 = s.add_node(name=node1_name, site=site, image="default_ubuntu_22")
-    iface1 = node1.add_component(
-        model="NIC_Basic", name="nic1"
-    ).get_interfaces()[0]
+    iface1 = node1.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
     iface1.set_mode("auto")
     net1.add_interface(iface1)
 
     node2 = s.add_node(name=node2_name, site=site, image="default_ubuntu_22")
-    iface2 = node2.add_component(
-        model="NIC_Basic", name="nic1"
-    ).get_interfaces()[0]
+    iface2 = node2.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
     iface2.set_mode("auto")
     net1.add_interface(iface2)
 

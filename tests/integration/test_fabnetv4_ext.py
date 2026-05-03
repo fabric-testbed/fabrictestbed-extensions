@@ -24,14 +24,10 @@ def test_fabnetv4_ext_lifecycle(fablib, available_sites_pair, slice_factory):
     s = slice_factory("fabnetv4-ext")
 
     node1 = s.add_node(name=node1_name, site=site1)
-    iface1 = node1.add_component(
-        model="NIC_Basic", name="nic1"
-    ).get_interfaces()[0]
+    iface1 = node1.add_component(model="NIC_Basic", name="nic1").get_interfaces()[0]
 
     node2 = s.add_node(name=node2_name, site=site2)
-    iface2 = node2.add_component(
-        model="NIC_Basic", name="nic2"
-    ).get_interfaces()[0]
+    iface2 = node2.add_component(model="NIC_Basic", name="nic2").get_interfaces()[0]
 
     s.add_l3network(name=network1_name, interfaces=[iface1], type="IPv4Ext")
     s.add_l3network(name=network2_name, interfaces=[iface2], type="IPv4Ext")
@@ -61,9 +57,7 @@ def test_fabnetv4_ext_lifecycle(fablib, available_sites_pair, slice_factory):
     node1_iface.ip_addr_add(addr=node1_addr, subnet=network1.get_subnet())
     node1.ip_route_add(subnet=network2.get_subnet(), gateway=network1.get_gateway())
 
-    node1.execute(
-        f"sudo ip route add 0.0.0.0/1 via {network1.get_gateway()}"
-    )
+    node1.execute(f"sudo ip route add 0.0.0.0/1 via {network1.get_gateway()}")
 
     node2 = s.get_node(name=node2_name)
     node2_iface = node2.get_interface(network_name=network2_name)
@@ -71,9 +65,7 @@ def test_fabnetv4_ext_lifecycle(fablib, available_sites_pair, slice_factory):
     node2_iface.ip_addr_add(addr=node2_addr, subnet=network2.get_subnet())
     node2.ip_route_add(subnet=network1.get_subnet(), gateway=network2.get_gateway())
 
-    node2.execute(
-        f"sudo ip route add 0.0.0.0/1 via {network2.get_gateway()}"
-    )
+    node2.execute(f"sudo ip route add 0.0.0.0/1 via {network2.get_gateway()}")
 
     # Verify inter-node connectivity
     node2_addr = node2.get_interface(network_name=network2_name).get_ip_addr()

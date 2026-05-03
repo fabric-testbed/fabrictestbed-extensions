@@ -19,9 +19,7 @@ class TestModifySlice:
     """Tests for slice modification with L2/L3 networks."""
 
     @pytest.mark.timeout(1200)
-    def test_modify_add_l2_l3_nodes(
-        self, fablib, available_sites_trio, slice_factory
-    ):
+    def test_modify_add_l2_l3_nodes(self, fablib, available_sites_trio, slice_factory):
         """Add nodes with L2 network, submit, add a third node with L3, resubmit."""
         site1, site2, site3 = available_sites_trio
         s = slice_factory("modify-l2-l3")
@@ -39,9 +37,7 @@ class TestModifySlice:
         self._check_interfaces(s)
 
     @pytest.mark.timeout(900)
-    def test_no_modify_l2_l3_nodes(
-        self, fablib, available_sites_trio, slice_factory
-    ):
+    def test_no_modify_l2_l3_nodes(self, fablib, available_sites_trio, slice_factory):
         """Add nodes with L2 and L3 networks, then submit once."""
         site1, site2, site3 = available_sites_trio
         s = slice_factory("no-modify-l2-l3")
@@ -57,9 +53,7 @@ class TestModifySlice:
     @staticmethod
     def _add_l2(s, site1, site2):
         """Add an L2 network with two nodes."""
-        l2_net = s.add_l2network(
-            name="net-L2", subnet=IPv4Network("192.168.1.0/24")
-        )
+        l2_net = s.add_l2network(name="net-L2", subnet=IPv4Network("192.168.1.0/24"))
 
         for site in [site1, site2]:
             node = s.add_node(name=f"node-{site}", site=site)

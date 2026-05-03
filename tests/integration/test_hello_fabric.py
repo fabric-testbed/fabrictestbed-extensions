@@ -20,8 +20,6 @@ def test_fablib_hello(fablib, available_site, slice_factory):
     s.submit()
 
     for node in s.get_nodes():
-        stdout, stderr = node.execute(
-            "echo Hello, FABRIC from node `hostname -s`"
-        )
+        stdout, stderr = node.execute("echo Hello, FABRIC from node `hostname -s`")
         assert stdout == f"Hello, FABRIC from node {node_name}\n"
         assert stderr == ""

@@ -45,8 +45,12 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, _ = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
-            resources=[{"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10}],
+            start=start,
+            end=end,
+            duration=1,
+            resources=[
+                {"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10}
+            ],
             max_results=3,
         )
         assert isinstance(result, dict)
@@ -55,11 +59,19 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, _ = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
-            resources=[{
-                "type": "compute", "site": site1, "cores": 4, "ram": 16, "disk": 50,
-                "components": {"GPU-Tesla T4": 1},
-            }],
+            start=start,
+            end=end,
+            duration=1,
+            resources=[
+                {
+                    "type": "compute",
+                    "site": site1,
+                    "cores": 4,
+                    "ram": 16,
+                    "disk": 50,
+                    "components": {"GPU-Tesla T4": 1},
+                }
+            ],
         )
         assert isinstance(result, dict)
 
@@ -67,11 +79,19 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, _ = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
-            resources=[{
-                "type": "compute", "site": site1, "cores": 4, "ram": 16, "disk": 50,
-                "components": {"GPU_TeslaT4": 1},
-            }],
+            start=start,
+            end=end,
+            duration=1,
+            resources=[
+                {
+                    "type": "compute",
+                    "site": site1,
+                    "cores": 4,
+                    "ram": 16,
+                    "disk": 50,
+                    "components": {"GPU_TeslaT4": 1},
+                }
+            ],
         )
         assert isinstance(result, dict)
 
@@ -79,11 +99,19 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, _ = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
-            resources=[{
-                "type": "compute", "site": site1, "cores": 4, "ram": 16, "disk": 10,
-                "components": {"NIC_ConnectX_6": 1},
-            }],
+            start=start,
+            end=end,
+            duration=1,
+            resources=[
+                {
+                    "type": "compute",
+                    "site": site1,
+                    "cores": 4,
+                    "ram": 16,
+                    "disk": 10,
+                    "components": {"NIC_ConnectX_6": 1},
+                }
+            ],
         )
         assert isinstance(result, dict)
 
@@ -91,7 +119,9 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, site2 = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
+            start=start,
+            end=end,
+            duration=1,
             resources=[
                 {"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10},
                 {"type": "compute", "site": site2, "cores": 2, "ram": 8, "disk": 10},
@@ -103,7 +133,9 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, site2 = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
+            start=start,
+            end=end,
+            duration=1,
             resources=[
                 {"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10},
                 {"type": "compute", "site": site2, "cores": 2, "ram": 8, "disk": 10},
@@ -116,8 +148,12 @@ class TestFindSlotRawResources:
         start, end = _search_window()
         site1, _ = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1,
-            resources=[{"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10}],
+            start=start,
+            end=end,
+            duration=1,
+            resources=[
+                {"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10}
+            ],
             max_results=5,
         )
         assert isinstance(result, dict)
@@ -126,8 +162,12 @@ class TestFindSlotRawResources:
         start, end = _search_window(days=14)
         site1, _ = two_sites
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=24,
-            resources=[{"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10}],
+            start=start,
+            end=end,
+            duration=24,
+            resources=[
+                {"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10}
+            ],
         )
         assert isinstance(result, dict)
 
@@ -148,7 +188,10 @@ class TestFindSlotWithSlice:
         slice_obj.add_node(name="node1", site=site1, cores=2, ram=8, disk=10)
 
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1, slice=slice_obj,
+            start=start,
+            end=end,
+            duration=1,
+            slice=slice_obj,
         )
         assert isinstance(result, dict)
 
@@ -163,7 +206,10 @@ class TestFindSlotWithSlice:
         node.add_component(model="GPU_TeslaT4", name="gpu1")
 
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1, slice=slice_obj,
+            start=start,
+            end=end,
+            duration=1,
+            slice=slice_obj,
         )
         assert isinstance(result, dict)
 
@@ -181,7 +227,10 @@ class TestFindSlotWithSlice:
         slice_obj.add_l2network(name="net1", interfaces=[iface1, iface2])
 
         result = fablib.find_resource_slot(
-            start=start, end=end, duration=1, slice=slice_obj,
+            start=start,
+            end=end,
+            duration=1,
+            slice=slice_obj,
         )
         assert isinstance(result, dict)
 
@@ -192,9 +241,7 @@ class TestFindSlotWithSlice:
 
 
 @pytest.mark.timeout(900)
-def test_find_slot_after_submitting_smartnic_slice(
-    fablib, two_sites, slice_factory
-):
+def test_find_slot_after_submitting_smartnic_slice(fablib, two_sites, slice_factory):
     """Submit a real SmartNIC slice, then search for equivalent availability."""
     site1, site2 = two_sites
     s = slice_factory("find-slot-smartnic")
@@ -223,18 +270,35 @@ def test_find_slot_after_submitting_smartnic_slice(
     query_slice.add_l2network(name="net1", interfaces=[qi1, qi2])
 
     result = fablib.find_resource_slot(
-        start=start, end=end, duration=1, slice=query_slice,
+        start=start,
+        end=end,
+        duration=1,
+        slice=query_slice,
     )
     assert isinstance(result, dict)
 
     # Also test with raw resource dicts
     result_raw = fablib.find_resource_slot(
-        start=start, end=end, duration=1,
+        start=start,
+        end=end,
+        duration=1,
         resources=[
-            {"type": "compute", "site": site1, "cores": 2, "ram": 8, "disk": 10,
-             "components": {"NIC_ConnectX_6": 1}},
-            {"type": "compute", "site": site2, "cores": 2, "ram": 8, "disk": 10,
-             "components": {"NIC_ConnectX_6": 1}},
+            {
+                "type": "compute",
+                "site": site1,
+                "cores": 2,
+                "ram": 8,
+                "disk": 10,
+                "components": {"NIC_ConnectX_6": 1},
+            },
+            {
+                "type": "compute",
+                "site": site2,
+                "cores": 2,
+                "ram": 8,
+                "disk": 10,
+                "components": {"NIC_ConnectX_6": 1},
+            },
             {"type": "link", "site_a": site1, "site_b": site2, "bandwidth": 10},
         ],
         max_results=3,
@@ -258,7 +322,9 @@ class TestFindSlotValidation:
 
         with pytest.raises(ValueError):
             fablib.find_resource_slot(
-                start=start, end=end, duration=1,
+                start=start,
+                end=end,
+                duration=1,
                 slice=slice_obj,
                 resources=[{"type": "compute", "site": site1, "cores": 2}],
             )
@@ -275,6 +341,8 @@ class TestFindSlotValidation:
 
         with pytest.raises(Exception, match="at least 60 minutes"):
             fablib.find_resource_slot(
-                start=start, end=end, duration=1,
+                start=start,
+                end=end,
+                duration=1,
                 resources=[{"type": "compute", "site": site1, "cores": 2}],
             )
