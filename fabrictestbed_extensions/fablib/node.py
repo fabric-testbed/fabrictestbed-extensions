@@ -64,27 +64,22 @@ from paramiko_expect import SSHClientInteraction
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
-from fabrictestbed_extensions.fablib.exceptions import (
-    ResourceNotFoundError,
-    SliceStateError,
-    SSHError,
-    ValidationError,
-)
+from fabrictestbed_extensions.fablib.exceptions import (ResourceNotFoundError,
+                                                        SliceStateError,
+                                                        SSHError,
+                                                        ValidationError)
 from fabrictestbed_extensions.fablib.network_service import NetworkService
 from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.slice import Slice
 
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
+from ipaddress import (IPv4Address, IPv4Network, IPv6Address, IPv6Network,
+                       ip_address)
 
-from fabrictestbed.slice_editor import (
-    Capacities,
-    CapacityHints,
-    Labels,
-    ServiceType,
-)
+from fabrictestbed.slice_editor import Capacities, CapacityHints, Labels
 from fabrictestbed.slice_editor import Node as FimNode
+from fabrictestbed.slice_editor import ServiceType
 from fim.slivers.network_service import NSLayer
 
 from fabrictestbed_extensions.fablib.component import Component

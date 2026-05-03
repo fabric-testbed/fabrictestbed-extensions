@@ -32,15 +32,10 @@ import traceback
 from typing import List
 
 from abc_test import AbcTest
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentCatalog,
-    ComponentModelType,
-    ComponentType,
-    ExperimentTopology,
-    Labels,
-    ServiceType,
-)
+from fabrictestbed.slice_editor import (Capacities, ComponentCatalog,
+                                        ComponentModelType, ComponentType,
+                                        ExperimentTopology, Labels,
+                                        ServiceType)
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 from fabrictestbed_extensions import images
@@ -741,7 +736,8 @@ class ComponentTest(AbcTest):
                             name_prefix + "-" + component_model_name + "-" + str(site)
                         )
                         # print("Running test, slice_name: {}".format(slice_name))
-                        from fabrictestbed_extensions.utils.slice import SliceUtils
+                        from fabrictestbed_extensions.utils.slice import \
+                            SliceUtils
 
                         slice = SliceUtils.get_slice(
                             slice_name=slice_name, slice_manager=self.slice_manager

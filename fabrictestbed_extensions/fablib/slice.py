@@ -65,12 +65,10 @@ from fss_utils.sshkey import FABRICSSHKey
 from IPython.core.display_functions import display
 
 from fabrictestbed_extensions.fablib.constants import Constants
-from fabrictestbed_extensions.fablib.exceptions import (
-    ResourceNotFoundError,
-    SliceStateError,
-    SliceTimeoutError,
-    ValidationError,
-)
+from fabrictestbed_extensions.fablib.exceptions import (ResourceNotFoundError,
+                                                        SliceStateError,
+                                                        SliceTimeoutError,
+                                                        ValidationError)
 from fabrictestbed_extensions.fablib.switch import Switch
 from fabrictestbed_extensions.utils.utils import Utils
 

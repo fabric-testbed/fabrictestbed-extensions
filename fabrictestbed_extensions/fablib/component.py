@@ -45,10 +45,8 @@ from typing import TYPE_CHECKING
 from fim.user import ComponentType
 
 from fabrictestbed_extensions.fablib.constants import Constants
-from fabrictestbed_extensions.fablib.exceptions import (
-    ResourceNotFoundError,
-    SliceStateError,
-)
+from fabrictestbed_extensions.fablib.exceptions import (ResourceNotFoundError,
+                                                        SliceStateError)
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 if TYPE_CHECKING:
