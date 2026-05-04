@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from IPython.core.display_functions import display
 
+from fabrictestbed_extensions.utils.utils import Utils
+
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.fablib import FablibManager
 
@@ -1681,7 +1683,7 @@ class CrinkleSlice(Slice):
 
         table = sorted(table, key=lambda x: (x["node_name"], x["interface"]))
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Interface Counters",
@@ -2087,7 +2089,7 @@ class CrinkleSlice(Slice):
                 table.append(rowdict)
 
         table = sorted(table, key=lambda x: (x["pkt_id"], x["time"]))
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Packet Provenance",
