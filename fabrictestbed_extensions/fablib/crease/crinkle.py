@@ -18,7 +18,6 @@ from concurrent import futures
 from ipaddress import IPv6Address, ip_address
 
 from fabrictestbed.external_api.orchestrator_client import SliceDTO
-
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_editor import Node as FimNode
 
@@ -333,7 +332,12 @@ class CrinkleSlice(Slice):
         name_prefix: str = None,
         analyzer_name: str = None,
     ):
-        super().__init__(fablib_manager=fablib_manager, name=name, sm_slice=sm_slice, user_only=user_only)
+        super().__init__(
+            fablib_manager=fablib_manager,
+            name=name,
+            sm_slice=sm_slice,
+            user_only=user_only,
+        )
         self.monitors: Dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
@@ -1124,7 +1128,9 @@ class CrinkleSlice(Slice):
             monitor_site = monitor.get_site()
             site_has_ptp = site_ptp_flags.setdefault(
                 monitor_site,
-                self.get_fablib_manager().get_resources().get_ptp_capable(site_name=monitor_site),
+                self.get_fablib_manager()
+                .get_resources()
+                .get_ptp_capable(site_name=monitor_site),
             )
             if not site_has_ptp:
                 logging.warning(
