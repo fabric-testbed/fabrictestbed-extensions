@@ -1112,7 +1112,7 @@ class CrinkleSlice(Slice):
         )
         ansible_cmd = f"cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml"
         jobs = []
-        site_ads = {}
+        site_ptp_flags = {}
         logging.info(f"Setting up PTP on Crinkle nodes")
         print("Setting up PTP on Crinkle nodes")
         jobs.append(
@@ -1120,11 +1120,11 @@ class CrinkleSlice(Slice):
         )
         for monitor_name, monitor in self.monitors.items():
             monitor_site = monitor.get_site()
-            site_ad = site_ads.setdefault(
+            site_has_ptp = site_ptp_flags.setdefault(
                 monitor_site,
                 self.get_fablib_manager().get_resources().get_ptp_capable(site_name=monitor_site),
             )
-            if not site_ad.flags.ptp:
+            if not site_has_ptp:
                 logging.warning(
                     f"Site {monitor_site} does not support PTP, skipping setup for monitor {monitor_name}"
                 )
