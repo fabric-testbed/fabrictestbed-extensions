@@ -3729,8 +3729,9 @@ class Slice:
         resources = self.get_fablib_manager().get_resources()
         nodes = self.get_nodes()
 
+        project_tags = self.get_fablib_manager().get_project_tags()
         all_valid, errors = NodeValidator.validate_nodes(
-            nodes=nodes, resources=resources
+            nodes=nodes, resources=resources, project_tags=project_tags
         )
 
         # Remove invalid nodes

@@ -42,6 +42,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from fim.user import ComponentType
 
+from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.node import Node
 
 log = logging.getLogger("fablib")
@@ -61,6 +62,7 @@ class NodeValidator:
         node: Node,
         allocated: dict,
         site: Dict[str, Any],
+        project_tags: Optional[frozenset] = None,
     ) -> Tuple[bool, str]:
         """Check if a node fits on a specific host given current allocations.
 
@@ -70,6 +72,9 @@ class NodeValidator:
         :param allocated: Mutable dict tracking cumulative allocations
             on this host.  Updated in-place when allocation succeeds.
         :param site: Site dict from ResourcesV2
+        :param project_tags: Optional frozenset of permission tags from
+            the decoded token.  When provided, each component is checked
+            against :data:`Constants.COMPONENT_MODEL_TO_TAGS`.
         :return: (success, message)
         """
         if host is None or site is None:
@@ -106,6 +111,18 @@ class NodeValidator:
                 f"does not meet core/ram/disk requirements."
             )
             return False, msg
+
+        # Check component permissions against project tags
+        if project_tags is not None:
+            for c in node.get_components():
+                model = c.get_model()
+                required_tags = Constants.COMPONENT_MODEL_TO_TAGS.get(model)
+                if required_tags and not required_tags.intersection(project_tags):
+                    return False, (
+                        f"Permission denied: component {model} requires one of "
+                        f"{sorted(required_tags)}, but project tags do not "
+                        f"include them."
+                    )
 
         # Check if there are enough components available
         host_components = host.get("components") or {}
@@ -148,6 +165,7 @@ class NodeValidator:
         node: Node,
         resources,
         allocated: Optional[dict] = None,
+        project_tags: Optional[frozenset] = None,
     ) -> Tuple[bool, str]:
         """Validate a single node against available resources.
 
@@ -160,6 +178,9 @@ class NodeValidator:
         :param allocated: Optional dict tracking cumulative host allocations
             across multiple ``validate_node`` calls.  Keyed by
             ``host_name -> {resource_type -> count}``.
+        :param project_tags: Optional frozenset of permission tags from
+            the decoded token.  Passed through to
+            :meth:`can_allocate_node_in_host`.
         :return: (success, message)
         """
         try:
@@ -210,7 +231,11 @@ class NodeValidator:
                 host = hosts.get(node.get_host())
                 allocated_comps = allocated.setdefault(node.get_host(), {})
                 status, error = NodeValidator.can_allocate_node_in_host(
-                    host=host, node=node, allocated=allocated_comps, site=site
+                    host=host,
+                    node=node,
+                    allocated=allocated_comps,
+                    site=site,
+                    project_tags=project_tags,
                 )
                 if not status:
                     log.error(error)
@@ -220,7 +245,11 @@ class NodeValidator:
             for host_name, host in hosts.items():
                 allocated_comps = allocated.setdefault(host_name, {})
                 status, error = NodeValidator.can_allocate_node_in_host(
-                    host=host, node=node, allocated=allocated_comps, site=site
+                    host=host,
+                    node=node,
+                    allocated=allocated_comps,
+                    site=site,
+                    project_tags=project_tags,
                 )
                 if status:
                     return status, error
@@ -242,6 +271,7 @@ class NodeValidator:
     def validate_nodes(
         nodes: List[Node],
         resources,
+        project_tags: Optional[frozenset] = None,
     ) -> Tuple[bool, Dict[str, str]]:
         """Batch-validate multiple nodes sharing a single allocated dict.
 
@@ -250,13 +280,18 @@ class NodeValidator:
 
         :param nodes: List of Node objects to validate
         :param resources: A ``ResourcesV2`` instance (pre-fetched)
+        :param project_tags: Optional frozenset of permission tags from
+            the decoded token.
         :return: (all_valid, errors) where errors maps node_name to message
         """
         allocated: Dict[str, dict] = {}
         errors: Dict[str, str] = {}
         for node in nodes:
             status, error = NodeValidator.validate_node(
-                node=node, resources=resources, allocated=allocated
+                node=node,
+                resources=resources,
+                allocated=allocated,
+                project_tags=project_tags,
             )
             if not status:
                 errors[node.get_name()] = error

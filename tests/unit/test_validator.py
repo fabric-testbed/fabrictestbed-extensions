@@ -367,3 +367,145 @@ class TestValidateNodes(unittest.TestCase):
         self.assertFalse(all_valid)
         self.assertIn("bad", errors)
         self.assertNotIn("ok", errors)
+
+
+class TestComponentPermissionTags(unittest.TestCase):
+    """Tests for project tag permission checks in can_allocate_node_in_host."""
+
+    def _make_host(self, components=None):
+        return {
+            "name": "host1",
+            "state": "Active",
+            "cores_available": 32,
+            "ram_available": 128,
+            "disk_available": 1000,
+            "components": components or {},
+        }
+
+    def _make_node_with_component(self, model, cores=2, ram=8, disk=10):
+        node = MagicMock()
+        node.get_requested_cores.return_value = cores
+        node.get_requested_ram.return_value = ram
+        node.get_requested_disk.return_value = disk
+        comp = MagicMock()
+        comp.get_model.return_value = model
+        comp.get_type.return_value = "GPU"
+        comp.get_fim_model.return_value = "RTX6000"
+        node.get_components.return_value = [comp]
+        return node
+
+    def test_gpu_passes_with_specific_tag(self):
+        host = self._make_host(
+            components={"GPU-RTX6000": {"capacity": 4, "allocated": 0}}
+        )
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset({"Component.GPU_RTX6000"})
+
+        success, msg = NodeValidator.can_allocate_node_in_host(
+            host=host,
+            node=node,
+            allocated={},
+            site={"state": "Active"},
+            project_tags=tags,
+        )
+
+        self.assertTrue(success)
+
+    def test_gpu_passes_with_category_tag(self):
+        host = self._make_host(
+            components={"GPU-RTX6000": {"capacity": 4, "allocated": 0}}
+        )
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset({"Component.GPU"})
+
+        success, msg = NodeValidator.can_allocate_node_in_host(
+            host=host,
+            node=node,
+            allocated={},
+            site={"state": "Active"},
+            project_tags=tags,
+        )
+
+        self.assertTrue(success)
+
+    def test_gpu_fails_without_matching_tag(self):
+        host = self._make_host(
+            components={"GPU-RTX6000": {"capacity": 4, "allocated": 0}}
+        )
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset({"Component.FPGA"})
+
+        success, msg = NodeValidator.can_allocate_node_in_host(
+            host=host,
+            node=node,
+            allocated={},
+            site={"state": "Active"},
+            project_tags=tags,
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
+        self.assertIn("GPU_RTX6000", msg)
+
+    def test_nic_basic_passes_with_empty_tags(self):
+        """NIC_Basic requires no special permission — the tag check passes."""
+        from fabrictestbed_extensions.fablib.constants import Constants
+
+        host = self._make_host(
+            components={"SharedNIC-ConnectX-6": {"capacity": 2, "allocated": 0}}
+        )
+        node = MagicMock()
+        node.get_requested_cores.return_value = 2
+        node.get_requested_ram.return_value = 8
+        node.get_requested_disk.return_value = 10
+        comp = MagicMock()
+        comp.get_model.return_value = Constants.CMP_NIC_Basic
+        comp.get_type.return_value = "SharedNIC"
+        comp.get_fim_model.return_value = "ConnectX-6"
+        node.get_components.return_value = [comp]
+        tags = frozenset()
+
+        success, msg = NodeValidator.can_allocate_node_in_host(
+            host=host,
+            node=node,
+            allocated={},
+            site={"state": "Active"},
+            project_tags=tags,
+        )
+
+        self.assertTrue(success)
+
+    def test_none_project_tags_skips_check(self):
+        """When project_tags is None, permission check is skipped."""
+        host = self._make_host(
+            components={"GPU-RTX6000": {"capacity": 4, "allocated": 0}}
+        )
+        node = self._make_node_with_component("GPU_RTX6000")
+
+        success, msg = NodeValidator.can_allocate_node_in_host(
+            host=host,
+            node=node,
+            allocated={},
+            site={"state": "Active"},
+            project_tags=None,
+        )
+
+        self.assertTrue(success)
+
+    def test_gpu_fails_with_empty_tags(self):
+        host = self._make_host(
+            components={"GPU-RTX6000": {"capacity": 4, "allocated": 0}}
+        )
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset()
+
+        success, msg = NodeValidator.can_allocate_node_in_host(
+            host=host,
+            node=node,
+            allocated={},
+            site={"state": "Active"},
+            project_tags=tags,
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
