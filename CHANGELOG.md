@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.4
 
 ### Added
+- Added the Crinkle network debugger from the [CREASE](https://crease.cs.iit.edu/) project.
 - Add `Constants.COMPONENT_MODELS` frozenset for offline validation by external tools (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
 - Add `payload` keyword argument to `FablibException` so exceptions can carry structured error data (Issue [#465](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/465))
 - Add slice state checks to `Component.configure()` and `Component.configure_nvme()` — raise `SliceStateError` if node is not Active (Issue [#464](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/464))
@@ -34,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.3
 
 ### Added
-- Added the Crinkle network debugger from the [CREASE](https://crease.cs.iit.edu/) project.
 - Add a new `SliceNotFoundError` and use it instead of `Exception` in the `get_slice` method.
 - Update to logging in the dependencies
 
