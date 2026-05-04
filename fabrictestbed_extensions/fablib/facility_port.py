@@ -284,7 +284,10 @@ class FacilityPort(TemplateMixin):
         return list(self._interfaces_cache.values())
 
     def get_interface(
-        self, name: str = None, refresh: bool = False
+        self,
+        name: str = None,
+        refresh: bool = False,
+        raise_exception: bool = None,
     ) -> Optional[Interface]:
         """
         Gets a specific interface by name.
@@ -293,14 +296,33 @@ class FacilityPort(TemplateMixin):
         :type name: str
         :param refresh: force refresh from FIM
         :type refresh: bool
-        :rtype: Interface
+        :param raise_exception: if True, raise ResourceNotFoundError
+            when the interface is not found; if False, return None.
+            When None (default), falls back to the global
+            ``FablibManager.raise_on_not_found`` setting.
+        :type raise_exception: bool
+        :return: the interface or None
+        :rtype: Optional[Interface]
+        :raises ResourceNotFoundError: if the interface is not found and
+            raising is enabled
         """
         # Ensure cache is populated
         interfaces = self.get_interfaces(refresh=refresh, output="dict")
         result = interfaces.get(name)
         if result is not None:
             return result
-        raise ResourceNotFoundError(f"Interface not found: {name}")
+        should_raise = (
+            raise_exception
+            if raise_exception is not None
+            else (
+                self.get_fablib_manager().raise_on_not_found
+                if self.get_fablib_manager()
+                else False
+            )
+        )
+        if should_raise:
+            raise ResourceNotFoundError(f"Interface not found: {name}")
+        return None
 
     def update(self, fim_node: FimNode = None):
         """

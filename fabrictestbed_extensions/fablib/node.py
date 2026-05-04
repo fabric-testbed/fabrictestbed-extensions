@@ -1384,7 +1384,11 @@ class Node(TemplateMixin):
         return list(self.interfaces.values())
 
     def get_interface(
-        self, name: str = None, network_name: str = None, refresh: bool = False
+        self,
+        name: str = None,
+        network_name: str = None,
+        refresh: bool = False,
+        raise_exception: bool = None,
     ) -> Optional[Interface]:
         """
         Gets a particular interface associated with a FABRIC node.
@@ -1399,9 +1403,15 @@ class Node(TemplateMixin):
         :type network_name: str
         :param refresh: Refresh interface objects with latest FIM info
         :type refresh: bool
-        :return: an interface on the node
-        :rtype: Interface
-        :raises Exception: if interface is not found
+        :param raise_exception: if True, raise ResourceNotFoundError
+            when the interface is not found; if False, return None.
+            When None (default), falls back to the global
+            ``FablibManager.raise_on_not_found`` setting.
+        :type raise_exception: bool
+        :return: an interface on the node or None
+        :rtype: Optional[Interface]
+        :raises ResourceNotFoundError: if the interface is not found and
+            raising is enabled
         """
         # Ensure interfaces are loaded
         interfaces = self.get_interfaces(refresh=refresh, output="dict")
@@ -1419,7 +1429,18 @@ class Node(TemplateMixin):
                 ):
                     return interface
 
-        raise ResourceNotFoundError(f"Interface not found: {name or network_name}")
+        should_raise = (
+            raise_exception
+            if raise_exception is not None
+            else (
+                self.get_fablib_manager().raise_on_not_found
+                if self.get_fablib_manager()
+                else False
+            )
+        )
+        if should_raise:
+            raise ResourceNotFoundError(f"Interface not found: {name or network_name}")
+        return None
 
     def get_ssh_command(self) -> str:
         """

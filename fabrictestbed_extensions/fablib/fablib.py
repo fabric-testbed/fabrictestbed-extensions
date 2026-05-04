@@ -139,6 +139,7 @@ class FablibManager(Config):
         auto_token_refresh: bool = True,
         validate_config: bool = True,
         no_ssh: bool = False,
+        raise_on_not_found: bool = False,
         **kwargs,
     ):
         """
@@ -204,6 +205,11 @@ class FablibManager(Config):
             (thread pool, bastion probing, SSH key validation) and prevents SSH operations
             on nodes. Useful for API-only mode (e.g., MCP server). Can also be set via
             the ``FABRIC_NO_SSH`` environment variable.
+        :param raise_on_not_found: Global default for singular getter methods
+            (``get_network``, ``get_interface``, etc.).  When ``True``, these
+            methods raise ``ResourceNotFoundError`` if the resource is not found;
+            when ``False`` (default), they return ``None``.  Individual calls
+            can override this via their ``raise_exception`` parameter.
         """
         # If id_token is provided, disable auto_token_refresh
         if id_token is not None:
@@ -233,6 +239,7 @@ class FablibManager(Config):
         self.resources = None
         self.auto_token_refresh = auto_token_refresh
         self.last_resources_filtered_by_time = False
+        self.raise_on_not_found = raise_on_not_found
 
         self.setup_logging()
         self._offline = offline
