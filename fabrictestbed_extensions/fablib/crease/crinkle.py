@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import enum
 import ipaddress
-import json
 import logging
-import random
 import re
-import shutil
-import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from IPython.core.display_functions import display
+
+from fabrictestbed_extensions.utils.utils import Utils
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.fablib import FablibManager
@@ -19,6 +17,7 @@ if TYPE_CHECKING:
 from concurrent import futures
 from ipaddress import IPv6Address, ip_address
 
+from fabrictestbed.external_api.orchestrator_client import SliceDTO
 from fabrictestbed.slice_editor import ExperimentTopology
 from fabrictestbed.slice_editor import Node as FimNode
 
@@ -319,8 +318,6 @@ class CrinkleMonitor(Node):
         }
         logging.info(f"Writing monitor config to user data: {data_dict}")
         user_data["monitor_config"] = data_dict
-        # logging.info(f"Writing monitor iface mappings to user data: {iface_mappings}")
-        # user_data["iface_mappings"] = iface_mappings
         self.set_user_data(user_data=user_data)
 
 
@@ -330,11 +327,17 @@ class CrinkleSlice(Slice):
         fablib_manager: FablibManager,
         name: str = None,
         user_only: bool = True,
+        sm_slice: Optional[SliceDTO] = None,
         pcaps_dir: str = None,
         name_prefix: str = None,
         analyzer_name: str = None,
     ):
-        super().__init__(fablib_manager=fablib_manager, name=name, user_only=user_only)
+        super().__init__(
+            fablib_manager=fablib_manager,
+            name=name,
+            sm_slice=sm_slice,
+            user_only=user_only,
+        )
         self.monitors: Dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
@@ -355,6 +358,8 @@ class CrinkleSlice(Slice):
     def new_slice(
         fablib_manager: FablibManager,
         name: str = None,
+        storage: bool = False,
+        storage_cluster: str = None,
         pcaps_dir: str = ".query_analysis_pcaps",
         name_prefix: str = "C",
     ):
@@ -377,7 +382,8 @@ class CrinkleSlice(Slice):
             pcaps_dir=pcaps_dir,
             name_prefix=name_prefix,
         )
-        slice.topology = ExperimentTopology()
+        slice._storage = storage
+        slice._storage_cluster = storage_cluster
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
         return slice
@@ -389,8 +395,6 @@ class CrinkleSlice(Slice):
         logging.info(f"get_crinkle_data()")
         if "crinkle_slice_config" in analyzer.get_user_data():
             data = self.analyzer.get_user_data()["crinkle_slice_config"]
-            # data_iface_mappings = self.get_user_data()["iface_mappings"]
-            # logging.info(f"Retrieved monitor iface mappings as: {data_iface_mappings}")
             self.analyzer_name = data["analyzer_name"]
             self.prefix = data["prefix"]
             self.monitor_string = data["monitor_string"]
@@ -419,14 +423,12 @@ class CrinkleSlice(Slice):
         }
         logging.info(f"Writing crinkle slice config to user data: {data_dict}")
         user_data["crinkle_slice_config"] = data_dict
-        # logging.info(f"Writing monitor iface mappings to user data: {iface_mappings}")
-        # user_data["iface_mappings"] = iface_mappings
         self.analyzer.set_user_data(user_data=user_data)
 
     @staticmethod
     def get_slice(
         fablib_manager: FablibManager,
-        sm_slice: OrchestratorSlice = None,
+        sm_slice: SliceDTO,
         user_only: bool = True,
         pcaps_dir: str = ".query_analysis_pcaps",
         name_prefix: str = "C",
@@ -444,16 +446,14 @@ class CrinkleSlice(Slice):
         :return: CrinkleSlice
         """
         logging.info("crinkleslice.get_slice()")
+
         slice = CrinkleSlice(
             fablib_manager=fablib_manager,
-            name=sm_slice.name,
+            sm_slice=sm_slice,
+            user_only=user_only,
             pcaps_dir=pcaps_dir,
             name_prefix=name_prefix,
         )
-        slice.sm_slice = sm_slice
-        slice.slice_id = sm_slice.slice_id
-        slice.slice_name = sm_slice.name
-        slice.user_only = user_only
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
 
@@ -937,7 +937,6 @@ class CrinkleSlice(Slice):
                         )
                         endhosts.setdefault(endpoint.get_host(), True)
                         continue
-                    # TODO: instead, traverse hostlist in reverse
                     for host_name, host in hostlist[1:]:
                         allocated_comps = allocated.setdefault(host_name, {})
                         if NodeValidator.can_allocate_node_in_host(
@@ -1020,9 +1019,9 @@ class CrinkleSlice(Slice):
             host = hosts[host_name]
             allocated_comps = allocated[host_name]
             logging.info(
-                f"{host_name}: CPU {allocated_comps['core']}/{host.get_core_available()} "
-                f"RAM {allocated_comps['ram']}/{host.get_ram_available()} "
-                f"DISK {allocated_comps['disk']}/{host.get_disk_available()}"
+                f"{host_name}: CPU {allocated_comps['core']}/{host.get('cores_available', 0)} "
+                f"RAM {allocated_comps['ram']}/{host.get('ram_available', 0)} "
+                f"DISK {allocated_comps['disk']}/{host.get('disk_available', 0)}"
             )
 
     def submit(
@@ -1119,7 +1118,7 @@ class CrinkleSlice(Slice):
         )
         ansible_cmd = f"cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml"
         jobs = []
-        site_ads = {}
+        site_ptp_flags = {}
         logging.info(f"Setting up PTP on Crinkle nodes")
         print("Setting up PTP on Crinkle nodes")
         jobs.append(
@@ -1127,11 +1126,13 @@ class CrinkleSlice(Slice):
         )
         for monitor_name, monitor in self.monitors.items():
             monitor_site = monitor.get_site()
-            site_ad = site_ads.setdefault(
+            site_has_ptp = site_ptp_flags.setdefault(
                 monitor_site,
-                self.get_fablib_manager().get_site_advertisement(monitor_site),
+                self.get_fablib_manager()
+                .get_resources()
+                .get_ptp_capable(site_name=monitor_site),
             )
-            if not site_ad.flags.ptp:
+            if not site_has_ptp:
                 logging.warning(
                     f"Site {monitor_site} does not support PTP, skipping setup for monitor {monitor_name}"
                 )
@@ -1688,7 +1689,7 @@ class CrinkleSlice(Slice):
 
         table = sorted(table, key=lambda x: (x["node_name"], x["interface"]))
 
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Interface Counters",
@@ -2094,7 +2095,7 @@ class CrinkleSlice(Slice):
                 table.append(rowdict)
 
         table = sorted(table, key=lambda x: (x["pkt_id"], x["time"]))
-        table = self.get_fablib_manager().list_table(
+        table = Utils.list_table(
             table,
             fields=fields,
             title="Packet Provenance",
