@@ -57,12 +57,40 @@ class NodeValidator:
     """
 
     @staticmethod
+    def check_component_permissions(
+        node: Node,
+        project_tags: Optional[frozenset] = None,
+    ) -> Tuple[bool, str]:
+        """Check component permissions against project tags.
+
+        This check runs independently of resource availability so that
+        permission errors are surfaced even when a site is missing or
+        inactive in the resources data.
+
+        :param node: The node whose components to check
+        :param project_tags: Optional frozenset of permission tags from
+            the decoded token.  When ``None`` the check is skipped.
+        :return: (success, message)
+        """
+        if project_tags is None:
+            return True, "Permission check skipped (no project tags)."
+        for c in node.get_components():
+            model = c.get_model()
+            required_tags = Constants.COMPONENT_MODEL_TO_TAGS.get(model)
+            if required_tags and not required_tags.intersection(project_tags):
+                return False, (
+                    f"Permission denied: component {model} requires one of "
+                    f"{sorted(required_tags)}, but project tags do not "
+                    f"include them."
+                )
+        return True, "All component permissions satisfied."
+
+    @staticmethod
     def can_allocate_node_in_host(
         host: Dict[str, Any],
         node: Node,
         allocated: dict,
         site: Dict[str, Any],
-        project_tags: Optional[frozenset] = None,
     ) -> Tuple[bool, str]:
         """Check if a node fits on a specific host given current allocations.
 
@@ -72,9 +100,6 @@ class NodeValidator:
         :param allocated: Mutable dict tracking cumulative allocations
             on this host.  Updated in-place when allocation succeeds.
         :param site: Site dict from ResourcesV2
-        :param project_tags: Optional frozenset of permission tags from
-            the decoded token.  When provided, each component is checked
-            against :data:`Constants.COMPONENT_MODEL_TO_TAGS`.
         :return: (success, message)
         """
         if host is None or site is None:
@@ -111,18 +136,6 @@ class NodeValidator:
                 f"does not meet core/ram/disk requirements."
             )
             return False, msg
-
-        # Check component permissions against project tags
-        if project_tags is not None:
-            for c in node.get_components():
-                model = c.get_model()
-                required_tags = Constants.COMPONENT_MODEL_TO_TAGS.get(model)
-                if required_tags and not required_tags.intersection(project_tags):
-                    return False, (
-                        f"Permission denied: component {model} requires one of "
-                        f"{sorted(required_tags)}, but project tags do not "
-                        f"include them."
-                    )
 
         # Check if there are enough components available
         host_components = host.get("components") or {}
@@ -179,14 +192,21 @@ class NodeValidator:
             across multiple ``validate_node`` calls.  Keyed by
             ``host_name -> {resource_type -> count}``.
         :param project_tags: Optional frozenset of permission tags from
-            the decoded token.  Passed through to
-            :meth:`can_allocate_node_in_host`.
+            the decoded token.  Checked early via
+            :meth:`check_component_permissions` before resource lookup.
         :return: (success, message)
         """
         try:
             error = None
             if allocated is None:
                 allocated = {}
+
+            perm_ok, perm_msg = NodeValidator.check_component_permissions(
+                node=node, project_tags=project_tags
+            )
+            if not perm_ok:
+                log.error(perm_msg)
+                return False, perm_msg
 
             site_name = node.get_site()
             site = resources.get_site(site_name=site_name)
@@ -235,7 +255,6 @@ class NodeValidator:
                     node=node,
                     allocated=allocated_comps,
                     site=site,
-                    project_tags=project_tags,
                 )
                 if not status:
                     log.error(error)
@@ -249,7 +268,6 @@ class NodeValidator:
                     node=node,
                     allocated=allocated_comps,
                     site=site,
-                    project_tags=project_tags,
                 )
                 if status:
                     return status, error
