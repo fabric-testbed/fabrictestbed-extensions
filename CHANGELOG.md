@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Improve `Node.add_storage()` docstring to document `auto_mount` limitation and suggest `enable_storage()` for CephFS (Issue [#461](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/461))
-- Improve `Node.add_component()` docstring to note project-level permission requirements (Issue [#463](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/463))
+- Add early validation of component permissions against project tags in token — `validate_node()` now checks `COMPONENT_MODEL_TO_TAGS` before submission (Issue [#463](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/463))
 - Update `Constants` class docstring to highlight public validation collections (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
 
 ## 2.0.3

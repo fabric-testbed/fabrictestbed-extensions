@@ -367,3 +367,159 @@ class TestValidateNodes(unittest.TestCase):
         self.assertFalse(all_valid)
         self.assertIn("bad", errors)
         self.assertNotIn("ok", errors)
+
+
+class TestComponentPermissionTags(unittest.TestCase):
+    """Tests for NodeValidator.check_component_permissions."""
+
+    def _make_node_with_component(self, model):
+        node = MagicMock()
+        comp = MagicMock()
+        comp.get_model.return_value = model
+        node.get_components.return_value = [comp]
+        return node
+
+    def test_gpu_passes_with_specific_tag(self):
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset({"Component.GPU_RTX6000"})
+
+        success, msg = NodeValidator.check_component_permissions(
+            node=node, project_tags=tags
+        )
+
+        self.assertTrue(success)
+
+    def test_gpu_passes_with_category_tag(self):
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset({"Component.GPU"})
+
+        success, msg = NodeValidator.check_component_permissions(
+            node=node, project_tags=tags
+        )
+
+        self.assertTrue(success)
+
+    def test_gpu_fails_without_matching_tag(self):
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset({"Component.FPGA"})
+
+        success, msg = NodeValidator.check_component_permissions(
+            node=node, project_tags=tags
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
+        self.assertIn("GPU_RTX6000", msg)
+
+    def test_nic_basic_passes_with_empty_tags(self):
+        """NIC_Basic requires no special permission — the tag check passes."""
+        from fabrictestbed_extensions.fablib.constants import Constants
+
+        node = MagicMock()
+        comp = MagicMock()
+        comp.get_model.return_value = Constants.CMP_NIC_Basic
+        node.get_components.return_value = [comp]
+        tags = frozenset()
+
+        success, msg = NodeValidator.check_component_permissions(
+            node=node, project_tags=tags
+        )
+
+        self.assertTrue(success)
+
+    def test_none_project_tags_skips_check(self):
+        """When project_tags is None, permission check is skipped."""
+        node = self._make_node_with_component("GPU_RTX6000")
+
+        success, msg = NodeValidator.check_component_permissions(
+            node=node, project_tags=None
+        )
+
+        self.assertTrue(success)
+        self.assertIn("skipped", msg)
+
+    def test_gpu_fails_with_empty_tags(self):
+        node = self._make_node_with_component("GPU_RTX6000")
+        tags = frozenset()
+
+        success, msg = NodeValidator.check_component_permissions(
+            node=node, project_tags=tags
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
+
+
+class TestPermissionCheckWithoutResources(unittest.TestCase):
+    """Permission denied even when resource lookup would short-circuit."""
+
+    def _make_node_with_component(self, model, site="TACC"):
+        node = MagicMock()
+        node.get_site.return_value = site
+        node.get_host.return_value = None
+        node.get_name.return_value = "test-node"
+        node.get_requested_cores.return_value = 2
+        node.get_requested_ram.return_value = 8
+        node.get_requested_disk.return_value = 10
+        comp = MagicMock()
+        comp.get_model.return_value = model
+        node.get_components.return_value = [comp]
+        return node
+
+    def _make_resources(self, site=None, hosts=None):
+        resources = MagicMock()
+        resources.get_site.return_value = site
+        resources.get_hosts_by_site.return_value = hosts
+        return resources
+
+    def test_permission_denied_when_site_missing(self):
+        """Permission check fires before site lookup returns None."""
+        node = self._make_node_with_component("GPU_RTX6000", site="NONEXISTENT")
+        resources = self._make_resources(site=None)
+        tags = frozenset({"Component.FPGA"})
+
+        success, msg = NodeValidator.validate_node(
+            node=node, resources=resources, project_tags=tags
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
+
+    def test_permission_denied_when_site_inactive(self):
+        """Permission check fires before inactive-site check."""
+        node = self._make_node_with_component("GPU_RTX6000")
+        resources = self._make_resources(site={"state": "Maintenance"})
+        tags = frozenset({"Component.FPGA"})
+
+        success, msg = NodeValidator.validate_node(
+            node=node, resources=resources, project_tags=tags
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
+
+    def test_permission_denied_when_no_hosts(self):
+        """Permission check fires before no-hosts check."""
+        node = self._make_node_with_component("GPU_RTX6000")
+        resources = self._make_resources(site={"state": "Active"}, hosts=None)
+        tags = frozenset({"Component.FPGA"})
+
+        success, msg = NodeValidator.validate_node(
+            node=node, resources=resources, project_tags=tags
+        )
+
+        self.assertFalse(success)
+        self.assertIn("Permission denied", msg)
+
+    def test_permitted_component_still_skips_missing_site(self):
+        """Permitted component gets 'Ignoring validation' when site missing."""
+        node = self._make_node_with_component("GPU_RTX6000", site="NONEXISTENT")
+        resources = self._make_resources(site=None)
+        tags = frozenset({"Component.GPU"})
+
+        success, msg = NodeValidator.validate_node(
+            node=node, resources=resources, project_tags=tags
+        )
+
+        self.assertTrue(success)
+        self.assertIn("Ignoring validation", msg)
