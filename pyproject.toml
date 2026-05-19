@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed_extensions"
-version = "2.0.5"
+version = "2.0.6"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
   { name = "Paul Ruth", email = "pruth@renci.org" },
@@ -24,7 +24,7 @@ dependencies = [
     "jinja2>=3.0.0",
     "pandas",
     "ipython>=8.12.0",
-    "fabric_fss_utils>=1.6.1",
+    "fabric_fss_utils==1.7.0",
     "atomicwrites",
     "fabric_paramiko_expect",
     "fabric_ceph_client==1.0.2",
