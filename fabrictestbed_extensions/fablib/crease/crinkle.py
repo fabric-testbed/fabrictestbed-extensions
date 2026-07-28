@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import ipaddress
 import logging
+import os
 import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
@@ -31,7 +32,7 @@ CAPERSTART = "./caper/caper.byte -q -p -e"
 PCAPDIR = "/home/ubuntu/pcaps/"
 LOCALP4DIR = "."
 REMOTEWORKDIR = ".crease"
-CREASEDIR = "fabrictestbed-extensions/fabrictestbed_extensions/fablib/crease"
+CREASEDIR = os.path.dirname(os.path.abspath(__file__))
 MONITORURL = "https://transparnet.cs.iit.edu/~awolosewicz/dpdk-crease_monitor-dev"
 DPDKNAME = "dpdk-crease_monitor-dev"
 MONPROT = 0x6587

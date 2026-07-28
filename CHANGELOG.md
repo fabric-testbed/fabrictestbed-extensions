@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
+- Fix `Crinkle.post_boot_config()` failing to complete a file upload due to an incorrect hardcoded file path.
 
 ## 2.0.6
 
