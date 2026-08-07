@@ -316,7 +316,7 @@ crinkle_command_handler(
 		if (unlikely(c_ctrs[IDX_REPLAY_RUN] > 0)) return;
 		replay_end = 0;
 		for (i = 1; i < nb_ports; ++i) {
-			c_to_tx[rx_lcores[i]] |= TYPE_REPLAY_CLEAR;
+			__atomic_fetch_or(&c_to_tx[rx_lcores[i]], TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 		}
 		c_ctrs[IDX_REPLAY_CLEAR] = nb_ports - 1;
 		printf("Clearing replay buffers\n");
@@ -327,8 +327,13 @@ crinkle_command_handler(
 		if (unlikely(c_ctrs[IDX_REPLAY_CLEAR] > 0)) return;
 		if (unlikely(c_ctrs[IDX_REPLAY_RUN] > 0)) return;
 		replay_run_start = extract_long(++cursor);
+		if (unlikely(replay_run_start <= replay_start)) {
+			printf("Replay run start %lu predates recording start %lu, ignoring\n",
+				   replay_run_start, replay_start);
+			return;
+		}
 		for (i = 1; i < nb_ports; ++i) {
-			c_to_tx[rx_lcores[i]] |= TYPE_REPLAY_RUN;
+			__atomic_fetch_or(&c_to_tx[rx_lcores[i]], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 		}
 		c_ctrs[IDX_REPLAY_RUN] = nb_ports - 1;
 		printf("Replay run start: %lu\n", replay_run_start);
@@ -507,16 +512,17 @@ crinkle_rx(
 									outport, queue_id, pidx, n);
 		}
 
-		if (unlikely(c_to_tx[lcore_id])) {
-			if (c_to_tx[lcore_id] & TYPE_REPLAY_CLEAR) {
+		uint8_t cmds = __atomic_load_n(&c_to_tx[lcore_id], __ATOMIC_ACQUIRE);
+		if (unlikely(cmds)) {
+			if (cmds & TYPE_REPLAY_CLEAR) {
 				clear_replay(pidx);
-				c_to_tx[lcore_id] &= ~TYPE_REPLAY_CLEAR;
-				tx_to_c[lcore_id] |= TYPE_REPLAY_CLEAR;
+				__atomic_fetch_and(&c_to_tx[lcore_id], (uint8_t)~TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
+				__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 			}
-			else if (c_to_tx[lcore_id] & TYPE_REPLAY_RUN) {
+			else if (cmds & TYPE_REPLAY_RUN) {
 				run_replay(pidx, outport, queue_id, replay_run_start);
-				c_to_tx[lcore_id] &= ~TYPE_REPLAY_RUN;
-				tx_to_c[lcore_id] |= TYPE_REPLAY_RUN;
+				__atomic_fetch_and(&c_to_tx[lcore_id], (uint8_t)~TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
+				__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 			}
 		}
 	}
@@ -994,13 +1000,14 @@ main(int argc, char *argv[])
 		}
 
 		for (k = 1; k < nb_ports; ++k) {
-			if (tx_to_c[rx_lcores[k]] & TYPE_REPLAY_CLEAR) {
+			uint8_t acks = __atomic_load_n(&tx_to_c[rx_lcores[k]], __ATOMIC_ACQUIRE);
+			if (acks & TYPE_REPLAY_CLEAR) {
 				--c_ctrs[IDX_REPLAY_CLEAR];
-				tx_to_c[rx_lcores[k]] &= ~TYPE_REPLAY_CLEAR;
+				__atomic_fetch_and(&tx_to_c[rx_lcores[k]], (uint8_t)~TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 			}
-			if (tx_to_c[rx_lcores[k]] & TYPE_REPLAY_RUN) {
+			if (acks & TYPE_REPLAY_RUN) {
 				--c_ctrs[IDX_REPLAY_RUN];
-				tx_to_c[rx_lcores[k]] &= ~TYPE_REPLAY_RUN;
+				__atomic_fetch_and(&tx_to_c[rx_lcores[k]], (uint8_t)~TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 			}
 		}
 	}
