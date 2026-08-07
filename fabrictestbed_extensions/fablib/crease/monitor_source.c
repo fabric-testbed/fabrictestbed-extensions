@@ -24,6 +24,7 @@
 #define MBUF_CACHE_SIZE 128
 #define BURST_SIZE 128
 #define MIN_REPLAY_SIZE 128
+#define REPLAY_TX_RETRIES 4
 #define BURST_TX_DRAIN_US 1 /* TX drain every ~1us */
 /* Configure how many packets ahead to prefetch, when reading packets */
 #define PREFETCH_OFFSET	3
@@ -269,6 +270,10 @@ run_replay(
 		while (rte_rdtsc_precise() < tsc_target)
 			;
 		nb_tx = rte_eth_tx_burst(outport, queueid, rbuf->bufs, (uint16_t)rbuf->len);
+		for (uint16_t tries = 0; tries < REPLAY_TX_RETRIES && nb_tx < rbuf->len; ++tries) {
+			nb_tx += rte_eth_tx_burst(outport, queueid, &rbuf->bufs[nb_tx],
+									  (uint16_t)(rbuf->len - nb_tx));
+		}
 		if (unlikely(nb_tx < rbuf->len)) {
 			rte_pktmbuf_free_bulk(&rbuf->bufs[nb_tx], rbuf->len - nb_tx);
 			printf("Failed to send all packets, sent %hu, total %u\n", nb_tx, rbuf->len);
