@@ -178,21 +178,28 @@ send_burst_replayable(
 	const uint16_t nb_rx)
 {
 	struct replay_buf *rbuf;
+	uint64_t tx_tsc = 0;
 	uint16_t nb_tx;
+	const bool recording = systime_ns <= copy_replay_end && systime_ns >= copy_replay_start;
+
+	// Stamp before the TX call so a replayed burst, which waits for the stored
+	// TSC and then calls TX, reproduces the same reference point
+	if (unlikely(recording))
+		tx_tsc = rte_rdtsc_precise();
 	nb_tx = rte_eth_tx_burst(outport, queueid, bufs, nb_rx);
 	if (unlikely(nb_tx < nb_rx)) {
 		rte_pktmbuf_free_bulk(&bufs[nb_tx], nb_rx - nb_tx);
 		debug_printf("Failed to send all packets, sent %d, total %d\n", nb_tx, nb_rx);
 	}
 
-	if (unlikely(systime_ns <= copy_replay_end && systime_ns >= copy_replay_start)) {
+	if (unlikely(recording)) {
 		if (unlikely(rte_mempool_get(replay_pool, (void **)&rbuf) < 0)) {
 			debug_printf("No replay bufs left, not storing packets\n");
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			return;
 		}
-		rbuf->tsc = rte_rdtsc_precise();
+		rbuf->tsc = tx_tsc;
 		rbuf->len = nb_tx;
 		rte_memcpy(rbuf->bufs, bufs, nb_tx * sizeof(struct rte_mbuf *));
 		if (unlikely(rte_ring_enqueue(replay_rings[pidx], rbuf) != 0)) {
