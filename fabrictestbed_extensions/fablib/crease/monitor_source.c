@@ -490,6 +490,10 @@ crinkle_rx(
 				rte_pktmbuf_free_bulk(&bufs[n], nb_rx - n);
 			}
 		}
+		else if (unlikely(replay_end != 0)) {
+			clock_gettime(CLOCK_REALTIME, &ts);
+			systime_ns = timespec64_to_ns(&ts);
+		}
 
 		/* Dequeue and Transmit */
 		
