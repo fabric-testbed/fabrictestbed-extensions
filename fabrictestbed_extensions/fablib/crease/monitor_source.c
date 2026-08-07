@@ -92,6 +92,8 @@ struct __rte_cache_aligned replay_buf {
 };
 
 static struct replay_buf **replay_run_bufs[MAX_PORTS - 1];
+static uint64_t record_pkts[MAX_PORTS - 1];
+static uint64_t record_drops[MAX_PORTS - 1];
 
 struct tlr_struct {
 	uint64_t systime_ns;
@@ -196,6 +198,7 @@ send_burst_replayable(
 	if (unlikely(recording)) {
 		if (unlikely(rte_mempool_get(replay_pool, (void **)&rbuf) < 0)) {
 			debug_printf("No replay bufs left, not storing packets\n");
+			record_drops[pidx] += nb_rx;
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			return;
@@ -205,11 +208,13 @@ send_burst_replayable(
 		rte_memcpy(rbuf->bufs, bufs, nb_tx * sizeof(struct rte_mbuf *));
 		if (unlikely(rte_ring_enqueue(replay_rings[pidx], rbuf) != 0)) {
 			debug_printf("Replay buffer overflow, not storing packets\n");
+			record_drops[pidx] += nb_rx;
 			rte_mempool_put(replay_pool, rbuf);
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			return;
 		}
+		record_pkts[pidx] += nb_tx;
 		// Packets the TX burst did not send are not stored, so drop the two
 		// references that would otherwise be held for replay
 		if (unlikely(nb_tx < nb_rx)) {
@@ -235,12 +240,18 @@ static void
 clear_replay(const uint16_t pidx)
 {
 	struct replay_buf *rbuf;
+	uint64_t bursts = 0;
 	while (rte_ring_dequeue(replay_rings[pidx], (void **)&rbuf) == 0) {
 		// Double free since stored packets hold two references
 		rte_pktmbuf_free_bulk(rbuf->bufs, rbuf->len);
 		rte_pktmbuf_free_bulk(rbuf->bufs, rbuf->len);
 		rte_mempool_put(replay_pool, rbuf);
+		++bursts;
 	}
+	printf("REPLAY-CLEAR port %hu: freed %lu bursts, had stored %lu pkts, dropped %lu\n",
+		   pidx, bursts, record_pkts[pidx], record_drops[pidx]);
+	record_pkts[pidx] = 0;
+	record_drops[pidx] = 0;
 }
 
 static void
@@ -252,7 +263,8 @@ run_replay(
 {
 	struct replay_buf **rbufs = replay_run_bufs[pidx];
 	struct replay_buf *rbuf;
-	uint64_t delta_ns, tsc_delta, tsc_target;
+	uint64_t delta_ns, tsc_delta, tsc_target, curr;
+	uint64_t late = 0, worst_late = 0, sent_pkts = 0, lost_pkts = 0;
 	uint32_t n, i, j;
 	uint16_t nb_tx;
 
@@ -267,18 +279,29 @@ run_replay(
 	for (i = 0; i < n; ++i) {
 		rbuf = rbufs[i];
 		tsc_target = rbuf->tsc + tsc_delta;
-		while (rte_rdtsc_precise() < tsc_target)
-			;
+		curr = rte_rdtsc_precise();
+		if (unlikely(curr > tsc_target)) {
+			++late;
+			if (curr - tsc_target > worst_late)
+				worst_late = curr - tsc_target;
+		}
+		else {
+			while (rte_rdtsc_precise() < tsc_target)
+				;
+		}
 		nb_tx = rte_eth_tx_burst(outport, queueid, rbuf->bufs, (uint16_t)rbuf->len);
 		for (uint16_t tries = 0; tries < REPLAY_TX_RETRIES && nb_tx < rbuf->len; ++tries) {
 			nb_tx += rte_eth_tx_burst(outport, queueid, &rbuf->bufs[nb_tx],
 									  (uint16_t)(rbuf->len - nb_tx));
 		}
+		sent_pkts += nb_tx;
 		if (unlikely(nb_tx < rbuf->len)) {
+			lost_pkts += rbuf->len - nb_tx;
 			rte_pktmbuf_free_bulk(&rbuf->bufs[nb_tx], rbuf->len - nb_tx);
-			printf("Failed to send all packets, sent %hu, total %u\n", nb_tx, rbuf->len);
 		}
 	}
+	printf("REPLAY-RUN port %hu: %u bursts, %lu pkts sent, %lu pkts lost, %lu late bursts, worst %lu ns\n",
+		   pidx, n, sent_pkts, lost_pkts, late, worst_late * NSEC_PER_SEC / tsc_hz);
 	// Does the refcnt update second so that replay can happen immediately,
 	// then requeues the bursts in order so the recording can be replayed again
 	for (i = 0; i < n; ++i) {
