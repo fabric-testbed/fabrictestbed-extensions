@@ -1021,6 +1021,7 @@ main(int argc, char *argv[])
 		for (i = 0; i < nb_rx; ++i) {
 			crinkle_command_handler(bufs[i], systime_ns);
 		}
+		rte_pktmbuf_free_bulk(bufs, nb_rx);
 
 		for (k = 1; k < nb_ports; ++k) {
 			uint8_t acks = __atomic_load_n(&tx_to_c[rx_lcores[k]], __ATOMIC_ACQUIRE);
