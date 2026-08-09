@@ -30,8 +30,8 @@ dependencies = [
     "recordclass>=0.23.1",
     "atomicwrites",
     "fabric_paramiko_expect",
-    # >=1.1.0 adds the S3 bucket/user/key methods used by the S3 helpers.
-    "fabric_ceph_client>=1.1.0"
+    # >=1.1.1 adds the S3 methods and drops unsafe POST retries.
+    "fabric_ceph_client>=1.1.1"
     ]
 
 classifiers = [
