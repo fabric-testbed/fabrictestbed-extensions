@@ -83,12 +83,26 @@ from fss_utils.sshkey import FABRICSSHKey
 from fabrictestbed_extensions.fablib.artifact import Artifact
 from fabrictestbed_extensions.fablib.site import Host, Site
 from fabrictestbed_extensions.utils.ceph_fs_utils import CephFsUtils
+from fabrictestbed_extensions.utils.ceph_s3_utils import (
+    CephS3Credentials,
+    CephS3Error,
+)
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import pandas as pd
 import paramiko
@@ -3341,4 +3355,95 @@ Host * !bastion.fabric-testbed.net
             verify=verify,
             out_base=out_base,
             mount_root_default=mount_root,
+        )
+
+    # ------------------------------------------------------------------
+    # S3 (Ceph RGW)
+    # ------------------------------------------------------------------
+
+    def _s3_uid(self, uid: Optional[str] = None) -> str:
+        """
+        Resolve the S3 uid, which is the caller's bastion login (the same
+        identity used for CephFS subvolumes).
+        """
+        if uid:
+            return uid
+        user = self.get_bastion_username()
+        if not user:
+            self.determine_bastion_username()
+            user = self.get_bastion_username()
+        if not user:
+            raise ValueError("User/bastion login is empty.")
+        # S3 uids are bare logins; strip any CephX "client." prefix.
+        return user[len("client."):] if user.startswith("client.") else user
+
+    def get_s3_credentials(
+        self,
+        cluster: str,
+        uid: str = None,
+        create_if_missing: bool = True,
+        out_base: str = None,
+        verify: bool = True,
+    ) -> dict:
+        """
+        Get S3 credentials for use with any S3 client (aws-cli, s3cmd, boto3).
+
+        The Ceph Manager only returns a secret key at the moment a key is
+        created, so if no readable secret exists a new keypair is minted.
+
+        :param str cluster: Target cluster name (e.g., ``"east"``).
+        :param str uid: S3 user id. Defaults to the caller's bastion login.
+        :param bool create_if_missing: Mint a keypair when no readable secret
+                                       exists. If False, raises instead.
+        :param str out_base: When set, also write ready-to-use client config
+                             (aws-cli, s3cmd, env.sh) under
+                             ``<out_base>/<cluster>/``. Secret-bearing files are
+                             written mode 0600.
+        :param bool verify: Verify TLS certificates when calling the API.
+        :return: ``{cluster, uid, access_key, secret_key, endpoint, endpoints,
+                  region}``; plus ``files`` when ``out_base`` is given.
+        :rtype: dict
+        :raises CephS3Error: If no usable credential can be obtained.
+
+        Example::
+
+            creds = fablib.get_s3_credentials("east", out_base="./s3")
+            print(creds["endpoint"], creds["access_key"])
+        """
+        creds = CephS3Credentials.get_credentials(
+            base_url=self.get_ceph_mgr_host(),
+            cluster=cluster,
+            uid=self._s3_uid(uid),
+            token_file=self.get_token_location(),
+            verify=verify,
+            create_if_missing=create_if_missing,
+        )
+        if out_base:
+            creds["files"] = CephS3Credentials.write_client_config(creds, out_base=out_base)
+        return creds
+
+    def list_s3_buckets(self, cluster: str, uid: str = None, verify: bool = True) -> list:
+        """
+        List the S3 buckets owned by ``uid`` on ``cluster``.
+
+        Served by the Ceph Manager API, so no S3 client or extra dependency is
+        needed. Non-operators always see only their own buckets, regardless of
+        the ``uid`` passed.
+
+        :param str cluster: Target cluster name.
+        :param str uid: S3 user id. Defaults to the caller's bastion login.
+        :param bool verify: Verify TLS certificates when calling the API.
+        :return: ``[{"name", "owner", "num_objects", "size_kb", "versioning"}, ...]``
+        :rtype: list
+
+        Bucket creation and deletion are administrative operations restricted to
+        facility admins and owners of the FABRIC Ceph service project; request
+        one through the Credential Manager Storage page.
+        """
+        return CephS3Credentials.list_buckets(
+            base_url=self.get_ceph_mgr_host(),
+            cluster=cluster,
+            uid=self._s3_uid(uid),
+            token_file=self.get_token_location(),
+            verify=verify,
         )
