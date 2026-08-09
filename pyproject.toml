@@ -30,8 +30,9 @@ dependencies = [
     "recordclass>=0.23.1",
     "atomicwrites",
     "fabric_paramiko_expect",
-    # >=1.1.1 adds the S3 methods and drops unsafe POST retries.
-    "fabric_ceph_client>=1.1.1"
+    # >=1.2.0 adds the S3 methods, drops unsafe POST retries, and removes the
+    # caps parameter the service no longer accepts.
+    "fabric_ceph_client>=1.2.0"
     ]
 
 classifiers = [
