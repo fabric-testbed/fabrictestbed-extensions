@@ -6,6 +6,8 @@ from unittest import mock
 
 import pytest
 
+from fabric_ceph_client.fabric_ceph_client import ApiError
+
 from fabrictestbed_extensions.utils.ceph_s3_utils import (
     CephS3Credentials,
     CephS3Error,
@@ -96,14 +98,43 @@ def test_no_mint_when_disallowed():
 
 
 def test_missing_user_still_mints():
-    """A user that does not exist yet surfaces as a failed list; minting covers it."""
+    """
+    404 genuinely means the user has no S3 account yet, so minting is correct.
+    The service auto-provisions the RGW user on that first key request.
+    """
     mgr = _mgr()
-    mgr.list_s3_user_keys.side_effect = RuntimeError("404 NoSuchUser")
+    mgr.list_s3_user_keys.side_effect = ApiError(404, "/s3/user/bob_2/keys",
+                                                 message="NoSuchUser")
     mgr.create_s3_user_key.return_value = {"access_key": "AK3", "secret_key": "SK3"}
     with _patch(mgr):
         creds = CephS3Credentials.get_credentials(
             base_url="https://x", cluster="east", uid="bob_2")
     assert creds["access_key"] == "AK3"
+
+
+@pytest.mark.parametrize("status", [500, 502, 503, 401, 403])
+def test_transient_read_failure_does_not_mint_a_duplicate_key(status):
+    """
+    A failed *read* must never be mistaken for "this user has no keys". Doing so
+    would mint a new credential on every blip, silently accumulating keys.
+    """
+    mgr = _mgr()
+    mgr.list_s3_user_keys.side_effect = ApiError(status, "/s3/user/alice_1/keys",
+                                                 message="upstream error")
+    with _patch(mgr), pytest.raises(CephS3Error, match="Refusing to mint"):
+        CephS3Credentials.get_credentials(
+            base_url="https://x", cluster="east", uid="alice_1")
+    mgr.create_s3_user_key.assert_not_called()
+
+
+def test_non_api_read_failure_also_does_not_mint():
+    """A timeout or socket error is likewise not evidence of an empty account."""
+    mgr = _mgr()
+    mgr.list_s3_user_keys.side_effect = TimeoutError("connection timed out")
+    with _patch(mgr), pytest.raises(CephS3Error, match="Could not read existing"):
+        CephS3Credentials.get_credentials(
+            base_url="https://x", cluster="east", uid="alice_1")
+    mgr.create_s3_user_key.assert_not_called()
 
 
 def test_bad_mint_response_is_an_error():

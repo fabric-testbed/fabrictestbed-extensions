@@ -50,7 +50,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from fabric_ceph_client.fabric_ceph_client import CephManagerClient
+from fabric_ceph_client.fabric_ceph_client import ApiError, CephManagerClient
 
 DEFAULT_REGION = "us-east-1"
 
@@ -136,13 +136,30 @@ class CephS3Credentials:
         access_key = secret_key = None
         try:
             existing = c.list_s3_user_keys(cluster, uid, include_secret=True)
-            for k in existing or []:
-                if isinstance(k, dict) and k.get("access_key") and k.get("secret_key"):
-                    access_key, secret_key = k["access_key"], k["secret_key"]
-                    break
-        except Exception:
-            # Most often the S3 user does not exist yet; minting handles it.
+        except ApiError as e:
+            # 404 genuinely means "no such user yet", so minting is the right
+            # next step. Anything else (timeout, 5xx, auth) must NOT be treated
+            # as "no keys" -- doing so would mint a duplicate key every time the
+            # read happens to fail, which is the very sprawl this reuse avoids.
+            if e.status != 404:
+                raise CephS3Error(
+                    f"Could not read existing S3 keys for '{uid}' on '{cluster}' "
+                    f"({e}). Refusing to mint a new key, which could leave a "
+                    f"duplicate credential behind; retry once the service is "
+                    f"reachable."
+                ) from e
             existing = []
+        except CephS3Error:
+            raise
+        except Exception as e:
+            raise CephS3Error(
+                f"Could not read existing S3 keys for '{uid}' on '{cluster}': {e}"
+            ) from e
+
+        for k in existing or []:
+            if isinstance(k, dict) and k.get("access_key") and k.get("secret_key"):
+                access_key, secret_key = k["access_key"], k["secret_key"]
+                break
 
         if not secret_key:
             if not create_if_missing:
