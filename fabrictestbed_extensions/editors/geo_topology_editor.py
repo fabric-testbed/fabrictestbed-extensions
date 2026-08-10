@@ -443,7 +443,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
 
                 ant_path.on_click(functools.partial(self.ant_path, path_name=link_name))
                 self.available_resources_layer_group.add_layer(ant_path)
-            except:
+            except Exception:
                 print("Skiping link: {}".format(link))
 
         #

@@ -54,7 +54,7 @@ import json
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from tabulate import tabulate
 
@@ -64,6 +64,8 @@ if TYPE_CHECKING:
 from fabrictestbed.slice_editor import Node as FimNode
 
 from fabrictestbed_extensions.fablib.node import Node
+
+log = logging.getLogger("fablib")
 
 
 class Attestable_Switch(Node):
@@ -120,22 +122,23 @@ class Attestable_Switch(Node):
 
         super().__init__(slice, node, validate, raise_exception)
 
-        logging.info(f"Creating Attestable Switch {self.get_name()}.")
+        log.info(f"Creating Attestable Switch {self.get_name()}.")
 
         self.runtime_cfg = {}
 
         if None == self.get_switch_data(soft=False):
-            logging.info(
+            log.info(
                 f"Attestable Switch {Attestable_Switch.__version__} {self.get_name()}: (not found)"
             )
 
             assert len(ports) > 0
 
-            self.cfg = {}
-            self.cfg["ports"] = ports
-            self.cfg["portmap"] = {}
-            self.cfg["from_raw_image"] = from_raw_image
-            self.cfg["setup_and_configure"] = setup_and_configure
+            self.cfg = {
+                "ports": ports,
+                "portmap": {},
+                "from_raw_image": from_raw_image,
+                "setup_and_configure": setup_and_configure,
+            }
 
             for port in ports:
                 self.cfg["portmap"][port] = (
@@ -143,12 +146,12 @@ class Attestable_Switch(Node):
                     .get_interfaces()[0]
                     .get_name()
                 )
-                logging.info(f"Attestable Switch {self.get_name()}: added port {port}")
+                log.info(f"Attestable Switch {self.get_name()}: added port {port}")
 
             self.set_switch_data(self.cfg)
 
         else:
-            logging.info(
+            log.info(
                 f"Attestable Switch {Attestable_Switch.__version__} {self.get_name()}: (found)"
             )
             self.cfg = self.get_switch_data(soft=False)
@@ -297,7 +300,7 @@ class Attestable_Switch(Node):
             result = as_name_prefix + orig_name
         return result
 
-    def get_name(self) -> str or None:
+    def get_name(self) -> Optional[str]:
         """
         Gets the name of the FABRIC node.
 
@@ -306,7 +309,7 @@ class Attestable_Switch(Node):
         """
         try:
             return Attestable_Switch.name(self.get_fim_node().name)
-        except:
+        except Exception:
             return None
 
     @staticmethod
@@ -361,7 +364,7 @@ class Attestable_Switch(Node):
 
         name = Attestable_Switch.name(name)
 
-        logging.info(
+        log.info(
             f"Adding attestable switch: {name}, slice: {slice.get_name()}, site: {site}, ports: "
             f"{ports}, from_raw_image: {from_raw_image}, setup_and_configure: {setup_and_configure}"
         )
@@ -427,20 +430,20 @@ class Attestable_Switch(Node):
         from_raw_image = self.get_switch_data()["from_raw_image"]
 
         if self.get_switch_data()["setup_and_configure"]:
-            self.execute(f"echo \"{'{}'}\" > {Attestable_Switch.cfg_file}")
+            self.execute(f'echo "{"{}"}" > {Attestable_Switch.cfg_file}')
 
-            logging.info(
+            log.info(
                 f"Attestable Switch {self.get_name()}: starting config. from_raw_image={from_raw_image}"
             )
 
             if not from_raw_image:
-                logging.info(
+                log.info(
                     f"Image already contains Attestable Switch: skipping compilation."
                 )
             else:
                 print(f"Compiling Attestable Switch {self.get_name()}, ", end="")
                 start = time.time()
-                logging.info(f"Attestable Switch {self.get_name()}: cloning repo...")
+                log.info(f"Attestable Switch {self.get_name()}: cloning repo...")
                 self.execute(
                     'bash -c "git clone https://github.com/awolosewicz/bmv2-remote-attestation.git"',
                     quiet=True,
@@ -449,7 +452,7 @@ class Attestable_Switch(Node):
                     'bash -c "cd ~/bmv2-remote-attestation && git checkout stable"',
                     quiet=True,
                 )
-                logging.info(
+                log.info(
                     f"Attestable Switch {self.get_name()}: obtaining dependencies..."
                 )
 
@@ -466,7 +469,7 @@ class Attestable_Switch(Node):
                     'bash -c "sudo apt-get update && sudo apt-get install -y p4lang-p4c net-tools python3-scapy"',
                     quiet=True,
                 )
-                logging.info(
+                log.info(
                     f"Attestable Switch {self.get_name()}: starting compilation..."
                 )
                 self.execute(
@@ -477,9 +480,7 @@ class Attestable_Switch(Node):
                     'bash -c "sudo rm /usr/bin/simple_switch /usr/bin/simple_switch_CLI && sudo rm -rf /home/ubuntu/bmv2-remote-attestation && sudo ldconfig"',
                     quiet=True,
                 )
-                logging.info(
-                    f"Attestable Switch {self.get_name()}: finished compilation"
-                )
+                log.info(f"Attestable Switch {self.get_name()}: finished compilation")
                 print(f"Done! ({time.time() - start:.0f} sec)")
 
             nothing_p4 = """#include <core.p4>
@@ -557,12 +558,10 @@ V1Switch(
                         )
 
             # self.execute(f"sudo ip route del 0/0")
-            logging.info(f"Attestable Switch {self.get_name()}: finished config")
+            log.info(f"Attestable Switch {self.get_name()}: finished config")
             print(f"Done! ({time.time() - start:.0f} sec)")
         else:
-            logging.info(
-                f"Attestable Switch {self.get_name()}: skipping setup and config"
-            )
+            log.info(f"Attestable Switch {self.get_name()}: skipping setup and config")
 
     def check(self, quiet=True):
         """
@@ -571,21 +570,21 @@ V1Switch(
 
         result = True
 
-        (out, _) = self.execute("sudo sysctl net.ipv4.ip_forward", quiet=True)
+        out, _ = self.execute("sudo sysctl net.ipv4.ip_forward", quiet=True)
         check = out == "net.ipv4.ip_forward = 1\n"
         if not check:
-            logging.error(f"Attestable Switch {self.get_name()}: failed check 1")
+            log.error(f"Attestable Switch {self.get_name()}: failed check 1")
             if not quiet:
                 print(f"Attestable Switch {self.get_name()}: failed check 1")
 
         result = result and check
 
-        (out, _) = self.execute(
+        out, _ = self.execute(
             f"ls -s {Attestable_Switch.crease_path_prefix}nothing.p4", quiet=True
         )
         check = out == f"4 {Attestable_Switch.crease_path_prefix}nothing.p4\n"
         if not check:
-            logging.error(f"Attestable Switch {self.get_name()}: failed check 2")
+            log.error(f"Attestable Switch {self.get_name()}: failed check 2")
             if not quiet:
                 print(f"Attestable Switch {self.get_name()}: failed check 2")
 
@@ -711,13 +710,13 @@ V1Switch(
             for command in commands:
                 print(command)
         else:
-            (out, err) = self.execute(commands[0], quiet=quiet)
+            out, err = self.execute(commands[0], quiet=quiet)
             stdout.append(out)
             stderr.append(err)
             job = self.execute_thread(commands[1])
             time.sleep(timeout)
             if not job.running() and not quiet:
-                (out, err) = job.result()
+                out, err = job.result()
                 stdout.append(out)
                 stderr.append(err)
 
@@ -758,7 +757,7 @@ V1Switch(
         if dry:
             print(command)
         else:
-            (out, err) = self.execute(command, quiet=quiet)
+            out, err = self.execute(command, quiet=quiet)
             stdout.append(out)
             stderr.append(err)
 
@@ -801,7 +800,7 @@ V1Switch(
         else:
             self.upload_file(filename, os.path.basename(filename), retry=1)
             for command in commands:
-                (out, err) = self.execute(command, quiet=quiet)
+                out, err = self.execute(command, quiet=quiet)
                 stdout.append(out)
                 stderr.append(err)
 
@@ -825,7 +824,7 @@ V1Switch(
         if dry:
             print(command)
         else:
-            (out, err) = self.execute(command, quiet=quiet)
+            out, err = self.execute(command, quiet=quiet)
             stdout.append(out)
             stderr.append(err)
 
@@ -887,7 +886,7 @@ V1Switch(
         stderr = []
 
         for command in commands:
-            (out, err) = self.execute(command, quiet=False)
+            out, err = self.execute(command, quiet=False)
             stdout.append(out)
             stderr.append(err)
 

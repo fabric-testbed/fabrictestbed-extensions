@@ -131,3 +131,6 @@ dmypy.json
 
 # Created by tox.
 /_trial_temp/
+CLAUDE.md
+cf_cli.py
+AGENTS.md

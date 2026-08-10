@@ -28,6 +28,7 @@ import os
 import re
 import time
 from functools import lru_cache
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -126,6 +127,10 @@ class Config:
             Constants.ENV_VAR: Constants.FABRIC_LOG_FILE,
             Constants.DEFAULT: Constants.DEFAULT_LOG_FILE,
         },
+        Constants.LOG_PROPAGATE: {
+            Constants.ENV_VAR: Constants.FABRIC_LOG_PROPAGATE,
+            Constants.DEFAULT: Constants.DEFAULT_LOG_PROPAGATE,
+        },
         Constants.BASTION_SSH_CONFIG_FILE: {
             Constants.ENV_VAR: Constants.FABRIC_BASTION_SSH_CONFIG_FILE,
             Constants.DEFAULT: Constants.DEFAULT_FABRIC_BASTION_SSH_CONFIG_FILE,
@@ -154,6 +159,7 @@ class Config:
         Constants.SLICE_PRIVATE_KEY_PASSPHRASE: "Slice Private Key Passphrase",
         Constants.LOG_FILE: "Log File",
         Constants.LOG_LEVEL: "Log Level",
+        Constants.LOG_PROPAGATE: "Log Propagate",
         Constants.FABLIB_VERSION: "Version",
         Constants.AVOID: "Sites to avoid",
         Constants.DATA_DIR: "Data directory",
@@ -173,36 +179,51 @@ class Config:
         am_host: str = None,
         ceph_mgr_host: str = None,
         token_location: str = None,
+        id_token: str = None,
         project_id: str = None,
         bastion_username: str = None,
         bastion_key_location: str = None,
         log_level: str = Constants.DEFAULT_LOG_LEVEL,
         log_file: str = Constants.DEFAULT_LOG_FILE,
+        log_propagate: bool = Constants.DEFAULT_LOG_PROPAGATE,
         data_dir: str = Constants.DEFAULT_DATA_DIR,
         offline: bool = True,
+        no_ssh: bool = False,
         **kwargs,
     ):
         """
         Constructor. Tries to get configuration from:
 
-         - constructor parameters (high priority)
-         - fabric_rc file (middle priority)
+         - constructor parameters (highest priority)
+         - fabric_rc file (medium priority)
          - environment variables (low priority)
-         - defaults (if needed and possible)
+         - defaults (lowest priority, if needed and possible)
+
+        The config file is optional. If not provided or doesn't exist,
+        configuration will be loaded from constructor parameters,
+        environment variables, and defaults.
+
+        :param id_token: ID token string to use directly (optional).
+            If provided, token_location file check is skipped.
 
         """
+        # Set config file path (may or may not exist)
         if fabric_rc is None:
             fabric_rc = Constants.DEFAULT_FABRIC_RC
-            if os.path.exists(Constants.DEFAULT_FABRIC_CONFIG_DIR):
-                Path(fabric_rc).touch()
 
-        if fabric_rc and os.path.exists(fabric_rc):
-            self.config_file_path = fabric_rc
+        self.config_file_path = fabric_rc if fabric_rc else None
         self.is_yaml = False
         self.runtime_config = {}
         self.offline = offline
 
-        # Load from config file
+        # Resolve no_ssh: constructor param > env var > default (False)
+        if no_ssh:
+            self.__no_ssh = True
+        else:
+            env_val = os.environ.get(Constants.FABRIC_NO_SSH, "").strip().lower()
+            self.__no_ssh = env_val in ("1", "true", "yes", "on")
+
+        # Load from config file (if it exists)
         self.__load_configuration(file_path=fabric_rc, **kwargs)
 
         # Apply any parameters explicitly passed
@@ -224,6 +245,9 @@ class Config:
         if token_location is not None:
             self.set_token_location(token_location=token_location)
 
+        if id_token is not None:
+            self.set_id_token(id_token=id_token)
+
         if project_id is not None:
             self.set_project_id(project_id=project_id)
 
@@ -239,22 +263,28 @@ class Config:
         if log_file is not None:
             self.set_log_file(log_file=log_file)
 
+        if log_propagate is not None:
+            self.set_log_propagate(log_propagate=log_propagate)
+
         if data_dir is not None:
             self.set_data_dir(data_dir=data_dir)
 
-        #        if self.get_ssh_command_line() is None:
-        #            self.set_ssh_command_line(
-        #                ssh_command_line=Constants.DEFAULT_FABRIC_SSH_COMMAND_LINE
-        #            )
+        self.log = logging.getLogger("fablib")
 
         self.required_check(partial=True)
 
         # Verify that Token file exists; any other checks cannot be done without this.
-        token_location = self.get_token_location()
-        if not os.path.exists(token_location):
-            raise ConfigException(
-                f"Token file does not exist, please provide the token at location: {token_location}!"
-            )
+        # Skip this check if:
+        # - offline mode (token may not be needed)
+        # - id_token is provided directly (no file needed)
+        if not offline and not self.get_id_token():
+            token_location = self.get_token_location()
+            if not os.path.exists(token_location):
+                raise ConfigException(
+                    f"Token file not found at: {token_location}\n"
+                    f"  Set FABRIC_TOKEN_LOCATION env var or token_location in fabric_rc.\n"
+                    f"  To get a token, run: fabric-cli tokens create"
+                )
 
     def __load_configuration(self, file_path, **kwargs):
         """
@@ -362,15 +392,17 @@ class Config:
                 elif attr_props.get(Constants.DEFAULT) is None and partial:
                     continue
                 else:
-                    errors.append(f"{attr} is not set")
+                    env_var = attr_props.get(Constants.ENV_VAR, "N/A")
+                    errors.append(
+                        f"  - {attr}: set env var {env_var} or add to fabric_rc"
+                    )
 
         if errors:
-            logging.error(f"Failing Config: {self.runtime_config}")
-            # TODO: define custom exception class to report errors,
-            # and emit a more helpful error message with hints about
-            # setting up environment variables or configuration file.
-            raise AttributeError(
-                f"Error initializing {self.__class__.__name__}: {errors}"
+            self.log.error(f"Failing Config: {self.runtime_config}")
+            hints = "\n".join(errors)
+            raise ConfigException(
+                f"Missing required configuration:\n{hints}\n"
+                f"  Run 'fabric-cli configure setup' for interactive setup."
             )
 
     def get_config(self) -> Dict[str, str]:
@@ -521,6 +553,24 @@ class Config:
         :type token_location: String
         """
         self.runtime_config[Constants.TOKEN_LOCATION] = token_location
+
+    def get_id_token(self) -> str:
+        """
+        Gets the FABRIC ID token (if provided directly).
+
+        :return: FABRIC ID token or None
+        :rtype: String or None
+        """
+        return self.runtime_config.get(Constants.ID_TOKEN)
+
+    def set_id_token(self, id_token: str):
+        """
+        Sets the FABRIC ID token.
+
+        :param id_token: ID Token
+        :type id_token: String
+        """
+        self.runtime_config[Constants.ID_TOKEN] = id_token
 
     def get_bastion_username(self) -> str:
         """
@@ -673,6 +723,29 @@ class Config:
         """
         self.runtime_config[Constants.LOG_FILE] = log_file
 
+    def get_log_propagate(self) -> bool:
+        """
+        Gets whether fablib logs propagate to the root logger.
+
+        :return: propagation flag
+        :rtype: bool
+        """
+        val = self.runtime_config.get(Constants.LOG_PROPAGATE)
+        if isinstance(val, str):
+            return val.strip().lower() in ("1", "true", "yes", "on", "y", "t")
+        if val is None:
+            return Constants.DEFAULT_LOG_PROPAGATE
+        return bool(val)
+
+    def set_log_propagate(self, log_propagate: Union[bool, str, int]):
+        """
+        Sets whether fablib logs propagate to the root logger.
+
+        :param log_propagate: propagation flag
+        :type log_propagate: bool
+        """
+        self.runtime_config[Constants.LOG_PROPAGATE] = log_propagate
+
     def get_data_dir(self) -> str:
         """
         Gets the data directory
@@ -736,6 +809,24 @@ class Config:
         :type avoid: string
         """
         self.runtime_config[Constants.AVOID] = avoid
+
+    def get_no_ssh(self) -> bool:
+        """
+        Gets the no_ssh flag. When True, SSH operations are disabled.
+
+        :return: True if SSH is disabled
+        :rtype: bool
+        """
+        return self.__no_ssh
+
+    def set_no_ssh(self, no_ssh: bool):
+        """
+        Sets the no_ssh flag.
+
+        :param no_ssh: True to disable SSH operations
+        :type no_ssh: bool
+        """
+        self.__no_ssh = no_ssh
 
     def set_avoid_csv(self, avoid_csv: str = ""):
         """
@@ -838,29 +929,43 @@ class Config:
         Create log file if it doesn't exist; setup logger
         """
         try:
-            for handler in logging.root.handlers[:]:
-                logging.root.removeHandler(handler)
-        except Exception as e:
-            print(f"Exception from removeHandler: {e}")
-            pass
-
-        try:
             if self.get_log_file() and not os.path.isdir(
                 os.path.dirname(self.get_log_file())
             ):
                 os.makedirs(os.path.dirname(self.get_log_file()))
         except Exception:
-            logging.warning(
+            self.log.warning(
                 f"Failed to create log_file directory: {os.path.dirname(self.get_log_file())}"
             )
 
-        if self.get_log_file() and self.get_log_level():
-            logging.basicConfig(
-                filename=self.get_log_file(),
-                level=self.LOG_LEVELS[self.get_log_level()],
-                format="[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
-                datefmt="%H:%M:%S",
+        default_log_format = (
+            "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s"
+        )
+        default_date_format = "%H:%M:%S"
+
+        # Control propagation to root handlers (default False to avoid Jupyter cell spam).
+        self.log.propagate = self.get_log_propagate()
+
+        if self.get_log_level():
+            self.log.setLevel(self.LOG_LEVELS[self.get_log_level()])
+
+        # Avoid adding duplicate handlers when setup_logging is called multiple times
+        # (e.g., multiple FablibManager instances sharing the same "fablib" logger).
+        existing_handler_types = {type(h) for h in self.log.handlers}
+
+        if self.get_log_file() and RotatingFileHandler not in existing_handler_types:
+            file_handler = RotatingFileHandler(
+                self.get_log_file(), backupCount=int(5), maxBytes=int(1024 * 1024 * 5)
             )
+            file_handler.setFormatter(
+                logging.Formatter(default_log_format, datefmt=default_date_format)
+            )
+            self.log.addHandler(file_handler)
+
+        if logging.StreamHandler not in existing_handler_types:
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.CRITICAL)
+            self.log.addHandler(console_handler)
 
     @staticmethod
     def get_metadata_tag() -> str:

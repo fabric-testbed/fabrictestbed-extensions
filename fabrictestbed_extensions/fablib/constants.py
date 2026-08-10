@@ -22,19 +22,74 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
+"""Configuration constants and default values for FABlib.
+
+This module defines all constants used throughout the FABlib library including:
+- Default hostnames for FABRIC services (Orchestrator, CredMgr, etc.)
+- Environment variable names for configuration
+- Default file paths for keys, tokens, and configuration
+- Hardware component names and types
+- UI color schemes
+- Image names and their metadata
+- Configuration keys for runtime settings
+"""
+
 import logging
 import os
 
 
 class Constants:
+    """Central repository for all FABlib configuration constants and defaults.
+
+    This class contains all constant values used across FABlib, organized into
+    several categories:
+
+    Configuration Defaults:
+        - DEFAULT_FABRIC_* - Default hostnames and URLs for FABRIC services
+        - DEFAULT_LOG_* - Logging configuration defaults
+        - DEFAULT_*_FILE - Default file paths for keys and configuration
+
+    Environment Variables:
+        - FABRIC_* - Environment variable names for runtime configuration
+
+    Configuration Keys:
+        - Lower-case keys used in configuration files (fabric_rc)
+
+    Hardware Constants:
+        - Component names for NICs, GPUs, FPGAs, and storage devices
+        - Both user-facing and internal component identifiers
+
+    UI Constants:
+        - Color schemes for the FABRIC brand and status indicators
+
+    Image Metadata:
+        - IMAGE_NAMES - Dictionary mapping image names to descriptions and default users
+
+    Public Validation Collections (no authentication required):
+        - COMPONENT_MODELS - frozenset of valid component model strings for
+          ``Node.add_component(model=...)``.
+        - IMAGE_NAMES - Dictionary of valid image names with user/description.
+
+    .. note::
+
+        Site names are dynamic and require authentication to query via
+        ``FablibManager.get_site_names()``.  If you need site names for
+        offline validation, use the FABRIC metadata endpoint or cache the
+        result of ``get_site_names()``.
+
+    All constants are class attributes and should be accessed as Constants.CONSTANT_NAME.
+    """
+
     DEFAULT_FABRIC_CREDMGR_HOST = "cm.fabric-testbed.net"
     DEFAULT_FABRIC_ORCHESTRATOR_HOST = "orchestrator.fabric-testbed.net"
     DEFAULT_FABRIC_CORE_API_HOST = "uis.fabric-testbed.net"
     DEFAULT_FABRIC_AM_HOST = "artifacts.fabric-testbed.net"
-    DEFAULT_FABRIC_CEPH_MGR_HOST = "23.134.232.211"
+    DEFAULT_FABRIC_CEPH_MGR_HOST = "https://ceph-mgr.fabric-testbed.net"
+    DEFAULT_CEPH_ARTIFACTS_DIR = f"{os.environ['HOME']}/.ceph"
     DEFAULT_FABRIC_BASTION_HOST = "bastion.fabric-testbed.net"
     DEFAULT_LOG_LEVEL = "INFO"
     DEFAULT_LOG_FILE = "/tmp/fablib/fablib.log"
+    DEFAULT_LOG_PROPAGATE = False
     DEFAULT_DATA_DIR = "/tmp/fablib"
     DEFAULT_WORK_DIR = f"{os.environ['HOME']}/work"
     DEFAULT_FABRIC_CONFIG_DIR = f"{DEFAULT_WORK_DIR}/fabric_config"
@@ -67,11 +122,13 @@ class Constants:
     FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE = "FABRIC_SLICE_PRIVATE_KEY_PASSPHRASE"
     FABRIC_LOG_FILE = "FABRIC_LOG_FILE"
     FABRIC_LOG_LEVEL = "FABRIC_LOG_LEVEL"
+    FABRIC_LOG_PROPAGATE = "FABRIC_LOG_PROPAGATE"
     FABRIC_AVOID = "FABRIC_AVOID"
     FABRIC_SSH_COMMAND_LINE = "FABRIC_SSH_COMMAND_LINE"
     FABLIB_VERSION = "fablib_version"
     FABRIC_BASTION_SSH_CONFIG_FILE = "FABRIC_BASTION_SSH_CONFIG_FILE"
     FABRIC_METADATA_TAG = "FABRIC_METADATA_TAG"
+    FABRIC_NO_SSH = "FABRIC_NO_SSH"
 
     FABRIC_PRIMARY = "#27aae1"
     FABRIC_PRIMARY_LIGHT = "#cde4ef"
@@ -116,6 +173,7 @@ class Constants:
     CEPH_MGR_HOST = "ceph_mgr_host"
     AM_HOST = "am_host"
     TOKEN_LOCATION = "token_location"
+    ID_TOKEN = "id_token"
     PROJECT_ID = "project_id"
     PROJECT_NAME = "project_name"
     BASTION_HOST = "bastion_host"
@@ -124,6 +182,7 @@ class Constants:
     BASTION_KEY_PASSPHRASE = "bastion_key_passphrase"
     LOG_FILE = "log_file"
     LOG_LEVEL = "log_level"
+    LOG_PROPAGATE = "log_propagate"
     DATA_DIR = "data_dir"
     SSH_COMMAND_LINE = "ssh_command_line"
     AVOID = "avoid"
@@ -268,6 +327,79 @@ class Constants:
     CMP_FPGA_Xilinx_SN1022 = "FPGA_Xilinx_SN1022"
     P4_DedicatedPort = "P4_DedicatedPort"
 
+    # ── Component Model Names ─────────────────────────────────────────
+    # Convenience collection of all valid component model strings that can
+    # be passed to ``Node.add_component(model=...)``.  External tools
+    # (e.g. EnOSlib) can use this for input validation without requiring
+    # FABRIC authentication.
+    COMPONENT_MODELS = frozenset(
+        {
+            CMP_NIC_Basic,
+            CMP_NIC_ConnectX_5,
+            CMP_NIC_ConnectX_6,
+            CMP_NIC_ConnectX_7_100,
+            CMP_NIC_ConnectX_7_400,
+            CMP_NIC_BlueField2_ConnectX_6,
+            CMP_NIC_P4,
+            CMP_NIC_OpenStack,
+            CMP_NVME_P4510,
+            CMP_GPU_TeslaT4,
+            CMP_GPU_RTX6000,
+            CMP_GPU_A30,
+            CMP_GPU_A40,
+            CMP_FPGA_Xilinx_U280,
+            CMP_FPGA_Xilinx_SN1022,
+        }
+    )
+
+    # ── Component Permission Tags ──────────────────────────────────────
+    # Maps component model name -> set of token tags that grant access.
+    # A model is permitted if ANY tag in the set is present in the
+    # project's tags from the decoded token.
+    # Models not listed here (NIC_Basic, NIC_OpenStack, NIC_P4) require
+    # no special permission and are available to all projects.
+    COMPONENT_MODEL_TO_TAGS = {
+        CMP_GPU_TeslaT4: {"Component.GPU", "Component.GPU_Tesla_T4"},
+        CMP_GPU_RTX6000: {"Component.GPU", "Component.GPU_RTX6000"},
+        CMP_GPU_A30: {"Component.GPU", "Component.GPU_A30"},
+        CMP_GPU_A40: {"Component.GPU", "Component.GPU_A40"},
+        CMP_NVME_P4510: {"Component.NVME", "Component.NVME_P4510"},
+        CMP_FPGA_Xilinx_U280: {"Component.FPGA", "Component.FPGA_Xilinx_U280"},
+        CMP_FPGA_Xilinx_SN1022: {"Component.FPGA", "Component.FPGA_Xilinx_SN1022"},
+        CMP_NIC_ConnectX_5: {"Component.SmartNIC_ConnectX_5"},
+        CMP_NIC_ConnectX_6: {"Component.SmartNIC_ConnectX_6"},
+        CMP_NIC_ConnectX_7_100: {"Component.SmartNIC_ConnectX_7_100"},
+        CMP_NIC_ConnectX_7_400: {"Component.SmartNIC_ConnectX_7_400"},
+        CMP_NIC_BlueField2_ConnectX_6: {"Component.SmartNIC_BlueField2_ConnectX_6"},
+    }
+
     FABRIC_USER = "fabric"
     FABRIC_METADATA_URL = "https://raw.githubusercontent.com/fabric-testbed/fabric-global-metadata/{}/metadata"
     LOCAL_CACHE_DIR = os.path.expanduser("~/.fabric/cache")
+
+    # ── Slice State Constants ──────────────────────────────────────────
+    # State machine:
+    #   Nascent → Configuring → StableOK / StableError
+    #   StableOK → (modify) → ModifyOK / ModifyError
+    #   StableOK → (close) → Closing → Dead
+    #   AllocatedOK = future-dated slice (not yet active)
+    SLICE_STATE_NASCENT = "Nascent"
+    SLICE_STATE_CONFIGURING = "Configuring"
+    SLICE_STATE_STABLE_OK = "StableOK"
+    SLICE_STATE_STABLE_ERROR = "StableError"
+    SLICE_STATE_MODIFY_OK = "ModifyOK"
+    SLICE_STATE_MODIFY_ERROR = "ModifyError"
+    SLICE_STATE_ALLOCATED_OK = "AllocatedOK"
+    SLICE_STATE_ALLOCATED_ERROR = "AllocatedError"
+    SLICE_STATE_CLOSING = "Closing"
+    SLICE_STATE_DEAD = "Dead"
+
+    SLICE_STATES_STABLE = {
+        SLICE_STATE_STABLE_OK,
+        SLICE_STATE_STABLE_ERROR,
+        SLICE_STATE_MODIFY_OK,
+        SLICE_STATE_MODIFY_ERROR,
+        SLICE_STATE_CLOSING,
+        SLICE_STATE_DEAD,
+    }
+    SLICE_STATES_TERMINAL = {SLICE_STATE_CLOSING, SLICE_STATE_DEAD}

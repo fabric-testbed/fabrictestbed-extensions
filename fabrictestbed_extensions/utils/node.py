@@ -26,6 +26,8 @@ from .abc_utils import AbcUtils
 
 
 class NodeUtils(AbcUtils):
+    """Utility helpers for FABRIC node operations."""
+
     def __init__(self):
         """
         Constructor
@@ -35,6 +37,7 @@ class NodeUtils(AbcUtils):
 
     @staticmethod
     def validIPAddress(IP: str) -> str:
+        """Return 'IPv4', 'IPv6', or 'Invalid' for the given IP address string."""
         try:
             return "IPv4" if type(ip_address(IP)) is IPv4Address else "IPv6"
         except ValueError:
@@ -42,6 +45,7 @@ class NodeUtils(AbcUtils):
 
     @staticmethod
     def execute_script(node_username, node, script):
+        """Execute a script on a remote FABRIC node via bastion SSH tunnel."""
         import paramiko
 
         management_ip = str(node.get_property(pname="management_ip"))

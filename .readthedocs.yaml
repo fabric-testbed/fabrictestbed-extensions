@@ -4,11 +4,11 @@
 version: 2
 
 # readthedocs.org uses Python 3.7 by default; fablib has to use Python
-# 3.9 or greater.  This incantation seems to work.
+# 3.11 or greater.  This incantation seems to work.
 build:
   os: ubuntu-20.04
   tools:
-    python: "3.9"
+    python: "3.11"
 
 # Tell RTD location of our Sphinx configuration.  Seems to work
 # without this too, although default is docs/conf.py.

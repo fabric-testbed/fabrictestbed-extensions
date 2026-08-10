@@ -1,10 +1,127 @@
-# Change Log 
+# Change Log
 
 This is the changelog file for FABRIC testbed extensions.  All notable
 changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 2.0.7
+
+### Added
+- Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+
+### Fixed
+- Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
+- Fix `Crinkle.post_boot_config()` failing to complete a file upload due to an incorrect hardcoded file path.
+- Fix `Interface.get_ips()` to correctly parse `ip -j addr show` output via new `_get_ip_addr_json()` helper (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix bare `except:` in `Interface.get_ip_addr()` — now catches only `ValueError`/`TypeError` and logs to debug (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix `Interface.get_ip_addr_ssh()` crash when `addr_info` is empty (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+
+### Changed
+- Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
+- Convert integration tests from `unittest.TestCase` to pytest-native style with shared fixtures (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
+
+## 2.0.6
+
+### Changed
+- Update `fabric_fss_utils` dependency to 1.7.0
+
+## 2.0.4
+
+### Added
+- Added the Crinkle network debugger from the [CREASE](https://crease.cs.iit.edu/) project.
+- Add `Constants.COMPONENT_MODELS` frozenset for offline validation by external tools (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
+- Add `payload` keyword argument to `FablibException` so exceptions can carry structured error data (Issue [#465](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/465))
+- Add slice state checks to `Component.configure()` and `Component.configure_nvme()` — raise `SliceStateError` if node is not Active (Issue [#464](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/464))
+- Add `DeprecationWarning` to `Interface.get_os_interface()` with `stacklevel=2` (Issue [#293](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/293))
+- Add `stacklevel=2` to existing `DeprecationWarning` in `verify_and_setup()` (Issue [#293](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/293))
+- Add bastion SSH config file existence warning in `Node.get_ssh_command()` (Issue [#297](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/297))
+- Add bastion key passphrase to SSH connection in `Node._get_ssh_connection()` (Issue [#135](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/135))
+
+### Fixed
+- Fix `Slice.build_error_exception_string()` string duplication bug (was prepending `exception_string` to itself)
+- Fix `Interface.get_ip_addr_ssh()` return type annotation — now `Optional[Union[str, list]]` with explicit `return None` in except block (Issue [#295](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/295))
+- Fix `Node.add_storage()` failing validation when `validate=True` — skip NAS storage in host-level component checks (Issue [#460](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/460))
+- Fix SSH error handling in `Node.execute()` — catch `PasswordRequiredException` and `AuthenticationException` immediately instead of retrying (Issues [#292](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/292), [#298](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/298))
+- Fix log handler cleanup in `FablibManager.close()` to avoid `ResourceWarning` from unclosed file handles (Issue [#201](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/201))
+- Fix inconsistent singular getter behavior — `Slice.get_network()`, `Node.get_interface()`, `NetworkService.get_interface()`, `FacilityPort.get_interface()`, `Switch.get_interface()` now return `None` by default (backward compatible) and accept `raise_exception=True` to raise `ResourceNotFoundError` instead; a global `FablibManager(raise_on_not_found=True)` setting controls the default for all getters (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+- Derive `SliceNotFoundError` from `ResourceNotFoundError` so `except ResourceNotFoundError` catches slice-not-found errors too (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+- Fix `Component.get_interface()` to raise `ResourceNotFoundError` instead of plain `Exception` (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+
+### Changed
+- Improve `Node.add_storage()` docstring to document `auto_mount` limitation and suggest `enable_storage()` for CephFS (Issue [#461](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/461))
+- Add early validation of component permissions against project tags in token — `validate_node()` now checks `COMPONENT_MODEL_TO_TAGS` before submission (Issue [#463](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/463))
+- Update `Constants` class docstring to highlight public validation collections (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
+
+## 2.0.3
+
+### Added
+- Add a new `SliceNotFoundError` and use it instead of `Exception` in the `get_slice` method.
+- Update to logging in the dependencies
+
+### Fixed
+- Fall back to sliver info (`mgmt_ip`) for node management IP when FIM topology does not have it populated
+- Add `find_resource_slot()` to FablibManager for finding time windows where specific resources are simultaneously available
+- Add resources_calendar() to FablibManager for querying resource availability over time
+- Add host support to resource calendar with `show` parameter to filter by sites, hosts, or all
+
+### Changed
+- Remove unused dependencies: `numpy`, `recordclass`, duplicate `ipycytoscape`
+
+## 2.0.2
+
+### Added
+- Add `storage=True` API for automatic distributed shared storage mounting on slices and nodes (Issue [#485](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/485), PR [#484](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/484))
+- Add `node.enable_storage()`, `node.has_storage()`, `node.get_storage_cluster()` methods
+- Auto-discover Ceph clusters, generate credentials, and mount CephFS during `post_boot_config()`
+
+### Fixed
+- Fix `get_storage_cluster()` returning `None` after `post_boot_config` — persist storage metadata back to orchestrator (Issue [#487](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/487), PR [#486](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/486))
+- Auto-detect user's Ceph clusters instead of using all available clusters, preventing `ValueError` when user lacks credentials on some clusters
+
+### Changed
+- Move default ceph artifacts directory from `~/ceph-artifacts` to `~/.ceph`
+- Update default Ceph manager host to DNS name `ceph-mgr.fabric-testbed.net`
+- Improve CephFS path slugs to be human-friendly with collision disambiguation
+- Handle Rocky 8/9 and Ubuntu ceph-common installation with correct repos
+
+## 2.0.1
+
+### Changed
+- Incorrect route for FabNetv4/FabNetv6 on rocky images (Issue [#481](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/481))
+
+## 2.0.0
+
+### Changed
+- Fix for when reporting management interface from OS for IPv6 on rocky nodes (Issue [#471] PR [#470](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/470)
+- Missed tab spaces from PR#470. This is resolved using PR [#472]
+- Improve the performance of several get_ calls through caching (Issue [#453](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/453))
+- Enable Fabric token creation via CLI (Issue [#473](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/473))
+- MCP friendly API, persistent network config, and bug fixes (Issue [#477](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/477))
+- Param to control SSH calls (Issue [#479](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/479))
+
+
+## 1.9.6
+
+### Changed
+- Replace remaining instances of the use of root logger with logging.getLogger("fablib").
+- Updated dependency for `cryptography` and `Utils::is_reachable` to work for IPv4/IPv6. (PR [#469](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/469))
+
+## 1.9.5
+
+### Added
+- Add the Fabnet external networks subnet as constants to the FablibManager.
+
+### Changed
+- Change `setup_logging` to not use the root logger as it alters the logging of the the application consuming the FABRIC API. Use logging.getLogger("fablib") instead.
+
+### Fixed
+- Fix typos in docstrings that prevent proper parsing. Some docstrings were missing `:` or new lines. 
+- Fix type annotations where `str or node.Node` was used instead of `Union[str, node.Node]` or `str | node.Node`.
+- Fix a typo in the docstring of the `get_fim_component` method.
+- Prevent setup_logging from removing all pre-existing logging handlers [#458](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/458)
 
 ## 1.9.4 
 - Fix TLS verify and documentation for Ceph utils (Issue [#451](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/451))
@@ -63,9 +180,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Ensure slice key and bastion key names are not identical (Issue [#389](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/389))
 
-## [1.7.4] - 11/05/2024 
+## [1.7.4] - 11/05/2024
 
-### Added 
+### Added
 - Missing docstrings in network_service module (Issue [#313](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/314))
 - Artifact Manager Support (Issue [#358](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/358))
 - FabNet user specified subnets (Issue [#361](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/361))
@@ -248,7 +365,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for CPU Pinning and Numa tuning (Issue [#221](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/221))
 
 ### Removed
-  
+
 - Remove unused `AbcFabLIB` class (Issue
   [#117](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/117))
 
@@ -268,7 +385,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured. 
+- The interface.get_ip_addr() fuction now returns address strings for devs that were manually configured.
 
 ## [1.4.2] - 2023-04-21
 

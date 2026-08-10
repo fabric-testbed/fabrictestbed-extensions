@@ -274,7 +274,7 @@ class AbcTopologyEditor(ABC):
             experiment = list(
                 filter(lambda x: x["slice_id"] == slice_id, self.experiments)
             )[0]
-        except:
+        except Exception:
             print("Slice {} not found".format(slice_id))
         return experiment
 
@@ -284,7 +284,7 @@ class AbcTopologyEditor(ABC):
             experiment = list(
                 filter(lambda x: x["slice_name"] == slice_name, self.experiments)
             )[0]
-        except:
+        except Exception:
             print("Slice {} not found".format(slice_name))
         return experiment
 
