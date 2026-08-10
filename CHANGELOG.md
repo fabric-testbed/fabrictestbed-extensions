@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.7
 
 ### Added
+- Add S3 (Ceph RGW) support to `FablibManager`: `get_s3_credentials()` fetches or mints the caller's access keypair and can write ready-to-use aws-cli / s3cmd / env config, and `list_s3_buckets()` lists the buckets they own. Backed by the new `fabrictestbed_extensions/utils/ceph_s3_utils.py`
 - Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 - Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 - Add ruff linter configuration with `E`, `F`, `W`, `I`, `UP` rule sets (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
