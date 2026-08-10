@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
 - Fix `Crinkle.post_boot_config()` failing to complete a file upload due to an incorrect hardcoded file path.
 
+### Changed
+- Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
+- Convert integration tests from `unittest.TestCase` to pytest-native style with shared fixtures (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
+
 ## 2.0.6
 
 ### Changed
