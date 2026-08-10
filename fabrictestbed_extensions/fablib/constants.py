@@ -352,6 +352,27 @@ class Constants:
         }
     )
 
+    # ── Component Permission Tags ──────────────────────────────────────
+    # Maps component model name -> set of token tags that grant access.
+    # A model is permitted if ANY tag in the set is present in the
+    # project's tags from the decoded token.
+    # Models not listed here (NIC_Basic, NIC_OpenStack, NIC_P4) require
+    # no special permission and are available to all projects.
+    COMPONENT_MODEL_TO_TAGS = {
+        CMP_GPU_TeslaT4: {"Component.GPU", "Component.GPU_Tesla_T4"},
+        CMP_GPU_RTX6000: {"Component.GPU", "Component.GPU_RTX6000"},
+        CMP_GPU_A30: {"Component.GPU", "Component.GPU_A30"},
+        CMP_GPU_A40: {"Component.GPU", "Component.GPU_A40"},
+        CMP_NVME_P4510: {"Component.NVME", "Component.NVME_P4510"},
+        CMP_FPGA_Xilinx_U280: {"Component.FPGA", "Component.FPGA_Xilinx_U280"},
+        CMP_FPGA_Xilinx_SN1022: {"Component.FPGA", "Component.FPGA_Xilinx_SN1022"},
+        CMP_NIC_ConnectX_5: {"Component.SmartNIC_ConnectX_5"},
+        CMP_NIC_ConnectX_6: {"Component.SmartNIC_ConnectX_6"},
+        CMP_NIC_ConnectX_7_100: {"Component.SmartNIC_ConnectX_7_100"},
+        CMP_NIC_ConnectX_7_400: {"Component.SmartNIC_ConnectX_7_400"},
+        CMP_NIC_BlueField2_ConnectX_6: {"Component.SmartNIC_BlueField2_ConnectX_6"},
+    }
+
     FABRIC_USER = "fabric"
     FABRIC_METADATA_URL = "https://raw.githubusercontent.com/fabric-testbed/fabric-global-metadata/{}/metadata"
     LOCAL_CACHE_DIR = os.path.expanduser("~/.fabric/cache")
