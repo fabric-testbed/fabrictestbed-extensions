@@ -79,10 +79,7 @@ from fss_utils.sshkey import FABRICSSHKey
 
 from fabrictestbed_extensions.fablib.artifact import Artifact
 from fabrictestbed_extensions.utils.ceph_fs_utils import CephFsUtils
-from fabrictestbed_extensions.utils.ceph_s3_utils import (
-    CephS3Credentials,
-    CephS3Error,
-)
+from fabrictestbed_extensions.utils.ceph_s3_utils import CephS3Credentials, CephS3Error
 
 warnings.filterwarnings("always", category=DeprecationWarning)
 
@@ -2891,7 +2888,7 @@ Host * !bastion.fabric-testbed.net
         if not user:
             raise ValueError("User/bastion login is empty.")
         # S3 uids are bare logins; strip any CephX "client." prefix.
-        return user[len("client."):] if user.startswith("client.") else user
+        return user[len("client.") :] if user.startswith("client.") else user
 
     def get_s3_credentials(
         self,
@@ -2935,10 +2932,14 @@ Host * !bastion.fabric-testbed.net
             create_if_missing=create_if_missing,
         )
         if out_base:
-            creds["files"] = CephS3Credentials.write_client_config(creds, out_base=out_base)
+            creds["files"] = CephS3Credentials.write_client_config(
+                creds, out_base=out_base
+            )
         return creds
 
-    def list_s3_buckets(self, cluster: str, uid: str = None, verify: bool = True) -> list:
+    def list_s3_buckets(
+        self, cluster: str, uid: str = None, verify: bool = True
+    ) -> list:
         """
         List the S3 buckets owned by ``uid`` on ``cluster``.
 
