@@ -8,9 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2.0.7
 
+### Added
+- Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+
 ### Fixed
 - Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
 - Fix `Crinkle.post_boot_config()` failing to complete a file upload due to an incorrect hardcoded file path.
+- Fix `Interface.get_ips()` to correctly parse `ip -j addr show` output via new `_get_ip_addr_json()` helper (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix bare `except:` in `Interface.get_ip_addr()` — now catches only `ValueError`/`TypeError` and logs to debug (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix `Interface.get_ip_addr_ssh()` crash when `addr_info` is empty (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 
 ### Changed
 - Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
