@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from fim.user import ComponentType
 
@@ -87,11 +87,11 @@ class NodeValidator:
 
     @staticmethod
     def can_allocate_node_in_host(
-        host: Dict[str, Any],
+        host: dict[str, Any],
         node: Node,
         allocated: dict,
-        site: Dict[str, Any],
-    ) -> Tuple[bool, str]:
+        site: dict[str, Any],
+    ) -> tuple[bool, str]:
         """Check if a node fits on a specific host given current allocations.
 
         :param host: Host dict from ResourcesV2 (keys: name, state,
@@ -287,7 +287,7 @@ class NodeValidator:
 
     @staticmethod
     def validate_nodes(
-        nodes: List[Node],
+        nodes: list[Node],
         resources,
         project_tags: Optional[frozenset] = None,
     ) -> Tuple[bool, Dict[str, str]]:
@@ -302,8 +302,8 @@ class NodeValidator:
             the decoded token.
         :return: (all_valid, errors) where errors maps node_name to message
         """
-        allocated: Dict[str, dict] = {}
-        errors: Dict[str, str] = {}
+        allocated: dict[str, dict] = {}
+        errors: dict[str, str] = {}
         for node in nodes:
             status, error = NodeValidator.validate_node(
                 node=node,

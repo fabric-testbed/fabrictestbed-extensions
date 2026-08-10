@@ -7,8 +7,10 @@ from fabrictestbed.fabric_manager import FabricManagerException
 from fabrictestbed.token_manager.token_manager import TokenManagerException
 from fabrictestbed.util.constants import Constants
 
-from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
-from fabrictestbed_extensions.fablib.constants import Constants as FablibConstants
+from fabrictestbed_extensions.fablib.config.config import (Config,
+                                                           ConfigException)
+from fabrictestbed_extensions.fablib.constants import \
+    Constants as FablibConstants
 from fabrictestbed_extensions.fablib.fablib import FablibManager
 
 

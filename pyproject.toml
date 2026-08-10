@@ -53,9 +53,8 @@ doc = [
   "furo",
 ]
 test = [
-  "black==24.*",
-  "isort==5.*",
   "tox==4.*",
+  "ruff>=0.4",
   "pytest",
   "pytest-xdist",
   "pytest-timeout",
@@ -66,9 +65,19 @@ test = [
 branch = true
 omit = ["fabrictestbed_extensions/tests/*"]
 
-[tool.isort]
-profile = "black"
-src_paths = ["fabrictestbed_extensions", "docs/source/conf.py", "tests"]
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+  "E501",   # line too long — handled by formatter
+  "UP031",  # printf-string-formatting — too many to change at once
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fabrictestbed_extensions"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -95,6 +104,11 @@ markers = [
   "nvme: Tests requiring NVMe resources",
   "cephfs: Tests requiring CephFS storage",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
 
 [tool.interrogate]
 ignore-init-method = true

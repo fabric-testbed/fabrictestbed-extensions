@@ -27,12 +27,8 @@ import traceback
 from abc import ABC, abstractmethod
 from typing import List
 
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentCatalog,
-    ComponentType,
-    ExperimentTopology,
-)
+from fabrictestbed.slice_editor import (Capacities, ComponentCatalog,
+                                        ComponentType, ExperimentTopology)
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 

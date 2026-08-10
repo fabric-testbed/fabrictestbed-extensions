@@ -5,12 +5,14 @@ changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## 2.0.7
 
 ### Added
 - Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 - Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Add ruff linter configuration with `E`, `F`, `W`, `I`, `UP` rule sets (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+- Add `[testenv:lint]` tox environment for ruff linting checks (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+- Add gradual mypy configuration in `pyproject.toml` (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
 
 ### Fixed
 - Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
@@ -22,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
 - Convert integration tests from `unittest.TestCase` to pytest-native style with shared fixtures (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
+- Replace black + isort with ruff for code formatting and import sorting (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
+- Modernize type annotations: `List[X]` → `list[X]`, `Dict[K,V]` → `dict[K,V]`, `Tuple[...]` → `tuple[...]`, `Optional[X]` → `X | None`, `Union[A, B]` → `A | B` across all fablib source files (Issue [#372](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/372))
+- Add `from __future__ import annotations` to `config/config.py` (Issue [#372](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/372))
 
 ## 2.0.6
 

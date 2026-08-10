@@ -35,7 +35,6 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from typing import Dict, List, Tuple
 
 from fabrictestbed.slice_editor import Capacities
 from fim.user import Component, node
@@ -374,7 +373,7 @@ class Host:
                         comp_cap[
                             Constants.ALLOCATED.lower()
                         ] += c.capacity_allocations.unit
-        except Exception as e:
+        except Exception:
             # log.error(f"Failed to get {component_model_name} capacity {site}: {e}")
             pass
 
@@ -387,7 +386,7 @@ class Host:
         """
         try:
             return self.host.components
-        except Exception as e:
+        except Exception:
             pass
 
     def get_component(self, comp_model_type: str) -> Component:
@@ -402,7 +401,7 @@ class Host:
         """
         try:
             return self.host.components.get(comp_model_type)
-        except Exception as e:
+        except Exception:
             pass
 
     def show(
@@ -459,11 +458,11 @@ class Host:
         """
         try:
             return self.host.location.postal
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get postal address for {site}")
             return ""
 
-    def get_location_lat_long(self) -> Tuple[float, float]:
+    def get_location_lat_long(self) -> tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -472,7 +471,7 @@ class Host:
         """
         try:
             return self.host.location.to_latlon()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get latitude and longitude for {site}")
             return 0, 0
 
@@ -486,7 +485,7 @@ class Host:
         """
         try:
             return self.ptp
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get PTP status for {site}")
             return False
 
@@ -498,7 +497,7 @@ class Host:
         """
         try:
             return self.host.name
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get name for {host}")
             return ""
 
@@ -511,7 +510,7 @@ class Host:
         """
         try:
             return self.host.capacities.core
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get core capacity {site}")
             return 0
 
@@ -524,7 +523,7 @@ class Host:
         """
         try:
             return self.host.capacity_allocations.core
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get cores allocated {site}")
             return 0
 
@@ -537,7 +536,7 @@ class Host:
         """
         try:
             return self.get_core_capacity() - self.get_core_allocated()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity()
 
@@ -550,7 +549,7 @@ class Host:
         """
         try:
             return self.host.capacities.ram
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get ram capacity {site}")
             return 0
 
@@ -565,7 +564,7 @@ class Host:
         """
         try:
             return self.host.capacity_allocations.ram
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get ram allocated {site}")
             return 0
 
@@ -580,7 +579,7 @@ class Host:
         """
         try:
             return self.get_ram_capacity() - self.get_ram_allocated()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity()
 
@@ -593,7 +592,7 @@ class Host:
         """
         try:
             return self.host.capacities.disk
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get disk capacity {site}")
             return 0
 
@@ -606,7 +605,7 @@ class Host:
         """
         try:
             return self.host.capacity_allocations.disk
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get disk allocated {site}")
             return 0
 
@@ -621,7 +620,7 @@ class Host:
         """
         try:
             return self.get_disk_capacity() - self.get_disk_allocated()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity()
 
@@ -644,7 +643,7 @@ class Host:
                     component_model_name
                 ].capacities.unit
             return component_capacity
-        except Exception as e:
+        except Exception:
             # log.error(f"Failed to get {component_model_name} capacity {site}: {e}")
             return component_capacity
 
@@ -671,7 +670,7 @@ class Host:
                     component_model_name
                 ].capacity_allocations.unit
             return component_allocated
-        except Exception as e:
+        except Exception:
             # log.error(f"Failed to get {component_model_name} allocated {site}: {e}")
             return component_allocated
 
@@ -692,7 +691,7 @@ class Host:
             return self.get_component_capacity(
                 component_model_name
             ) - self.get_component_allocated(component_model_name)
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(component_model_name)
 
@@ -720,12 +719,12 @@ class Site:
         self.site_info = {}
         self.__load()
 
-    def get_hosts(self) -> Dict[str, Host]:
+    def get_hosts(self) -> dict[str, Host]:
         """
         Get the hosts associated with the site.
 
         :return: Dictionary of hosts associated with the site.
-        :rtype: Dict[str, Host]
+        :rtype: dict[str, Host]
         """
         return self.hosts
 
@@ -781,12 +780,12 @@ class Site:
         """
         return self.fablib_manager
 
-    def to_row(self) -> Tuple[list, list]:
+    def to_row(self) -> tuple[list, list]:
         """
         Convert the Site object to a row for tabular display.
 
         :return: Tuple containing headers and row for tabular display.
-        :rtype: Tuple[list, list]
+        :rtype: tuple[list, list]
         """
         headers = [
             "Name",
@@ -840,7 +839,7 @@ class Site:
         """
         try:
             return self.site.name
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get name for {site}")
             return ""
 
@@ -858,7 +857,7 @@ class Site:
                     return str(self.site.maintenance_info.get(host).state)
                 else:
                     return "Active"
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get maintenance state for {site}")
             return ""
 
@@ -873,11 +872,11 @@ class Site:
         """
         try:
             return self.site.location.postal
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get postal address for {site}")
             return ""
 
-    def get_location_lat_long(self) -> Tuple[float, float]:
+    def get_location_lat_long(self) -> tuple[float, float]:
         """
         Gets gets location of a site in latitude and longitude
 
@@ -886,7 +885,7 @@ class Site:
         """
         try:
             return self.site.location.to_latlon()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get latitude and longitude for {site}")
             return 0, 0
 
@@ -901,7 +900,7 @@ class Site:
         """
         try:
             return self.site.flags.ptp
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get PTP status for {site}")
             return False
 
@@ -916,7 +915,7 @@ class Site:
         """
         try:
             return self.site.capacities.unit
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get host count {site}")
             return 0
 
@@ -931,7 +930,7 @@ class Site:
         """
         try:
             return self.site.capacities.cpu
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get cpu capacity {site}")
             return 0
 
@@ -1010,7 +1009,7 @@ class Site:
                     Constants.ALLOCATED.lower(): s.get_allocated(),
                 }
 
-        except Exception as e:
+        except Exception:
             # log.error(f"Failed to get {component_model_name} capacity {site}: {e}")
             pass
 
@@ -1076,7 +1075,7 @@ class Site:
                     component_model_name=component_model_name
                 )
             return component_capacity
-        except Exception as e:
+        except Exception:
             # log.error(f"Failed to get {component_model_name} capacity {site}: {e}")
             return component_capacity
 
@@ -1100,7 +1099,7 @@ class Site:
                     component_model_name=component_model_name
                 )
             return component_allocated
-        except Exception as e:
+        except Exception:
             # log.error(f"Failed to get {component_model_name} allocated {site}: {e}")
             return component_allocated
 
@@ -1121,7 +1120,7 @@ class Site:
             return self.get_component_capacity(
                 component_model_name
             ) - self.get_component_allocated(component_model_name)
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get {component_model_name} available {site}")
             return self.get_component_capacity(component_model_name)
 
@@ -1143,7 +1142,7 @@ class Site:
         """
         try:
             return self.site.capacities.core
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get core capacity {site}")
             return 0
 
@@ -1156,7 +1155,7 @@ class Site:
         """
         try:
             return self.site.capacity_allocations.core
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get cores allocated {site}")
             return 0
 
@@ -1169,7 +1168,7 @@ class Site:
         """
         try:
             return self.get_core_capacity() - self.get_core_allocated()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get cores available {site}")
             return self.get_core_capacity()
 
@@ -1182,7 +1181,7 @@ class Site:
         """
         try:
             return self.site.capacities.ram
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get ram capacity {site}")
             return 0
 
@@ -1197,7 +1196,7 @@ class Site:
         """
         try:
             return self.site.capacity_allocations.ram
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get ram allocated {site}")
             return 0
 
@@ -1212,7 +1211,7 @@ class Site:
         """
         try:
             return self.get_ram_capacity() - self.get_ram_allocated()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get ram available {site_name}")
             return self.get_ram_capacity()
 
@@ -1225,7 +1224,7 @@ class Site:
         """
         try:
             return self.site.capacities.disk
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get disk capacity {site}")
             return 0
 
@@ -1238,7 +1237,7 @@ class Site:
         """
         try:
             return self.site.capacity_allocations.disk
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get disk allocated {site}")
             return 0
 
@@ -1253,15 +1252,15 @@ class Site:
         """
         try:
             return self.get_disk_capacity() - self.get_disk_allocated()
-        except Exception as e:
+        except Exception:
             # log.debug(f"Failed to get disk available {site_name}")
             return self.get_disk_capacity()
 
-    def get_host_names(self) -> List[str]:
+    def get_host_names(self) -> list[str]:
         """
         Gets a list of all currently available hosts
 
         :return: list of host names
-        :rtype: List[String]
+        :rtype: list[String]
         """
         return list(self.hosts.keys())

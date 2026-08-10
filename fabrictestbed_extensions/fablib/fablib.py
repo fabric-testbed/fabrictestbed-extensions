@@ -84,11 +84,12 @@ warnings.filterwarnings("always", category=DeprecationWarning)
 
 from concurrent.futures import ThreadPoolExecutor
 from ipaddress import IPv4Network, IPv6Network
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 import paramiko
 
-from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
+from fabrictestbed_extensions.fablib.config.config import (Config,
+                                                           ConfigException)
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.exceptions import SliceNotFoundError
 from fabrictestbed_extensions.utils.utils import Utils
@@ -328,7 +329,7 @@ class FablibManager(Config):
 
     def _get_slice_from_cache(
         self, slice_id: str = None, slice_name: str = None
-    ) -> Optional[Slice]:
+    ) -> Slice | None:
         """
         Retrieves a Slice object from the cache by its ID or name.
 
@@ -714,7 +715,7 @@ Host * !bastion.fabric-testbed.net
         for key in ssh_keys:
             expires_on = key.get(Constants.EXPIRES_ON)
             expires_on_dt = datetime.datetime.fromisoformat(expires_on)
-            now = datetime.datetime.now(tz=datetime.timezone.utc)
+            now = datetime.datetime.now(tz=datetime.UTC)
             if now > expires_on_dt:
                 keys_to_remove.append(key)
                 continue
@@ -952,7 +953,7 @@ Host * !bastion.fabric-testbed.net
 
         return self.manager
 
-    def get_site_names(self) -> List[str]:
+    def get_site_names(self) -> list[str]:
         """
         Gets a list of all available site names.
 
@@ -963,17 +964,17 @@ Host * !bastion.fabric-testbed.net
 
     def list_sites(
         self,
-        output: Optional[str] = None,
-        fields: Optional[str] = None,
-        quiet: Optional[bool] = False,
+        output: str | None = None,
+        fields: str | None = None,
+        quiet: bool | None = False,
         filter_function=None,
-        update: Optional[bool] = False,
-        pretty_names: Optional[bool] = True,
-        force_refresh: Optional[bool] = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None,
+        update: bool | None = False,
+        pretty_names: bool | None = True,
+        force_refresh: bool | None = False,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        avoid: list[str] | None = None,
+        includes: list[str] | None = None,
     ) -> object:
         """
         Lists all the sites and their attributes.
@@ -996,7 +997,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -1037,17 +1038,17 @@ Host * !bastion.fabric-testbed.net
 
     def list_hosts(
         self,
-        output: Optional[str] = None,
-        fields: Optional[str] = None,
-        quiet: Optional[bool] = False,
+        output: str | None = None,
+        fields: str | None = None,
+        quiet: bool | None = False,
         filter_function=None,
-        update: Optional[bool] = False,
-        pretty_names: Optional[bool] = True,
-        force_refresh: Optional[bool] = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None,
+        update: bool | None = False,
+        pretty_names: bool | None = True,
+        force_refresh: bool | None = False,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        avoid: list[str] | None = None,
+        includes: list[str] | None = None,
     ) -> object:
         """
         Lists all the hosts and their attributes.
@@ -1070,7 +1071,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -1109,12 +1110,12 @@ Host * !bastion.fabric-testbed.net
 
     def list_links(
         self,
-        output: Optional[str] = None,
-        fields: Optional[str] = None,
-        quiet: Optional[bool] = False,
+        output: str | None = None,
+        fields: str | None = None,
+        quiet: bool | None = False,
         filter_function=None,
-        update: Optional[bool] = True,
-        pretty_names: Optional[bool] = True,
+        update: bool | None = True,
+        pretty_names: bool | None = True,
     ) -> object:
         """
         Lists all the links and their attributes.
@@ -1137,7 +1138,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -1159,14 +1160,14 @@ Host * !bastion.fabric-testbed.net
 
     def list_facility_ports(
         self,
-        output: Optional[str] = None,
-        fields: Optional[str] = None,
-        quiet: Optional[bool] = False,
+        output: str | None = None,
+        fields: str | None = None,
+        quiet: bool | None = False,
         filter_function=None,
-        update: Optional[bool] = False,
-        pretty_names: Optional[bool] = True,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        update: bool | None = False,
+        pretty_names: bool | None = True,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> object:
         """
         Lists all the facility ports and their attributes.
@@ -1190,7 +1191,7 @@ Host * !bastion.fabric-testbed.net
         :type output: str
 
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
 
         :param quiet: True to specify printing/display
         :type quiet: bool
@@ -1225,10 +1226,10 @@ Host * !bastion.fabric-testbed.net
 
     def show_config(
         self,
-        output: Optional[str] = None,
+        output: str | None = None,
         fields: list[str] = None,
-        quiet: Optional[bool] = False,
-        pretty_names: Optional[bool] = True,
+        quiet: bool | None = False,
+        pretty_names: bool | None = True,
     ):
         """
         Show a table containing the current FABlib configuration parameters.
@@ -1247,7 +1248,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param pretty_names:
@@ -1273,10 +1274,10 @@ Host * !bastion.fabric-testbed.net
     def show_site(
         self,
         site_name: str,
-        output: Optional[str] = None,
-        fields: Optional[list[str]] = None,
-        quiet: Optional[bool] = False,
-        pretty_names: Optional[bool] = True,
+        output: str | None = None,
+        fields: list[str] | None = None,
+        quiet: bool | None = False,
+        pretty_names: bool | None = True,
     ):
         """
         Show a table with all the properties of a specific site
@@ -1297,7 +1298,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param pretty_names:
@@ -1328,9 +1329,9 @@ Host * !bastion.fabric-testbed.net
 
     def get_facility_ports(
         self,
-        update: Optional[bool] = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
+        update: bool | None = False,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> ResourcesV2:
         """
         Get the resources object (which includes facility ports).
@@ -1352,12 +1353,12 @@ Host * !bastion.fabric-testbed.net
 
     def get_resources(
         self,
-        update: Optional[bool] = False,
-        force_refresh: Optional[bool] = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None,
+        update: bool | None = False,
+        force_refresh: bool | None = False,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        avoid: list[str] | None = None,
+        includes: list[str] | None = None,
     ) -> ResourcesV2:
         """
         Get a reference to the resources object. The resources object
@@ -1402,7 +1403,7 @@ Host * !bastion.fabric-testbed.net
         )
 
     @staticmethod
-    def _slice_to_resources(slice_object: "Slice") -> List[Dict[str, Any]]:
+    def _slice_to_resources(slice_object: Slice) -> list[dict[str, Any]]:
         """
         Convert an unsubmitted Slice object into the resource requirement
         list expected by the find-slot API.
@@ -1410,10 +1411,10 @@ Host * !bastion.fabric-testbed.net
         :param slice_object: a fablib Slice built with add_node/add_l2network/etc.
         :return: list of resource dicts
         """
-        resources: List[Dict[str, Any]] = []
+        resources: list[dict[str, Any]] = []
 
         # --- Compute nodes: aggregate by site ---
-        site_compute: Dict[str, Dict[str, Any]] = {}
+        site_compute: dict[str, dict[str, Any]] = {}
         for node in slice_object.get_nodes():
             site = node.get_site()
             if site not in site_compute:
@@ -1476,8 +1477,8 @@ Host * !bastion.fabric-testbed.net
 
     @staticmethod
     def _normalize_component_keys(
-        resources: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        resources: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """
         Normalize component keys in resource dicts to match the format used
         by the reports DB: ``"{ComponentType}-{Model}"`` (e.g.
@@ -1492,7 +1493,7 @@ Host * !bastion.fabric-testbed.net
         from fabrictestbed_extensions.fablib.component import Component
 
         # Build fablib-name -> DB-key mapping lazily
-        mapping: Dict[str, str] = {}
+        mapping: dict[str, str] = {}
         for fablib_name, model_type in Component.component_model_map.items():
             catalog_entry = ComponentModelTypeMap.get(model_type)
             if catalog_entry:
@@ -1514,11 +1515,11 @@ Host * !bastion.fabric-testbed.net
         start: datetime.datetime,
         end: datetime.datetime,
         duration: int,
-        slice: Optional["Slice"] = None,
-        resources: Optional[List[Dict[str, Any]]] = None,
+        slice: Slice | None = None,
+        resources: list[dict[str, Any]] | None = None,
         max_results: int = 1,
         use_live_data: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Find time windows where requested resources are simultaneously available.
 
@@ -1573,13 +1574,13 @@ Host * !bastion.fabric-testbed.net
         start: datetime.datetime,
         end: datetime.datetime,
         interval: str = "day",
-        site: Optional[List[str]] = None,
-        host: Optional[List[str]] = None,
-        exclude_site: Optional[List[str]] = None,
-        exclude_host: Optional[List[str]] = None,
+        site: list[str] | None = None,
+        host: list[str] | None = None,
+        exclude_site: list[str] | None = None,
+        exclude_host: list[str] | None = None,
         show: str = "all",
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
         filter_function=None,
     ):
@@ -1660,15 +1661,15 @@ Host * !bastion.fabric-testbed.net
 
     def get_random_site(
         self,
-        avoid: Optional[List[str]] = None,
+        avoid: list[str] | None = None,
         filter_function=None,
-        update: Optional[bool] = True,
+        update: bool | None = True,
     ) -> str:
         """
         Get a random site.
 
         :param avoid: list of site names to avoid choosing
-        :type avoid: List[String]
+        :type avoid: list[String]
         :param filter_function: filter_function
         :type filter_function:
         :param update: flag indicating if fetch latest availability information
@@ -1682,24 +1683,24 @@ Host * !bastion.fabric-testbed.net
 
     def get_random_sites(
         self,
-        count: Optional[int] = 1,
-        avoid: Optional[List[str]] = None,
+        count: int | None = 1,
+        avoid: list[str] | None = None,
         filter_function=None,
-        update: Optional[bool] = True,
-    ) -> List[str]:
+        update: bool | None = True,
+    ) -> list[str]:
         """
         Get a list of random sites names. Each site will be included at most once.
 
         :param count: number of sites to return.
         :type count: int
         :param avoid: list of site names to avoid choosing
-        :type avoid: List[String]
+        :type avoid: list[String]
         :param filter_function: filter_function
         :type filter_function:
         :param update: flag indicating if fetch latest availability information
         :type update: bool
         :return: list of random site names.
-        :rtype: List[String]
+        :rtype: list[String]
         """
         if avoid is None:
             avoid = []
@@ -1755,7 +1756,7 @@ Host * !bastion.fabric-testbed.net
                 rtn_sites.append(None)
         return rtn_sites
 
-    def probe_bastion_host(self) -> Optional[bool]:
+    def probe_bastion_host(self) -> bool | None:
         """
         See if bastion will admit us with our configuration.
 
@@ -1896,12 +1897,12 @@ Host * !bastion.fabric-testbed.net
 
     def get_available_resources(
         self,
-        update: Optional[bool] = False,
-        force_refresh: Optional[bool] = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None,
+        update: bool | None = False,
+        force_refresh: bool | None = False,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        avoid: list[str] | None = None,
+        includes: list[str] | None = None,
     ) -> ResourcesV2:
         """
         Get the available resources.
@@ -1955,14 +1956,14 @@ Host * !bastion.fabric-testbed.net
 
     def list_slices(
         self,
-        excludes: Optional[list[SliceState]] = None,
-        output: Optional[str] = None,
-        fields: Optional[list[str]] = None,
-        quiet: Optional[bool] = False,
+        excludes: list[SliceState] | None = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
+        quiet: bool | None = False,
         filter_function=None,
-        pretty_names: Optional[bool] = True,
-        user_only: Optional[bool] = True,
-        show_un_submitted: Optional[bool] = False,
+        pretty_names: bool | None = True,
+        user_only: bool | None = True,
+        show_un_submitted: bool | None = False,
     ):
         """
         Lists all the slices created by a user.
@@ -1987,7 +1988,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields (table columns) to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param filter_function: lambda function
@@ -2024,14 +2025,14 @@ Host * !bastion.fabric-testbed.net
 
     def show_slice(
         self,
-        name: Optional[str] = None,
-        id: Optional[str] = None,
-        output: Optional[str] = None,
-        fields: Optional[list[str]] = None,
-        quiet: Optional[bool] = False,
-        pretty_names: Optional[bool] = True,
-        user_only: Optional[bool] = True,
-        show_un_submitted: Optional[bool] = False,
+        name: str | None = None,
+        id: str | None = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
+        quiet: bool | None = False,
+        pretty_names: bool | None = True,
+        user_only: bool | None = True,
+        show_un_submitted: bool | None = False,
     ):
         """
         Show a table with all the properties of a specific site
@@ -2054,7 +2055,7 @@ Host * !bastion.fabric-testbed.net
         :param output: output format
         :type output: str
         :param fields: list of fields to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param pretty_names: pretty_names
@@ -2080,12 +2081,12 @@ Host * !bastion.fabric-testbed.net
 
     def get_slices(
         self,
-        excludes: Optional[List[SliceState]] = None,
-        slice_name: Optional[str] = None,
-        slice_id: Optional[str] = None,
-        user_only: Optional[bool] = True,
-        show_un_submitted: Optional[bool] = False,
-    ) -> List[Slice]:
+        excludes: list[SliceState] | None = None,
+        slice_name: str | None = None,
+        slice_id: str | None = None,
+        user_only: bool | None = True,
+        show_un_submitted: bool | None = False,
+    ) -> list[Slice]:
         """
         Gets a list of slices from the slice manager.
 
@@ -2095,7 +2096,7 @@ Host * !bastion.fabric-testbed.net
 
         :param excludes: A list of slice states to exclude from the output list.
             Defaults to [SliceState.Dead, SliceState.Closing].
-        :type excludes: List[SliceState]
+        :type excludes: list[SliceState]
         :param slice_name: Filter by slice name
         :type slice_name: str
         :param slice_id: Filter by slice ID
@@ -2106,7 +2107,7 @@ Host * !bastion.fabric-testbed.net
         :type show_un_submitted: bool
 
         :return: a list of slices
-        :rtype: List[Slice]
+        :rtype: list[Slice]
         """
         import time
 
@@ -2213,14 +2214,14 @@ Host * !bastion.fabric-testbed.net
 
     def get_crinkle_slices(
         self,
-        excludes: List[SliceState] = [SliceState.Dead, SliceState.Closing],
+        excludes: list[SliceState] = [SliceState.Dead, SliceState.Closing],
         slice_name: str = None,
         slice_id: str = None,
         user_only: bool = True,
         show_un_submitted: bool = False,
         pcaps_dir: str = ".query_analysis_pcaps",
         name_prefix: str = "C",
-    ) -> List[CrinkleSlice]:
+    ) -> list[CrinkleSlice]:
         """
         Gets a list of Crinkle slices from the slice manager.
 
@@ -2229,7 +2230,7 @@ Host * !bastion.fabric-testbed.net
         an empty list (i.e. excludes=[]) to get a list of all slices.
 
         :param excludes: A list of slice states to exclude from the output list
-        :type excludes: List[SliceState]
+        :type excludes: list[SliceState]
         :param slice_name:
         :param slice_id:
         :param user_only: True indicates return own slices; False indicates return project slices
@@ -2242,7 +2243,7 @@ Host * !bastion.fabric-testbed.net
         :type name_prefix: String
 
         :return: a list of slices
-        :rtype: List[Slice]
+        :rtype: list[Slice]
         """
         import time
 
@@ -2391,7 +2392,7 @@ Host * !bastion.fabric-testbed.net
                 self.remove_slice_from_cache(slice_obj)
                 if progress:
                     print(", Success!")
-            except Exception as e:
+            except Exception:
                 if progress:
                     print(", Failed!")
 
@@ -2445,7 +2446,7 @@ Host * !bastion.fabric-testbed.net
         ``Node.add_component()`` calls ``self.get_fablib_manager().validate_node()``.
 
         :return: Tuple indicating status for validation and error message in case of failure
-        :rtype: Tuple[bool, str]
+        :rtype: tuple[bool, str]
         """
         from fabrictestbed_extensions.fablib.validator import NodeValidator
 
@@ -2461,8 +2462,8 @@ Host * !bastion.fabric-testbed.net
         artifact_title: str,
         description_short: str,
         description_long: str,
-        authors: List[str],
-        tags: List[str],
+        authors: list[str],
+        tags: list[str],
         visibility: Visibility = Visibility.Author,
         update_existing: bool = True,
     ) -> Artifact:
@@ -2495,7 +2496,7 @@ Host * !bastion.fabric-testbed.net
         artifact_title: str = None,
         artifact_id: str = None,
         tag: str = None,
-    ) -> List[Artifact]:
+    ) -> list[Artifact]:
         """
         Gets a list of artifacts either based on artifact id, artifact title or tag.
         :param artifact_title:
@@ -2503,7 +2504,7 @@ Host * !bastion.fabric-testbed.net
         :param tag:
 
         :return: a list of Artifacts
-        :rtype: List[Artifact]
+        :rtype: list[Artifact]
         """
         import time
 
@@ -2664,7 +2665,7 @@ Host * !bastion.fabric-testbed.net
         fetch_func,
         offset: int = 0,
         limit: int = 200,
-    ) -> List:
+    ) -> list:
         """
         Generic paginated fetch helper.
 
