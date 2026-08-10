@@ -208,6 +208,7 @@ class FacilityPort(TemplateMixin):
                     capacities,
                 )
                 interfaces.append(iface_tuple)
+                index += 1
 
         fim_facility_port = slice.get_fim_topology().add_facility(
             name=name,
