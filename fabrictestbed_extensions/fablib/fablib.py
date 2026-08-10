@@ -92,8 +92,7 @@ from typing import TYPE_CHECKING, Any
 
 import paramiko
 
-from fabrictestbed_extensions.fablib.config.config import (Config,
-                                                           ConfigException)
+from fabrictestbed_extensions.fablib.config.config import Config, ConfigException
 from fabrictestbed_extensions.fablib.constants import Constants
 from fabrictestbed_extensions.fablib.exceptions import SliceNotFoundError
 from fabrictestbed_extensions.utils.utils import Utils

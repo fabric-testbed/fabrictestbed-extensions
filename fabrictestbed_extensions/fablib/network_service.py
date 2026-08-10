@@ -53,8 +53,7 @@ from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from fabrictestbed.slice_editor import Capacities, Labels
 from fabrictestbed.slice_editor import NetworkService as FimNetworkService
 from fabrictestbed.slice_editor import ServiceType
-from fim.slivers.network_service import (NetworkServiceSliver, NSLayer,
-                                         ServiceType)
+from fim.slivers.network_service import NetworkServiceSliver, NSLayer, ServiceType
 from fim.user.network_service import MirrorDirection
 
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin

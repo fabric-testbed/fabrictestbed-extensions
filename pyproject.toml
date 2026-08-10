@@ -67,6 +67,12 @@ test = [
 branch = true
 omit = ["fabrictestbed_extensions/tests/*"]
 
+[tool.isort]
+# CI runs `isort --profile black`. Without this, a bare `isort` uses isort's
+# own default profile, and black then rejects what it produced -- which is how
+# the formatting checks ended up failing on main.
+profile = "black"
+
 [tool.ruff]
 target-version = "py311"
 line-length = 88
