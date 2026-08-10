@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add gradual mypy configuration in `pyproject.toml` (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
 
 ### Fixed
+- Fix the failing "Code formatting checks" job by recording `[tool.isort] profile = "black"` in `pyproject.toml` and reformatting the 18 files left inconsistent. CI runs `isort --profile black`, but nothing in the repo declared that profile, so a bare `isort` used its own default and black rejected the result
 - Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
 - Fix `Crinkle.post_boot_config()` failing to complete a file upload due to an incorrect hardcoded file path.
 - Fix `Interface.get_ips()` to correctly parse `ip -j addr show` output via new `_get_ip_addr_json()` helper (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
