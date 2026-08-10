@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Update `fabric_fss_utils` dependency to 1.7.0
 
+## [Unreleased]
+
+### Added
+- Add `FablibManager.verify_configuration()` method — validates all config aspects and collects all errors instead of stopping at first failure (Issue [#303](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/303))
+- Add `FablibManager.generate_configuration()` method — applies configuration changes (keys, SSH config) independently of verification (Issue [#303](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/303))
+
+### Changed
+- Refactor `FablibManager.verify_and_configure()` to delegate to `verify_configuration()` + `generate_configuration()`, maintaining backward compatibility (Issue [#303](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/303))
+
 ## 2.0.4
 
 ### Added
