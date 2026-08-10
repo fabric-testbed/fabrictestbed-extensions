@@ -3,10 +3,15 @@
 
 version: 2
 
-# readthedocs.org uses Python 3.7 by default; fablib has to use Python
-# 3.11 or greater.  This incantation seems to work.
+# fablib needs Python 3.11 or greater, so pin the interpreter rather than
+# taking the build image's default.
+#
+# `os` must name an image Read the Docs still offers. When one is retired the
+# config fails *validation*: the build stops right after reading this file with
+# no failing command and no error text in the log, which is a confusing way to
+# find out. Valid as of 2026-08: ubuntu-22.04, ubuntu-24.04, ubuntu-lts-latest.
 build:
-  os: ubuntu-20.04
+  os: ubuntu-24.04
   tools:
     python: "3.11"
 
