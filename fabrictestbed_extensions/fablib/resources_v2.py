@@ -38,8 +38,9 @@ required.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 from fabrictestbed.slice_editor import AdvertisedTopology
 
@@ -54,7 +55,7 @@ log = logging.getLogger("fablib")
 # Pretty-name dictionaries
 # ------------------------------------------------------------------
 
-LINK_PRETTY_NAMES: Dict[str, str] = {
+LINK_PRETTY_NAMES: dict[str, str] = {
     "name": "Link Name",
     "layer": "Layer",
     "bandwidth": "Capacity (Gbps)",
@@ -63,7 +64,7 @@ LINK_PRETTY_NAMES: Dict[str, str] = {
     "sites": "Sites",
 }
 
-FACILITY_PORT_PRETTY_NAMES: Dict[str, str] = {
+FACILITY_PORT_PRETTY_NAMES: dict[str, str] = {
     "name": "Name",
     "site": "Site",
     "port": "Port",
@@ -78,14 +79,14 @@ FACILITY_PORT_PRETTY_NAMES: Dict[str, str] = {
 # ------------------------------------------------------------------
 
 # Reverse map: FIM model name → v1 non_pretty_name used by attribute_name_mappings
-_FIM_MODEL_TO_ATTR: Dict[str, str] = {}
+_FIM_MODEL_TO_ATTR: dict[str, str] = {}
 for _attr, _names in ResourceConstants.attribute_name_mappings.items():
     _FIM_MODEL_TO_ATTR[_attr] = _attr  # exact FIM key (lowered)
     _FIM_MODEL_TO_ATTR[_attr.lower()] = _attr  # lowered duplicate safe
 
 # Also map component model names that appear in the summary JSON
 # to the attribute_name_mappings key they correspond to.
-_SUMMARY_COMP_TO_ATTR: Dict[str, str] = {
+_SUMMARY_COMP_TO_ATTR: dict[str, str] = {
     "GPU-Tesla T4": Constants.GPU_TESLA_T4,
     "GPU-RTX6000": Constants.GPU_RTX6000,
     "GPU-A30": Constants.GPU_A30,
@@ -102,7 +103,7 @@ _SUMMARY_COMP_TO_ATTR: Dict[str, str] = {
 }
 
 
-def _site_summary_to_v1_dict(site_data: Dict[str, Any]) -> Dict[str, Any]:
+def _site_summary_to_v1_dict(site_data: dict[str, Any]) -> dict[str, Any]:
     """Convert a resources_summary site dict to a v1-compatible ordered dict.
 
     The key order and key names match ``Site.to_dict()`` exactly so that
@@ -117,7 +118,7 @@ def _site_summary_to_v1_dict(site_data: Dict[str, Any]) -> Dict[str, Any]:
     else:
         hosts_count = site_data.get("hosts_count", 0)
 
-    d: Dict[str, Any] = {
+    d: dict[str, Any] = {
         "name": site_data.get("name"),
         "state": site_data.get("state"),
         "address": site_data.get("address"),
@@ -131,7 +132,7 @@ def _site_summary_to_v1_dict(site_data: Dict[str, Any]) -> Dict[str, Any]:
     # sourced from the flat summary keys and nested components dict.
     components = site_data.get("components") or {}
 
-    def _get_cap_alloc(attr_key: str) -> Tuple[int, int]:
+    def _get_cap_alloc(attr_key: str) -> tuple[int, int]:
         """Return (capacity, allocated) for a given attribute_name_mappings key."""
         low = attr_key.lower()
         # cores / ram / disk come as flat top-level keys
@@ -171,12 +172,12 @@ def _site_summary_to_v1_dict(site_data: Dict[str, Any]) -> Dict[str, Any]:
     return d
 
 
-def _host_summary_to_v1_dict(host_data: Dict[str, Any]) -> Dict[str, Any]:
+def _host_summary_to_v1_dict(host_data: dict[str, Any]) -> dict[str, Any]:
     """Convert a resources_summary host dict to a v1-compatible ordered dict.
 
     The key order and key names match ``Host.to_dict()`` exactly.
     """
-    d: Dict[str, Any] = {
+    d: dict[str, Any] = {
         "name": host_data.get("name"),
         "state": host_data.get("state"),
         "address": host_data.get("address"),
@@ -186,7 +187,7 @@ def _host_summary_to_v1_dict(host_data: Dict[str, Any]) -> Dict[str, Any]:
 
     components = host_data.get("components") or {}
 
-    def _get_cap_alloc(attr_key: str) -> Tuple[int, int]:
+    def _get_cap_alloc(attr_key: str) -> tuple[int, int]:
         low = attr_key.lower()
         # cores / ram / disk come as flat keys
         cap_key = f"{low}_capacity"
@@ -238,25 +239,25 @@ class ResourcesV2:
         self,
         fablib_manager,
         force_refresh: bool = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        avoid: list[str] | None = None,
+        includes: list[str] | None = None,
     ):
         self.fablib_manager = fablib_manager
 
         # Summary-derived caches (lists of plain dicts)
-        self._sites_data: List[Dict[str, Any]] = []
-        self._hosts_data: List[Dict[str, Any]] = []
-        self._links_data: List[Dict[str, Any]] = []
-        self._facility_ports_data: List[Dict[str, Any]] = []
+        self._sites_data: list[dict[str, Any]] = []
+        self._hosts_data: list[dict[str, Any]] = []
+        self._links_data: list[dict[str, Any]] = []
+        self._facility_ports_data: list[dict[str, Any]] = []
 
         # Keyed lookup for sites
-        self._sites_by_name: Dict[str, Dict[str, Any]] = {}
+        self._sites_by_name: dict[str, dict[str, Any]] = {}
 
         # FIM topology — loaded lazily for ERO validation only
-        self._topology: Optional[AdvertisedTopology] = None
-        self._lazy_params: Dict[str, Any] = {}
+        self._topology: AdvertisedTopology | None = None
+        self._lazy_params: dict[str, Any] = {}
 
         self.update(
             force_refresh=force_refresh,
@@ -273,10 +274,10 @@ class ResourcesV2:
     def update(
         self,
         force_refresh: bool = False,
-        start: Optional[datetime] = None,
-        end: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
-        includes: Optional[List[str]] = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        avoid: list[str] | None = None,
+        includes: list[str] | None = None,
     ) -> None:
         """Refresh resource data via ``resources_summary``."""
         log.info("ResourcesV2Wrapper: updating resources via resources_summary")
@@ -458,11 +459,11 @@ class ResourcesV2:
     # Site accessors
     # ----------------------------------------------------------
 
-    def get_site_names(self) -> List[str]:
+    def get_site_names(self) -> list[str]:
         """Return a list of all available site names."""
         return list(self._sites_by_name.keys())
 
-    def get_site(self, site_name: str) -> Optional[Dict[str, Any]]:
+    def get_site(self, site_name: str) -> dict[str, Any] | None:
         """Return the site data dict for the given site name, or None."""
         return self._sites_by_name.get(site_name)
 
@@ -544,7 +545,7 @@ class ResourcesV2:
             .get("available", 0)
         )
 
-    def get_location_lat_long(self, site_name: str) -> Tuple[float, float]:
+    def get_location_lat_long(self, site_name: str) -> tuple[float, float]:
         """Return (latitude, longitude) for the given site."""
         loc = self._site_val(site_name, "location", None)
         if isinstance(loc, (list, tuple)) and len(loc) == 2:
@@ -563,7 +564,7 @@ class ResourcesV2:
     # Host accessors
     # ----------------------------------------------------------
 
-    def get_hosts_by_site(self, site_name: str) -> Dict[str, Dict[str, Any]]:
+    def get_hosts_by_site(self, site_name: str) -> dict[str, dict[str, Any]]:
         """Return hosts for a given site as a dict keyed by host name."""
         return {
             h["name"]: h
@@ -571,7 +572,7 @@ class ResourcesV2:
             if h.get("site") == site_name and h.get("name")
         }
 
-    def get_host(self, host_name: str) -> Optional[Dict[str, Any]]:
+    def get_host(self, host_name: str) -> dict[str, Any] | None:
         """Return a single host dict by name, or None."""
         for h in self._hosts_data:
             if h.get("name") == host_name:
@@ -588,10 +589,10 @@ class ResourcesV2:
 
     def list_sites(
         self,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
-        filter_function: Optional[Callable] = None,
+        filter_function: Callable | None = None,
         pretty_names: bool = True,
     ) -> object:
         """List all sites as a table."""
@@ -614,8 +615,8 @@ class ResourcesV2:
     def show_site(
         self,
         site_name: str,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
@@ -640,10 +641,10 @@ class ResourcesV2:
 
     def list_hosts(
         self,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
-        filter_function: Optional[Callable] = None,
+        filter_function: Callable | None = None,
         pretty_names: bool = True,
     ) -> object:
         """List all hosts as a table."""
@@ -664,8 +665,8 @@ class ResourcesV2:
     def show_host(
         self,
         host_name: str,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
@@ -691,10 +692,10 @@ class ResourcesV2:
 
     def list_links(
         self,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
-        filter_function: Optional[Callable] = None,
+        filter_function: Callable | None = None,
         pretty_names: bool = True,
     ) -> object:
         """List all inter-site links as a table."""
@@ -711,8 +712,8 @@ class ResourcesV2:
     def show_link(
         self,
         link_name: str,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
@@ -729,7 +730,7 @@ class ResourcesV2:
                 )
         return f"Link '{link_name}' not found."
 
-    def get_link_list(self) -> List[str]:
+    def get_link_list(self) -> list[str]:
         """Return a list of all link names."""
         return [l.get("name") for l in self._links_data if l.get("name")]
 
@@ -739,10 +740,10 @@ class ResourcesV2:
 
     def list_facility_ports(
         self,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
-        filter_function: Optional[Callable] = None,
+        filter_function: Callable | None = None,
         pretty_names: bool = True,
     ) -> object:
         """List all facility ports as a table."""
@@ -759,8 +760,8 @@ class ResourcesV2:
     def show_facility_port(
         self,
         fp_name: str,
-        output: Optional[str] = None,
-        fields: Optional[List[str]] = None,
+        output: str | None = None,
+        fields: list[str] | None = None,
         quiet: bool = False,
         pretty_names: bool = True,
     ) -> object:
@@ -784,7 +785,7 @@ class ResourcesV2:
     # ----------------------------------------------------------
 
     def validate_requested_ero_path(
-        self, source: str, end: str, hops: List[str]
+        self, source: str, end: str, hops: list[str]
     ) -> None:
         """Validate an ERO path between source and end via the given hops."""
         self._ensure_topology_loaded()

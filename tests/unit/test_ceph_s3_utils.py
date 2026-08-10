@@ -5,18 +5,17 @@ import stat
 from unittest import mock
 
 import pytest
-
 from fabric_ceph_client.fabric_ceph_client import ApiError
 
-from fabrictestbed_extensions.utils.ceph_s3_utils import (
-    CephS3Credentials,
-    CephS3Error,
-)
+from fabrictestbed_extensions.utils.ceph_s3_utils import CephS3Credentials, CephS3Error
 
 CLUSTER_INFO = {
     "data": [
-        {"cluster": "east", "fsid": "f1",
-         "s3_endpoints": ["http://10.133.124.2:8080", "http://10.137.252.2:8080"]},
+        {
+            "cluster": "east",
+            "fsid": "f1",
+            "s3_endpoints": ["http://10.133.124.2:8080", "http://10.137.252.2:8080"],
+        },
         {"cluster": "west", "fsid": "f2", "s3_endpoints": []},
     ]
 }
@@ -41,6 +40,7 @@ def _patch(mgr):
 # endpoint discovery
 # --------------------------------------------------------------------------
 
+
 def test_list_s3_endpoints():
     with _patch(_mgr()):
         eps = CephS3Credentials.list_s3_endpoints(base_url="https://x", cluster="east")
@@ -62,6 +62,7 @@ def test_cluster_without_endpoints_is_an_error():
 # credentials
 # --------------------------------------------------------------------------
 
+
 def test_existing_readable_key_is_reused():
     mgr = _mgr()
     mgr.list_s3_user_keys.return_value = [
@@ -69,7 +70,8 @@ def test_existing_readable_key_is_reused():
     ]
     with _patch(mgr):
         creds = CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="alice_1")
+            base_url="https://x", cluster="east", uid="alice_1"
+        )
     assert (creds["access_key"], creds["secret_key"]) == ("AK1", "SK1")
     assert creds["endpoint"] == "http://10.133.124.2:8080"
     mgr.create_s3_user_key.assert_not_called()
@@ -82,7 +84,8 @@ def test_key_is_minted_when_secret_is_withheld():
     mgr.create_s3_user_key.return_value = {"access_key": "AK2", "secret_key": "SK2"}
     with _patch(mgr):
         creds = CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="alice_1")
+            base_url="https://x", cluster="east", uid="alice_1"
+        )
     assert (creds["access_key"], creds["secret_key"]) == ("AK2", "SK2")
     mgr.create_s3_user_key.assert_called_once()
 
@@ -92,8 +95,8 @@ def test_no_mint_when_disallowed():
     mgr.list_s3_user_keys.return_value = [{"access_key": "AK1", "secret_key": None}]
     with _patch(mgr), pytest.raises(CephS3Error, match="create_if_missing"):
         CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="alice_1",
-            create_if_missing=False)
+            base_url="https://x", cluster="east", uid="alice_1", create_if_missing=False
+        )
     mgr.create_s3_user_key.assert_not_called()
 
 
@@ -103,12 +106,14 @@ def test_missing_user_still_mints():
     The service auto-provisions the RGW user on that first key request.
     """
     mgr = _mgr()
-    mgr.list_s3_user_keys.side_effect = ApiError(404, "/s3/user/bob_2/keys",
-                                                 message="NoSuchUser")
+    mgr.list_s3_user_keys.side_effect = ApiError(
+        404, "/s3/user/bob_2/keys", message="NoSuchUser"
+    )
     mgr.create_s3_user_key.return_value = {"access_key": "AK3", "secret_key": "SK3"}
     with _patch(mgr):
         creds = CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="bob_2")
+            base_url="https://x", cluster="east", uid="bob_2"
+        )
     assert creds["access_key"] == "AK3"
 
 
@@ -119,11 +124,13 @@ def test_transient_read_failure_does_not_mint_a_duplicate_key(status):
     would mint a new credential on every blip, silently accumulating keys.
     """
     mgr = _mgr()
-    mgr.list_s3_user_keys.side_effect = ApiError(status, "/s3/user/alice_1/keys",
-                                                 message="upstream error")
+    mgr.list_s3_user_keys.side_effect = ApiError(
+        status, "/s3/user/alice_1/keys", message="upstream error"
+    )
     with _patch(mgr), pytest.raises(CephS3Error, match="Refusing to mint"):
         CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="alice_1")
+            base_url="https://x", cluster="east", uid="alice_1"
+        )
     mgr.create_s3_user_key.assert_not_called()
 
 
@@ -133,7 +140,8 @@ def test_non_api_read_failure_also_does_not_mint():
     mgr.list_s3_user_keys.side_effect = TimeoutError("connection timed out")
     with _patch(mgr), pytest.raises(CephS3Error, match="Could not read existing"):
         CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="alice_1")
+            base_url="https://x", cluster="east", uid="alice_1"
+        )
     mgr.create_s3_user_key.assert_not_called()
 
 
@@ -143,18 +151,22 @@ def test_bad_mint_response_is_an_error():
     mgr.create_s3_user_key.return_value = {"access_key": "AK", "secret_key": None}
     with _patch(mgr), pytest.raises(CephS3Error, match="did not return a new keypair"):
         CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="bob_2")
+            base_url="https://x", cluster="east", uid="bob_2"
+        )
 
 
 # --------------------------------------------------------------------------
 # client config artifacts
 # --------------------------------------------------------------------------
 
+
 @pytest.fixture
 def creds():
     return {
-        "cluster": "east", "uid": "alice_1",
-        "access_key": "AKIAEXAMPLE", "secret_key": "s3cr3t",
+        "cluster": "east",
+        "uid": "alice_1",
+        "access_key": "AKIAEXAMPLE",
+        "secret_key": "s3cr3t",
         "endpoint": "http://10.133.124.2:8080",
         "endpoints": ["http://10.133.124.2:8080"],
         "region": "us-east-1",
@@ -163,7 +175,13 @@ def creds():
 
 def test_write_client_config_produces_all_artifacts(creds, tmp_path):
     files = CephS3Credentials.write_client_config(creds, out_base=tmp_path)
-    assert set(files) == {"aws_credentials", "aws_config", "s3cfg", "env.sh", "README.md"}
+    assert set(files) == {
+        "aws_credentials",
+        "aws_config",
+        "s3cfg",
+        "env.sh",
+        "README.md",
+    }
     for path in files.values():
         assert os.path.exists(path)
 
@@ -183,7 +201,7 @@ def test_client_config_contents(creds, tmp_path):
 
     cfg = open(files["aws_config"]).read()
     assert "endpoint_url = http://10.133.124.2:8080" in cfg
-    assert "addressing_style = path" in cfg      # RGW needs path style
+    assert "addressing_style = path" in cfg  # RGW needs path style
 
     s3cfg = open(files["s3cfg"]).read()
     assert "host_base = 10.133.124.2:8080" in s3cfg
@@ -203,6 +221,7 @@ def test_https_endpoint_sets_use_https(tmp_path, creds):
 # bucket listing (Ceph Manager API — no S3 client involved)
 # --------------------------------------------------------------------------
 
+
 def test_list_buckets_returns_the_data_array():
     mgr = _mgr()
     mgr.list_s3_buckets.return_value = {
@@ -214,7 +233,8 @@ def test_list_buckets_returns_the_data_array():
     }
     with _patch(mgr):
         out = CephS3Credentials.list_buckets(
-            base_url="https://x", cluster="east", uid="alice_1")
+            base_url="https://x", cluster="east", uid="alice_1"
+        )
     assert [b["name"] for b in out] == ["b1", "b2"]
     mgr.list_s3_buckets.assert_called_once_with("east", uid="alice_1")
 
@@ -224,8 +244,10 @@ def test_list_buckets_tolerates_an_empty_or_odd_response():
         mgr = _mgr()
         mgr.list_s3_buckets.return_value = payload
         with _patch(mgr):
-            assert CephS3Credentials.list_buckets(
-                base_url="https://x", cluster="east") == []
+            assert (
+                CephS3Credentials.list_buckets(base_url="https://x", cluster="east")
+                == []
+            )
 
 
 def test_credentials_reuse_an_existing_key_via_include_secret():
@@ -237,14 +259,18 @@ def test_credentials_reuse_an_existing_key_via_include_secret():
     mgr.list_s3_user_keys.return_value = [{"access_key": "AK1", "secret_key": "SK1"}]
     with _patch(mgr):
         CephS3Credentials.get_credentials(
-            base_url="https://x", cluster="east", uid="alice_1")
-    mgr.list_s3_user_keys.assert_called_once_with("east", "alice_1", include_secret=True)
+            base_url="https://x", cluster="east", uid="alice_1"
+        )
+    mgr.list_s3_user_keys.assert_called_once_with(
+        "east", "alice_1", include_secret=True
+    )
     mgr.create_s3_user_key.assert_not_called()
 
 
 def test_module_does_not_import_boto3():
     """FABlib must not gain a boto3 dependency; S3 data transfer is out of scope."""
     import fabrictestbed_extensions.utils.ceph_s3_utils as mod
+
     src = open(mod.__file__).read()
     assert "\nimport boto3" not in src
     assert "\n    import boto3" not in src

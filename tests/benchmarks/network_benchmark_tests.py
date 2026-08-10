@@ -6,14 +6,9 @@ import time
 from typing import List
 
 import paramiko
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentModelType,
-    ComponentType,
-    ExperimentTopology,
-    Labels,
-    ServiceType,
-)
+from fabrictestbed.slice_editor import (Capacities, ComponentModelType,
+                                        ComponentType, ExperimentTopology,
+                                        Labels, ServiceType)
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from fabrictestbed.util.constants import Constants
 

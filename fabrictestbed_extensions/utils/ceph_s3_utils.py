@@ -59,8 +59,9 @@ class CephS3Error(RuntimeError):
     """Raised when an S3 helper cannot complete a request."""
 
 
-def _client(base_url: str, token: Optional[str], token_file: Optional[str],
-            verify: bool) -> CephManagerClient:
+def _client(
+    base_url: str, token: Optional[str], token_file: Optional[str], verify: bool
+) -> CephManagerClient:
     return CephManagerClient(
         base_url=base_url, token=token, token_file=token_file, verify=verify
     )
@@ -126,8 +127,11 @@ class CephS3Credentials:
         """
         c = _client(base_url, token, token_file, verify)
         endpoints = CephS3Credentials.list_s3_endpoints(
-            base_url=base_url, cluster=cluster, token=token,
-            token_file=token_file, verify=verify,
+            base_url=base_url,
+            cluster=cluster,
+            token=token,
+            token_file=token_file,
+            verify=verify,
         )
 
         # Ask for the secret so an existing keypair can be reused. Without this

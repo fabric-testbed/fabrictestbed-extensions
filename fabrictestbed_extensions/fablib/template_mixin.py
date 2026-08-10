@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from abc import abstractmethod
-from typing import List, Optional
 
 import jinja2
 from fabrictestbed.slice_editor import UserData
@@ -23,18 +22,18 @@ class TemplateMixin:
       customising the :class:`jinja2.Environment` before rendering.
     """
 
-    _default_skip: Optional[List[str]] = None
+    _default_skip: list[str] | None = None
     _show_title: str = ""
 
     def __init__(self, **kwargs):
         # V2 specific: dirty flag for caching
         self._fim_dirty: bool = True
 
-        self._cached_reservation_id: Optional[str] = None
-        self._cached_reservation_state: Optional[str] = None
-        self._cached_error_message: Optional[str] = None
-        self._cached_name: Optional[str] = None
-        self._cached_dict: Optional[dict] = None
+        self._cached_reservation_id: str | None = None
+        self._cached_reservation_state: str | None = None
+        self._cached_error_message: str | None = None
+        self._cached_name: str | None = None
+        self._cached_dict: dict | None = None
 
     def _invalidate_cache(self):
         """
@@ -56,7 +55,7 @@ class TemplateMixin:
         """
 
     @abstractmethod
-    def toDict(self, skip: Optional[List[str]]):
+    def toDict(self, skip: list[str] | None):
         """
         Returns the attributes as a dictionary
 
@@ -64,7 +63,7 @@ class TemplateMixin:
         :rtype: dict
         """
 
-    def generate_template_context(self, skip: Optional[List[str]] = None):
+    def generate_template_context(self, skip: list[str] | None = None):
         """Return a dict representing this object for template rendering.
 
         The default implementation delegates to ``self.toDict()``.
@@ -124,7 +123,7 @@ class TemplateMixin:
                 self._cached_error_message = None
         return self._cached_error_message
 
-    def get_reservation_id(self) -> Optional[str]:
+    def get_reservation_id(self) -> str | None:
         """
         Gets the reservation ID of the node.
 
@@ -142,7 +141,7 @@ class TemplateMixin:
                 self._cached_reservation_id = None
         return self._cached_reservation_id
 
-    def get_reservation_state(self) -> Optional[str]:
+    def get_reservation_state(self) -> str | None:
         """
         Gets the reservation state on the FABRIC node.
 
@@ -220,7 +219,7 @@ class TemplateMixin:
         :param output: output format
         :type output: str
         :param fields: list of fields to show
-        :type fields: List[str]
+        :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
         :param colors: True to specify state colors for pandas output

@@ -31,14 +31,9 @@ import traceback
 from typing import List
 
 import ipycytoscape as cy
-from fabrictestbed.slice_editor import (
-    Capacities,
-    ComponentCatalog,
-    ComponentModelType,
-    ComponentType,
-    ExperimentTopology,
-    ServiceType,
-)
+from fabrictestbed.slice_editor import (Capacities, ComponentCatalog,
+                                        ComponentModelType, ComponentType,
+                                        ExperimentTopology, ServiceType)
 from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 from IPython.display import display
 from ipywidgets import Output
