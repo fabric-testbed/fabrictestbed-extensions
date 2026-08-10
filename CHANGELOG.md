@@ -5,22 +5,38 @@ changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## 2.0.7
 
 ### Added
+- Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 - Add ruff linter configuration with `E`, `F`, `W`, `I`, `UP` rule sets (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
 - Add `[testenv:lint]` tox environment for ruff linting checks (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
 - Add gradual mypy configuration in `pyproject.toml` (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
 
+### Fixed
+- Fix `FacilityPort.new_facility_port()` multi-VLAN interface index bug — `index` was never incremented, causing all interfaces to be named `iface-1` when multiple VLANs were passed
+- Fix `Crinkle.post_boot_config()` failing to complete a file upload due to an incorrect hardcoded file path.
+- Fix `Interface.get_ips()` to correctly parse `ip -j addr show` output via new `_get_ip_addr_json()` helper (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix bare `except:` in `Interface.get_ip_addr()` — now catches only `ValueError`/`TypeError` and logs to debug (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+- Fix `Interface.get_ip_addr_ssh()` crash when `addr_info` is empty (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
+
 ### Changed
+- Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
+- Convert integration tests from `unittest.TestCase` to pytest-native style with shared fixtures (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
 - Replace black + isort with ruff for code formatting and import sorting (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
 - Modernize type annotations: `List[X]` → `list[X]`, `Dict[K,V]` → `dict[K,V]`, `Tuple[...]` → `tuple[...]`, `Optional[X]` → `X | None`, `Union[A, B]` → `A | B` across all fablib source files (Issue [#372](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/372))
 - Add `from __future__ import annotations` to `config/config.py` (Issue [#372](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/372))
 
+## 2.0.6
+
+### Changed
+- Update `fabric_fss_utils` dependency to 1.7.0
+
 ## 2.0.4
 
 ### Added
+- Added the Crinkle network debugger from the [CREASE](https://crease.cs.iit.edu/) project.
 - Add `Constants.COMPONENT_MODELS` frozenset for offline validation by external tools (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
 - Add `payload` keyword argument to `FablibException` so exceptions can carry structured error data (Issue [#465](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/465))
 - Add slice state checks to `Component.configure()` and `Component.configure_nvme()` — raise `SliceStateError` if node is not Active (Issue [#464](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/464))
@@ -35,18 +51,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `Node.add_storage()` failing validation when `validate=True` — skip NAS storage in host-level component checks (Issue [#460](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/460))
 - Fix SSH error handling in `Node.execute()` — catch `PasswordRequiredException` and `AuthenticationException` immediately instead of retrying (Issues [#292](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/292), [#298](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/298))
 - Fix log handler cleanup in `FablibManager.close()` to avoid `ResourceWarning` from unclosed file handles (Issue [#201](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/201))
-- Fix inconsistent singular getter behavior — `Slice.get_network()`, `NetworkService.get_interface()`, `FacilityPort.get_interface()`, `Switch.get_interface()` now raise `ResourceNotFoundError` instead of returning `None` (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+- Fix inconsistent singular getter behavior — `Slice.get_network()`, `Node.get_interface()`, `NetworkService.get_interface()`, `FacilityPort.get_interface()`, `Switch.get_interface()` now return `None` by default (backward compatible) and accept `raise_exception=True` to raise `ResourceNotFoundError` instead; a global `FablibManager(raise_on_not_found=True)` setting controls the default for all getters (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
+- Derive `SliceNotFoundError` from `ResourceNotFoundError` so `except ResourceNotFoundError` catches slice-not-found errors too (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
 - Fix `Component.get_interface()` to raise `ResourceNotFoundError` instead of plain `Exception` (Issue [#462](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/462))
 
 ### Changed
 - Improve `Node.add_storage()` docstring to document `auto_mount` limitation and suggest `enable_storage()` for CephFS (Issue [#461](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/461))
-- Improve `Node.add_component()` docstring to note project-level permission requirements (Issue [#463](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/463))
+- Add early validation of component permissions against project tags in token — `validate_node()` now checks `COMPONENT_MODEL_TO_TAGS` before submission (Issue [#463](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/463))
 - Update `Constants` class docstring to highlight public validation collections (Issue [#466](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/466))
 
 ## 2.0.3
 
 ### Added
-- Added the Crinkle network debugger from the [CREASE](https://crease.cs.iit.edu/) project.
 - Add a new `SliceNotFoundError` and use it instead of `Exception` in the `get_slice` method.
 - Update to logging in the dependencies
 

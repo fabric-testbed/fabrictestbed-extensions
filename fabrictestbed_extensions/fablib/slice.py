@@ -2178,15 +2178,23 @@ class Slice:
         else:
             return list(self.network_services.values())
 
-    def get_network(self, name: str = None) -> NetworkService:
+    def get_network(
+        self, name: str = None, raise_exception: bool = None
+    ) -> Optional[NetworkService]:
         """
         Gets a particular network service from this slice.
 
         :param name: the name of the network service to search for
         :type name: str
-        :return: a particular network service
-        :rtype: NetworkService
-        :raises ResourceNotFoundError: if the network is not found
+        :param raise_exception: if True, raise ResourceNotFoundError
+            when the network is not found; if False, return None.
+            When None (default), falls back to the global
+            ``FablibManager.raise_on_not_found`` setting.
+        :type raise_exception: bool
+        :return: a particular network service or None
+        :rtype: Optional[NetworkService]
+        :raises ResourceNotFoundError: if the network is not found and
+            raising is enabled
         """
         try:
             # Check cache first
@@ -2200,7 +2208,18 @@ class Slice:
         except Exception as e:
             log.info(e, exc_info=True)
 
-        raise ResourceNotFoundError(f"Network not found: {name}")
+        should_raise = (
+            raise_exception
+            if raise_exception is not None
+            else (
+                self.get_fablib_manager().raise_on_not_found
+                if self.get_fablib_manager()
+                else False
+            )
+        )
+        if should_raise:
+            raise ResourceNotFoundError(f"Network not found: {name}")
+        return None
 
     def close_ssh(self):
         """Close all cached SSH connections for nodes in this slice.
@@ -3705,8 +3724,9 @@ class Slice:
         resources = self.get_fablib_manager().get_resources()
         nodes = self.get_nodes()
 
+        project_tags = self.get_fablib_manager().get_project_tags()
         all_valid, errors = NodeValidator.validate_nodes(
-            nodes=nodes, resources=resources
+            nodes=nodes, resources=resources, project_tags=project_tags
         )
 
         # Remove invalid nodes

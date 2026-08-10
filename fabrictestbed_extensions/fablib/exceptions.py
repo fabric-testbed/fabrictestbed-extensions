@@ -36,7 +36,7 @@ class SliceTimeoutError(FablibException, TimeoutError):
     pass
 
 
-class SliceNotFoundError(FablibException, KeyError):
+class SliceNotFoundError(ResourceNotFoundError):
     """The requested slice was not found."""
 
     pass

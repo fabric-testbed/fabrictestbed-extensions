@@ -140,6 +140,7 @@ class FablibManager(Config):
         auto_token_refresh: bool = True,
         validate_config: bool = True,
         no_ssh: bool = False,
+        raise_on_not_found: bool = False,
         **kwargs,
     ):
         """
@@ -205,6 +206,11 @@ class FablibManager(Config):
             (thread pool, bastion probing, SSH key validation) and prevents SSH operations
             on nodes. Useful for API-only mode (e.g., MCP server). Can also be set via
             the ``FABRIC_NO_SSH`` environment variable.
+        :param raise_on_not_found: Global default for singular getter methods
+            (``get_network``, ``get_interface``, etc.).  When ``True``, these
+            methods raise ``ResourceNotFoundError`` if the resource is not found;
+            when ``False`` (default), they return ``None``.  Individual calls
+            can override this via their ``raise_exception`` parameter.
         """
         # If id_token is provided, disable auto_token_refresh
         if id_token is not None:
@@ -234,11 +240,13 @@ class FablibManager(Config):
         self.resources = None
         self.auto_token_refresh = auto_token_refresh
         self.last_resources_filtered_by_time = False
+        self.raise_on_not_found = raise_on_not_found
 
         self.setup_logging()
         self._offline = offline
         self._validate_config = validate_config
         self._manager_built = False
+        self._project_tags_cache: Optional[frozenset] = None
         self._execute_thread_pool_size = execute_thread_pool_size
 
         if not offline:
@@ -2388,7 +2396,48 @@ Host * !bastion.fabric-testbed.net
                 if progress:
                     print(", Failed!")
 
-    def validate_node(self, node: Node, allocated: dict = None) -> tuple[bool, str]:
+    def get_project_tags(self) -> frozenset:
+        """Return the set of permission tags for the current project from the token.
+
+        The result is cached for the lifetime of this manager instance.
+        Returns an empty frozenset in offline mode or if the token cannot
+        be decoded.
+
+        :return: frozenset of tag strings (e.g. ``"Component.GPU"``)
+        :rtype: frozenset
+        """
+        if self._project_tags_cache is not None:
+            return self._project_tags_cache
+
+        if self._offline:
+            self._project_tags_cache = frozenset()
+            return self._project_tags_cache
+
+        try:
+            manager = self.get_manager()
+            tok = manager.get_id_token()
+            if not tok:
+                self._project_tags_cache = frozenset()
+                return self._project_tags_cache
+
+            decoded = manager.credmgr.validate(id_token=tok, return_fmt="dict")
+            token_info = decoded.get("token", {})
+            projects = token_info.get("projects") or []
+            current_project_id = self.get_project_id()
+
+            for project in projects:
+                if project.get("uuid") == current_project_id:
+                    self._project_tags_cache = frozenset(project.get("tags", []))
+                    return self._project_tags_cache
+
+            self._project_tags_cache = frozenset()
+        except Exception as e:
+            log.debug(f"Could not retrieve project tags from token: {e}")
+            self._project_tags_cache = frozenset()
+
+        return self._project_tags_cache
+
+    def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
         """
         Validate a node w.r.t available resources on a site before submission.
 
@@ -2402,7 +2451,10 @@ Host * !bastion.fabric-testbed.net
         from fabrictestbed_extensions.fablib.validator import NodeValidator
 
         return NodeValidator.validate_node(
-            node=node, resources=self.get_resources(), allocated=allocated
+            node=node,
+            resources=self.get_resources(),
+            allocated=allocated,
+            project_tags=self.get_project_tags(),
         )
 
     def create_artifact(
