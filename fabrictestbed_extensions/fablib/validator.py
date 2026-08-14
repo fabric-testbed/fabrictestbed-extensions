@@ -221,7 +221,9 @@ class NodeValidator:
                 )
 
             site_state = site.get("state", "")
-            if site_state != "Active":
+            # A PartMaint site only has some of its hosts in maintenance; the host level
+            # check below rejects the hosts that are actually in maintenance
+            if site_state not in ("Active", "PartMaint"):
                 msg = (
                     f"Node cannot be allocated on {site_name}, "
                     f"{site_name} is in {site_state}."

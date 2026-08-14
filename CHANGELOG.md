@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.7
 
 ### Added
+- Add Partial Maintenance (`PartMaint`) mode support: the Control Framework now advertises a site as `PartMaint` when only some of its workers are in maintenance. `get_random_sites()` and node validation keep `PartMaint` sites eligible (their healthy hosts can still take VMs), host state now reflects the effective per-worker maintenance carried on the BQM worker nodes (so hosts inherit a site-wide `Maint`/`PreMaint`), and `fabric-cli` colors the `Maint`/`PreMaint`/`PartMaint` states (PR [#512](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/512))
 - Add S3 (Ceph RGW) support to `FablibManager`: `get_s3_credentials()` fetches or mints the caller's access keypair and can write ready-to-use aws-cli / s3cmd / env config, and `list_s3_buckets()` lists the buckets they own. Backed by the new `fabrictestbed_extensions/utils/ceph_s3_utils.py`
 - Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 - Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `Interface.get_ip_addr_ssh()` crash when `addr_info` is empty (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 
 ### Changed
+- Update `fabrictestbed` dependency to 2.0.8, which brings `fabric-fim` 2.0.0 with the `PartMaint` maintenance state (PR [#512](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/512))
 - Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
 - Convert integration tests from `unittest.TestCase` to pytest-native style with shared fixtures (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
 - Replace black + isort with ruff for code formatting and import sorting (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
