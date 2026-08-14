@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.7
 
 ### Added
+- Add Partial Maintenance (`PartMaint`) mode support: the Control Framework now advertises a site as `PartMaint` when only some of its workers are in maintenance. `get_random_sites()` and node validation keep `PartMaint` sites eligible (their healthy hosts can still take VMs), host state now reflects the effective per-worker maintenance carried on the BQM worker nodes (so hosts inherit a site-wide `Maint`/`PreMaint`), and `fabric-cli` colors the `Maint`/`PreMaint`/`PartMaint` states (PR [#512](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/512))
 - Add S3 (Ceph RGW) support to `FablibManager`: `get_s3_credentials()` fetches or mints the caller's access keypair and can write ready-to-use aws-cli / s3cmd / env config, and `list_s3_buckets()` lists the buckets they own. Backed by the new `fabrictestbed_extensions/utils/ceph_s3_utils.py`
 - Add `parse_ip_addr_json()` module-level helper for extracting IPs from `ip -j addr show` JSON output (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 - Add unit tests for IP address parsing in `tests/unit/test_interface_ip.py` (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
