@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `Interface.get_ip_addr_ssh()` crash when `addr_info` is empty (Issue [#296](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/296))
 
 ### Changed
+- Update `fabrictestbed` dependency to 2.0.8, which brings `fabric-fim` 2.0.0 with the `PartMaint` maintenance state (PR [#512](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/512))
 - Migrate integration tests to use `slice_factory` fixture for automatic cleanup: `test_hello_fabric.py`, `test_list_resources.py`, `test_fablib_node.py`, `test_modify.py`, `test_L2_reconfig_post_reboot.py`, `test_fabnetv4_ext.py`, `test_find_resource_slot.py` (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
 - Convert integration tests from `unittest.TestCase` to pytest-native style with shared fixtures (Issue [#244](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/244))
 - Replace black + isort with ruff for code formatting and import sorting (Issue [#73](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/73))
