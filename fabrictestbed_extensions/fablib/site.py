@@ -750,7 +750,7 @@ class Site:
                 if child.type == NodeType.Server:
                     self.hosts[child.name] = Host(
                         host=child,
-                        state=self.get_state(child.name),
+                        state=self.__host_state(child),
                         ptp=self.get_ptp_capable(),
                         fablib_manager=self.fablib_manager,
                     )
@@ -761,6 +761,23 @@ class Site:
         except Exception as e:
             log.error(f"Error occurred - {e}")
             log.error(traceback.format_exc())
+
+    def __host_state(self, child) -> str:
+        """
+        Effective maintenance state for a host.
+
+        Prefer the state carried on the worker node itself - the broker resolves
+        site level vs worker level maintenance there, so a host inherits a site
+        wide Maint/PreMaint. Fall back to the host's entry in the site level
+        maintenance info for older advertisements that do not carry it.
+        """
+        try:
+            maint_info = getattr(child, "maintenance_info", None)
+            if maint_info is not None and maint_info.get(child.name) is not None:
+                return str(maint_info.get(child.name).state)
+        except Exception:
+            pass
+        return self.get_state(child.name)
 
     def to_json(self) -> str:
         """

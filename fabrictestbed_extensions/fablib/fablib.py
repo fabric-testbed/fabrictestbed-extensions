@@ -1712,15 +1712,17 @@ Host * !bastion.fabric-testbed.net
             Filter out "impossible" sites.
 
             Always filter out sites in maintenance and sites that
-            can't support any VMs.
+            can't support any VMs. A PartMaint site only has some of
+            its hosts in maintenance and can still take VMs on the
+            remaining hosts, so it stays eligible.
             """
             if filter_function is None:
-                if site["state"] == "Active" and site["hosts"] > 0:
+                if site["state"] in ("Active", "PartMaint") and site["hosts"] > 0:
                     return True
             else:
                 if (
                     filter_function(site)
-                    and site["state"] == "Active"
+                    and site["state"] in ("Active", "PartMaint")
                     and site["hosts"] > 0
                 ):
                     return True
