@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "fabrictestbed_extensions"
-version = "2.0.6"
+version = "2.0.8"
 description = "FABRIC Python Client Library and CLI Extensions"
 authors = [
   { name = "Paul Ruth", email = "pruth@renci.org" },
@@ -13,7 +13,12 @@ authors = [
 
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+# fablib uses `datetime.UTC`, which is 3.11+.  Keep this in sync with the
+# floor of the CI matrix, `[tool.ruff] target-version`, `[tool.mypy]
+# python_version`, and `.readthedocs.yaml` -- the `min-python` tox env
+# (and its CI job) fails if they drift apart or if the code starts
+# requiring something newer than this.
+requires-python = ">=3.11"
 dependencies = [
     "ipycytoscape",
     "ipywidgets",
@@ -35,6 +40,9 @@ dependencies = [
 
 classifiers = [
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]

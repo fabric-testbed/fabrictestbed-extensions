@@ -73,6 +73,27 @@ $ tox -e format
 ```
 
 
+## Minimum supported Python version
+
+FABlib supports Python 3.11 and newer.  The floor is declared once, as
+`requires-python` in `pyproject.toml`, and everything else follows it: the
+`Test` workflow matrix, `[tool.ruff] target-version`, `[tool.mypy]
+python_version`, and the interpreter `.readthedocs.yaml` builds with.
+
+If you use a language or standard-library feature newer than that floor,
+raise `requires-python` in the same change -- otherwise `pip` will install
+FABlib on an interpreter that cannot import it.  This check catches both
+that and any drift between the places listed above:
+
+```
+$ tox -e min-python
+```
+
+It runs on every pull request too.  When dropping an old Python version,
+run it after editing `pyproject.toml` and it will tell you what else still
+needs updating.
+
+
 ## Documenting FABlib
 
 FABlib uses Sphinx to generate API documentation from Python
