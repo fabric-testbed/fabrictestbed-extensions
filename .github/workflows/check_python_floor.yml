@@ -1,0 +1,43 @@
+# Check that `requires-python` in pyproject.toml tells the truth.
+#
+# 2.0.7 shipped claiming Python 3.10 support while the code already used
+# `datetime.UTC` (3.11+), so installs resolved on 3.10 and then failed at
+# import. See https://github.com/fabric-testbed/fabrictestbed-extensions/issues/513
+
+name: Minimum Python version check
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  check-python-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+          cache: 'pip'  # cache pip dependencies
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Quote the specifier: unquoted, `>=` is a shell redirect, so pip
+          # would install an unconstrained vermin and write a file named "=1.6".
+          python -m pip install 'vermin>=1.6' pyyaml
+
+      # Fails if the sources need a newer interpreter than we advertise, or
+      # if the CI matrix / ruff / mypy / Read the Docs disagree about which
+      # version is the floor.
+      - name: Check the declared minimum Python version
+        run: |
+          python tools/check_python_floor.py

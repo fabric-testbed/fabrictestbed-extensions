@@ -5,6 +5,16 @@ changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 2.0.8
+
+### Fixed
+- Fix `ImportError: cannot import name 'UTC' from 'datetime'` when installing on Python 3.10. `requires-python` claimed `>=3.10`, but `fablib/slice.py` and `fablib/fablib.py` use `datetime.UTC`, which is Python 3.11+. Python 3.10 was never actually supported — the CI matrix, `[tool.ruff] target-version`, `[tool.mypy] python_version` and `.readthedocs.yaml` all already targeted 3.11 — so `requires-python` is now `>=3.11` and pip will correctly refuse to install on 3.10 instead of failing at import time (Issue [#513](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/513))
+
+### Added
+- Add Python version classifiers (3.11, 3.12, 3.13) to `pyproject.toml` so the supported versions are visible on PyPI
+- Add `tools/check_python_floor.py`, a `[testenv:min-python]` tox environment, and a "Minimum Python version check" CI workflow. `vermin` verifies that no source file requires a newer interpreter than `requires-python` advertises, and a consistency check keeps the CI matrix, ruff, mypy and Read the Docs in agreement with it — including that the declared floor is actually tested, which is what would have caught the 3.10 breakage before release (Issue [#513](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/513))
+
 ## 2.0.7
 
 ### Added
