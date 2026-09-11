@@ -81,6 +81,11 @@ class ResourceConstants:
             Constants.PRETTY_NAME: "ConnectX-6",
             Constants.HEADER_NAME: "ConnectX-6 (100 Gbps x2 NIC)",
         },
+        Constants.SMART_NIC_CONNECTX_6_1P: {
+            Constants.NON_PRETTY_NAME: "nic_connectx_6_1p",
+            Constants.PRETTY_NAME: "ConnectX-6-1P",
+            Constants.HEADER_NAME: "ConnectX-6 (100 Gbps x1 NIC)",
+        },
         Constants.SMART_NIC_CONNECTX_5: {
             Constants.NON_PRETTY_NAME: "nic_connectx_5",
             Constants.PRETTY_NAME: "ConnectX-5",
