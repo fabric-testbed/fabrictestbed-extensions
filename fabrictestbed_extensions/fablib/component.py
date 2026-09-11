@@ -83,6 +83,7 @@ class Component(TemplateMixin):
         Constants.CMP_NIC_Basic: ComponentModelType.SharedNIC_ConnectX_6,
         Constants.CMP_NIC_BlueField2_ConnectX_6: ComponentModelType.SmartNIC_BlueField_2_ConnectX_6,
         Constants.CMP_NIC_ConnectX_6: ComponentModelType.SmartNIC_ConnectX_6,
+        Constants.CMP_NIC_ConnectX_6_1P: ComponentModelType.SmartNIC_ConnectX_6_1P,
         Constants.CMP_NIC_ConnectX_5: ComponentModelType.SmartNIC_ConnectX_5,
         Constants.CMP_NIC_ConnectX_7_100: ComponentModelType.SmartNIC_ConnectX_7_100,
         Constants.CMP_NIC_ConnectX_7_400: ComponentModelType.SmartNIC_ConnectX_7_400,

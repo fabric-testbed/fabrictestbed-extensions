@@ -292,6 +292,7 @@ class Constants:
 
     NIC_SHARED_CONNECTX_6 = "SharedNIC-ConnectX-6"
     SMART_NIC_CONNECTX_6 = "SmartNIC-ConnectX-6"
+    SMART_NIC_CONNECTX_6_1P = "SmartNIC-ConnectX-6-1P"
     SMART_NIC_CONNECTX_5 = "SmartNIC-ConnectX-5"
     SMART_NIC_CONNECTX_7_100 = "SmartNIC-ConnectX-7-100"
     SMART_NIC_CONNECTX_7_400 = "SmartNIC-ConnectX-7-400"
@@ -315,6 +316,8 @@ class Constants:
     CMP_NIC_ConnectX_7_400 = "NIC_ConnectX_7_400"
     CMP_NIC_ConnectX_7_100 = "NIC_ConnectX_7_100"
     CMP_NIC_ConnectX_6 = "NIC_ConnectX_6"
+    # a single dedicated port of a ConnectX-6 whose sibling port is in SR-IOV/shared mode
+    CMP_NIC_ConnectX_6_1P = "NIC_ConnectX_6_1P"
     CMP_NIC_ConnectX_5 = "NIC_ConnectX_5"
     CMP_NIC_P4 = "NIC_P4"
     CMP_NVME_P4510 = "NVME_P4510"
@@ -337,6 +340,7 @@ class Constants:
             CMP_NIC_Basic,
             CMP_NIC_ConnectX_5,
             CMP_NIC_ConnectX_6,
+            CMP_NIC_ConnectX_6_1P,
             CMP_NIC_ConnectX_7_100,
             CMP_NIC_ConnectX_7_400,
             CMP_NIC_BlueField2_ConnectX_6,
@@ -368,6 +372,7 @@ class Constants:
         CMP_FPGA_Xilinx_SN1022: {"Component.FPGA", "Component.FPGA_Xilinx_SN1022"},
         CMP_NIC_ConnectX_5: {"Component.SmartNIC_ConnectX_5"},
         CMP_NIC_ConnectX_6: {"Component.SmartNIC_ConnectX_6"},
+        CMP_NIC_ConnectX_6_1P: {"Component.SmartNIC_ConnectX_6"},
         CMP_NIC_ConnectX_7_100: {"Component.SmartNIC_ConnectX_7_100"},
         CMP_NIC_ConnectX_7_400: {"Component.SmartNIC_ConnectX_7_400"},
         CMP_NIC_BlueField2_ConnectX_6: {"Component.SmartNIC_BlueField2_ConnectX_6"},
