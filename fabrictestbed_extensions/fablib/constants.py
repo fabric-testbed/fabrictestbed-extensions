@@ -264,10 +264,10 @@ class Constants:
             "description": "Ubuntu 20.04 LTS Focal Fossa with BMv2 essentials",
             "default_user": "ubuntu",
         },
-       "default_nixos_24": {
+        "default_nixos_24": {
             "description": "NixOS 24.05 system image",
-            "default_user": "nixos"
-      },
+            "default_user": "nixos",
+        },
     }
 
     ENV_VAR = "env_var"
