@@ -2320,6 +2320,61 @@ class Slice:
 
         return exception_string
 
+    def __wait_for_modify_start(
+        self, previous_state: str = None, timeout: int = 360, interval: int = 10
+    ):
+        """
+        Waits for the orchestrator to pick up a just-submitted modify request.
+
+        modify_slice() returns as soon as the request is *accepted*; the
+        slice-level state only leaves its pre-modify value asynchronously, a
+        few seconds later.  Until it does, the slice still reads StableOK --
+        which both wait() and wait_jupyter() treat as a terminal success
+        state -- so waiting on the slice state directly after a modify is a
+        race.  When it is lost, the wait returns having waited for nothing,
+        the topology fetched afterward is the pre-modify one, and no error is
+        raised anywhere: the caller silently gets a slice without the
+        hardware it just asked for.
+
+        Waiting for the state to *change* is unambiguous where waiting for a
+        particular state is not.
+
+        :param previous_state: slice state sampled immediately before the
+            modify request was sent
+        :type previous_state: String
+        :param timeout: how many seconds to wait for the modify to start
+        :type timeout: int
+        :param interval: how often in seconds to check the slice state
+        :type interval: int
+
+        :raises SliceTimeoutError: if the slice state never changes
+
+        :return: the new slice state
+        :rtype: String
+        """
+        if previous_state is None:
+            # Nothing to compare against -- do not block on a condition that
+            # can never be evaluated; fall through to the caller's own wait.
+            return self.get_state()
+
+        start = time.time()
+        while time.time() < start + timeout:
+            self.update_slice()
+            state = self.get_state()
+            if state != previous_state:
+                log.info(
+                    f"modify picked up: {self.get_name()} "
+                    f"{previous_state} -> {state}"
+                )
+                return state
+            time.sleep(interval)
+
+        raise SliceTimeoutError(
+            f"Timeout exceeded ({timeout} sec) waiting for the modify request on "
+            f"slice {self.get_name()} to be picked up by the orchestrator; state "
+            f"never left {previous_state}"
+        )
+
     def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
@@ -3006,15 +3061,23 @@ class Slice:
             ).strftime("%Y-%m-%d %H:%M:%S %z")
 
         # Request slice from Orchestrator
+        modify_requested = False
+        pre_modify_state = None
         if self._is_modify():
             if lease_in_hours:
                 self.fablib_manager.get_manager().renew_slice(
                     slice_id=self.sm_slice.slice_id, lease_end_time=end_time_str
                 )
             else:
+                # Sample the state *before* the request goes out: it is the
+                # only way to tell "the orchestrator has not picked the
+                # modify up yet" apart from "the modify is finished", since
+                # both read StableOK.  See __wait_for_modify_start().
+                pre_modify_state = self.get_state()
                 slice_reservations = self.fablib_manager.get_manager().modify_slice(
                     slice_id=self.slice_id, graph_model=slice_graph
                 )
+                modify_requested = True
         else:
             # retrieve and validate SSH keys
             ssh_keys = list()
@@ -3057,6 +3120,15 @@ class Slice:
                 # Update the cache with the new slice_id
                 if self.get_fablib_manager():
                     self.get_fablib_manager().update_slice_cache_id(slice_object=self)
+
+        # Covers both waiting paths below (wait_jupyter() and wait()), each of
+        # which would otherwise accept the pre-modify state as "done".
+        if modify_requested and wait:
+            self.__wait_for_modify_start(
+                previous_state=pre_modify_state,
+                timeout=wait_timeout,
+                interval=wait_interval,
+            )
 
         if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
@@ -3623,12 +3695,21 @@ class Slice:
         # Generate Slice Graph
         slice_graph = self.get_fim_topology().serialize()
 
-        # Request slice from Orchestrator
+        # Request slice from Orchestrator.  Sample the state first -- see
+        # __wait_for_modify_start() for why.
+        pre_modify_state = self.get_state()
         slice_reservations = self.fablib_manager.get_manager().modify_slice(
             slice_id=self.slice_id, graph_model=slice_graph
         )
 
         log.debug(f"slice_reservations: {slice_reservations}")
+
+        if wait:
+            self.__wait_for_modify_start(
+                previous_state=pre_modify_state,
+                timeout=wait_timeout,
+                interval=wait_interval,
+            )
 
         if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
             self.wait_jupyter(
