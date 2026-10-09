@@ -82,9 +82,7 @@ class TestUnprovisionedNetworkAddressing(unittest.TestCase):
 
     def _make_network(self):
         try:
-            from fabrictestbed_extensions.fablib.network_service import (
-                NetworkService,
-            )
+            from fabrictestbed_extensions.fablib.network_service import NetworkService
         except Exception:
             self.skipTest("Cannot import NetworkService (requires Python 3.10+)")
 
@@ -115,9 +113,7 @@ class TestNetworkServiceCacheRefresh(unittest.TestCase):
 
     def test_existing_network_service_is_updated_not_just_reassigned(self):
         try:
-            from fabrictestbed_extensions.fablib.network_service import (
-                NetworkService,
-            )
+            from fabrictestbed_extensions.fablib.network_service import NetworkService
             from fabrictestbed_extensions.fablib.slice import Slice
         except Exception:
             self.skipTest("Cannot import fablib (requires Python 3.10+)")
