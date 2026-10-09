@@ -1523,13 +1523,15 @@ class Interface(TemplateMixin):
 
         :raises Exception: If the NIC model does not support sub-interfaces.
         """
-        if self.get_model() not in [
+        supported_models = [
             Constants.CMP_NIC_ConnectX_5,
             Constants.CMP_NIC_ConnectX_6,
-        ]:
+            Constants.CMP_NIC_ConnectX_6_1P,
+        ]
+        if self.get_model() not in supported_models:
             raise Exception(
                 f"Sub interfaces are only supported for the following NIC models: "
-                f"{Constants.CMP_NIC_ConnectX_5}, {Constants.CMP_NIC_ConnectX_6}"
+                f"{', '.join(supported_models)}"
             )
 
         # Hack for finding interfaces

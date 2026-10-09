@@ -92,6 +92,7 @@ _SUMMARY_COMP_TO_ATTR: dict[str, str] = {
     "GPU-A30": Constants.GPU_A30,
     "GPU-A40": Constants.GPU_A40,
     "SmartNIC-ConnectX-6": Constants.SMART_NIC_CONNECTX_6,
+    "SmartNIC-ConnectX-6-1P": Constants.SMART_NIC_CONNECTX_6_1P,
     "SmartNIC-ConnectX-5": Constants.SMART_NIC_CONNECTX_5,
     "SmartNIC-ConnectX-7-100": Constants.SMART_NIC_CONNECTX_7_100,
     "SmartNIC-ConnectX-7-400": Constants.SMART_NIC_CONNECTX_7_400,

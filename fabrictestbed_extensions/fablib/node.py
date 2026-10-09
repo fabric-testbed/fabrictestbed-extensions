@@ -1226,6 +1226,9 @@ class Node(TemplateMixin):
 
         - NIC_ConnectX_6: A dual port 100 Gbps Mellanox ConnectX-6
 
+        - NIC_ConnectX_6_1P: A single dedicated 100 Gbps port of a Mellanox
+          ConnectX-6 whose sibling port is in SR-IOV/shared mode
+
         - NVME_P4510: NVMe Storage Device
 
         - GPU_TeslaT4: Tesla T4 GPU
