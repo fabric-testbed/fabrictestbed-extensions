@@ -977,16 +977,19 @@ class NetworkService(TemplateMixin):
                         gateway = None
             else:
                 # Not yet instantiated — check if gateway was explicitly
-                # set via set_gateway() (common for L2 networks in modify)
+                # set via set_gateway() (common for L2 networks in modify).
+                # If there is no real address yet, return None rather than a
+                # "<name>.gateway" placeholder string: the documented return
+                # type is an address or None, callers use a None check to
+                # tell an unprovisioned network from a provisioned one, and
+                # get_available_ips() does arithmetic on whatever comes back.
                 fablib_data = self.get_fablib_data()
                 try:
                     gw_str = fablib_data.get("subnet", {}).get("gateway")
                     if gw_str:
                         gateway = ipaddress.ip_address(gw_str)
-                    else:
-                        gateway = f"{self.get_name()}.gateway"
                 except Exception:
-                    gateway = f"{self.get_name()}.gateway"
+                    gateway = None
 
             if gateway is not None:
                 self._cached_gateway = gateway
@@ -1087,7 +1090,9 @@ class NetworkService(TemplateMixin):
                             log.warning(f"Failed to get L2 subnet: {e}")
             else:
                 # Not yet instantiated — check if subnet was explicitly
-                # set via set_subnet() (common for L2 networks in modify)
+                # set via set_subnet() (common for L2 networks in modify).
+                # As in get_gateway(), an unprovisioned network yields None
+                # rather than a "<name>.subnet" placeholder string.
                 fablib_data = self.get_fablib_data()
                 if fablib_data.get("subnet") and fablib_data.get("subnet").get(
                     "subnet"
@@ -1095,9 +1100,7 @@ class NetworkService(TemplateMixin):
                     try:
                         subnet = ipaddress.ip_network(fablib_data["subnet"]["subnet"])
                     except Exception:
-                        subnet = f"{self.get_name()}.subnet"
-                else:
-                    subnet = f"{self.get_name()}.subnet"
+                        subnet = None
 
             if subnet is not None:
                 self._cached_subnet = subnet
