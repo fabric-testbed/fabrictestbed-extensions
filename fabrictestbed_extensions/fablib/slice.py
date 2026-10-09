@@ -2134,8 +2134,16 @@ class Slice:
                                 slice=self, fim_network_service=net
                             )
                         else:
-                            # Update existing network service's fim reference
-                            self.network_services[net_name].fim_network_service = net
+                            # Update existing network service's fim reference.
+                            # update() also invalidates the cached subnet,
+                            # gateway and reservation state, which would
+                            # otherwise survive every refresh and pin the
+                            # object to values read before the resources were
+                            # provisioned.  Matches what __initialize_nodes()
+                            # does for nodes.
+                            self.network_services[net_name].update(
+                                fim_network_service=net
+                            )
                 except Exception as e:
                     log.warning(
                         f"Error initializing network service " f"{net_name}: {e}"
