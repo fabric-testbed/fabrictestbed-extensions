@@ -12,7 +12,6 @@ $ARGUMENTS - The module, class, method, or concept to explain.
    - `fabrictestbed_extensions/fablib/` for core classes
    - `fabrictestbed_extensions/cli/` for CLI commands
    - `fabrictestbed_extensions/utils/` for utilities
-   - `fabrictestbed_extensions/editors/` for visualization
    - `tests/` for test patterns
 
 2. Read the source code thoroughly.
