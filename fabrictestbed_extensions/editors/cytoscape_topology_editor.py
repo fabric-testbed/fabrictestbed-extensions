@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+"""A Jupyter widget editor that renders FABRIC sites and links as an interactive Cytoscape graph."""
 
 import functools
 import importlib.resources as pkg_resources
@@ -48,6 +49,13 @@ from .abc_topology_editor import AbcTopologyEditor
 
 
 class CytoscapeTopologyEditor(AbcTopologyEditor):
+    """Render the FABRIC advertised topology (sites and links) as a Cytoscape graph widget.
+
+    Builds a node/edge graph from the advertised topology pulled by the base
+    class, displays it with ``ipycytoscape``, and toggles the FABRIC primary
+    or secondary color scheme on node click.
+    """
+
     # FABRIC design elements https://fabric-testbed.net/branding/style/
     FABRIC_PRIMARY = "#27aae1"
     FABRIC_PRIMARY_LIGHT = "#cde4ef"
@@ -77,6 +85,11 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         self.style = "secondary"
 
     def toggle_style(self):
+        """
+        Flip ``self.style`` between "primary" and "secondary" and apply the
+        corresponding FABRIC color scheme to the Cytoscape widget's node and
+        selected-node CSS.
+        """
         if self.style == "primary":
             self.style = "secondary"
             color = self.FABRIC_SECONDARY
@@ -113,6 +126,11 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
         )
 
     def build_data(self):
+        """
+        Populate ``self.data`` with Cytoscape node and edge entries built
+        from the advertised topology: one node per site, and one edge per
+        link connecting the sites that own the link's two interfaces.
+        """
         cy_nodes = self.data["nodes"]
         cy_edges = self.data["edges"]
 
@@ -157,16 +175,31 @@ class CytoscapeTopologyEditor(AbcTopologyEditor):
             )
 
     def setup_interaction(self):
+        """
+        Wire up ``self.cytoscapeobj`` node click and mouseover events to
+        :meth:`on_click` and :meth:`on_mouseover`.
+        """
         # out = Output()
         self.cytoscapeobj.on("node", "click", self.on_click)
         self.cytoscapeobj.on("node", "mouseover", self.on_mouseover)
 
     def on_click(self, node):
+        """
+        Node click handler: log the clicked node to ``self.out`` and toggle
+        the graph's color style.
+
+        :param node: the Cytoscape node event data that was clicked
+        """
         with self.out:
             print("click: {}".format(str(node)))
             self.toggle_style()
 
     def on_mouseover(self, node):
+        """
+        Node mouseover handler: log the hovered node to ``self.out``.
+
+        :param node: the Cytoscape node event data that was hovered
+        """
         with self.out:
             print("mouseovers: {}".format(str(node)))
 
