@@ -17,21 +17,13 @@ tests/
 │   ├── test_ceph_fs.py      # CephFsUtils tests (NEW)
 │   └── test_template.py     # TemplateMixin tests (NEW)
 ├── integration/             # Requires FABRIC credentials & network
-│   ├── abc_test.py          # Base class for integration tests
 │   ├── test_hello_fabric.py # Basic slice lifecycle
 │   ├── test_fablib_node.py  # Node operations
 │   ├── test_bastion_ssh.py  # SSH connectivity
 │   ├── test_list_resources.py
 │   ├── test_modify.py
 │   ├── test_L2_reconfig_post_reboot.py
-│   ├── test_fabnetv4_ext.py
-│   └── component_tests.py
-└── benchmarks/              # Performance testing
-    ├── gpu_tesla_t4_benchmark.py
-    ├── link_benchmark.py
-    ├── local_network_benchmark.py
-    ├── network_benchmark_tests.py
-    └── nvme_benchmark.py
+│   └── test_fabnetv4_ext.py
 ```
 
 ### Running Tests
@@ -46,9 +38,6 @@ pytest tests/unit/ -k "test_config"  # Run specific tests
 # Integration tests (requires FABRIC setup)
 tox -e integration
 pytest -s tests/integration/test_hello_fabric.py
-
-# Benchmarks
-tox -e benchmarks
 
 # With coverage
 pytest tests/unit/ --cov=fabrictestbed_extensions --cov-report=html
@@ -126,16 +115,22 @@ class NodeValidatorTests(unittest.TestCase):
 ### Pattern: Testing Utilities
 
 ```python
+from unittest.mock import patch
+
+from fabrictestbed_extensions.utils.utils import Utils
+
+
 class UtilsTests(unittest.TestCase):
-    def test_valid_ipv4(self):
-        from fabrictestbed_extensions.utils.node import NodeUtils
-        self.assertEqual(NodeUtils.validIPAddress("192.168.1.1"), "IPv4")
+    def test_explicit_output_type_is_kept(self):
+        self.assertEqual(Utils._determine_output_type("json"), "json")
 
-    def test_valid_ipv6(self):
-        self.assertEqual(NodeUtils.validIPAddress("::1"), "IPv6")
+    @patch.object(Utils, "is_jupyter_notebook", return_value=True)
+    def test_defaults_to_pandas_in_jupyter(self, _):
+        self.assertEqual(Utils._determine_output_type(None), "pandas")
 
-    def test_invalid_ip(self):
-        self.assertEqual(NodeUtils.validIPAddress("not_an_ip"), "Invalid")
+    @patch.object(Utils, "is_jupyter_notebook", return_value=False)
+    def test_defaults_to_text_outside_jupyter(self, _):
+        self.assertEqual(Utils._determine_output_type(None), "text")
 ```
 
 ### Pattern: Testing CephFS Utils
