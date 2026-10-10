@@ -23,6 +23,8 @@
 #
 # Author: Paul Ruth (pruth@renci.org)
 
+"""Helpers for creating, polling and tearing down FABRIC slices in tests and examples."""
+
 
 import time
 
