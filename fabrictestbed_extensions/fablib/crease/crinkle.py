@@ -401,7 +401,7 @@ class CrinkleSlice(Slice):
         fablib_manager: FablibManager,
         name: str = None,
         user_only: bool = True,
-        sm_slice: Optional[SliceDTO] = None,
+        sm_slice: SliceDTO | None = None,
         pcaps_dir: str = None,
         name_prefix: str = None,
         analyzer_name: str = None,
@@ -432,7 +432,7 @@ class CrinkleSlice(Slice):
             sm_slice=sm_slice,
             user_only=user_only,
         )
-        self.monitors: Dict[str, CrinkleMonitor] = {}
+        self.monitors: dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
         self.cnets: dict[str, NetworkService] = {}
