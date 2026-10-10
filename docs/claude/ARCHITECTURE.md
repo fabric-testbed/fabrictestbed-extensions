@@ -40,7 +40,6 @@
 │  fabric_ceph_client ──── Ceph cluster management API             │
 │  fabric_fss_utils ──── File system service utilities             │
 │  pandas/numpy ──── Data processing for resource tables           │
-│  ipycytoscape/ipyleaflet ──── Topology visualization             │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -79,25 +78,15 @@ fabrictestbed_extensions/
 │   ├── cli.py                   # Click commands & groups
 │   └── exceptions.py            # CLI exceptions
 │
-├── editors/                     # Topology visualization (2,600 LOC)
-│   ├── __init__.py
-│   ├── abc_topology_editor.py   # Abstract base editor
-│   ├── cytoscape_topology_editor.py  # Interactive graph
-│   └── geo_topology_editor.py   # Geographic map view
-│
 ├── utils/                       # Utilities (1,950 LOC)
 │   ├── __init__.py
 │   ├── utils.py                 # Display, network, I/O helpers
 │   ├── ceph_fs_utils.py         # CephFS client management
-│   ├── slice.py                 # Slice utility functions
-│   ├── node.py                  # Node SSH helpers
-│   └── abc_utils.py             # Abstract test utilities
+│   └── ceph_s3_utils.py         # Ceph S3 (RGW) credentials
 │
-├── ui/                          # UI components
-│   ├── __init__.py
-│   └── artifact_manager_ui.py   # Artifact browser
-│
-└── images/                      # Static assets
+└── ui/                          # UI components
+    ├── __init__.py
+    └── artifact_manager_ui.py   # Artifact browser
     ├── fabric_logo.png
     ├── server.png
     └── slice_rack.png
@@ -235,13 +224,12 @@ Mount points: `/mnt/cephfs/<cluster>/<user>/<path_slug>/`
 
 | Module | LOC | % of Total |
 |---|---|---|
-| fablib/ (core) | 26,600 | 76% |
-| cli/ | 2,400 | 7% |
-| editors/ | 2,600 | 7% |
+| fablib/ (core) | 24,300 | 72% |
+| cli/ | 2,570 | 8% |
 | utils/ | 1,950 | 6% |
 | ui/ | 280 | 1% |
-| tests/ | ~1,200 | 3% |
-| **Total** | **~35,000** | **100%** |
+| tests/ | 4,490 | 13% |
+| **Total** | **~33,600** | **100%** |
 
 The largest single files are `node.py` (4,800 LOC) and `slice.py` (3,600 LOC),
 reflecting the breadth of operations available on compute nodes and experiment
