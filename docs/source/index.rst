@@ -134,7 +134,6 @@ FABLib functionality is made available in these modules:
    switch
    network_service
    facility_port
-   resources
    site
    artifact
    artifact_manager_ui
