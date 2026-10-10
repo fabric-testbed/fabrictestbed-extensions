@@ -941,10 +941,16 @@ class NetworkService(TemplateMixin):
         Gets the assigned gateway for a FABnetv L3 IPv6 or IPv4 network.
 
         Results are cached for performance. Cache is invalidated when
-        ``set_gateway()`` or ``set_instantiated()`` is called.
+        ``set_gateway()``, ``set_instantiated()`` or ``update()`` is called;
+        ``update()`` runs on every slice topology refresh.
 
-        :return: gateway IP
-        :rtype: IPv4Address or IPv6Network
+        Returns ``None`` until a real address is known, i.e. while the network
+        is not yet provisioned and no gateway was set with ``set_gateway()``.
+        ``None`` is never cached, so a later call picks up the address once
+        the network is provisioned.
+
+        :return: gateway IP, or ``None`` if the network has no address yet
+        :rtype: IPv4Address or IPv6Address or None
         """
         if self._cached_gateway is not None:
             return self._cached_gateway
@@ -1007,10 +1013,14 @@ class NetworkService(TemplateMixin):
         list. By default this will return the first 256 addresses.  If you needed
         more addresses, set the count parameter.
 
-        :param count: number of addresse to include
-        :type slice: Slice
-        :return: gateway IP
-        :rtype: list[IPv4Address]
+        Addresses are counted up from the gateway, so this returns ``None``
+        while ``get_gateway()`` returns ``None`` (the network is not yet
+        provisioned).
+
+        :param count: number of addresses to include
+        :type count: int
+        :return: available IPs, or ``None`` if the network has no gateway yet
+        :rtype: list[IPv4Address] or list[IPv6Address] or None
         """
         try:
             ip_list = []
@@ -1047,10 +1057,16 @@ class NetworkService(TemplateMixin):
         Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network.
 
         Results are cached for performance. Cache is invalidated when
-        ``set_subnet()`` or ``set_instantiated()`` is called.
+        ``set_subnet()``, ``set_instantiated()`` or ``update()`` is called;
+        ``update()`` runs on every slice topology refresh.
 
-        :return: subnet
-        :rtype: IPv4Network or IPv6Network
+        Returns ``None`` until a real subnet is known, i.e. while the network
+        is not yet provisioned and no subnet was set with ``set_subnet()``.
+        ``None`` is never cached, so a later call picks up the subnet once
+        the network is provisioned.
+
+        :return: subnet, or ``None`` if the network has no subnet yet
+        :rtype: IPv4Network or IPv6Network or None
         """
         if self._cached_subnet is not None:
             return self._cached_subnet
@@ -1142,7 +1158,7 @@ class NetworkService(TemplateMixin):
         name: str = None,
         refresh: bool = False,
         raise_exception: bool = None,
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a particular interface on this network service.
 

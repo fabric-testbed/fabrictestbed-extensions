@@ -1,4 +1,6 @@
 # CephFsUtils.py
+"""Generate CephFS client config/keyring/secret bundles and mount scripts for a cluster/user."""
+
 from __future__ import annotations
 
 import json
@@ -56,6 +58,20 @@ class CephFsUtils:
         out_base: Path | str = ".",
         mount_root_default: str = "/mnt/cephfs",
     ):
+        """Validate ``cluster`` and store the inputs needed to later build the client bundle.
+
+        :param cluster: logical cluster name (e.g. ``"asia"``); must be non-empty
+        :type cluster: str
+        :param ceph_conf_text: minimal Ceph configuration text for the cluster
+        :type ceph_conf_text: str
+        :param keyring_blob: keyring content as plain text, or a JSON-encoded string of that text
+        :type keyring_blob: str
+        :param out_base: output directory for the generated artifacts
+        :type out_base: pathlib.Path | str
+        :param mount_root_default: root directory under which per-user mountpoints are created
+        :type mount_root_default: str
+        :raises ValueError: if ``cluster`` is empty after stripping whitespace
+        """
         self.cluster = str(cluster).strip()
         if not self.cluster:
             raise ValueError("cluster must be a non-empty string")

@@ -183,6 +183,32 @@ User → FablibManager.new_slice(name)
         → paramiko SSH via bastion tunnel
 ```
 
+### Slice Modify Flow
+```
+User → slice.add_node(...) / slice.add_l2network(...)    (on an existing slice)
+     → slice.modify(wait=True)        (or slice.submit() on an existing slice)
+        → pre_modify_state = slice.get_state()            (sampled before the request)
+        → orchestrator_proxy.modify_slice(topology)
+        → __wait_for_modify_start(pre_modify_state)
+           → poll until the state != pre_modify_state     (own wait_timeout)
+        → slice.wait() / wait_jupyter()
+           → poll orchestrator until stable               (own wait_timeout)
+        → refresh topology; NetworkService.update() clears cached subnet/gateway
+```
+
+`modify_slice()` returns as soon as the request is accepted, but the slice
+state only leaves `StableOK` a few seconds later. Because `wait()` treats
+`StableOK` as done, waiting on the state directly would race and could
+return the pre-modify topology. Waiting for the state to *change* first
+avoids that. `wait_timeout` applies to each waiting step on its own
+(modify start, slice stable, and SSH for `submit()`), not to the call as a
+whole, and `post_boot_config()` is not bounded by it, so a blocking modify
+can take longer than `wait_timeout` in total.
+
+Until a network is provisioned, `NetworkService.get_subnet()`,
+`get_gateway()` and `get_available_ips()` return `None`. Callers should
+treat `None` as "not provisioned yet".
+
 ### Configuration Flow
 ```
 FablibManager(token_location=..., fabric_rc=...)
@@ -205,7 +231,7 @@ FablibManager(token_location=..., fabric_rc=...)
 | `FabricManagerException` | fabrictestbed | Orchestrator API error |
 | `TokenManagerException` | fabrictestbed | Token refresh failure |
 | `SSHException` | paramiko | SSH connection failure |
-| `TimeoutError` | Slice.wait() | Slice did not stabilize in time |
+| `SliceTimeoutError` (subclass of `TimeoutError`) | Slice.wait(), Slice.submit(), Slice.modify() | Slice did not stabilize in time, or the orchestrator did not pick up a modify request within `wait_timeout` |
 
 ## 6. Thread Safety
 

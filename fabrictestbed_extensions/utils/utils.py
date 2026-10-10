@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
+
+"""Shared helpers for reachability checks, file I/O and table display used across fablib."""
+
 import hashlib
 import json
 import logging

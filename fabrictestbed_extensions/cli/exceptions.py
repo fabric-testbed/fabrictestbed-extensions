@@ -24,14 +24,22 @@
 #
 # Author: Erica Fu (ericafu@renci.org), Komal Thareja (kthare10@renci.org)
 
+"""Exception types raised by the FABRIC CLI."""
+
 
 class TokenExpiredException(Exception):
     """Raised when a FABRIC authentication token has expired."""
 
     def __init__(self, text, data=None):
+        """Store the error message and any additional context.
+
+        :param text: human-readable description of why the token is considered expired
+        :param data: optional extra data associated with the failure (e.g. the stale token or response payload)
+        """
         super(TokenExpiredException, self).__init__()
         self.text = str(text)
         self.data = data
 
     def __str__(self):
+        """Return the stored error message."""
         return self.text

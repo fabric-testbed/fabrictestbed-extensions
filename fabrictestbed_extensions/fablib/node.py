@@ -1388,7 +1388,7 @@ class Node(TemplateMixin):
         network_name: str = None,
         refresh: bool = False,
         raise_exception: bool = None,
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a particular interface associated with a FABRIC node.
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""Standalone packet-sniffing script, uploaded to and run on the Crinkle analyzer
+node, that parses incoming CMA-tagged packets and converts them into SPADE
+provenance records written to the spade_pipe named pipe for SPADE's DSL reporter.
+"""
 import enum
 import getopt
 import queue
@@ -19,6 +23,12 @@ CMA_ID = b"\x65\x87"
 
 
 class CMA(Packet):
+    """Scapy packet definition for the CMA trailer that Crinkle monitors append to
+    captured packets, carrying the monitor id, receiving port, receive timestamp,
+    and the sender-assigned unique packet id fields used to correlate a packet
+    across hops.
+    """
+
     name = "CMA"
     fields_desc = [
         ShortField("len", 0),
@@ -35,6 +45,11 @@ class CMA(Packet):
 
 
 class PktLayers(enum.IntEnum):
+    """Named indices into the layered structure of a captured CMA packet (the outer
+    Ethernet/IPv6 headers, the CMA trailer, and the tunneled inner Ethernet/IP/
+    protocol/payload); currently unused by this script.
+    """
+
     ETHER_O = 0
     IPv6_O = 1
     CMA = 2
@@ -45,7 +60,24 @@ class PktLayers(enum.IntEnum):
 
 
 class Flow:
+    """A hashable 5-tuple-like key (TX/RX ports plus IP/transport addressing)
+    identifying one network flow, used to assign and look up a stable SPADE
+    artifact id per flow.
+    """
+
     def __init__(self, txport, rxport, ip_src, ip_dst, ip_prot, prot_sport, prot_dport):
+        """
+        Store the flow's TX/RX port identifiers and IP/transport addressing used to
+        uniquely identify it.
+
+        :param txport: identifier of the port the packet was retransmitted out of
+        :param rxport: identifier of the port the packet was received on
+        :param ip_src: source IP address of the flow
+        :param ip_dst: destination IP address of the flow
+        :param ip_prot: IP protocol number (e.g. 6 for TCP, 17 for UDP)
+        :param prot_sport: transport-layer source port, if applicable
+        :param prot_dport: transport-layer destination port, if applicable
+        """
         self.txport = txport
         self.rxport = rxport
         self.ip_src = ip_src
@@ -55,6 +87,7 @@ class Flow:
         self.prot_dport = prot_dport
 
     def __hash__(self):
+        """Hash the flow by its full field tuple, so equal flows map to the same dict key."""
         return hash(
             (
                 self.txport,
@@ -68,6 +101,7 @@ class Flow:
         )
 
     def __eq__(self, other):
+        """Compare two flows for equality by their full field tuple."""
         return (
             self.txport,
             self.rxport,
@@ -98,6 +132,24 @@ def analyze_packet(
     monitors: dict[int, dict[int, tuple[str, str]]],
     output_queue: queue.Queue,
 ):
+    """
+    Parse one sniffed packet for a CMA trailer and, if present, convert it into
+    SPADE provenance lines: an "Artifact" vertex the first time a flow is seen,
+    plus "Used"/"WasGeneratedBy" edges recording this packet's receipt and
+    retransmission across the hop. The resulting lines are pushed onto
+    output_queue for the writer thread to persist. Packets without a CMA trailer
+    produce no lines.
+
+    :param pkt: the packet captured by scapy's sniff()
+    :type pkt: Packet
+    :param monitors: maps a monitor id to a mapping of its port id (1 or 2) to
+        that port's SPADE interface identifier, used to resolve the packet's
+        TX/RX port names
+    :type monitors: dict[int, dict[int, tuple[str, str]]]
+    :param output_queue: queue the generated SPADE lines are pushed onto for the
+        writer thread to persist
+    :type output_queue: queue.Queue
+    """
     global flowptr
     global flows
     size = None
@@ -194,6 +246,18 @@ def analyze_packet(
 
 
 def packet_worker(pkt_queue: queue.Queue, monitors, output_queue: queue.Queue):
+    """
+    Continuously pull packets from pkt_queue and analyze them until a None
+    sentinel is received, then exit the worker thread.
+
+    :param pkt_queue: queue of sniffed packets awaiting analysis
+    :type pkt_queue: queue.Queue
+    :param monitors: maps monitor id to its port-id-to-interface-name mapping,
+        passed through to analyze_packet()
+    :param output_queue: queue the generated SPADE lines are pushed onto for the
+        writer thread to persist
+    :type output_queue: queue.Queue
+    """
     while True:
         pkt = pkt_queue.get()
         if pkt is None:
@@ -204,6 +268,14 @@ def packet_worker(pkt_queue: queue.Queue, monitors, output_queue: queue.Queue):
 
 
 def writer_worker(output_queue: queue.Queue):
+    """
+    Open the spade_pipe named pipe and write each batch of SPADE lines pulled from
+    output_queue to it, flushing after every batch, until a None sentinel is
+    received.
+
+    :param output_queue: queue of line lists produced by the analysis workers
+    :type output_queue: queue.Queue
+    """
     with open("spade_pipe", "w") as pipe:
         while True:
             lines = output_queue.get()
@@ -263,6 +335,12 @@ if __name__ == "__main__":
         workers.append(t)
 
     def enqueue_packet(pkt):
+        """
+        Callback passed to scapy's sniff() that queues each captured packet for
+        asynchronous analysis by the worker threads.
+
+        :param pkt: the packet captured by sniff()
+        """
         pkt_queue.put(pkt)
 
     sniff(prn=enqueue_packet, iface=ana_iface)

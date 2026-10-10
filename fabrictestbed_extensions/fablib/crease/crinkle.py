@@ -1,3 +1,8 @@
+"""FABRIC fablib extension for building Crinkle network-provenance slices, which pair
+an analyzer node running SPADE with monitor nodes that transparently capture and tag
+traffic on the networks they are inserted into.
+"""
+
 from __future__ import annotations
 
 import enum
@@ -49,6 +54,10 @@ UBUNTU_IMAGES = [
 
 
 class MonNetData(enum.IntEnum):
+    """Field indices into the tuples stored in ``CrinkleMonitor.creation_data``, each
+    tuple describing one node interface attached to a network the monitor observes.
+    """
+
     NODENAME = 0
     IFACENAME = 1
     MIFACENAME = 2
@@ -57,6 +66,10 @@ class MonNetData(enum.IntEnum):
 
 
 class CrinkleAnalyzer(Node):
+    """A fablib Node that acts as the Crinkle slice's SPADE-based provenance
+    analyzer, aggregating the traffic records collected by the slice's
+    CrinkleMonitor nodes.
+    """
 
     default_image = "crease_ubuntu_22"
     default_cores = 4
@@ -70,6 +83,18 @@ class CrinkleAnalyzer(Node):
         validate: bool = False,
         raise_exception: bool = False,
     ):
+        """
+        Wrap an existing or newly allocated FABRIC node as a Crinkle analyzer.
+
+        :param slice: the fablib slice the node belongs to
+        :type slice: Slice
+        :param node: the FIM node to wrap
+        :type node: FimNode
+        :param validate: validate the node can be allocated given available resources
+        :type validate: bool
+        :param raise_exception: raise an exception instead of returning a failure flag on validation failure
+        :type raise_exception: bool
+        """
         super().__init__(
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
@@ -156,6 +181,10 @@ class CrinkleAnalyzer(Node):
 
 
 class CrinkleMonitor(Node):
+    """A fablib Node that sits inline on a monitored network, capturing and tagging
+    observed packets for forwarding to the analyzer. Its runtime configuration is
+    stored in a MonitorData instance and persisted to the node's FABRIC user data.
+    """
 
     default_image = "crease_ubuntu_22"
     default_cores = 2
@@ -163,6 +192,12 @@ class CrinkleMonitor(Node):
     default_disk = 10
 
     class MonitorData:
+        """Holds a CrinkleMonitor's runtime configuration (its control-network
+        interface, accumulated DPDK launch arguments, and per-interface port
+        mappings), as persisted to and restored from the node's FABRIC user data by
+        CrinkleMonitor.set_monitor_data()/get_monitor_data().
+        """
+
         def __init__(
             self,
             port_nums: int = 0,
@@ -173,6 +208,25 @@ class CrinkleMonitor(Node):
             iface_mappings: dict[str, tuple[str, Interface, bool, int]] = {},
             monitor_id: int = None,
         ):
+            """
+            Store the monitor's control-network interface, DPDK launch arguments,
+            and per-node-interface port mappings.
+
+            :param port_nums: number of DPDK ports already allocated to this monitor, used as the next port index
+            :type port_nums: int
+            :param cmd_args: accumulated DPDK monitor command-line arguments
+            :type cmd_args: str
+            :param net_name: name of the network this monitor observes
+            :type net_name: str
+            :param net_type: the network service type (e.g. "L2Bridge") of the network this monitor observes
+            :type net_type: str
+            :param cnet_iface: the monitor's interface on the Crinkle control network, used to reach the analyzer
+            :type cnet_iface: Interface
+            :param iface_mappings: maps a monitored node interface name to (node name, monitor-side Interface, is_sink flag, DPDK port number)
+            :type iface_mappings: dict[str, tuple[str, Interface, bool, int]]
+            :param monitor_id: unique numeric id assigned to this monitor within the slice
+            :type monitor_id: int
+            """
             self.port_nums = port_nums
             self.cmd_args = cmd_args
             self.net_name = net_name
@@ -188,6 +242,19 @@ class CrinkleMonitor(Node):
         validate: bool = False,
         raise_exception: bool = False,
     ):
+        """
+        Wrap an existing or newly allocated FABRIC node as a Crinkle monitor,
+        loading any previously saved monitor configuration from the node's user data.
+
+        :param slice: the fablib slice the node belongs to
+        :type slice: Slice
+        :param node: the FIM node to wrap
+        :type node: FimNode
+        :param validate: validate the node can be allocated given available resources
+        :type validate: bool
+        :param raise_exception: raise an exception instead of returning a failure flag on validation failure
+        :type raise_exception: bool
+        """
         super().__init__(
             slice=slice, node=node, validate=validate, raise_exception=raise_exception
         )
@@ -324,23 +391,48 @@ class CrinkleMonitor(Node):
 
 
 class CrinkleSlice(Slice):
+    """A fablib Slice subclass that adds Crinkle provenance-monitoring support: an
+    analyzer node, per-site control networks, and CrinkleMonitor nodes that are
+    transparently inserted into monitored L2/L3 networks.
+    """
+
     def __init__(
         self,
         fablib_manager: FablibManager,
         name: str = None,
         user_only: bool = True,
-        sm_slice: Optional[SliceDTO] = None,
+        sm_slice: SliceDTO | None = None,
         pcaps_dir: str = None,
         name_prefix: str = None,
         analyzer_name: str = None,
     ):
+        """
+        Initialize a CrinkleSlice, delegating base slice setup to Slice.__init__
+        and initializing the bookkeeping used to track the Crinkle analyzer and
+        monitor nodes, their control networks, and pending setup flags.
+
+        :param fablib_manager: the FablibManager that owns this slice
+        :type fablib_manager: FablibManager
+        :param name: the name of the slice
+        :type name: str
+        :param user_only: True to restrict slice lookups to the caller's own slices; False to include project slices
+        :type user_only: bool
+        :param sm_slice: an existing orchestrator SliceDTO to attach to, if re-wrapping an existing slice
+        :type sm_slice: Optional[SliceDTO]
+        :param pcaps_dir: local directory used to store downloaded pcap/graph output
+        :type pcaps_dir: str
+        :param name_prefix: prefix Crinkle prepends to the names of resources it creates
+        :type name_prefix: str
+        :param analyzer_name: name of the slice's analyzer node, if already known
+        :type analyzer_name: str
+        """
         super().__init__(
             fablib_manager=fablib_manager,
             name=name,
             sm_slice=sm_slice,
             user_only=user_only,
         )
-        self.monitors: Dict[str, CrinkleMonitor] = {}
+        self.monitors: dict[str, CrinkleMonitor] = {}
         self.analyzer: CrinkleAnalyzer = None
         self.analyzer_name: str = analyzer_name
         self.cnets: dict[str, NetworkService] = {}
@@ -366,17 +458,22 @@ class CrinkleSlice(Slice):
         name_prefix: str = "C",
     ):
         """
-        Create a new crinkle slice
-        :param fablib_manager:
-        :param name:
-        :param analyzer_name:
-        :param cores:
-        :param ram:
-        :param disk:
-        :param site:
-        :param image:
-        :param pcaps_dir:
-        :return: CrinkleSlice
+        Create a new crinkle slice.
+
+        :param fablib_manager: the FablibManager to create and cache the new slice with
+        :type fablib_manager: FablibManager
+        :param name: the name of the new slice
+        :type name: str
+        :param storage: whether the slice should request a storage volume
+        :type storage: bool
+        :param storage_cluster: name of the storage cluster to request the volume from, if storage is True
+        :type storage_cluster: str
+        :param pcaps_dir: local directory used to store downloaded pcap/graph output
+        :type pcaps_dir: str
+        :param name_prefix: prefix Crinkle prepends to the names of resources it creates
+        :type name_prefix: str
+        :return: the new, not-yet-submitted CrinkleSlice
+        :rtype: CrinkleSlice
         """
         slice = CrinkleSlice(
             fablib_manager=fablib_manager,
@@ -439,8 +536,10 @@ class CrinkleSlice(Slice):
         Not intended for API use. See FablibManager.get_crinkle_slice().
 
         Gets an existing crinkle fablib slice using a slice manager slice
-        :param fablib_manager:
-        :param sm_slice:
+        :param fablib_manager: the FablibManager to create and cache the wrapping CrinkleSlice with
+        :type fablib_manager: FablibManager
+        :param sm_slice: the orchestrator slice manager slice to wrap
+        :type sm_slice: SliceDTO
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
         :param name_prefix: The prefix Crinkle will append its resources with, which should not prefix any other resources
@@ -533,7 +632,9 @@ class CrinkleSlice(Slice):
             Default: 10 GB
         :type disk: int
 
-        :param instance_type:
+        :param instance_type: (Optional) A FABRIC catalog instance type name
+            (e.g. "fabric.c4.m16.d500") to use instead of the separate
+            cores/ram/disk values.
         :type instance_type: String
 
         :param host: (Optional) The physical host to deploy the node.
@@ -643,7 +744,7 @@ class CrinkleSlice(Slice):
 
         :param name: The name for the monitor node
         :type name: String
-        :param site:
+        :param site: The name of the site to build the monitor node and its control network on
         :type site: String
         :param user_data
         :type user_data: dict
@@ -766,10 +867,10 @@ class CrinkleSlice(Slice):
             "L2PTP"
         :type type: String
 
-        :param subnet:
+        :param subnet: (Optional) subnet to assign to each per-endpoint network created between an interface and the monitor
         :type subnet: ipaddress
 
-        :param gateway:
+        :param gateway: (Optional) gateway to assign to each per-endpoint network created between an interface and the monitor
         :type gateway: ipaddress
 
         :param user_data
@@ -863,6 +964,15 @@ class CrinkleSlice(Slice):
 
     @staticmethod
     def get_orig_net_name(net: NetworkService) -> str:
+        """
+        Return the original network name Crinkle recorded for a monitored network,
+        before the monitor split it into the per-endpoint networks it actually runs on.
+
+        :param net: the (per-endpoint) network service to look up
+        :type net: NetworkService
+        :return: the original network name, or an empty string if none was stored
+        :rtype: str
+        """
         user_data = net.get_user_data()
         if "crinkle_net_name" in user_data:
             orig_name = user_data["crinkle_net_name"]
@@ -876,12 +986,32 @@ class CrinkleSlice(Slice):
 
     @staticmethod
     def set_orig_net_name(net: NetworkService, name: str):
+        """
+        Save the original network name in the (per-endpoint) network's user data so
+        it can later be recovered by get_orig_net_name().
+
+        :param net: the per-endpoint network service to update
+        :type net: NetworkService
+        :param name: the original, pre-monitor-split network name to store
+        :type name: str
+        """
         logging.info(f"Storing orig name for network {net.get_name()} as {name}")
         user_data = net.get_user_data()
         user_data["crinkle_net_name"] = name
         net.set_user_data(user_data=user_data)
 
     def allocate_hosts(self):
+        """
+        Assign every node and monitor in the slice to an explicit physical worker
+        host, placing each CrinkleMonitor on a different host than the node(s)
+        whose network traffic it observes so the monitor can see traffic crossing
+        between hosts. Availability on each candidate host is checked with
+        NodeValidator before it is assigned, do_allocate_hosts is cleared, and the
+        resulting Crinkle slice config is persisted once allocation is complete.
+
+        :raises Exception: if no worker host has enough free resources to place a
+            node, a monitored endpoint, or a monitor
+        """
         allocated = {}
         logging.info(
             "Allocating Monitors and their connected Nodes to different worker hosts"
@@ -1062,10 +1192,10 @@ class CrinkleSlice(Slice):
         :param wait_jupyter: Special wait for jupyter notebooks.
         :type wait_jupyter: str
 
-        :param post_boot_config:
+        :param post_boot_config: indicator for whether post boot config should be applied
         :type post_boot_config: bool
 
-        :param wait_ssh:
+        :param wait_ssh: indicator for whether to wait for SSH to become available on the slice's nodes
         :type wait_ssh: bool
 
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
@@ -1114,6 +1244,13 @@ class CrinkleSlice(Slice):
         )
 
     def setup_ptp(self):
+        """
+        Install and run the fabric-testbed PTP (Precision Time Protocol) ansible
+        playbook on the analyzer and on each monitor whose site advertises PTP
+        support, running the jobs concurrently and blocking until they all finish.
+        Monitors at sites without PTP support are skipped. Clears do_ptp_setup
+        once complete.
+        """
         prereq_cmd = "sudo apt update && sudo apt install -y ansible git"
         git_cmd = (
             f"cd {REMOTEWORKDIR} && git clone https://github.com/fabric-testbed/ptp.git"
@@ -1663,6 +1800,18 @@ class CrinkleSlice(Slice):
         quiet=False,
         pretty_names=True,
     ):
+        """
+        Build and optionally display a table of each node's interfaces and their
+        current RX/TX packet counters, as collected by dump_counters().
+
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param quiet: if True, suppress printing/display of the table
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
         table = []
         counter_dict = self.dump_counters()
 
@@ -2059,6 +2208,32 @@ class CrinkleSlice(Slice):
         quiet: bool = False,
         pretty_names: bool = True,
     ):
+        """
+        Build and optionally display a table of the per-packet provenance records
+        produced by dump_provenance(), one row per hop in the SPADE lineage graph.
+
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param name: base filename used for the intermediate SPADE graph/dot files
+        :type name: str
+        :param filterin: a tcpdump-like filter string (supports ip, tcp, udp, icmp, and src/dst host/net/port terms) used to restrict which flows are queried
+        :type filterin: str
+        :param tstart: lower time bound for returned packets, expressed in tformat
+        :type tstart: str
+        :param tend: upper time bound for returned packets, expressed in tformat
+        :type tend: str
+        :param tformat: the format of tstart/tend; "epoch" (default) or a datetime.strptime() format string
+        :type tformat: str
+        :param pkt_id: restrict results to a single packet id
+        :type pkt_id: str
+        :param quiet: if True, suppress SPADE query output while building the table
+        :type quiet: bool
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :type pretty_names: bool
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
         table = []
         prov_dict = self.dump_provenance(
             name=name,
@@ -2111,6 +2286,12 @@ class CrinkleSlice(Slice):
         return table
 
     def reset_monitor_string(self):
+        """
+        Rebuild self.monitor_string — the argument list passed to spade_reader.py
+        identifying the analyzer's interface and spare core count, plus each
+        monitor's id and its interface-to-port mappings — from the current
+        analyzer and monitors. Used when the stored string was lost or left blank.
+        """
         logging.info(
             "Crinkle tried to start with blank monitor string, regenerating it"
         )
@@ -2196,10 +2377,20 @@ class CrinkleSlice(Slice):
         return start_list
 
     def stop_monitor(self, monitor: CrinkleMonitor):
+        """
+        Stop the running DPDK monitor process on the given CrinkleMonitor node via SSH.
+
+        :param monitor: the monitor node to stop
+        :type monitor: CrinkleMonitor
+        :raises Exception: if monitor is None
+        """
         if monitor is None:
             raise Exception("monitor cannot be None")
         monitor.execute(f"sudo killall {DPDKNAME}")
 
     def stop_all_monitors(self):
+        """
+        Stop the DPDK monitor process on every CrinkleMonitor node in the slice.
+        """
         for monitor in self.monitors.values():
             self.stop_monitor(monitor=monitor)

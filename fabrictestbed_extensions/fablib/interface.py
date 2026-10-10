@@ -963,7 +963,7 @@ class Interface(TemplateMixin):
             log.warning(f"get_ip_addr_ssh failed for interface {self.get_name()}: {e}")
             return None
 
-    def _get_ip_addr_json(self) -> Optional[dict]:
+    def _get_ip_addr_json(self) -> dict | None:
         """
         Get the full ``ip -j addr show`` JSON dict for this interface's device.
 
