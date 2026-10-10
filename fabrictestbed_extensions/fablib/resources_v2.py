@@ -244,6 +244,19 @@ class ResourcesV2:
         avoid: list[str] | None = None,
         includes: list[str] | None = None,
     ):
+        """Initialize the wrapper and populate it via ``resources_summary``.
+
+        Sets up the caches used to hold sites, hosts, links and facility
+        ports, then immediately calls :meth:`update` with the given
+        filters to fetch the current resource summary.
+
+        :param fablib_manager: the owning ``FablibManager``, used to reach the FabricManagerV2 client
+        :param force_refresh: bypass any cached ``resources_summary`` response and fetch fresh data
+        :param start: start of the time window used to compute available vs. allocated capacity
+        :param end: end of the time window used to compute available vs. allocated capacity
+        :param avoid: site names to exclude from the loaded data
+        :param includes: if given, restrict the loaded data to only these site names
+        """
         self.fablib_manager = fablib_manager
 
         # Summary-derived caches (lists of plain dicts)
