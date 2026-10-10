@@ -64,7 +64,7 @@ class FacilityPort(TemplateMixin):
         :param slice: the fablib slice to have this node on
         :type slice: Slice
 
-        :param fim_object:
+        :param fim_object: the underlying FIM facility node this object wraps
         :type fim_object: FimNode
         """
         super().__init__()
