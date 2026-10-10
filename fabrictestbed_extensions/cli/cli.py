@@ -24,6 +24,9 @@
 #
 # Author: Erica Fu (ericafu@renci.org), Komal Thareja (kthare10@renci.org)
 #
+
+"""Click-based command-line interface for configuring, authenticating and querying FABRIC."""
+
 import datetime
 import json
 import os

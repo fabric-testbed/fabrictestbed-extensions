@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""Abstract base class and shared environment/credential setup for FABRIC test utilities."""
+
 import os
 import time
 import traceback

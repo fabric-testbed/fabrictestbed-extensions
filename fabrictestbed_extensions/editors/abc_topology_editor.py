@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+"""Abstract base class shared by the Jupyter widget-based FABRIC slice editors."""
 import os
 import traceback
 from abc import ABC, abstractmethod
@@ -37,6 +38,15 @@ from fabrictestbed.slice_manager import SliceManager, SliceState, Status
 
 
 class AbcTopologyEditor(ABC):
+    """Common state and slice/node/component management logic for the editors.
+
+    Subclasses (e.g. the Cytoscape and geo map editors) build a concrete
+    widget UI on top of the experiment bookkeeping provided here: pulling
+    advertised FABRIC resources, tracking in-progress "experiments" (slices
+    being edited), and creating/deleting/submitting them through the
+    ``SliceManager``.
+    """
+
     EXPERIMENT_STATE_UNSUBMITTED = "unsubmitted"
     EXPERIMENT_STATE_LIVE = "live"
     EXPERIMENT_STATE_ERROR = "error"
@@ -45,6 +55,12 @@ class AbcTopologyEditor(ABC):
     DEFAULT_SLICE_SELECT_VALUE = "<Choose Slice>"
 
     def __init__(self):
+        """
+        Create a ``SliceManager``, load the user's SSH public key, and pull
+        the currently advertised FABRIC resources and existing slices.
+
+        :raises FileNotFoundError: if ``~/.ssh/id_rsa.pub`` does not exist.
+        """
         self.slice_manager = SliceManager()
         self.advertised_topology = None
         self.experiments = []
@@ -58,6 +74,11 @@ class AbcTopologyEditor(ABC):
         self.update_experiment_list()
 
     def pull_advertised_topology(self):
+        """
+        Fetch the currently advertised FABRIC resource topology from the
+        orchestrator and store it in ``self.advertised_topology``. Prints a
+        message instead of raising if the request does not succeed.
+        """
         return_status, self.advertised_topology = self.slice_manager.resources()
         if return_status != Status.OK:
             print(
@@ -68,7 +89,8 @@ class AbcTopologyEditor(ABC):
         """
         Remove and experiment from the editor.
         Does not delete the slice.
-        :param experiment:
+        :param experiment: the experiment dict to remove from ``self.experiments``,
+            as returned by :meth:`create_experiment` or :meth:`update_experiment_list`
         :return:
         """
         # Unset current experiment
@@ -79,6 +101,15 @@ class AbcTopologyEditor(ABC):
         self.experiments.remove(experiment)
 
     def delete_experiment(self, experiment):
+        """
+        Delete the slice backing ``experiment`` through the slice manager (if
+        it has been submitted) and remove the experiment from the editor.
+
+        Errors from the slice manager are caught and printed rather than
+        raised.
+
+        :param experiment: the experiment dict to delete
+        """
         print("Delete Slice")
         if experiment["editor_slice_state"] != self.EXPERIMENT_STATE_UNSUBMITTED:
             try:
@@ -104,6 +135,15 @@ class AbcTopologyEditor(ABC):
         self.remove_experiment(experiment)
 
     def create_experiment(self, slice_name):
+        """
+        Create a new, unsubmitted experiment with an empty
+        ``ExperimentTopology`` and append it to ``self.experiments``.
+
+        Does nothing (besides printing an error) if an experiment with
+        ``slice_name`` already exists.
+
+        :param slice_name: name for the new slice/experiment
+        """
         print("Create Experiment")
 
         experiment = self.get_experiment_by_name(slice_name)
@@ -128,9 +168,20 @@ class AbcTopologyEditor(ABC):
         )
 
     def set_current_experiment(self, experiment):
+        """
+        Set ``experiment`` as the editor's active experiment.
+
+        :param experiment: the experiment dict to make current
+        """
         self.current_experiment = experiment
 
     def add_node(self, node_name):
+        """
+        Add a new node to the current experiment's topology, using the
+        editor's default site, capacities (core/ram/disk), and image.
+
+        :param node_name: name for the new node
+        """
         print("abc.add_node  node_name {}".format(node_name))
 
         # Add to FABRIC experiment topology
@@ -177,13 +228,13 @@ class AbcTopologyEditor(ABC):
     ):
         """
         Save node
-        :param node_name:
-        :param site_name:
-        :param cores:
-        :param ram:
-        :param disk:
-        :param image:
-        :param image_type:
+        :param node_name: new name to set on the node, if provided
+        :param site_name: new site to set on the node, if provided
+        :param cores: number of CPU cores to set in the node's capacities, if provided
+        :param ram: amount of RAM (GB) to set in the node's capacities, if provided
+        :param disk: amount of disk (GB) to set in the node's capacities, if provided
+        :param image: image reference to set on the node, if provided
+        :param image_type: image type (e.g. qcow2) to set on the node, if provided
         :return:
         """
         print("ABC.save_node")
@@ -260,6 +311,17 @@ class AbcTopologyEditor(ABC):
         return capacities
 
     def add_component(self, component_name, model_type, node=None):
+        """
+        Add a component of ``model_type`` to ``node`` (or ``self.current_node``
+        if ``node`` is not given), generating a unique name if
+        ``component_name`` is not given.
+
+        :param component_name: name for the new component, or ``None`` to
+            generate one
+        :param model_type: component model type to add
+        :param node: node to add the component to; defaults to
+            ``self.current_node``
+        """
         if node == None:
             node = self.current_node
         if component_name == None:
@@ -269,6 +331,12 @@ class AbcTopologyEditor(ABC):
         node.add_component(model_type=model_type, name=component_name)
 
     def get_experiment_by_slice_id(self, slice_id):
+        """
+        Look up an experiment in ``self.experiments`` by its FABRIC slice ID.
+
+        :param slice_id: slice ID to search for
+        :return: the matching experiment dict, or ``None`` if not found
+        """
         experiment = None
         try:
             experiment = list(
@@ -279,6 +347,12 @@ class AbcTopologyEditor(ABC):
         return experiment
 
     def get_experiment_by_name(self, slice_name):
+        """
+        Look up an experiment in ``self.experiments`` by its slice name.
+
+        :param slice_name: slice name to search for
+        :return: the matching experiment dict, or ``None`` if not found
+        """
         experiment = None
         try:
             experiment = list(
@@ -289,6 +363,13 @@ class AbcTopologyEditor(ABC):
         return experiment
 
     def pull_experiment_topology(self, experiment):
+        """
+        Refresh ``experiment["topology"]`` from the slice manager, unless the
+        experiment has not yet been submitted (in which case it has no
+        corresponding slice to query).
+
+        :param experiment: the experiment dict to refresh
+        """
         # do not update if unsubmitted
         if experiment["editor_slice_state"] != self.EXPERIMENT_STATE_UNSUBMITTED:
             status, current_slice_topology = self.slice_manager.get_slice_topology(
@@ -297,9 +378,15 @@ class AbcTopologyEditor(ABC):
             experiment["topology"] = current_slice_topology
 
     def update_current_experiment(self):
+        """
+        Refresh the topology of ``self.current_experiment``.
+        """
         update_experiment_topology(self.current_experiment)
 
     def update_all_experiment_topologies(self):
+        """
+        Refresh the topology of every experiment in ``self.experiments``.
+        """
         for experiment in self.experiments:
             update_experiment_topology(experiment)
 
@@ -308,8 +395,15 @@ class AbcTopologyEditor(ABC):
     ) -> List[str]:
         """
         Update Slice list
-        :param current_slice_name:
-        :param excludes:
+
+        Refresh ``self.experiments`` from FABRIC: pull topologies for new and
+        existing (non-excluded) slices, and mark previously-submitted
+        experiments whose slice is now dead/closing as deleted. Errors from
+        the slice manager are printed rather than raised.
+
+        :param current_slice_name: currently unused by this implementation
+        :param excludes: slice states to exclude when listing existing slices
+            and to treat as deleted/error when reconciling known experiments
         :return:
         """
         print("XXXXXXXXXX update_experiment_list XXXXXXXXXX")
@@ -403,6 +497,16 @@ class AbcTopologyEditor(ABC):
                     experiment["slice"] = found_experiment
 
     def submit_slice(self, experiment):
+        """
+        Serialize ``self.current_experiment``'s topology and submit it to the
+        orchestrator via ``slice_manager.create()``, then record the
+        resulting slice ID and mark the experiment as live.
+
+        Note: the ``experiment`` argument is not used; the method always
+        operates on ``self.current_experiment``.
+
+        :param experiment: unused
+        """
         slice_name = self.current_experiment["slice_name"]
         # ssh_key = self.current_experiment['ssh_key']
         slice_graph = self.current_experiment["topology"].serialize()
@@ -435,7 +539,8 @@ class AbcTopologyEditor(ABC):
     def get_component_model_list(type=None):
         """
         Get component model list
-        :param type:
+        :param type: component type name to filter the catalog by; if
+            ``None``, the full catalog is returned
         :return:
         """
         if type is None:
@@ -449,7 +554,8 @@ class AbcTopologyEditor(ABC):
     def get_component_widget_options_list(type=None):
         """
         Get component widget options list
-        :param type:
+        :param type: component type name to filter the catalog by, passed
+            through to :meth:`get_component_model_list`
         :return:
         """
         return_list = []

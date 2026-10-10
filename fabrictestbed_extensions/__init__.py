@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""Top-level package for the FABRIC testbed Jupyter/CLI extensions."""
+
 from importlib.metadata import version
 
 __all__ = ["__version__"]
