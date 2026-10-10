@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix stale network addressing after a topology refresh: `get_network_services(force_refresh=True)` now calls `NetworkService.update()` instead of only reassigning `fim_network_service`, so cached subnet, gateway and reservation state no longer survive the refresh (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
 - Fix `NetworkService.get_subnet()` / `get_gateway()` returning `"<name>.subnet"` / `"<name>.gateway"` placeholder strings for an unprovisioned network. They now return `None`, matching the documented return type. Before this, the placeholder was cached, passed "is provisioned" checks, and made `get_available_ips()` fail (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
 
+## 2.0.9
+
+### Changed
+- Update BlueField BFB image to `bf-bundle-3.0.0-135_25.04` (PR [#517](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/517))
+
+**Full Changelog**: [rel2.0.8...rel2.0.9](https://github.com/fabric-testbed/fabrictestbed-extensions/compare/rel2.0.8...rel2.0.9)
+
 ## 2.0.8
 
 ### Fixed
