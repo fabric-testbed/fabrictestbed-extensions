@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Sphinx API reference pages for `attestable_switch`, `resources_v2`, `validator`, `config`, `constants`, `exceptions`, `ceph_s3_utils` and `ceph_fs_utils` (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
 - Document the modify-start wait in `Slice.submit()` / `Slice.modify()` and the `None` addressing of unprovisioned networks, and add a slice modify flow to `docs/claude/SPEC.md` (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
 
+### Removed
+- **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
+- **Breaking:** remove the unused `fabrictestbed_extensions.utils.node` (`NodeUtils`), `utils.slice` (`SliceUtils`) and `utils.abc_utils` (`AbcUtils`) modules. They predate fablib, nothing imports them, and they referenced undefined names that would have raised `NameError` (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
+- Remove the `ipycytoscape` and `ipyleaflet` dependencies, which only the topology editors used (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
+- Remove the legacy `tests/integration/abc_test.py` and `component_tests.py`, the `tests/benchmarks` suite and the `benchmarks` tox environment. None of them could run: `component_tests.py` failed to import, `abc_test.py` used `AbcUtils` without importing it, and the benchmark files did not match pytest's `test_*.py` pattern, so `tox -e benchmarks` collected no tests (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
+
 ## 2.0.9
 
 ### Changed

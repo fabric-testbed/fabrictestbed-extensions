@@ -24,7 +24,7 @@ Run these checks (report results for each):
 
 4. **Docstring Coverage (interrogate)**
    ```bash
-   python -m interrogate fabrictestbed_extensions/ --ignore-init-method --ignore-init-module --ignore-magic --ignore-module --ignore-nested-functions --ignore-nested-classes --ignore-private --ignore-semiprivate --fail-under 92.6 --exclude tests --exclude fabrictestbed_extensions/editors 2>&1
+   python -m interrogate fabrictestbed_extensions/ --ignore-init-method --ignore-init-module --ignore-magic --ignore-module --ignore-nested-functions --ignore-nested-classes --ignore-private --ignore-semiprivate --fail-under 92.6 --exclude tests 2>&1
    ```
 
 5. **CHANGELOG Updated**

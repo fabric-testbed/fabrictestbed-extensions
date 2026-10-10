@@ -20,9 +20,7 @@ license = { file = "LICENSE" }
 # requiring something newer than this.
 requires-python = ">=3.11"
 dependencies = [
-    "ipycytoscape",
     "ipywidgets",
-    "ipyleaflet",
     "tabulate",
     "fabrictestbed==2.0.8",
     "paramiko",
@@ -138,4 +136,4 @@ ignore-semiprivate = true
 omit-covered-files = true
 verbose = 0
 fail-under = 92.6
-exclude = ["tests", "fabrictestbed_extensions/editors"]
+exclude = ["tests"]

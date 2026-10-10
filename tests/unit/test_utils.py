@@ -3,44 +3,6 @@
 import unittest
 
 
-class TestNodeUtilsIPValidation(unittest.TestCase):
-    """Tests for NodeUtils.validIPAddress."""
-
-    def _validate(self, ip):
-        """Import and call validIPAddress. The function references
-        ip_address/IPv4Address but they aren't imported in the module,
-        so we test the logic by importing what's needed."""
-        from ipaddress import IPv4Address, ip_address
-
-        try:
-            return "IPv4" if type(ip_address(ip)) is IPv4Address else "IPv6"
-        except ValueError:
-            return "Invalid"
-
-    def test_valid_ipv4(self):
-        self.assertEqual(self._validate("192.168.1.1"), "IPv4")
-
-    def test_valid_ipv4_loopback(self):
-        self.assertEqual(self._validate("127.0.0.1"), "IPv4")
-
-    def test_valid_ipv6(self):
-        self.assertEqual(self._validate("::1"), "IPv6")
-
-    def test_valid_ipv6_full(self):
-        self.assertEqual(
-            self._validate("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), "IPv6"
-        )
-
-    def test_invalid_ip(self):
-        self.assertEqual(self._validate("not_an_ip"), "Invalid")
-
-    def test_empty_string(self):
-        self.assertEqual(self._validate(""), "Invalid")
-
-    def test_ipv4_with_port(self):
-        self.assertEqual(self._validate("192.168.1.1:8080"), "Invalid")
-
-
 class TestConstantsImageNames(unittest.TestCase):
     """Tests for Constants.IMAGE_NAMES dictionary structure."""
 

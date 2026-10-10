@@ -163,9 +163,7 @@ FABNetv6Ext, L3VPN, PortMirror
 **Modules**:
 - `utils.py` — Table display, network reachability, file I/O, Jupyter detection
 - `ceph_fs_utils.py` — CephFS credential building, mount script generation
-- `slice.py` — Slice convenience methods (delete_all, find)
-- `node.py` — SSH execution through bastion, IP validation
-- `abc_utils.py` — Abstract base for test infrastructure
+- `ceph_s3_utils.py` — Ceph S3 (RGW) credential lookup and client config
 
 ## 4. Data Flow
 

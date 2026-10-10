@@ -43,7 +43,6 @@ FablibManager (Config) → Slice → Node/NetworkService/Component/Interface
 - `fabrictestbed_extensions/fablib/` — core classes
 - `fabrictestbed_extensions/cli/` — Click CLI
 - `fabrictestbed_extensions/utils/` — helpers
-- `fabrictestbed_extensions/editors/` — visualization
 
 ### Key Constraints
 - Python >=3.11, built with flit
