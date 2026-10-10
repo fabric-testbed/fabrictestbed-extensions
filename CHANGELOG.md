@@ -16,9 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2.0.9
 
 ### Changed
-- Update BlueField BFB image to `bf-bundle-3.0.0-135_25.04` (PR [#517](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/517))
-
-**Full Changelog**: [rel2.0.8...rel2.0.9](https://github.com/fabric-testbed/fabrictestbed-extensions/compare/rel2.0.8...rel2.0.9)
+- Update the BlueField DPU bootstream installed by `Component.component_configure_commands` from `bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb` (DOCA 2.9.1) to `bf-bundle-3.4.0-92_26.04_ubuntu-24.04_64k_prod.bfb` (DOCA 3.4.0), for `NIC_ConnectX_7_100`, `NIC_ConnectX_7_400` and `NIC_BlueField2_ConnectX_6` (Issue [#516](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/516))
 
 ## 2.0.8
 

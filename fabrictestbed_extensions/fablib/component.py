@@ -101,17 +101,17 @@ class Component(TemplateMixin):
         Constants.CMP_NIC_ConnectX_7_100: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
             "sudo ip link set tmfifo_net0 up",
-            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-3.4.0-92_26.04_ubuntu-24.04_64k_prod.bfb --rshim rshim0",
         ],
         Constants.CMP_NIC_ConnectX_7_400: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
             "sudo ip link set tmfifo_net0 up",
-            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-3.4.0-92_26.04_ubuntu-24.04_64k_prod.bfb --rshim rshim0",
         ],
         Constants.CMP_NIC_BlueField2_ConnectX_6: [
             "sudo ip addr add 192.168.100.1/24 dev tmfifo_net0",
             "sudo ip link set tmfifo_net0 up",
-            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-2.9.1-40_24.11_ubuntu-22.04_prod.bfb --rshim rshim0",
+            "sudo bfb-install --bfb /opt/bf-bundle/bf-bundle-3.4.0-92_26.04_ubuntu-24.04_64k_prod.bfb --rshim rshim0",
         ],
     }
 
