@@ -23,6 +23,8 @@
 #
 # Author: Komal Thareja(kthare10@renci.org)
 
+"""Jupyter widget UI for browsing, downloading and uploading FABRIC artifacts."""
+
 import os
 import tarfile
 
