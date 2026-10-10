@@ -1,1 +1,1 @@
-"""Helper utilities for managing FABRIC slices, nodes, Ceph storage and ABC authentication."""
+"""Helper utilities shared across fablib: display and file helpers, and Ceph storage (CephFS and S3) client tools."""
