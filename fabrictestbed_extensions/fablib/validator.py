@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from fim.user import ComponentType
 
@@ -59,8 +59,8 @@ class NodeValidator:
     @staticmethod
     def check_component_permissions(
         node: Node,
-        project_tags: Optional[frozenset] = None,
-    ) -> Tuple[bool, str]:
+        project_tags: frozenset | None = None,
+    ) -> tuple[bool, str]:
         """Check component permissions against project tags.
 
         This check runs independently of resource availability so that
@@ -177,9 +177,9 @@ class NodeValidator:
     def validate_node(
         node: Node,
         resources,
-        allocated: Optional[dict] = None,
-        project_tags: Optional[frozenset] = None,
-    ) -> Tuple[bool, str]:
+        allocated: dict | None = None,
+        project_tags: frozenset | None = None,
+    ) -> tuple[bool, str]:
         """Validate a single node against available resources.
 
         Unlike the former ``FablibManager.validate_node``, this accepts
@@ -291,8 +291,8 @@ class NodeValidator:
     def validate_nodes(
         nodes: list[Node],
         resources,
-        project_tags: Optional[frozenset] = None,
-    ) -> Tuple[bool, Dict[str, str]]:
+        project_tags: frozenset | None = None,
+    ) -> tuple[bool, dict[str, str]]:
         """Batch-validate multiple nodes sharing a single allocated dict.
 
         Resources are fetched once by the caller and passed in.
