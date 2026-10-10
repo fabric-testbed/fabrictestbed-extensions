@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Komal Thareja (kthare10@renci.org)
+"""Loading, validation, and persistence of FABlib runtime configuration (fabric_rc/yaml files, environment overrides, and token/SSH key locations)."""
 from __future__ import annotations
 
 import json
@@ -293,8 +294,9 @@ class Config:
 
         :param file_path: path to the config file; can be bashrc or yaml
         :type file_path: str
-        :param kwargs:
-        :type kwargs:
+        :param kwargs: extra runtime config overrides applied after the
+            file is loaded, written directly into ``runtime_config``
+        :type kwargs: dict
 
         :raises ConfigException: if config file does not exist
         """
