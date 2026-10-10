@@ -2211,7 +2211,7 @@ class Slice:
 
     def get_network(
         self, name: str = None, raise_exception: bool = None
-    ) -> Optional[NetworkService]:
+    ) -> NetworkService | None:
         """
         Gets a particular network service from this slice.
 
