@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+
+"""IP-address validation and other FABRIC node-level helper functions."""
+
 from .abc_utils import AbcUtils
 
 
