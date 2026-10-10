@@ -1158,7 +1158,7 @@ class NetworkService(TemplateMixin):
         name: str = None,
         refresh: bool = False,
         raise_exception: bool = None,
-    ) -> Optional[Interface]:
+    ) -> Interface | None:
         """
         Gets a particular interface on this network service.
 
