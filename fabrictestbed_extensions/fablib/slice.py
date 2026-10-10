@@ -2987,11 +2987,20 @@ class Slice:
 
         Blocking calls can, optionally, print progress info.
 
+        When this submits a modify of an existing slice and is blocking, it
+        first waits for the orchestrator to pick up the modify request (the
+        slice state leaves its pre-modify value), then waits for the slice to
+        become stable.  See :meth:`modify` for why.  ``wait_timeout`` applies to
+        each waiting step on its own (modify start, slice stable, SSH), not to
+        the call as a whole, and ``post_boot_config()`` is not bounded by it, so
+        a blocking call can take longer than ``wait_timeout`` in total.
 
         :param wait: indicator for whether to wait for the slice's resources to be active
         :type wait: bool
 
-        :param wait_timeout: how many seconds to wait on the slice resources
+        :param wait_timeout: how many seconds to wait on the slice resources;
+            for a modify, applied separately to waiting for the modify to
+            start and to waiting for the slice to become stable
         :type wait_timeout: int
 
         :param wait_interval: how often to check on the slice resources
@@ -3028,6 +3037,10 @@ class Slice:
         :type validate: bool
 
         :return: slice_id
+
+        :raises SliceTimeoutError: if a blocking call times out, including
+            when the orchestrator does not pick up a modify request within
+            ``wait_timeout``
         """
         slice_reservations = []
 
@@ -3676,13 +3689,27 @@ class Slice:
 
         Blocking calls can, optionally, print progress info.
 
+        When blocking, the call first waits for the orchestrator to pick up
+        the modify request (the slice state leaves its pre-modify value),
+        then waits for the slice to become stable.  The modify request is
+        accepted before the slice state changes, and the pre-modify
+        ``StableOK`` would otherwise be mistaken for a finished modify.
+        ``wait_timeout`` applies to each waiting step on its own, not to the
+        call as a whole, and ``post_boot_config()`` is not bounded by it, so a
+        blocking call can take longer than ``wait_timeout`` in total.
 
         :param wait: indicator for whether to wait for the slice's resources to be active
-        :param wait_timeout: how many seconds to wait on the slice resources
+        :param wait_timeout: how many seconds to wait on the slice resources;
+            applied separately to waiting for the modify to start and to
+            waiting for the slice to become stable
         :param wait_interval: how often to check on the slice resources
         :param progress: indicator for whether to show progress while waiting
         :param wait_jupyter: Special wait for jupyter notebooks.
         :param post_boot_config: Flag indicating if post boot config should be applied
+
+        :raises SliceTimeoutError: if the orchestrator does not pick up the
+            modify request, or the slice does not become stable, within
+            ``wait_timeout``
         """
 
         # When no_ssh is set, force SSH-dependent options off
