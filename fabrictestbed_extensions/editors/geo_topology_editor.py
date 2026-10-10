@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 # Author: Paul Ruth (pruth@renci.org)
+"""A Jupyter widget editor for building FABRIC slices on an interactive geographic map."""
 
 import functools
 import importlib.resources as pkg_resources
@@ -61,6 +62,15 @@ from .abc_topology_editor import AbcTopologyEditor
 
 
 class GeoTopologyEditor(AbcTopologyEditor):
+    """Visual slice editor built on an ``ipyleaflet`` map of FABRIC sites.
+
+    Draws available FABRIC sites and links on a US map, and provides
+    "slice", "node", and "link" dashboards (collections of ``ipywidgets``
+    controls docked onto the map) for creating slices, adding/editing/
+    deleting nodes and components, and submitting or deleting slices through
+    the inherited :class:`AbcTopologyEditor` operations.
+    """
+
     # Constants
     # U.S. Default Map Center
     DEFAULT_US_MAP_CENTER = (38.12480976137421, -85.7129)
@@ -282,6 +292,14 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.canvas.add_control(dc)
 
     def set_dashboard(self, dashboard_name):
+        """
+        Switch the active dashboard to ``dashboard_name``: reset the
+        previously active dashboard's button color and highlight the newly
+        selected dashboard's button.
+
+        :param dashboard_name: key into ``self.dashboards`` for the dashboard
+            to activate (e.g. "slice_dashboard", "node_dashboard")
+        """
         # Unset the old dashbord
         self.current_dashboard["button"].style.button_color = self.FABRIC_PRIMARY
 
@@ -293,7 +311,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         Handle click on a site
         :param site_name: site name
-        :param kwargs:
+        :param kwargs: ipyleaflet marker click event data, including
+            "event" and "coordinates"
         :return:
         """
         print("click_site: " + str(kwargs))
@@ -313,7 +332,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         Handle double click on a site
         :param site_name: site name
-        :param kwargs:
+        :param kwargs: ipyleaflet marker double-click event data, including
+            "event"
         :return:
         """
         print("dbclick_site: " + str(kwargs))
@@ -325,7 +345,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         Handle mouse over a site
         :param site_name: site name
-        :param kwargs:
+        :param kwargs: ipyleaflet marker mouseover event data (unused)
         :return:
         """
         print("mouseover_site")
@@ -338,7 +358,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         Handle mouse out on a site
         :param site_name: site name
-        :param kwargs:
+        :param kwargs: ipyleaflet marker mouseout event data (unused)
         :return:
         """
         print("mouseout_site")
@@ -351,7 +371,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         Print ant paths
         :param path_name: path name
-        :param kwargs:
+        :param kwargs: ipyleaflet AntPath click event data (unused besides
+            logging)
         :return:
         """
         print("ant_path")
@@ -1082,7 +1103,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def zoom_control(self, change):
         """
         Zoom control
-        :param change:
+        :param change: the traitlets change event for the canvas's "zoom"
+            property (unused besides logging)
         :return:
         """
         print("CHANGE: " + str(change))
@@ -1205,8 +1227,10 @@ class GeoTopologyEditor(AbcTopologyEditor):
         """
         Location plus
         :param location: current location
-        :param plus_x:
-        :param plus_y:
+        :param plus_x: amount to add to the location's longitude (second
+            element)
+        :param plus_y: amount to add to the location's latitude (first
+            element)
         :return:
         """
         return location[0] + plus_y, location[1] + plus_x
@@ -1223,7 +1247,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def set_edit_slice_dashboard(self, button):
         """
         Set Edit slice dashboard
-        :param button:
+        :param button: the button widget that triggered the event (unused)
         :return:
         """
         self.save_node_widget_data()
@@ -1233,7 +1257,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def rebuild_node_dashboard(self, node_name=None):
         """
         Rebuild Node dashboard
-        :param node_name:
+        :param node_name: name of the node to select/display; if ``None``
+            and the topology has nodes, the first node (sorted by name) is
+            selected
         :return:
         """
         print(" XX REBUILD NODE DASHBOARD XX")
@@ -1382,7 +1408,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def set_edit_node_dashboard(self, button):
         """
         Set Edit node dashboard
-        :param button:
+        :param button: the button widget that triggered the event (unused)
         :return:
         """
         self.set_dashboard("node_dashboard")
@@ -1402,7 +1428,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def set_edit_link_dashboard(self, button):
         """
         Set edit link dashboard
-        :param button:
+        :param button: the button widget that triggered the event (unused)
         :return:
         """
         self.set_dashboard("link_dashboard")
@@ -1412,7 +1438,7 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def add_node(self, node_name):
         """
         Add node
-        :param node_name:
+        :param node_name: name for the new node
         :return:
         """
         try:
@@ -1520,8 +1546,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def get_capacity_value(self, node, name="core"):
         """
         Get capacity value
-        :param node:
-        :param name:
+        :param node: topology node to read the "capacities" property from
+        :param name: which capacity to extract: "core", "ram", or "disk"
         :return:
         """
         # name options: 'core', 'ram', 'disk'
@@ -1541,7 +1567,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def update_select_node_widget_option_name(self, name):
         """
         Update select node widget option name
-        :param name:
+        :param name: node name to set as the select widget's value, without
+            triggering the node-selection change handler; if falsy, the
+            widget's value is left unchanged
         :return:
         """
         self.dashboards["node_dashboard"]["select_node_widget"].observe(
@@ -1556,7 +1584,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def node_dashboard_node_name_event(self, change):
         """
         Node dashboard node name event
-        :param change:
+        :param change: the ipywidgets traitlets change event for the node
+            name text widget; ``change["new"]`` is the newly entered name
         :return:
         """
         print("node_dashboard_node_name_event")
@@ -1569,6 +1598,11 @@ class GeoTopologyEditor(AbcTopologyEditor):
         self.update_select_node_widget_option_name(new_name)
 
     def save_node_widget_data(self):
+        """
+        Write the node dashboard's current widget values (name, site,
+        cores, RAM, disk, image, image type) onto ``self.current_node`` via
+        :meth:`AbcTopologyEditor.save_node`.
+        """
         self.save_node(
             topology_node=self.current_node,
             node_name=self.dashboards["node_dashboard"]["node_name_widget"].value,
@@ -1583,7 +1617,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def node_dashboard_select_node_event(self, change):
         """
         Node dashboard select node event
-        :param change:
+        :param change: the ipywidgets traitlets change event for the node
+            select widget; ``change["old"]``/``change["new"]`` are the
+            previously and newly selected node names
         :return:
         """
         print("node_dashboard_select_node_event")
@@ -1612,8 +1648,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def node_dashboard_add_node(self, button, **kwargs):
         """
         Node dashboard add node
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         print("Add Node")
@@ -1642,8 +1678,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def node_dashboard_delete_node(self, button, **kwargs):
         """
         Node dashboard delete node
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         super().delete_node(
@@ -1655,7 +1691,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def delete_experiment(self, slice_name):
         """
         Delete a slice
-        :param slice_name:
+        :param slice_name: unused; the current experiment is deleted
+            regardless of this value
         :return:
         """
         print("Delete Slice")
@@ -1681,8 +1718,12 @@ class GeoTopologyEditor(AbcTopologyEditor):
     ) -> List[str]:
         """
         Update Slice list
-        :param current_slice_name:
-        :param excludes:
+        :param current_slice_name: name of the slice to make the editor's
+            current experiment after refreshing; if ``None``, the first
+            slice (sorted by name) is selected
+        :param excludes: slice states to exclude when refreshing the
+            experiment list, forwarded to
+            :meth:`AbcTopologyEditor.update_experiment_list`
         :return:
         """
         super().update_experiment_list(
@@ -1780,7 +1821,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def open_slice_from_file(self, file_name):
         """
         Open existing slice from a file
-        :param file_name:
+        :param file_name: path of the file to load the slice from (not yet
+            implemented)
         :return:
         """
         print("TODO open_slice_from_file")
@@ -1788,7 +1830,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def save_slice_to_file(self, file_name):
         """
         Save slice to a file
-        :param file_name:
+        :param file_name: path of the file to save the slice to (not yet
+            implemented)
         :return:
         """
         print("TODO save_slice_to_file")
@@ -1796,8 +1839,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def slice_dashboard_select_slice(self, change, **kwargs):
         """
         Slice dashboard select slice
-        :param change:
-        :param kwargs:
+        :param change: the ipywidgets traitlets change event for the slice
+            select widget; ``change.new`` is the newly selected slice name
+        :param kwargs: additional event data (unused)
         :return:
         """
         self.update_slice_list(current_slice_name=change.new)
@@ -1806,8 +1850,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def slice_dashboard_update_slices(self, button, **kwargs):
         """
         Slice dashboard update slice
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         current_slice_name = None
@@ -1819,8 +1863,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def slice_dashboard_open_slice(self, button, **kwargs):
         """
         Slice dashboard open slice
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         self.open_slice_from_file("GET FILE NAME/PATH FROM DASHBOARD")
@@ -1828,8 +1872,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def slice_dashboard_new_slice(self, button, **kwargs):
         """
         Slice dashboard new slice
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         new_slice_name = self.dashboards["slice_dashboard"]["slice_name_widget"].value
@@ -1843,8 +1887,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def slice_dashboard_delete_experiment(self, button, **kwargs):
         """
         Slice dashboard delete slice
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         self.delete_experiment(
@@ -1854,8 +1898,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def slice_dashboard_submit_slice(self, button, **kwargs):
         """
         Slice dashboard submit slice
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         super().submit_slice(self.current_experiment)
@@ -1865,8 +1909,8 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def node_dashboard_add_component(self, button, **kwargs):
         """
         Node dashboard add component
-        :param button:
-        :param kwargs:
+        :param button: the button widget that triggered the event (unused)
+        :param kwargs: additional event data (unused)
         :return:
         """
         # Add a compopnent to the current node dashboard
@@ -1880,8 +1924,9 @@ class GeoTopologyEditor(AbcTopologyEditor):
     def handle_draw(self, info, **kwargs):
         """
         Handle draw
-        :param info:
-        :param kwargs:
+        :param info: the ipyleaflet ``DrawControl`` event data for the drawn
+            shape (unused besides logging)
+        :param kwargs: additional event data (unused)
         :return:
         """
         print("handle_draw")
