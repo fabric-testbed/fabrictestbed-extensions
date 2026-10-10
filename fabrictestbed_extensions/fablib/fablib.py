@@ -2839,39 +2839,43 @@ Host * !bastion.fabric-testbed.net
         on a specific cluster.
 
         This:
-          1. Fetches the minimal ``ceph.conf`` for ``region``.
-          2. Exports the user's keyring from that cluster.
-          3. Writes files under ``out_base/<region>/``:
-             ``ceph.conf``, ``ceph.client.<user>.secret``,
-             ``ceph.client.<user>.keyring``, and a mount script
-             ``mount_<user>.sh`` that mounts every path found in the MDS caps.
+
+        1. Fetches the minimal ``ceph.conf`` for ``cluster``.
+        2. Exports the user's keyring from that cluster.
+        3. Writes files under ``out_base/<cluster>/``:
+           ``ceph.conf``, ``ceph.client.<user>.secret``,
+           ``ceph.client.<user>.keyring``, and a mount script
+           ``mount_<user>.sh`` that mounts every path found in the MDS caps.
 
         :param str cluster: Target cluster name (e.g., ``"europe"``).
         :param str out_base: Output root directory for artifacts
-                             (default: ``"~/.ceph"``).
+            (default: ``"~/.ceph"``).
         :param str mount_root: Mount prefix used by the generated script
-                               (default: ``"/mnt/cephfs"``).
+            (default: ``"/mnt/cephfs"``).
         :param bool verify: Verify TLS certificates when calling the API.
-                            Defaults to ``True``.
-        :return: Details of the generated bundle, for example::
+            Defaults to ``True``.
+        :return: Details of the generated bundle, for example:
 
-            {
-              "cluster_dir": "~/.ceph/europe",
-              "ceph_conf": "~/.ceph/europe/ceph.conf",
-              "secret_file": "~/.ceph/europe/ceph.client.alice.secret",
-              "keyring_file": "~/.ceph/europe/ceph.client.alice.keyring",
-              "mount_script": "~/.ceph/europe/mount_alice.sh",
-              "entity": "client.alice",
-              "user": "alice",
-              "mounts": [
-                {
-                  "fsname": "CEPH-FS-01",
-                  "path": "/volumes/_nogroup/alice/....",
-                  "mount_point": "/mnt/cephfs/europe/alice/volumes__nogroup_alice____"
-                },
-                ...
-              ]
-            }
+            .. code-block:: text
+
+              {
+                "cluster_dir": "~/.ceph/europe",
+                "ceph_conf": "~/.ceph/europe/ceph.conf",
+                "secret_file": "~/.ceph/europe/ceph.client.alice.secret",
+                "keyring_file": "~/.ceph/europe/ceph.client.alice.keyring",
+                "mount_script": "~/.ceph/europe/mount_alice.sh",
+                "entity": "client.alice",
+                "user": "alice",
+                "mounts": [
+                  {
+                    "fsname": "CEPH-FS-01",
+                    "path": "/volumes/_nogroup/alice/....",
+                    "mount_point": "/mnt/cephfs/europe/alice/volumes__nogroup_alice____"
+                  },
+                  ...
+                ]
+              }
+
         :rtype: dict
         :raises ValueError: If ``cluster`` is unknown or the user name is empty.
         :raises RuntimeError: If no clusters are discovered or keyring is unavailable.
