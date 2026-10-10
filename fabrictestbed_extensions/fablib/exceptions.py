@@ -20,6 +20,12 @@ class FablibException(Exception):
     """
 
     def __init__(self, *args, payload=None, **kwargs):
+        """Initialize the exception, storing optional structured error data.
+
+        :param payload: structured data describing the failure (e.g. a list of
+            validation errors or the object that caused the error), accessible
+            afterwards via ``exc.payload``
+        """
         super().__init__(*args, **kwargs)
         self.payload = payload
 
