@@ -1,3 +1,5 @@
+"""Mixin that adds Jinja2-based template rendering to FABRIC resource classes."""
+
 from __future__ import annotations
 
 import json
@@ -26,6 +28,10 @@ class TemplateMixin:
     _show_title: str = ""
 
     def __init__(self, **kwargs):
+        """Initialize the per-instance cache used to avoid re-reading the FIM object.
+
+        :param kwargs: accepted for cooperative multiple inheritance; unused here
+        """
         # V2 specific: dirty flag for caching
         self._fim_dirty: bool = True
 
