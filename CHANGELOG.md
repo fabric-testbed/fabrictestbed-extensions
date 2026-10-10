@@ -6,6 +6,13 @@ changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+- Fix `Slice.submit()` / `Slice.modify()` with `wait=True` returning the pre-modify topology with no error. `modify_slice()` returns as soon as the request is accepted, but the slice state only leaves `StableOK` a few seconds later, and `wait()` / `wait_jupyter()` treat `StableOK` as done. The state is now sampled before the request is sent, and the wait first waits for it to change (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
+- Fix stale network addressing after a topology refresh: `get_network_services(force_refresh=True)` now calls `NetworkService.update()` instead of only reassigning `fim_network_service`, so cached subnet, gateway and reservation state no longer survive the refresh (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
+- Fix `NetworkService.get_subnet()` / `get_gateway()` returning `"<name>.subnet"` / `"<name>.gateway"` placeholder strings for an unprovisioned network. They now return `None`, matching the documented return type. Before this, the placeholder was cached, passed "is provisioned" checks, and made `get_available_ips()` fail (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
+
 ## 2.0.8
 
 ### Fixed
