@@ -13,7 +13,7 @@ entire project for missing docstrings.
    files below threshold:
    ```bash
    cd /mnt/scratch_nvme/work/fabrictestbed-extensions
-   python -m interrogate -v fabrictestbed_extensions/ --ignore-init-method --ignore-init-module --ignore-magic --ignore-module --ignore-nested-functions --ignore-nested-classes --ignore-private --ignore-semiprivate --exclude tests --exclude fabrictestbed_extensions/editors 2>&1
+   python -m interrogate -v fabrictestbed_extensions/ --ignore-init-method --ignore-init-module --ignore-magic --ignore-module --ignore-nested-functions --ignore-nested-classes --ignore-private --ignore-semiprivate --exclude tests 2>&1
    ```
 
 2. For each public method missing a docstring:
