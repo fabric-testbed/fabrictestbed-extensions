@@ -252,7 +252,8 @@ class Slice:
         :type quiet: bool
         :param colors: True to specify state colors for pandas output
         :type colors: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
 
         :return: table in format specified by output parameter
@@ -347,7 +348,8 @@ class Slice:
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
@@ -411,7 +413,8 @@ class Slice:
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
         :param refresh: Refresh the interface object with latest Fim info
         :type refresh: bool
@@ -505,8 +508,11 @@ class Slice:
         """
         Create a new slice
 
-        :param fablib_manager:
-        :param name:
+        :param fablib_manager: the FablibManager instance the slice is
+            created through and registered with
+        :type fablib_manager: FablibManager
+        :param name: the name to give the slice
+        :type name: str
         :param storage: Enable CephFS storage on every node added to
             this slice.  Default: False
         :type storage: bool
@@ -532,8 +538,13 @@ class Slice:
         Not intended for API use.
 
         Gets an existing fablib slice using a slice manager slice
-        :param fablib_manager:
-        :param sm_slice:
+
+        :param fablib_manager: the FablibManager instance the slice is
+            created through and registered with
+        :type fablib_manager: FablibManager
+        :param sm_slice: the slice manager (orchestrator) slice DTO to
+            wrap in a fablib Slice
+        :type sm_slice: SliceDTO
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
         :return: Slice
@@ -1134,13 +1145,16 @@ class Slice:
             "L2PTP"
         :type type: String
 
-        :param subnet:
+        :param subnet: optional subnet to assign to the L2 network
+            (e.g. for an L2Bridge network, used to configure node IPs)
         :type subnet: ipaddress
 
-        :param gateway:
+        :param gateway: optional gateway address to assign to the L2
+            network, used together with ``subnet``
         :type gateway: ipaddress
 
-        :param user_data:
+        :param user_data: arbitrary user metadata to attach to the
+            network service
         :type user_data: dict
 
         :return: a new L2 network service
@@ -1214,7 +1228,8 @@ class Slice:
         :param type: L3 network type "IPv4" or "IPv6"
         :type type: String
 
-        :param user_data:
+        :param user_data: arbitrary user metadata to attach to the
+            network service
         :type user_data: dict
 
         :param technology: Specify the technology used should be set
@@ -1330,7 +1345,9 @@ class Slice:
             Default: default_rocky_9
         :type image: String
 
-        :param instance_type:
+        :param instance_type: (Optional) A specific instance type
+            (flavor) to request for the node; when set, this overrides
+            the ``cores``, ``ram``, and ``disk`` parameters
         :type instance_type: String
 
         :param host: (Optional) The physical host to deploy the node.
@@ -1339,7 +1356,9 @@ class Slice:
             number 1: "star-w1.fabric-testbed.net".  Default: unset
         :type host: String
 
-        :param user_data:
+        :param user_data: (Optional) Arbitrary key/value metadata merged
+            into the node's user data, available to post-boot
+            configuration
         :type user_data: dict
 
         :param avoid: (Optional) A list of sites to avoid is allowing
@@ -1503,7 +1522,9 @@ class Slice:
             on.  Default to a random site.
         :type site: String
 
-        :param user_data:
+        :param user_data: (Optional) Arbitrary key/value metadata merged
+            into the switch's user data, available to post-boot
+            configuration
         :type user_data: dict
 
         :param avoid: (Optional) A list of sites to avoid is allowing
@@ -2810,10 +2831,13 @@ class Slice:
         :type timeout: int
         :param interval: how often in seconds to check on slice state
         :type interval: int
-        :param verbose:
+        :param verbose: if True, display the node and network tables on
+            every polling iteration, not just once the slice is stable
         :type verbose: bool
 
-        :param post_boot_config:
+        :param post_boot_config: if True, run post-boot configuration
+            once the slice becomes stable; skipped for a slice that is
+            only in an advance-allocation (future) state
         :type post_boot_config: bool
 
         :raises Exception: if the slice state is undesirable, or waiting times out
@@ -3012,10 +3036,14 @@ class Slice:
         :param wait_jupyter: Special wait for jupyter notebooks.
         :type wait_jupyter: str
 
-        :param post_boot_config:
+        :param post_boot_config: indicator for whether to run post-boot
+            configuration once the slice is stable (ignored when ``wait``
+            is False, which disables it)
         :type post_boot_config: bool
 
-        :param wait_ssh:
+        :param wait_ssh: indicator for whether to wait for SSH to become
+            available on the slice's nodes before running post-boot
+            configuration (ignored when ``wait`` is False)
         :type wait_ssh: bool
 
         :param extra_ssh_keys: Optional list of additional SSH public keys to be installed in the slivers of this slice
@@ -3335,7 +3363,8 @@ class Slice:
         :type filter_function: lambda
         :param colors: True to add colors to the table when possible
         :type colors: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
 
         :return: table in format specified by output parameter
@@ -3486,7 +3515,8 @@ class Slice:
         :type filter_function: lambda
         :param colors: True to add colors to the table when possible
         :type colors: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
 
         :return: table in format specified by output parameter
@@ -3597,7 +3627,8 @@ class Slice:
         :type filter_function: lambda
         :param colors: True to add colors to the table when possible
         :type colors: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
 
         :return: table in format specified by output parameter
