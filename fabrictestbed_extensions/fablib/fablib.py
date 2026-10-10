@@ -246,7 +246,7 @@ class FablibManager(Config):
         self._offline = offline
         self._validate_config = validate_config
         self._manager_built = False
-        self._project_tags_cache: Optional[frozenset] = None
+        self._project_tags_cache: frozenset | None = None
         self._execute_thread_pool_size = execute_thread_pool_size
 
         if not offline:
@@ -2460,7 +2460,7 @@ Host * !bastion.fabric-testbed.net
 
         return self._project_tags_cache
 
-    def validate_node(self, node: Node, allocated: dict = None) -> Tuple[bool, str]:
+    def validate_node(self, node: Node, allocated: dict = None) -> tuple[bool, str]:
         """
         Validate a node w.r.t available resources on a site before submission.
 
