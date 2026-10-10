@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix stale network addressing after a topology refresh: `get_network_services(force_refresh=True)` now calls `NetworkService.update()` instead of only reassigning `fim_network_service`, so cached subnet, gateway and reservation state no longer survive the refresh (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
 - Fix `NetworkService.get_subnet()` / `get_gateway()` returning `"<name>.subnet"` / `"<name>.gateway"` placeholder strings for an unprovisioned network. They now return `None`, matching the documented return type. Before this, the placeholder was cached, passed "is provisioned" checks, and made `get_available_ips()` fail (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519))
 
+### Removed
+- **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function
+- **Breaking:** remove the unused `fabrictestbed_extensions.utils.node` (`NodeUtils`), `utils.slice` (`SliceUtils`) and `utils.abc_utils` (`AbcUtils`) modules. They predate fablib, nothing imports them, and they referenced undefined names that would have raised `NameError`
+- Remove the `ipycytoscape` and `ipyleaflet` dependencies, which only the topology editors used
+- Remove the legacy `tests/integration/abc_test.py` and `component_tests.py`, the `tests/benchmarks` suite and the `benchmarks` tox environment. None of them could run: `component_tests.py` failed to import, `abc_test.py` used `AbcUtils` without importing it, and the benchmark files did not match pytest's `test_*.py` pattern, so `tox -e benchmarks` collected no tests
+
 ## 2.0.9
 
 ### Changed
