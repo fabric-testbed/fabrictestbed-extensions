@@ -138,6 +138,23 @@ FABLib functionality is made available in these modules:
    site
    artifact
    artifact_manager_ui
+   attestable_switch
+   resources_v2
+   validator
+   config
+   constants
+   exceptions
+
+Storage helpers
+---------------
+
+Helpers for FABRIC's Ceph-backed storage:
+
+.. toctree::
+   :maxdepth: 1
+
+   ceph_s3_utils
+   ceph_fs_utils
 
 
 Indices and tables
