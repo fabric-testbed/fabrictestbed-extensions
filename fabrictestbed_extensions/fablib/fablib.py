@@ -1003,11 +1003,15 @@ Host * !bastion.fabric-testbed.net
         :param filter_function: lambda function
         :type filter_function: lambda
         :return: table in format specified by output parameter
-        :param update:
+        :param update: if True, refresh the cached resources from the
+            FABRIC services before listing; otherwise use the existing
+            cached data
         :type update: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
-        :param force_refresh:
+        :param force_refresh: if True, bypass the resources object's
+            internal cache and re-query the FABRIC services
         :type force_refresh: bool
         :param latlon: convert address to latlon, makes online call to openstreetmaps.org
         :type: Object
@@ -1077,11 +1081,15 @@ Host * !bastion.fabric-testbed.net
         :param filter_function: lambda function
         :type filter_function: lambda
         :return: table in format specified by output parameter
-        :param update:
+        :param update: if True, refresh the cached resources from the
+            FABRIC services before listing; otherwise use the existing
+            cached data
         :type update: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
-        :param force_refresh:
+        :param force_refresh: if True, bypass the resources object's
+            internal cache and re-query the FABRIC services
         :type force_refresh: bool
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
         :type: datetime
@@ -1143,9 +1151,12 @@ Host * !bastion.fabric-testbed.net
         :type quiet: bool
         :param filter_function: lambda function
         :type filter_function: lambda
-        :param update:
+        :param update: if True, refresh the cached resources from the
+            FABRIC services before listing; otherwise use the existing
+            cached data
         :type update: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
         :return: table in format specified by output parameter
         :rtype: Object
@@ -1199,10 +1210,13 @@ Host * !bastion.fabric-testbed.net
         :param filter_function: lambda function
         :type filter_function: lambda
 
-        :param update:
+        :param update: if True, refresh the cached resources from the
+            FABRIC services before listing; otherwise use the existing
+            cached data
         :type update: bool
 
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
 
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
@@ -1251,7 +1265,8 @@ Host * !bastion.fabric-testbed.net
         :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
         :return: table in format specified by output parameter
         :rtype: Object
@@ -1301,7 +1316,8 @@ Host * !bastion.fabric-testbed.net
         :type fields: list[str]
         :param quiet: True to specify printing/display
         :type quiet: bool
-        :param pretty_names:
+        :param pretty_names: if True, use human-readable column names
+            in the output table instead of the raw field names
         :type pretty_names: bool
         :param latlon: convert address to lat/lon
         :type latlon: bool
@@ -1364,10 +1380,14 @@ Host * !bastion.fabric-testbed.net
         Get a reference to the resources object. The resources object
         is used to query for available resources and capacities.
 
-        :param update:
+        :param update: if True, refresh the cached resources from the
+            FABRIC services.  Even when False, the resources are refreshed
+            if there is no cached object yet, if ``start`` or ``end`` is
+            given, or if the previous call was filtered by time
         :type update: bool
 
-        :param force_refresh:
+        :param force_refresh: if True, bypass the resources object's
+            internal cache and re-query the FABRIC services
         :type force_refresh: bool
 
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
@@ -1876,18 +1896,12 @@ Host * !bastion.fabric-testbed.net
 
         :param name: the name to give the slice
         :type name: String
-        :param analyzer_name: Name for the
-        :type analyzer_name: String
-        :param cores:
-        :type cores: int
-        :param ram:
-        :type ram: int
-        :param disk:
-        :type disk: int
-        :param site:
-        :type site: String
-        :param pcaps_dir:
+        :param pcaps_dir: directory where the analyzer node stores
+            captured packet files
         :type pcaps_dir: String
+        :param name_prefix: prefix used to name the resources Crinkle
+            creates in this slice (analyzer node, monitor nodes, networks)
+        :type name_prefix: String
 
         :return: A new Crinkle slice
         :rtype: CrinkleSlice
@@ -1913,10 +1927,13 @@ Host * !bastion.fabric-testbed.net
         FABRIC services.  Otherwise, this method returns the existing
         information.
 
-        :param update:
+        :param update: if True, refresh the cached resources from the
+            FABRIC services; otherwise return the existing cached object
+            unchanged (it is still fetched if nothing is cached yet)
         :type update: bool
 
-        :param force_refresh:
+        :param force_refresh: if True, bypass the resources object's
+            internal cache and re-query the FABRIC services
         :type force_refresh: bool
 
         :param start: start time in UTC format: %Y-%m-%d %H:%M:%S %z
@@ -2233,8 +2250,12 @@ Host * !bastion.fabric-testbed.net
 
         :param excludes: A list of slice states to exclude from the output list
         :type excludes: list[SliceState]
-        :param slice_name:
-        :param slice_id:
+        :param slice_name: if given, restrict the search to the slice with
+            this name instead of listing all slices
+        :type slice_name: str
+        :param slice_id: if given, restrict the search to the slice with
+            this id instead of listing all slices
+        :type slice_id: str
         :param user_only: True indicates return own slices; False indicates return project slices
         :type user_only: bool
         :param show_un_submitted: Show unsubmitted slices;
@@ -2501,9 +2522,12 @@ Host * !bastion.fabric-testbed.net
     ) -> list[Artifact]:
         """
         Gets a list of artifacts either based on artifact id, artifact title or tag.
-        :param artifact_title:
-        :param artifact_id:
-        :param tag:
+        :param artifact_title: search for artifacts whose title matches this value
+        :type artifact_title: str
+        :param artifact_id: look up the artifact with this unique identifier
+        :type artifact_id: str
+        :param tag: search for artifacts matching this tag
+        :type tag: str
 
         :return: a list of Artifacts
         :rtype: list[Artifact]
