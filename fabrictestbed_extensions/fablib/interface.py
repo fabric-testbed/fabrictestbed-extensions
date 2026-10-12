@@ -42,6 +42,7 @@ from fim.user import Capacities, InterfaceType, Labels
 from tabulate import tabulate
 
 from fabrictestbed_extensions.fablib.constants import Constants
+from fabrictestbed_extensions.fablib.exceptions import ValidationError
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 if TYPE_CHECKING:
@@ -1072,11 +1073,14 @@ class Interface(TemplateMixin):
             fablib_data[self.MODE] = str(mode)
 
         mode = fablib_data[self.MODE]
+        allocated = None
         if addr:
-            fablib_data[self.ADDR] = str(self.get_network().allocate_ip(addr))
+            allocated = self.get_network().allocate_ip(addr)
         elif mode == self.AUTO:
             if self.get_network():
-                fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
+                allocated = self.get_network().allocate_ip()
+        if allocated is not None:
+            fablib_data[self.ADDR] = str(allocated)
 
         self.set_fablib_data(fablib_data)
 
@@ -1201,8 +1205,10 @@ class Interface(TemplateMixin):
         mode = fablib_data.get(self.MODE, self.MANUAL)
 
         if mode == self.AUTO and addr is None:
-            fablib_data[self.ADDR] = str(self.get_network().allocate_ip())
-            self.set_fablib_data(fablib_data)
+            allocated = self.get_network().allocate_ip()
+            if allocated is not None:
+                fablib_data[self.ADDR] = str(allocated)
+                self.set_fablib_data(fablib_data)
 
         if mode not in [self.CONFIG, self.AUTO]:
             # Manual mode; just bring the link up via legacy path
@@ -1211,7 +1217,15 @@ class Interface(TemplateMixin):
 
         subnet = self.get_network().get_subnet()
         addr = fablib_data.get(self.ADDR)
-        if not addr or not subnet:
+        if not addr or addr == "None" or not subnet:
+            self.ip_link_up()
+            return
+
+        try:
+            network.check_public_ip(addr)
+        except ValidationError as e:
+            # Configuring it could take over another slice's public IP.
+            log.error(f"Not configuring {addr} on {self.get_name()}: {e}")
             self.ip_link_up()
             return
 

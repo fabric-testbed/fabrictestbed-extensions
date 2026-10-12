@@ -54,6 +54,7 @@ import json
 import logging
 import sys
 import time
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -2396,6 +2397,54 @@ class Slice:
             f"never left {previous_state}"
         )
 
+    def __public_ip_requests_sent(self):
+        """
+        Note that pending public IP requests have been sent to FABRIC.
+
+        Called once the orchestrator has accepted a create or modify request.
+        From then on a network's public IP labels reflect what the AM granted
+        rather than the local request.
+        """
+        for net in self.network_services.values():
+            net._mark_public_ip_request_submitted()
+
+    def __report_public_ip_changes(self):
+        """
+        Warn when the AM granted different public IPs than were requested.
+
+        The AM replaces a requested FabNetv4Ext address that another slice
+        already holds.  A user who then configures the requested address
+        takes over the other slice's IP, so make the substitution visible.
+        """
+        to_check = [
+            net
+            for net in self.network_services.values()
+            if net.get_requested_public_ips() and not net._public_ip_changes_reported
+        ]
+        if not to_check:
+            return
+        try:
+            # Read the granted labels from the orchestrator, not the local
+            # topology.
+            self.update_topology()
+        except Exception as e:
+            log.warning(f"Could not refresh slice to check public IPs: {e}")
+            return
+        for net in to_check:
+            # Report each request once, not on every later submit.
+            net._public_ip_changes_reported = True
+            changes = net.get_public_ip_changes()
+            if not changes:
+                continue
+            msg = (
+                f"Network {net.get_name()}: public IP(s) "
+                f"{changes['not_granted']} were already in use and were not "
+                f"granted; the AM assigned {changes['granted']} instead. "
+                f"Configure only addresses from get_public_ips()."
+            )
+            log.warning(msg)
+            warnings.warn(msg, UserWarning, stacklevel=3)
+
     def wait(self, timeout: int = 360, interval: int = 10, progress: bool = False):
         """
         Waits for the slice on the slice manager to be in a stable, running state.
@@ -3119,6 +3168,7 @@ class Slice:
                     slice_id=self.slice_id, graph_model=slice_graph
                 )
                 modify_requested = True
+                self.__public_ip_requests_sent()
         else:
             # retrieve and validate SSH keys
             ssh_keys = list()
@@ -3161,6 +3211,7 @@ class Slice:
                 # Update the cache with the new slice_id
                 if self.get_fablib_manager():
                     self.get_fablib_manager().update_slice_cache_id(slice_object=self)
+                self.__public_ip_requests_sent()
 
         # Covers both waiting paths below (wait_jupyter() and wait()), each of
         # which would otherwise accept the pre-modify state as "done".
@@ -3177,6 +3228,7 @@ class Slice:
                 interval=wait_interval,
                 post_boot_config=post_boot_config,
             )
+            self.__report_public_ip_changes()
             return self.slice_id
 
         elif wait:
@@ -3198,6 +3250,7 @@ class Slice:
 
             if not advance_allocation and post_boot_config:
                 self.post_boot_config()
+            self.__report_public_ip_changes()
         else:
             self.update()
             return self.slice_id
@@ -3759,6 +3812,7 @@ class Slice:
         slice_reservations = self.fablib_manager.get_manager().modify_slice(
             slice_id=self.slice_id, graph_model=slice_graph
         )
+        self.__public_ip_requests_sent()
 
         log.debug(f"slice_reservations: {slice_reservations}")
 
@@ -3775,6 +3829,7 @@ class Slice:
                 interval=wait_interval,
                 post_boot_config=post_boot_config,
             )
+            self.__report_public_ip_changes()
             return self.slice_id
 
         elif wait:
@@ -3788,6 +3843,7 @@ class Slice:
 
             if post_boot_config:
                 self.post_boot_config()
+            self.__report_public_ip_changes()
         else:
             self.update()
 
