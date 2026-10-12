@@ -1,6 +1,8 @@
 """Unit tests for CephFsUtils."""
 
 import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -171,3 +173,57 @@ class TestCephFsUtilsBuild(unittest.TestCase):
             fsnames = {m["fsname"] for m in result["mounts"]}
             self.assertIn("fs1", fsnames)
             self.assertIn("fs2", fsnames)
+
+
+class TestCephFsUtilsMountScriptPersistence(unittest.TestCase):
+    """Tests that the generated mount script persists mounts in /etc/fstab."""
+
+    KEYRING = (
+        "[client.carol]\n"
+        "\tkey = AQBKeyForCarol==\n"
+        '\tcaps mds = "allow rw fsname=fs1 path=/alpha, allow rw fsname=fs2 path=/beta"\n'
+        '\tcaps mon = "allow r"\n'
+        '\tcaps osd = "allow rw"\n'
+    )
+
+    def _build_script(self, tmpdir):
+        utils = CephFsUtils(
+            cluster="east",
+            ceph_conf_text="[global]\nmon_host = 10.0.0.1\n",
+            keyring_blob=self.KEYRING,
+            out_base=tmpdir,
+        )
+        result = utils.build()
+        with open(result["mount_script"]) as f:
+            return f.read()
+
+    def test_script_defines_persist_helper(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = self._build_script(tmpdir)
+        self.assertIn("persist_fstab() {", script)
+        self.assertIn("/etc/fstab", script)
+        self.assertIn("CEPH_PERSIST", script)
+
+    def test_fstab_entry_options(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = self._build_script(tmpdir)
+        self.assertIn("mds_namespace=$fsname", script)
+        self.assertIn("_netdev", script)
+        self.assertIn("nofail", script)
+
+    def test_persist_called_for_each_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = self._build_script(tmpdir)
+        # Once in the already-mounted branch and once after a fresh mount.
+        self.assertEqual(script.count('persist_fstab "/alpha"'), 2)
+        self.assertEqual(script.count('persist_fstab "/beta"'), 2)
+
+    @unittest.skipUnless(shutil.which("bash"), "bash not available")
+    def test_script_is_valid_bash(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = self._build_script(tmpdir)
+            path = os.path.join(tmpdir, "check.sh")
+            with open(path, "w") as f:
+                f.write(script)
+            proc = subprocess.run(["bash", "-n", path], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)

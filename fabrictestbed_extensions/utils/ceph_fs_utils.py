@@ -494,6 +494,8 @@ class CephFsUtils:
           * Creates per-user mount directories.
           * Tries kernel mount with ``fs=`` first, falls back to ``mds_namespace=``.
           * Skips a path if it is already mounted.
+          * Adds an ``/etc/fstab`` entry (``_netdev,nofail``) for each mounted path
+            so the mount survives a reboot. Set ``CEPH_PERSIST=0`` to skip this.
 
         :param cluster_dir: Output cluster directory.
         :type cluster_dir: pathlib.Path
@@ -518,6 +520,7 @@ class CephFsUtils:
     if mountpoint -q "{mnt}"; then
       current_src="$(findmnt -n -o SOURCE --target "{mnt}" 2>/dev/null || true)"
       echo "Already mounted at {mnt} (SOURCE=${{current_src:-unknown}}). Skipping."
+      persist_fstab "{path}" "{mnt}" "{fsname}"
     else
       # Set perms on empty dir
       sudo chown "${{owner_uid}}:${{owner_gid}}" "{mnt}" || true
@@ -543,6 +546,7 @@ class CephFsUtils:
 
       # Fix ownership of the mountpoint root (best-effort)
       sudo chown -R "${{owner_uid}}:${{owner_gid}}" "{mnt}" || true
+      persist_fstab "{path}" "{mnt}" "{fsname}"
     fi
     """
             blocks.append(blk)
@@ -580,6 +584,24 @@ class CephFsUtils:
       if [[ ! -f "$dst" ]] || ! cmp -s "$src" "$dst"; then
         sudo install -m "$mode" -D "$src" "$dst"
       fi
+    }}
+
+    # Helper: add an /etc/fstab entry so the mount survives a reboot.
+    # mds_namespace= is used because older kernels (e.g. 5.4) reject fs=; nofail
+    # keeps boot from blocking if the cluster is unreachable. Existing entries for
+    # the same mountpoint are left alone. Set CEPH_PERSIST=0 to skip.
+    persist_fstab() {{
+      local path="$1" mnt="$2" fsname="$3"
+      [[ "${{CEPH_PERSIST:-1}}" == "1" ]] || return 0
+      if awk -v m="$mnt" '$1 !~ /^#/ && $2 == m {{found=1}} END {{exit !found}}' /etc/fstab; then
+        echo "fstab entry for $mnt already present."
+        return 0
+      fi
+      [[ -f /etc/fstab.fablib.bak ]] || sudo cp -p /etc/fstab /etc/fstab.fablib.bak
+      echo ":${{path// /\\\\040}} ${{mnt// /\\\\040}} ceph name=$USER_NAME,secretfile=$SECRET_TGT,conf=$CONF_TGT,mds_namespace=$fsname,_netdev,noatime,nofail 0 0" \\
+        | sudo tee -a /etc/fstab >/dev/null
+      sudo systemctl daemon-reload 2>/dev/null || true
+      echo "Added fstab entry for $mnt."
     }}
 
     # Install ceph-common if the mount helper is missing
