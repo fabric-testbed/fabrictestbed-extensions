@@ -164,6 +164,8 @@ class Node(TemplateMixin):
 
         # Persistent network configuration backend: 'nmcli', 'netplan', or 'ip'
         self._net_config_backend: str | None = None
+        self._net_backend_by_device: dict[str, str] = {}
+        self._netplan_present: bool | None = None
         self._persistent_config: bool = True
 
         # SSH connection cache for reuse across execute/upload/download calls
@@ -2570,12 +2572,23 @@ class Node(TemplateMixin):
         log.info(f"{self.get_name()}: falling back to ip backend")
         return self._net_config_backend
 
-    def _get_effective_backend(self, persistent: bool | None = None) -> str:
+    def _get_effective_backend(
+        self, persistent: bool | None = None, ifname: str | None = None
+    ) -> str:
         """
         Return the effective backend considering the persistent flag.
 
+        When ``ifname`` is given and the node-level backend is ``nmcli``, the
+        device's NetworkManager state is checked as well. NetworkManager can be
+        installed on an image without managing its NICs. For example, ``apt
+        install cuda`` on Ubuntu pulls it in next to netplan/networkd, and every
+        ethernet device stays ``unmanaged``. ``nmcli c up`` then fails with
+        "No suitable device", so such devices use netplan (or ``ip``) instead.
+
         :param persistent: Override for self._persistent_config. If False,
             forces legacy 'ip' backend.
+        :param ifname: OS interface the caller is about to configure. For a
+            VLAN sub-interface (``eth1.100``) the parent device is checked.
         :return: 'nmcli', 'netplan', or 'ip'
         """
         use_persistent = (
@@ -2583,7 +2596,131 @@ class Node(TemplateMixin):
         )
         if not use_persistent:
             return "ip"
-        return self._detect_net_config_backend()
+        backend = self._detect_net_config_backend()
+        if backend != "nmcli" or not ifname:
+            return backend
+
+        device = str(ifname).split(".")[0]
+        cache = self._net_backend_by_device
+        if device in cache:
+            return cache[device]
+        managed = self._nm_device_managed(device)
+        if managed is None:
+            # Device not visible to NM yet (e.g. just hot-plugged); keep nmcli
+            # and check again next time. Verification catches real failures.
+            return backend
+        if not managed:
+            backend = "netplan" if self._netplan_available() else "ip"
+            log.info(
+                f"{self.get_name()}: {device} is not managed by NetworkManager, "
+                f"using {backend} backend for it"
+            )
+        cache[device] = backend
+        return backend
+
+    def _fall_back_from_nmcli(self, ifname: str) -> str:
+        """
+        Record that nmcli could not configure ``ifname`` and return the backend
+        to use for it from now on (netplan if available, else ``ip``).
+
+        Later calls for the same device (addresses, routes) then use the same
+        backend, so routes are not added to a connection that never came up.
+        """
+        backend = "netplan" if self._netplan_available() else "ip"
+        self._net_backend_by_device[str(ifname).split(".")[0]] = backend
+        return backend
+
+    def _nm_device_managed(self, device: str) -> bool | None:
+        """
+        Report whether NetworkManager manages ``device``.
+
+        :return: ``True``/``False``, or ``None`` if NM does not list the device
+            or its state could not be read.
+        """
+        try:
+            stdout, _ = self.execute(
+                "nmcli -t -f DEVICE,STATE device status 2>/dev/null || true",
+                quiet=True,
+            )
+        except Exception:
+            return None
+        for line in (stdout or "").splitlines():
+            name, _, state = line.strip().partition(":")
+            if name == device:
+                return state != "unmanaged"
+        return None
+
+    def _netplan_available(self) -> bool:
+        """
+        Return True if the ``netplan`` command exists on the node.
+        """
+        if self._netplan_present is None:
+            try:
+                stdout, _ = self.execute("command -v netplan || true", quiet=True)
+                self._netplan_present = bool(stdout and stdout.strip())
+            except Exception:
+                self._netplan_present = False
+        return self._netplan_present
+
+    def _execute_checked(self, command: str, what: str) -> str:
+        """
+        Run ``command`` and raise if it exits non-zero.
+
+        :meth:`execute` returns output but not the exit status, so the status
+        is appended as a marker line and stripped from the returned output.
+
+        :param command: shell command to run
+        :param what: short description used in the error message
+        :return: command output without the status marker
+        :raises RuntimeError: if the command exits non-zero
+        """
+        stdout, stderr = self.execute(
+            f"{{ {command} ; }} 2>&1; echo __fablib_rc=$?", quiet=True
+        )
+        out = stdout or ""
+        rc = None
+        for line in out.splitlines():
+            if line.startswith("__fablib_rc="):
+                rc = line.split("=", 1)[1].strip()
+        out = "\n".join(
+            line for line in out.splitlines() if not line.startswith("__fablib_rc=")
+        )
+        if rc != "0":
+            tail = "\n".join(out.strip().splitlines()[-20:]) or (stderr or "").strip()
+            raise RuntimeError(f"{what} failed (rc={rc}): {tail}")
+        return out
+
+    def _verify_ip_on_device(
+        self, device: str, addr, attempts: int = 10, interval: float = 1.0
+    ) -> None:
+        """
+        Raise if ``addr`` does not show up on ``device``.
+
+        Called after a persistent backend reports success, so that a backend
+        that silently did nothing falls back to the next one. Polls because
+        ``netplan apply`` returns before systemd-networkd assigns the address.
+
+        :param attempts: number of checks before giving up
+        :param interval: seconds between checks
+        :raises RuntimeError: if the address is not present
+        """
+        from fabrictestbed_extensions.fablib.interface import parse_ip_addr_json
+
+        want = str(ipaddress.ip_address(str(addr)))
+        for attempt in range(attempts):
+            stdout, _ = self.execute(
+                f"ip -j addr show dev {device} 2>/dev/null || echo '[]'", quiet=True
+            )
+            try:
+                entries = json.loads(stdout or "[]")
+            except ValueError:
+                entries = []
+            for entry in entries:
+                if want in parse_ip_addr_json(entry):
+                    return
+            if attempt < attempts - 1:
+                time.sleep(interval)
+        raise RuntimeError(f"{want} not present on {device} after configuration")
 
     def _unmanage_mgmt_interface(self):
         """
@@ -2742,9 +2879,9 @@ class Node(TemplateMixin):
 
         :param conn_name: NM connection name
         """
-        self.execute(
-            f"sudo nmcli c up {conn_name} 2>/dev/null || sudo nmcli c up {conn_name}",
-            quiet=True,
+        self._execute_checked(
+            f"sudo nmcli c up {conn_name} >/dev/null 2>&1 || sudo nmcli c up {conn_name}",
+            f"nmcli c up {conn_name}",
         )
 
     def _nmcli_down(self, conn_name: str):
@@ -2959,16 +3096,16 @@ class Node(TemplateMixin):
         yaml_str = yaml.dump(yaml_content, default_flow_style=False)
         # Escape single quotes for shell
         yaml_str_escaped = yaml_str.replace("'", "'\\''")
-        self.execute(
+        self._execute_checked(
             f"echo '{yaml_str_escaped}' | sudo tee {config_file} > /dev/null && sudo chmod 600 {config_file}",
-            quiet=True,
+            f"writing {config_file}",
         )
 
     def _netplan_apply(self):
         """
         Apply netplan configuration.
         """
-        self.execute("sudo netplan apply", quiet=True)
+        self._execute_checked("sudo netplan apply", "netplan apply")
 
     def _netplan_add_route(self, ifname: str, subnet: str, gateway: str):
         """
@@ -3025,9 +3162,9 @@ class Node(TemplateMixin):
         # Rewrite the config file
         yaml_str = yaml.dump(config, default_flow_style=False)
         yaml_str_escaped = yaml_str.replace("'", "'\\''")
-        self.execute(
+        self._execute_checked(
             f"echo '{yaml_str_escaped}' | sudo tee {config_file} > /dev/null && sudo chmod 600 {config_file}",
-            quiet=True,
+            f"writing {config_file}",
         )
 
     def _netplan_remove_config(self, ifname: str):
@@ -3060,14 +3197,17 @@ class Node(TemplateMixin):
         :param persistent: if True, also remove persistent config (nmcli/netplan)
         :type persistent: bool
         """
-        backend = self._get_effective_backend(persistent)
+        backend = self._get_effective_backend(persistent, ifname=os_iface)
 
         if backend == "nmcli":
             conn_name = self._nm_conn_name(os_iface)
             self._nmcli_delete(conn_name)
         elif backend == "netplan":
             self._netplan_remove_config(os_iface)
-            self._netplan_apply()
+            try:
+                self._netplan_apply()
+            except Exception as e:
+                log.warning(f"netplan apply after removing {os_iface} failed: {e}")
 
         # Always flush via ip commands as well for immediate cleanup
         stdout, stderr = self.execute(f"sudo ip addr flush dev {os_iface}", quiet=True)
@@ -3125,12 +3265,15 @@ class Node(TemplateMixin):
         :param persistent: Override persistent config setting
         :type persistent: bool
         """
-        backend = self._get_effective_backend(persistent)
         ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
 
         # Auto-discover interface from gateway when not explicitly provided
         if interface is None:
             interface = self._find_interface_for_gateway(gateway)
+        backend = self._get_effective_backend(
+            persistent,
+            ifname=interface.get_device_name() if interface is not None else None,
+        )
 
         if backend == "nmcli" and interface is not None:
             try:
@@ -3280,8 +3423,8 @@ class Node(TemplateMixin):
         if network:
             network.check_public_ip(addr)
 
-        backend = self._get_effective_backend(persistent)
         device_name = interface.get_device_name()
+        backend = self._get_effective_backend(persistent, ifname=device_name)
         cidr = f"{addr}/{subnet.prefixlen}"
         ip_version = "ipv6" if type(subnet) == IPv6Network else "ipv4"
 
@@ -3295,19 +3438,28 @@ class Node(TemplateMixin):
                     addresses=cidr,
                 )
                 self._nmcli_up(conn_name)
+                self._verify_ip_on_device(device_name, addr)
                 return
             except Exception as e:
-                log.warning(f"nmcli ip_addr_add failed, falling back to ip: {e}")
-        elif backend == "netplan":
+                backend = self._fall_back_from_nmcli(device_name)
+                log.warning(
+                    f"{self.get_name()}: nmcli ip_addr_add on {device_name} failed, "
+                    f"falling back to {backend}: {e}"
+                )
+        if backend == "netplan":
             try:
                 self._netplan_write_config(
                     ifname=device_name,
                     addresses=[cidr],
                 )
                 self._netplan_apply()
+                self._verify_ip_on_device(device_name, addr)
                 return
             except Exception as e:
-                log.warning(f"netplan ip_addr_add failed, falling back to ip: {e}")
+                log.warning(
+                    f"{self.get_name()}: netplan ip_addr_add on {device_name} failed, "
+                    f"falling back to ip (not persistent across reboot): {e}"
+                )
 
         # Legacy fallback
         self._ip_addr_add_legacy(addr, subnet, interface)
@@ -3380,7 +3532,7 @@ class Node(TemplateMixin):
         if interface is None:
             return
 
-        backend = self._get_effective_backend()
+        backend = self._get_effective_backend(ifname=interface.get_device_name())
         if backend == "nmcli":
             # No-op: NM manages the interface persistently now
             return
@@ -3406,7 +3558,7 @@ class Node(TemplateMixin):
         if not interface:
             return
 
-        backend = self._get_effective_backend()
+        backend = self._get_effective_backend(ifname=interface.get_device_name())
 
         if backend == "nmcli":
             try:
@@ -3484,7 +3636,9 @@ class Node(TemplateMixin):
         :param interface: the FABlib interface.
         :type interface: Interface
         """
-        backend = self._get_effective_backend()
+        backend = self._get_effective_backend(
+            ifname=interface.get_device_name() if interface else None
+        )
 
         if backend == "nmcli":
             try:
@@ -3567,7 +3721,7 @@ class Node(TemplateMixin):
         if mtu:
             mtu = str(mtu)
 
-        backend = self._get_effective_backend(persistent)
+        backend = self._get_effective_backend(persistent, ifname=os_iface)
         ip_version = "ipv6" if self.validIPAddress(ip) == "IPv6" else "ipv4"
 
         if backend == "nmcli" and ip is not None and cidr is not None:
@@ -3691,7 +3845,7 @@ class Node(TemplateMixin):
         :param persistent: Override persistent config setting
         :type persistent: bool
         """
-        backend = self._get_effective_backend(persistent)
+        backend = self._get_effective_backend(persistent, ifname=os_iface)
 
         if backend == "nmcli":
             conn_name = self._nm_conn_name(os_iface)
@@ -3756,7 +3910,7 @@ class Node(TemplateMixin):
         if mtu:
             mtu = str(mtu)
 
-        backend = self._get_effective_backend(persistent)
+        backend = self._get_effective_backend(persistent, ifname=os_iface)
         ip_version = (
             self._detect_ip_version_for_interface(interface) if interface else "ipv4"
         )
@@ -4173,6 +4327,10 @@ class Node(TemplateMixin):
             # Find the interface for this gateway so the route can be added
             # to the correct connection/config
             target_iface = self._find_interface_for_gateway(next_hop)
+            if target_iface is not None:
+                backend = self._get_effective_backend(
+                    ifname=target_iface.get_device_name()
+                )
 
             if backend == "netplan" and target_iface is not None:
                 try:
@@ -4192,7 +4350,10 @@ class Node(TemplateMixin):
             )
 
         if needs_netplan_apply:
-            self._netplan_apply()
+            try:
+                self._netplan_apply()
+            except Exception as e:
+                log.warning(f"{self.get_name()}: netplan apply for routes failed: {e}")
 
     def run_post_boot_tasks(self, log_dir: str = "."):
         """

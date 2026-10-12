@@ -1230,16 +1230,19 @@ class Interface(TemplateMixin):
             return
 
         node = self.get_node()
-        backend = node._get_effective_backend()
+        device_name = self.get_device_name()
+        backend = node._get_effective_backend(ifname=device_name)
 
         if backend == "nmcli":
             try:
                 self._config_nmcli(node, network, addr, subnet)
+                node._verify_ip_on_device(device_name, addr)
                 return
             except Exception as e:
+                fallback = node._fall_back_from_nmcli(device_name)
                 log.warning(
                     f"nmcli config failed for {self.get_name()}, "
-                    f"falling back to legacy: {e}"
+                    f"falling back to {fallback}: {e}"
                 )
 
         # Legacy path

@@ -103,12 +103,12 @@ def _setup_ceph_on_node(node, bundle: dict):
     cluster_name = os.path.basename(cluster_dir)
 
     node.upload_directory(cluster_dir, ".ceph")
-    stdout, stderr = node.execute(
+    # Raises if the mount script exits non-zero (e.g. the storage network is
+    # down), so post_boot_config reports a failure instead of "configured".
+    node._execute_checked(
         f"sudo bash ~/.ceph/{cluster_name}/{script_name}",
-        quiet=True,
+        f"CephFS mount script on {node.get_name()}",
     )
-    if stderr and stderr.strip():
-        log.warning(f"CephFS mount stderr on {node.get_name()}: {stderr.strip()}")
 
 
 class Slice:
