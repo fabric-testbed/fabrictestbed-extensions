@@ -40,7 +40,10 @@ from fim.slivers.path_info import Path
 from fim.user import ERO, Gateway
 from tabulate import tabulate
 
-from fabrictestbed_extensions.fablib.exceptions import ResourceNotFoundError
+from fabrictestbed_extensions.fablib.exceptions import (
+    ResourceNotFoundError,
+    ValidationError,
+)
 
 if TYPE_CHECKING:
     from fabrictestbed_extensions.fablib.interface import Interface
@@ -745,6 +748,14 @@ class NetworkService(TemplateMixin):
 
         self.lock = threading.Lock()
 
+        # Public IPs requested with make_ip_publicly_routable().  Until the
+        # request is submitted, the FIM labels hold the *request*, not what
+        # the AM granted; the AM may replace a requested address that is
+        # already in use by another slice.
+        self._requested_public_ips: list[str] | None = None
+        self._public_ips_pending: bool = False
+        self._public_ip_changes_reported: bool = False
+
         # Caching support
         self._cached_type: str | None = None
         self._cached_layer: str | None = None
@@ -1017,6 +1028,12 @@ class NetworkService(TemplateMixin):
         while ``get_gateway()`` returns ``None`` (the network is not yet
         provisioned).
 
+        These are candidates in the subnet, not addresses reserved for this
+        slice.  On a FabNetv4Ext network the subnet is shared with other
+        slices, so never configure one of these on a node: request public IPs
+        with :meth:`make_ip_publicly_routable`, submit, and use
+        :meth:`get_public_ips`.
+
         :param count: number of addresses to include
         :type count: int
         :return: available IPs, or ``None`` if the network has no gateway yet
@@ -1032,13 +1049,33 @@ class NetworkService(TemplateMixin):
         except Exception as e:
             log.warning(f"Failed to get_available_ips: {e}")
 
-    def get_public_ips(self) -> list[IPv4Address] or list[IPv6Address] | None:
+    def get_public_ips(self) -> list[IPv4Address] | list[IPv6Address] | None:
         """
-        Get list of public IPs assigned to the FabNetv*Ext service
+        Get the public IPs the FABRIC AM *granted* to this FabNetv*Ext service.
 
-        :return: List of Public IPs
+        These are the only addresses that may be configured on a node for
+        this network.  Always read them after the slice has been submitted:
+        the AM replaces any requested address that another slice already
+        holds, so the granted list can differ from what was passed to
+        :meth:`make_ip_publicly_routable`.
+
+        While a :meth:`make_ip_publicly_routable` request has not been
+        submitted yet, this returns ``None`` (with a warning) rather than
+        the requested addresses, which have not been granted.
+
+        :return: granted public IPs, or ``None`` if none are granted (or a
+            request is still pending submission)
         :rtype: list[IPv4Address] or list[IPv6Address] or None
         """
+        if self._public_ips_pending:
+            log.warning(
+                f"Network {self.get_name()}: public IPs "
+                f"{self._requested_public_ips} were requested but the slice "
+                f"has not been submitted yet; call slice.submit() and then "
+                f"get_public_ips() to get the addresses actually granted."
+            )
+            return None
+
         if self.get_fim().labels is not None:
             if self.get_fim().labels.ipv4 is not None:
                 result = []
@@ -1426,6 +1463,27 @@ class NetworkService(TemplateMixin):
             subnet = self.get_subnet()
             allocated_ips = self.get_allocated_ips()
 
+            if self._is_fabnetv4ext():
+                # The FABNetv4Ext subnet is shared by every slice at the site,
+                # so only the public IPs granted to this slice may be handed
+                # out; any other host in the subnet may belong to someone else.
+                if addr:
+                    addr = ipaddress.ip_address(str(addr))
+                    self.check_public_ip(addr)
+                    if addr not in allocated_ips:
+                        self.set_allocated_ip(addr)
+                    return addr
+                for host in self.get_public_ips() or []:
+                    if host not in allocated_ips:
+                        self.set_allocated_ip(host)
+                        return host
+                log.warning(
+                    f"Network {self.get_name()}: no unassigned public IP left "
+                    f"to allocate; request more with "
+                    f"make_ip_publicly_routable() and resubmit the slice."
+                )
+                return None
+
             if addr:
                 # if addr != subnet.network_address and addr not in allocated_ips:
                 if addr not in allocated_ips:
@@ -1472,21 +1530,206 @@ class NetworkService(TemplateMixin):
         finally:
             self.lock.release()
 
-    def make_ip_publicly_routable(self, ipv6: list[str] = None, ipv4: list[str] = None):
+    def _is_fabnetv4ext(self) -> bool:
+        """Return ``True`` if this is a FABNetv4Ext (shared public IPv4) network."""
+        try:
+            return self.fim_network_service.type == ServiceType.FABNetv4Ext
+        except Exception:
+            return False
+
+    def check_public_ip(self, addr: IPv4Address | IPv6Address | str):
         """
-        Mark a list of IPs as publicly routable.
+        Ensure ``addr`` may be configured on a node in this network.
+
+        A FABNetv4Ext subnet is shared by every slice at the site, and only
+        the addresses returned by :meth:`get_public_ips` belong to this
+        slice.  Configuring any other address can take over another
+        experimenter's IP and break both slices.  Other network types are
+        not restricted.
+
+        :param addr: address about to be assigned to an interface
+        :type addr: IPv4Address or IPv6Address or str
+        :raises ValidationError: if this is a FABNetv4Ext network and
+            ``addr`` is not one of its granted public IPs
         """
+        if not self._is_fabnetv4ext():
+            return
+        addr = ipaddress.ip_address(str(addr))
+        granted = self.get_public_ips() or []
+        if addr in granted:
+            return
+        if self._public_ips_pending:
+            hint = (
+                "a public IP request is still pending: submit the slice, then "
+                "use an address from get_public_ips()"
+            )
+        elif not granted:
+            hint = (
+                "no public IPs are granted to this network: request them with "
+                "make_ip_publicly_routable() and submit the slice"
+            )
+        else:
+            hint = f"granted public IPs are {[str(ip) for ip in granted]}"
+        raise ValidationError(
+            f"{addr} is not a public IP granted to FABNetv4Ext network "
+            f"{self.get_name()}; {hint}. Addresses from get_available_ips() "
+            f"are only candidates and may belong to another slice."
+        )
+
+    def make_ip_publicly_routable(
+        self,
+        ipv6: list[str] | str | None = None,
+        ipv4: list[str] | str | None = None,
+        count: int | None = None,
+    ):
+        """
+        Request public IPs for a FabNetv4Ext or FabNetv6Ext network.
+
+        Pass the addresses to request, or ``count`` to say how many public
+        IPs the network should hold in total: fablib keeps the ones already
+        granted and picks candidates from the subnet for the rest.  An
+        explicit address list replaces the earlier request, so any granted
+        address left out of it is released.  The request is sent to FABRIC
+        on the next ``slice.submit()``.
+
+        The FABRIC AM may grant a *different* address than requested: if a
+        requested address is already in use by another slice, it substitutes
+        a free one.  So do not configure the requested addresses on your
+        nodes.  After submitting, use :meth:`get_public_ips` to get the
+        addresses actually granted; fablib warns if any were substituted.
+
+        Example::
+
+            net.make_ip_publicly_routable(count=1)
+            slice.submit()
+            net = slice.get_network(name=net_name)
+            addr = net.get_public_ips()[0]
+            iface.ip_addr_add(addr=addr, subnet=net.get_subnet())
+
+        :param ipv6: IPv6 address(es) to request (FabNetv6Ext only)
+        :type ipv6: list[str] or str
+        :param ipv4: IPv4 address(es) to request (FabNetv4Ext only)
+        :type ipv4: list[str] or str
+        :param count: total number of public IPs wanted; already granted
+            ones are kept and the rest are chosen by fablib from the subnet.
+            Used when no addresses are given.
+        :type count: int
+        :return: the requested (not yet granted) addresses
+        :rtype: list[str]
+        :raises ValidationError: if this is not a FabNetv4Ext/FabNetv6Ext
+            network, the addresses are of the wrong family or outside the
+            network's subnet, or neither addresses nor ``count`` are given
+        """
+        ns_type = self.fim_network_service.type
+        if ns_type == ServiceType.FABNetv4Ext:
+            addrs, other, family = ipv4, ipv6, "ipv4"
+        elif ns_type == ServiceType.FABNetv6Ext:
+            addrs, other, family = ipv6, ipv4, "ipv6"
+        else:
+            raise ValidationError(
+                f"make_ip_publicly_routable() needs a FabNetv4Ext or "
+                f"FabNetv6Ext network; {self.get_name()} is {ns_type}"
+            )
+        if other:
+            raise ValidationError(
+                f"{self.get_name()} is {ns_type}: pass the addresses as "
+                f"{family}=..."
+            )
+
+        if isinstance(addrs, (str, IPv4Address, IPv6Address)):
+            addrs = [addrs]
+        requested = [ipaddress.ip_address(str(a)) for a in (addrs or [])]
+
+        if not requested:
+            if not count or count < 1:
+                raise ValidationError(
+                    f"Pass the {family} addresses to request, or count=N to let "
+                    f"fablib pick N candidates"
+                )
+            # Keep the addresses this slice already holds, so asking for more
+            # never releases one that may already be configured on a node.
+            granted = [] if self._public_ips_pending else self.get_public_ips() or []
+            requested = list(granted[:count])
+            if len(requested) < count:
+                candidates = self.get_available_ips(count=count + len(granted))
+                if not candidates:
+                    raise ValidationError(
+                        f"Network {self.get_name()} has no subnet yet; submit "
+                        f"the slice before requesting public IPs"
+                    )
+                for c in candidates:
+                    if len(requested) == count:
+                        break
+                    if c not in requested:
+                        requested.append(c)
+
+        subnet = self.get_subnet()
+        if isinstance(subnet, (IPv4Network, IPv6Network)):
+            gateway = self.get_gateway()
+            for a in requested:
+                if a.version != subnet.version or a not in subnet:
+                    raise ValidationError(
+                        f"{a} is not in {self.get_name()}'s subnet {subnet}"
+                    )
+                if a in (subnet.network_address, subnet.broadcast_address, gateway):
+                    raise ValidationError(
+                        f"{a} is the network, broadcast or gateway address of "
+                        f"{subnet} and cannot be requested"
+                    )
+
+        requested_strs = [str(a) for a in requested]
         labels = self.get_fim().labels
         if labels is None:
             labels = Labels()
-        if self.fim_network_service.type == ServiceType.FABNetv4Ext:
-            labels = Labels.update(labels, ipv4=ipv4)
-
-        elif self.fim_network_service.type == ServiceType.FABNetv6Ext:
-            labels = Labels.update(labels, ipv6=ipv6)
+        labels = Labels.update(labels, **{family: requested_strs})
 
         self.fim_network_service.set_properties(labels=labels)
         self._invalidate_cache()
+        self._requested_public_ips = requested_strs
+        self._public_ips_pending = True
+        self._public_ip_changes_reported = False
+        return requested_strs
+
+    def get_requested_public_ips(self) -> list[str] | None:
+        """
+        Get the public IPs last requested with :meth:`make_ip_publicly_routable`.
+
+        These are only a request; use :meth:`get_public_ips` for the
+        addresses the AM actually granted.
+
+        :return: requested addresses, or ``None`` if none were requested in
+            this session
+        :rtype: list[str] or None
+        """
+        return self._requested_public_ips
+
+    def get_public_ip_changes(self) -> dict | None:
+        """
+        Compare the requested public IPs with those the AM granted.
+
+        Only meaningful after the request has been submitted.
+
+        :return: ``None`` if nothing was requested in this session, the
+            request is still pending, or every requested address was granted;
+            otherwise a dict with ``requested``, ``granted`` and
+            ``not_granted`` address lists
+        :rtype: dict or None
+        """
+        if not self._requested_public_ips or self._public_ips_pending:
+            return None
+        granted = [str(ip) for ip in (self.get_public_ips() or [])]
+        not_granted = [ip for ip in self._requested_public_ips if ip not in granted]
+        if not not_granted:
+            return None
+        return {
+            "requested": list(self._requested_public_ips),
+            "granted": granted,
+            "not_granted": not_granted,
+        }
+
+    def _mark_public_ip_request_submitted(self):
+        """Note that a pending public IP request has been sent to FABRIC."""
+        self._public_ips_pending = False
 
     def init_fablib_data(self):
         """
