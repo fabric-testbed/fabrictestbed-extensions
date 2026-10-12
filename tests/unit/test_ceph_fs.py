@@ -227,3 +227,33 @@ class TestCephFsUtilsMountScriptPersistence(unittest.TestCase):
                 f.write(script)
             proc = subprocess.run(["bash", "-n", path], capture_output=True, text=True)
         self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    @unittest.skipUnless(shutil.which("bash"), "bash not available")
+    def test_persist_helper_is_idempotent_with_spaces(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = self._build_script(tmpdir)
+            fstab = os.path.join(tmpdir, "fstab")
+            with open(fstab, "w") as f:
+                f.write("/dev/vda1 / ext4 defaults 0 1\n")
+            # Pull out just the helper and point it at a scratch fstab, no sudo.
+            start = script.index("    persist_fstab() {")
+            end = script.index("\n    }\n", start) + len("\n    }\n")
+            helper = (
+                script[start:end]
+                .replace("/etc/fstab", fstab)
+                .replace("sudo ", "")
+                .replace("systemctl daemon-reload", "true")
+            )
+            runner = os.path.join(tmpdir, "run.sh")
+            with open(runner, "w") as f:
+                f.write("USER_NAME=carol SECRET_TGT=/s CONF_TGT=/c\n" + helper)
+                f.write('persist_fstab "/a b" "/mnt/my dir" fs1\n' * 2)
+                f.write('CEPH_PERSIST=0 persist_fstab "/x" "/mnt/skip" fs1\n')
+            proc = subprocess.run(["bash", runner], capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            with open(fstab) as f:
+                lines = f.read().splitlines()
+        ceph = [line for line in lines if " ceph " in line]
+        self.assertEqual(len(ceph), 1, lines)
+        self.assertTrue(ceph[0].startswith(":/a\\040b /mnt/my\\040dir ceph "))
+        self.assertNotIn("/mnt/skip", "\n".join(lines))

@@ -592,13 +592,16 @@ class CephFsUtils:
     # the same mountpoint are left alone. Set CEPH_PERSIST=0 to skip.
     persist_fstab() {{
       local path="$1" mnt="$2" fsname="$3"
+      # fstab escapes spaces as \\040; compare in that form (via ENVIRON, since
+      # awk -v would turn \\040 back into a space).
+      local emnt="${{mnt// /\\\\040}}"
       [[ "${{CEPH_PERSIST:-1}}" == "1" ]] || return 0
-      if awk -v m="$mnt" '$1 !~ /^#/ && $2 == m {{found=1}} END {{exit !found}}' /etc/fstab; then
+      if M="$emnt" awk '$1 !~ /^#/ && $2 == ENVIRON["M"] {{found=1}} END {{exit !found}}' /etc/fstab; then
         echo "fstab entry for $mnt already present."
         return 0
       fi
       [[ -f /etc/fstab.fablib.bak ]] || sudo cp -p /etc/fstab /etc/fstab.fablib.bak
-      echo ":${{path// /\\\\040}} ${{mnt// /\\\\040}} ceph name=$USER_NAME,secretfile=$SECRET_TGT,conf=$CONF_TGT,mds_namespace=$fsname,_netdev,noatime,nofail 0 0" \\
+      echo ":${{path// /\\\\040}} $emnt ceph name=$USER_NAME,secretfile=$SECRET_TGT,conf=$CONF_TGT,mds_namespace=$fsname,_netdev,noatime,nofail 0 0" \\
         | sudo tee -a /etc/fstab >/dev/null
       sudo systemctl daemon-reload 2>/dev/null || true
       echo "Added fstab entry for $mnt."
