@@ -3273,7 +3273,13 @@ class Node(TemplateMixin):
 
         :param persistent: Override persistent config setting
         :type persistent: bool
+        :raises ValidationError: if the interface is on a FABNetv4Ext network
+            and ``addr`` is not one of the public IPs granted to it
         """
+        network = interface.get_network()
+        if network:
+            network.check_public_ip(addr)
+
         backend = self._get_effective_backend(persistent)
         device_name = interface.get_device_name()
         cidr = f"{addr}/{subnet.prefixlen}"
