@@ -12,7 +12,6 @@ Uses mocked FIM and FablibManager to avoid network access.
 import unittest
 from unittest.mock import MagicMock
 
-
 # What modify_slice() returns when the orchestrator has slivers to add or
 # modify at an AM.
 RESERVATIONS = [{"sliver_id": "s1"}]
