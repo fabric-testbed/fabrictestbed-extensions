@@ -78,7 +78,9 @@ class TestWaitForModifyStart(unittest.TestCase):
 
 
 class TestUnprovisionedNetworkAddressing(unittest.TestCase):
-    """A network with no resources yet must not report addressing."""
+    """A network with no resources yet reports "<name>.gateway" / "<name>.subnet"
+    placeholders, which routes added before submit (e.g. add_fabnet) store and
+    Node.config() resolves to the real addresses after provisioning."""
 
     def _make_network(self):
         try:
@@ -90,18 +92,17 @@ class TestUnprovisionedNetworkAddressing(unittest.TestCase):
         ns._cached_subnet = None
         ns._cached_gateway = None
         ns.get_fablib_data = lambda: {}  # nothing instantiated, nothing set
-        # get_name() must work, otherwise the placeholder branch under test
-        # dies into an except and returns None for the wrong reason.
+        # get_name() must work: the placeholder is built from it.
         ns.get_name = lambda: "meas-net6_IPv6_KANS"
         return ns
 
-    def test_gateway_is_none_not_a_placeholder_string(self):
+    def test_gateway_is_a_placeholder_string(self):
         ns = self._make_network()
-        self.assertIsNone(ns.get_gateway())
+        self.assertEqual(ns.get_gateway(), "meas-net6_IPv6_KANS.gateway")
 
-    def test_subnet_is_none_not_a_placeholder_string(self):
+    def test_subnet_is_a_placeholder_string(self):
         ns = self._make_network()
-        self.assertIsNone(ns.get_subnet())
+        self.assertEqual(ns.get_subnet(), "meas-net6_IPv6_KANS.subnet")
 
     def test_available_ips_is_falsy_when_unprovisioned(self):
         ns = self._make_network()

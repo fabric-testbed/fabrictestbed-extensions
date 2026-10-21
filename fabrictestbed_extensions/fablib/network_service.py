@@ -952,16 +952,10 @@ class NetworkService(TemplateMixin):
         Gets the assigned gateway for a FABnetv L3 IPv6 or IPv4 network.
 
         Results are cached for performance. Cache is invalidated when
-        ``set_gateway()``, ``set_instantiated()`` or ``update()`` is called;
-        ``update()`` runs on every slice topology refresh.
+        ``set_gateway()`` or ``set_instantiated()`` is called.
 
-        Returns ``None`` until a real address is known, i.e. while the network
-        is not yet provisioned and no gateway was set with ``set_gateway()``.
-        ``None`` is never cached, so a later call picks up the address once
-        the network is provisioned.
-
-        :return: gateway IP, or ``None`` if the network has no address yet
-        :rtype: IPv4Address or IPv6Address or None
+        :return: gateway IP
+        :rtype: IPv4Address or IPv6Network
         """
         if self._cached_gateway is not None:
             return self._cached_gateway
@@ -994,19 +988,16 @@ class NetworkService(TemplateMixin):
                         gateway = None
             else:
                 # Not yet instantiated — check if gateway was explicitly
-                # set via set_gateway() (common for L2 networks in modify).
-                # If there is no real address yet, return None rather than a
-                # "<name>.gateway" placeholder string: the documented return
-                # type is an address or None, callers use a None check to
-                # tell an unprovisioned network from a provisioned one, and
-                # get_available_ips() does arithmetic on whatever comes back.
+                # set via set_gateway() (common for L2 networks in modify)
                 fablib_data = self.get_fablib_data()
                 try:
                     gw_str = fablib_data.get("subnet", {}).get("gateway")
                     if gw_str:
                         gateway = ipaddress.ip_address(gw_str)
+                    else:
+                        gateway = f"{self.get_name()}.gateway"
                 except Exception:
-                    gateway = None
+                    gateway = f"{self.get_name()}.gateway"
 
             if gateway is not None:
                 self._cached_gateway = gateway
@@ -1024,10 +1015,6 @@ class NetworkService(TemplateMixin):
         list. By default this will return the first 256 addresses.  If you needed
         more addresses, set the count parameter.
 
-        Addresses are counted up from the gateway, so this returns ``None``
-        while ``get_gateway()`` returns ``None`` (the network is not yet
-        provisioned).
-
         These are candidates in the subnet, not addresses reserved for this
         slice.  On a FabNetv4Ext network the subnet is shared with other
         slices, so never configure one of these on a node: request public IPs
@@ -1036,8 +1023,8 @@ class NetworkService(TemplateMixin):
 
         :param count: number of addresses to include
         :type count: int
-        :return: available IPs, or ``None`` if the network has no gateway yet
-        :rtype: list[IPv4Address] or list[IPv6Address] or None
+        :return: available IPs
+        :rtype: list[IPv4Address] or list[IPv6Address]
         """
         try:
             ip_list = []
@@ -1094,16 +1081,10 @@ class NetworkService(TemplateMixin):
         Gets the assigned subnet for a FABnet L3 IPv6 or IPv4 network.
 
         Results are cached for performance. Cache is invalidated when
-        ``set_subnet()``, ``set_instantiated()`` or ``update()`` is called;
-        ``update()`` runs on every slice topology refresh.
+        ``set_subnet()`` or ``set_instantiated()`` is called.
 
-        Returns ``None`` until a real subnet is known, i.e. while the network
-        is not yet provisioned and no subnet was set with ``set_subnet()``.
-        ``None`` is never cached, so a later call picks up the subnet once
-        the network is provisioned.
-
-        :return: subnet, or ``None`` if the network has no subnet yet
-        :rtype: IPv4Network or IPv6Network or None
+        :return: subnet
+        :rtype: IPv4Network or IPv6Network
         """
         if self._cached_subnet is not None:
             return self._cached_subnet
@@ -1143,9 +1124,7 @@ class NetworkService(TemplateMixin):
                             log.warning(f"Failed to get L2 subnet: {e}")
             else:
                 # Not yet instantiated — check if subnet was explicitly
-                # set via set_subnet() (common for L2 networks in modify).
-                # As in get_gateway(), an unprovisioned network yields None
-                # rather than a "<name>.subnet" placeholder string.
+                # set via set_subnet() (common for L2 networks in modify)
                 fablib_data = self.get_fablib_data()
                 if fablib_data.get("subnet") and fablib_data.get("subnet").get(
                     "subnet"
@@ -1153,7 +1132,9 @@ class NetworkService(TemplateMixin):
                     try:
                         subnet = ipaddress.ip_network(fablib_data["subnet"]["subnet"])
                     except Exception:
-                        subnet = None
+                        subnet = f"{self.get_name()}.subnet"
+                else:
+                    subnet = f"{self.get_name()}.subnet"
 
             if subnet is not None:
                 self._cached_subnet = subnet
