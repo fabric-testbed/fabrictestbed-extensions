@@ -12,6 +12,10 @@ Uses mocked FIM and FablibManager to avoid network access.
 import unittest
 from unittest.mock import MagicMock
 
+# What modify_slice() returns when the orchestrator has slivers to add or
+# modify at an AM.
+RESERVATIONS = [{"sliver_id": "s1"}]
+
 
 class TestWaitForModifyStart(unittest.TestCase):
     """Test Slice.__wait_for_modify_start()."""
@@ -36,6 +40,7 @@ class TestWaitForModifyStart(unittest.TestCase):
         return s
 
     def _wait(self, s, **kwargs):
+        kwargs.setdefault("reservations", RESERVATIONS)
         # Name-mangled private method.
         return s._Slice__wait_for_modify_start(**kwargs)
 
@@ -69,6 +74,85 @@ class TestWaitForModifyStart(unittest.TestCase):
         s = self._make_slice(["StableOK"])
         with self.assertRaises(SliceTimeoutError):
             self._wait(s, previous_state="StableOK", timeout=0.05, interval=0.01)
+
+    def test_no_reservations_and_no_state_change_falls_through(self):
+        """A user-data-only modify (e.g. saving fablib_data) never changes
+        the slice state; it must not wait out the full timeout and fail."""
+        s = self._make_slice(["StableOK"])
+        s.MODIFY_NO_RESERVATIONS_GRACE = 0.05
+        state = self._wait(
+            s,
+            previous_state="StableOK",
+            timeout=1800,
+            interval=0.01,
+            reservations=[],
+            removes_slivers=False,
+        )
+        self.assertEqual(state, "StableOK")
+
+    def test_no_reservations_but_a_removal_still_times_out(self):
+        """A remove-only modify also returns no reservations; falling through
+        would let wait() accept the pre-removal StableOK as done."""
+        from fabrictestbed_extensions.fablib.slice import SliceTimeoutError
+
+        s = self._make_slice(["StableOK"])
+        s.MODIFY_NO_RESERVATIONS_GRACE = 0.05
+        with self.assertRaises(SliceTimeoutError):
+            self._wait(
+                s,
+                previous_state="StableOK",
+                timeout=0.2,
+                interval=0.01,
+                reservations=[],
+                removes_slivers=True,
+            )
+
+    def test_no_reservations_still_waits_for_a_remove_only_modify(self):
+        """A remove-only modify returns no reservations but does change state."""
+        s = self._make_slice(["StableOK", "StableOK", "Modifying"])
+        state = self._wait(
+            s,
+            previous_state="StableOK",
+            timeout=10,
+            interval=0.01,
+            reservations=[],
+        )
+        self.assertEqual(state, "Modifying")
+
+    def _removal_slice(self, live, submitted, broken=False):
+        s = self._make_slice(["StableOK"])
+        s.get_slivers = lambda: [
+            MagicMock(sliver_id=rid, state=state) for rid, state in live
+        ]
+
+        def element(rid):
+            e = MagicMock()
+            e.get_property.return_value = MagicMock(reservation_id=rid)
+            return e
+
+        topology = MagicMock()
+        topology.nodes = {r: element(r) for r in submitted}
+        topology.network_services = {}
+        topology.facilities = {}
+        if broken:
+            s.get_fim_topology = MagicMock(side_effect=RuntimeError("boom"))
+        else:
+            s.get_fim_topology = lambda: topology
+        return s._Slice__modify_removes_slivers()
+
+    def test_user_data_only_modify_removes_nothing(self):
+        self.assertFalse(
+            self._removal_slice([("a", "Active"), ("b", "Active")], ["a", "b"])
+        )
+
+    def test_deleted_node_is_a_removal(self):
+        self.assertTrue(self._removal_slice([("a", "Active"), ("b", "Active")], ["a"]))
+
+    def test_already_closed_slivers_are_not_a_removal(self):
+        self.assertFalse(self._removal_slice([("a", "Active"), ("b", "Closed")], ["a"]))
+
+    def test_undeterminable_removal_is_assumed(self):
+        self.assertTrue(self._removal_slice([], [], broken=True))
 
     def test_unknown_previous_state_does_not_block(self):
         s = self._make_slice(["StableOK"])

@@ -2342,8 +2342,53 @@ class Slice:
 
         return exception_string
 
+    # How long to wait for the slice state to change after a modify that
+    # returned no reservations before concluding it needs no AM work.
+    MODIFY_NO_RESERVATIONS_GRACE = 60
+
+    def __modify_removes_slivers(self) -> bool:
+        """
+        Tell whether the topology about to be submitted drops a live sliver.
+
+        A remove-only modify returns no reservations from the orchestrator,
+        exactly like a user-data-only one, but it does have AM work to do.
+        Call before the modify request so the sliver list is the pre-modify
+        one.
+
+        :return: True if a live sliver is missing from the local topology, or
+            if that cannot be determined
+        :rtype: bool
+        """
+        try:
+            live = {
+                str(s.sliver_id)
+                for s in self.get_slivers() or []
+                if s.sliver_id and str(s.state) not in ("Closed", "CloseWait", "Dead")
+            }
+            topology = self.get_fim_topology()
+            elements = list(topology.nodes.values())
+            elements += list(topology.network_services.values())
+            elements += list(topology.facilities.values())
+            submitted = set()
+            for element in elements:
+                info = element.get_property(pname="reservation_info")
+                if info is not None and info.reservation_id:
+                    submitted.add(str(info.reservation_id))
+            return bool(live - submitted)
+        except Exception as e:
+            log.warning(
+                f"could not tell whether the modify on {self.get_name()} "
+                f"removes slivers, assuming it does: {e}"
+            )
+            return True
+
     def __wait_for_modify_start(
-        self, previous_state: str = None, timeout: int = 360, interval: int = 10
+        self,
+        previous_state: str = None,
+        timeout: int = 360,
+        interval: int = 10,
+        reservations: list = None,
+        removes_slivers: bool = True,
     ):
         """
         Waits for the orchestrator to pick up a just-submitted modify request.
@@ -2361,6 +2406,14 @@ class Slice:
         Waiting for the state to *change* is unambiguous where waiting for a
         particular state is not.
 
+        A modify that needs no AM work -- one that changes nothing, or only
+        user data such as ``fablib_data`` -- never changes the slice state, so
+        it must not be waited on for the full timeout.  The orchestrator
+        returns the reservations it has to add or modify, but not those it
+        has to remove.  So only when it returns none *and* the submitted
+        topology keeps every live sliver is a short grace period given before
+        concluding there is nothing to wait for.
+
         :param previous_state: slice state sampled immediately before the
             modify request was sent
         :type previous_state: String
@@ -2368,8 +2421,14 @@ class Slice:
         :type timeout: int
         :param interval: how often in seconds to check the slice state
         :type interval: int
+        :param reservations: reservations returned by the modify request
+        :type reservations: list
+        :param removes_slivers: whether the modify drops a live sliver; see
+            __modify_removes_slivers()
+        :type removes_slivers: bool
 
-        :raises SliceTimeoutError: if the slice state never changes
+        :raises SliceTimeoutError: if the modify has AM work to do and the
+            slice state never changes
 
         :return: the new slice state
         :rtype: String
@@ -2378,6 +2437,11 @@ class Slice:
             # Nothing to compare against -- do not block on a condition that
             # can never be evaluated; fall through to the caller's own wait.
             return self.get_state()
+
+        expect_change = bool(reservations) or removes_slivers
+        if not expect_change:
+            timeout = min(timeout, self.MODIFY_NO_RESERVATIONS_GRACE)
+            interval = min(interval, 5)
 
         start = time.time()
         while time.time() < start + timeout:
@@ -2390,6 +2454,14 @@ class Slice:
                 )
                 return state
             time.sleep(interval)
+
+        if not expect_change:
+            log.info(
+                f"modify on {self.get_name()} adds, changes and removes no "
+                f"slivers and the state stayed {previous_state}; nothing to "
+                f"provision"
+            )
+            return previous_state
 
         raise SliceTimeoutError(
             f"Timeout exceeded ({timeout} sec) waiting for the modify request on "
@@ -3153,6 +3225,7 @@ class Slice:
         # Request slice from Orchestrator
         modify_requested = False
         pre_modify_state = None
+        removes_slivers = True
         if self._is_modify():
             if lease_in_hours:
                 self.fablib_manager.get_manager().renew_slice(
@@ -3164,6 +3237,7 @@ class Slice:
                 # modify up yet" apart from "the modify is finished", since
                 # both read StableOK.  See __wait_for_modify_start().
                 pre_modify_state = self.get_state()
+                removes_slivers = self.__modify_removes_slivers()
                 slice_reservations = self.fablib_manager.get_manager().modify_slice(
                     slice_id=self.slice_id, graph_model=slice_graph
                 )
@@ -3220,6 +3294,8 @@ class Slice:
                 previous_state=pre_modify_state,
                 timeout=wait_timeout,
                 interval=wait_interval,
+                reservations=slice_reservations,
+                removes_slivers=removes_slivers,
             )
 
         if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
@@ -3809,6 +3885,7 @@ class Slice:
         # Request slice from Orchestrator.  Sample the state first -- see
         # __wait_for_modify_start() for why.
         pre_modify_state = self.get_state()
+        removes_slivers = self.__modify_removes_slivers()
         slice_reservations = self.fablib_manager.get_manager().modify_slice(
             slice_id=self.slice_id, graph_model=slice_graph
         )
@@ -3821,6 +3898,8 @@ class Slice:
                 previous_state=pre_modify_state,
                 timeout=wait_timeout,
                 interval=wait_interval,
+                reservations=slice_reservations,
+                removes_slivers=removes_slivers,
             )
 
         if progress and wait_jupyter == "text" and Utils.is_jupyter_notebook():
