@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove the `ipycytoscape` and `ipyleaflet` dependencies, which only the topology editors used (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
 - Remove the legacy `tests/integration/abc_test.py` and `component_tests.py`, the `tests/benchmarks` suite and the `benchmarks` tox environment. None of them could run: `component_tests.py` failed to import, `abc_test.py` used `AbcUtils` without importing it, and the benchmark files did not match pytest's `test_*.py` pattern, so `tox -e benchmarks` collected no tests (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
 
+### Security
+- Restrict the default `GITHUB_TOKEN` to `contents: read` in the `check_format`, `check_python_floor`, `test` and `publish` workflows, which previously inherited the repository's default token permissions. The PyPI publish job keeps its own `id-token: write` / `contents: write` grant (PR [#527](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/527))
+
 ## 2.0.9
 
 ### Changed
