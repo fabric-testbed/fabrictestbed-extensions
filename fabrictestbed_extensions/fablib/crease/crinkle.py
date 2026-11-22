@@ -3347,7 +3347,8 @@ class CrinkleSlice(Slice):
                     entry["rx_interface"] = flow_tx_map[entry["artifact"]][pkt_id][
                         "time"
                     ]
-                    del entry["artifact"]
+                # The flow key is internal.
+                del entry["artifact"]
         return prov_dict
 
     def list_provenance(
