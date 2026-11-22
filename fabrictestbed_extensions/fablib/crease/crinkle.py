@@ -53,8 +53,85 @@ MONPROT = 0x6587
 # Most edges a time-filtered provenance query takes from SPADE.
 SPADE_TIME_EDGE_LIMIT = 10_000_000
 
+# Stops Ubuntu's automatic upgrades and waits up to ten minutes for a run in progress to
+# end. A kernel they install lacks linux-modules-extra (ptp_kvm), and the monitor reboot
+# would boot it without a PTP clock. The processes are watched, not the oneshot units,
+# which report "activating" while they run. The [u] and [a] keep pgrep -f from matching
+# this command, and "( |$)" leaves out unattended-upgrade-shutdown.
+STOP_AUTO_UPGRADES_CMD = (
+    "sudo systemctl disable --now apt-daily.timer apt-daily-upgrade.timer"
+    " unattended-upgrades.service >/dev/null 2>&1;"
+    " sudo systemctl stop apt-daily.service apt-daily-upgrade.service >/dev/null 2>&1;"
+    " for _ in $(seq 300); do pgrep -f '[u]nattended-upgrade( |$)' >/dev/null"
+    " || pgrep -f '[a]pt.systemd.daily' >/dev/null || break; sleep 2; done;"
+    " sudo dpkg --configure -a >/dev/null 2>&1"
+)
+RESUME_AUTO_UPGRADES_CMD = (
+    "sudo systemctl enable --now apt-daily.timer apt-daily-upgrade.timer"
+    " unattended-upgrades.service >/dev/null 2>&1 && echo CRINKLE_UPGRADES_RESUMED"
+)
+APT_GET = (
+    "sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600"
+    " -o Dpkg::Options::=--force-confold"
+)
+# Upgrades the kernel alone, in the foreground, through its flavour metapackage
+# (linux-image-generic for a -generic kernel), which brings the matching
+# linux-modules-extra.
+KERNEL_UPGRADE_CMD = (
+    f"{APT_GET} install -y \"linux-image-$(uname -r | sed 's/^[0-9.-]*//')\""
+    ' >/dev/null 2>&1 || echo "CRINKLE_PTP_WARN: kernel upgrade failed"'
+)
+# Installs linux-modules-extra (ptp_kvm) for every installed kernel. Only a miss for the
+# newest kernel, which the next boot picks, is reported: other flavours (e.g. -kvm) have
+# no such package.
+PTP_MODULES_CMD = (
+    "next=$(ls /boot | sed -n 's/^vmlinuz-//p' | sort -V | tail -n 1);"
+    " for k in $(ls /boot | sed -n 's/^vmlinuz-//p'); do"
+    f' {APT_GET} install -y "linux-modules-extra-$k" >/dev/null 2>&1'
+    ' || { [ "$k" != "$next" ] || echo "CRINKLE_PTP_WARN: no linux-modules-extra-$k"; };'
+    " done"
+)
+# The whole PTP setup of one node, safe to repeat. It ends with CRINKLE_PTP_RC=<status>.
+# A failed kernel or module install that did not stop the setup is reported on a
+# CRINKLE_PTP_WARN line.
+PTP_SETUP_CMD = (
+    f"mkdir -p {REMOTEWORKDIR}; {STOP_AUTO_UPGRADES_CMD};"
+    f" {APT_GET} update && {APT_GET} install -y ansible git &&"
+    f" {{ {KERNEL_UPGRADE_CMD}; {PTP_MODULES_CMD}; }} &&"
+    f" (cd {REMOTEWORKDIR} && (test -d ptp ||"
+    " git clone https://github.com/fabric-testbed/ptp.git)) &&"
+    f" (cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local"
+    " --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml);"
+    " echo CRINKLE_PTP_RC=$?"
+)
+# Reports the kernel, the ptp_kvm device, the phc2sys service and the offset of the system
+# clock from the host clock in nanoseconds (system minus host). The offset comes from the
+# tightest of 300 system/PTP/system clock_gettime triples on the ptp_kvm device.
+CLOCK_OFFSET_PY = (
+    "import os,time;fd=os.open('/dev/ptp_kvm',os.O_RDONLY);c=((~fd)<<3)|3;"
+    "r=min((b-a,(a+b)//2-p) for a,p,b in ((time.clock_gettime_ns(0),"
+    "time.clock_gettime_ns(c),time.clock_gettime_ns(0)) for _ in range(300)));"
+    "print('CLOCK_OFFSET_NS=%d' % r[1])"
+)
+CLOCK_CHECK_CMD = (
+    "echo CLOCK_KERNEL=$(uname -r);"
+    " test -e /dev/ptp_kvm && echo CLOCK_PTPDEV=yes || echo CLOCK_PTPDEV=no;"
+    " echo CLOCK_SYNC=$(systemctl is-active phc2sys@CLOCK_REALTIME);"
+    f' sudo python3 -c "{CLOCK_OFFSET_PY}" 2>&1 | tail -n 1'
+)
+# Repeats the PTP setup, reinstalls the running kernel's linux-modules-extra, restarts
+# phc2sys and turns the automatic upgrades back on.
+CLOCK_REPAIR_CMD = (
+    f"{PTP_SETUP_CMD};"
+    f' {APT_GET} install -y --reinstall "linux-modules-extra-$(uname -r)" >/dev/null 2>&1;'
+    " sudo modprobe ptp_kvm; sudo udevadm settle;"
+    f" sudo systemctl restart phc2sys@CLOCK_REALTIME; sleep 5; {RESUME_AUTO_UPGRADES_CMD}"
+)
 # Seconds start_monitor() waits before checking that the monitor app is still running.
 MONITOR_START_CHECK_S = 5
+# Largest offset from the host clock that counts as synchronised. A VM synchronised
+# through ptp_kvm sits within a microsecond of its host.
+CLOCK_SYNC_TOLERANCE_NS = 10_000
 
 UBUNTU_IMAGES = [
     "default_ubuntu_20",
@@ -516,6 +593,7 @@ class CrinkleSlice(Slice):
             self.do_allocate_hosts = data["do_allocate_hosts"]
             self.do_post_boot = data["do_post_boot"]
             self.do_ptp_setup = data["do_ptp_setup"]
+            self.ptp_nodes = data.get("ptp_nodes")
             logging.info(
                 f"Retrieved crinkle slice config as:\n{self.analyzer_name}\n{self.prefix}\n{self.monitor_string}"
             )
@@ -535,6 +613,7 @@ class CrinkleSlice(Slice):
             "do_allocate_hosts": self.do_allocate_hosts,
             "do_post_boot": self.do_post_boot,
             "do_ptp_setup": self.do_ptp_setup,
+            "ptp_nodes": getattr(self, "ptp_nodes", None),
         }
         logging.info(f"Writing crinkle slice config to user data: {data_dict}")
         user_data["crinkle_slice_config"] = data_dict
@@ -1424,26 +1503,26 @@ class CrinkleSlice(Slice):
             self._remove_user_data_dump()
         return slice_id
 
-    def setup_ptp(self):
+    def setup_ptp(self, resume_upgrades: bool = True):
         """
         Install and run the fabric-testbed PTP (Precision Time Protocol) ansible
         playbook on the analyzer and on each monitor whose site advertises PTP
         support, running the jobs concurrently and blocking until they all finish.
-        Monitors at sites without PTP support are skipped. Clears do_ptp_setup
-        once complete.
+        Monitors at sites without PTP support are skipped. Unattended upgrades are
+        stopped first, the kernel alone is brought up to date in the foreground,
+        and linux-modules-extra is installed for every installed kernel. A node
+        whose setup fails is reported. Clears do_ptp_setup once complete.
+
+        :param resume_upgrades: turn the automatic upgrades back on at the end
+        :type resume_upgrades: bool
         """
-        prereq_cmd = "sudo apt update && sudo apt install -y ansible git"
-        git_cmd = (
-            f"cd {REMOTEWORKDIR} && git clone https://github.com/fabric-testbed/ptp.git"
-        )
-        ansible_cmd = f"cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml"
-        jobs = []
+        ptp_cmd = PTP_SETUP_CMD
+        jobs = {}
         site_ptp_flags = {}
+        self.ptp_nodes = [self.analyzer.get_name()]
         logging.info(f"Setting up PTP on Crinkle nodes")
         print("Setting up PTP on Crinkle nodes")
-        jobs.append(
-            self.analyzer.execute_thread(f"{prereq_cmd} && {git_cmd} && {ansible_cmd}")
-        )
+        jobs[self.analyzer.execute_thread(ptp_cmd)] = self.analyzer.get_name()
         for monitor_name, monitor in self.monitors.items():
             monitor_site = monitor.get_site()
             site_has_ptp = site_ptp_flags.setdefault(
@@ -1460,15 +1539,190 @@ class CrinkleSlice(Slice):
                     f"Site {monitor_site} does not support PTP, skipping setup for monitor {monitor_name}"
                 )
                 continue
-            jobs.append(
-                monitor.execute_thread(f"{prereq_cmd} && {git_cmd} && {ansible_cmd}")
-            )
+            jobs[monitor.execute_thread(ptp_cmd)] = monitor.get_name()
+            self.ptp_nodes.append(monitor.get_name())
+        self._upgrades_stopped = getattr(self, "_upgrades_stopped", set()) | set(
+            self.ptp_nodes
+        )
         ctr = 0
-        for _ in futures.as_completed(jobs):
+        for job in futures.as_completed(jobs):
             ctr += 1
             logging.info(f"{ctr}/{len(jobs)} jobs finished")
             print(f"{ctr}/{len(jobs)} jobs finished")
+            try:
+                stdout = job.result()[0]
+            except Exception as e:
+                stdout = f"{type(e).__name__}: {e}"
+            match = re.search(r"CRINKLE_PTP_RC=(\d+)", stdout or "")
+            warnings = re.findall(r"^CRINKLE_PTP_WARN: (.*)$", stdout or "", re.M)
+            if match is None or match.group(1) != "0":
+                msg = f"PTP setup failed on {jobs[job]}: {(stdout or '')[-500:]}"
+            elif warnings:
+                msg = f"PTP setup on {jobs[job]} incomplete: {'; '.join(warnings)}"
+            else:
+                continue
+            logging.warning(msg)
+            print(msg)
         self.do_ptp_setup = False
+        if resume_upgrades:
+            self._resume_auto_upgrades()
+
+    @staticmethod
+    def parse_clock_check(output: str) -> dict:
+        """
+        Parse the output of CLOCK_CHECK_CMD.
+
+        :param output: stdout of the check on one node
+        :type output: str
+        :return: kernel, ptp_device (bool), sync_service (systemd state),
+            offset_ns (int or None) and ok (bool: device present, phc2sys active,
+            offset within CLOCK_SYNC_TOLERANCE_NS); a failing check also carries
+            the end of the raw output as detail
+        :rtype: dict
+        """
+        output = output or ""
+
+        def field(name):
+            match = re.search(rf"^{name}=(.*)$", output, re.MULTILINE)
+            return match.group(1).strip() if match else None
+
+        offset = field("CLOCK_OFFSET_NS")
+        status = {
+            "kernel": field("CLOCK_KERNEL"),
+            "ptp_device": field("CLOCK_PTPDEV") == "yes",
+            "sync_service": field("CLOCK_SYNC"),
+            "offset_ns": (
+                int(offset) if offset and re.fullmatch(r"-?\d+", offset) else None
+            ),
+        }
+        status["ok"] = (
+            status["ptp_device"]
+            and status["sync_service"] == "active"
+            and status["offset_ns"] is not None
+            and abs(status["offset_ns"]) <= CLOCK_SYNC_TOLERANCE_NS
+        )
+        if not status["ok"]:
+            status["detail"] = output[-300:]
+        return status
+
+    def check_clock_sync(
+        self, node_names: list[str] = None, repair: bool = True, settle_s: float = 30
+    ):
+        """
+        Check that each PTP-synchronised Crinkle node still has its ptp_kvm device,
+        a running phc2sys and a system clock within CLOCK_SYNC_TOLERANCE_NS of its
+        host. A node that fails is repaired once (the PTP setup again, the
+        running kernel's linux-modules-extra reinstalled, modprobe ptp_kvm,
+        phc2sys restarted) and checked again. A node still failing is reported.
+
+        :param node_names: nodes to check; defaults to the nodes setup_ptp
+            configured (none if it did not run), or, for a slice set up before
+            they were recorded, the analyzer and the monitors at PTP-capable
+            sites
+        :type node_names: list[str]
+        :param repair: attempt one repair of failing nodes
+        :type repair: bool
+        :param settle_s: seconds to wait before checking failing nodes again.
+            Only nodes still failing then are repaired.
+        :type settle_s: float
+        :return: per-node status from parse_clock_check
+        :rtype: dict
+        """
+        if node_names is None:
+            node_names = getattr(self, "ptp_nodes", None)
+        if node_names is None:
+            resources = self.get_fablib_manager().get_resources()
+            node_names = [self.analyzer.get_name()] + [
+                m.get_name()
+                for m in self.monitors.values()
+                if resources.get_ptp_capable(site_name=m.get_site())
+            ]
+        nodes = {
+            n.get_name(): n
+            for n in [self.analyzer] + list(self.monitors.values())
+            if n.get_name() in node_names
+        }
+
+        def run(names, cmd):
+            jobs = {nodes[name].execute_thread(cmd): name for name in names}
+            out = {}
+            for job in futures.as_completed(jobs):
+                try:
+                    out[jobs[job]] = job.result()[0]
+                except Exception as e:
+                    out[jobs[job]] = f"{type(e).__name__}: {e}"
+            return out
+
+        status = {
+            name: self.parse_clock_check(out)
+            for name, out in run(nodes, CLOCK_CHECK_CMD).items()
+        }
+        failing = [name for name, st in status.items() if not st["ok"]]
+        if failing and repair and settle_s:
+            time.sleep(settle_s)
+            for name, out in run(failing, CLOCK_CHECK_CMD).items():
+                status[name] = self.parse_clock_check(out)
+            failing = [name for name in failing if not status[name]["ok"]]
+        if failing and repair:
+            logging.warning(f"Clock not synchronised on {failing}, repairing")
+            run(failing, CLOCK_REPAIR_CMD)
+            for name, out in run(failing, CLOCK_CHECK_CMD).items():
+                status[name] = self.parse_clock_check(out)
+                status[name]["repaired"] = True
+        for name in sorted(status):
+            st = status[name]
+            msg = (
+                f"Clock {name}: offset {st['offset_ns']} ns, phc2sys {st['sync_service']},"
+                f" ptp_kvm {'yes' if st['ptp_device'] else 'no'}, kernel {st['kernel']}"
+            )
+            if st["ok"]:
+                logging.info(msg)
+            else:
+                logging.warning(f"{msg} -- NOT SYNCHRONISED")
+                print(
+                    f"WARNING: {msg} -- NOT SYNCHRONISED; its timestamps cannot be"
+                    " compared with other monitors'"
+                )
+        self.clock_status = status
+        return status
+
+    def _resume_auto_upgrades(self):
+        """
+        Not intended for API call.
+
+        Turn back on the automatic upgrades that post_boot_config and setup_ptp
+        stopped, and report the nodes where that failed. Stop commands still
+        running finish first.
+        """
+        stop_jobs = getattr(self, "_upgrade_stop_jobs", [])
+        futures.wait(stop_jobs)
+        jobs = {}
+        for name in sorted(getattr(self, "_upgrades_stopped", set())):
+            try:
+                # Look the node up afresh: after a failed submit the objects in
+                # self.monitors may predate it and lack a management IP.
+                node = (
+                    self.get_node(name=name)
+                    if name == self.analyzer_name
+                    else self.get_monitor(name)
+                )
+                jobs[node.execute_thread(RESUME_AUTO_UPGRADES_CMD)] = name
+            except Exception as e:
+                logging.error(f"Resuming automatic upgrades on {name}: {e}")
+                print(
+                    f"WARNING: Automatic upgrades could not be turned back on on {name}"
+                )
+        for job in futures.as_completed(jobs):
+            try:
+                ok = "CRINKLE_UPGRADES_RESUMED" in (job.result()[0] or "")
+            except Exception as e:
+                logging.error(f"Resuming automatic upgrades: {e}", exc_info=True)
+                ok = False
+            if not ok:
+                msg = f"Automatic upgrades could not be turned back on on {jobs[job]}"
+                logging.warning(msg)
+                print(f"WARNING: {msg}")
+        self._upgrades_stopped = set()
 
     def resolve_interface_networks(self):
         """
@@ -1517,6 +1771,7 @@ class CrinkleSlice(Slice):
                 )
                 self._apply_user_data(self._post_boot_snapshot)
                 self.save_fablib_data()
+            self._resume_auto_upgrades()
             raise
 
     def _post_boot_config(self):
@@ -1710,15 +1965,17 @@ class CrinkleSlice(Slice):
                         logging.error(e, exc_info=True)
                         prefetched_dataplane_ifaces[key] = None
 
+            self._upgrades_stopped = {m.get_name() for m in self.monitors.values()}
+            self._upgrade_stop_jobs = []
             for key, monitor in self.monitors.items():
                 logging.info(
                     f"Refreshing monitor for net {key} after slice creation, count {counter}"
                 )
                 refreshed_monitor = refreshed_monitors[key]
                 mon_site = refreshed_monitor.get_site()
-                jobs.append(
+                self._upgrade_stop_jobs.append(
                     refreshed_monitor.execute_thread(
-                        f"sudo ip link set {self.analyzer_iface.get_device_name()} up; wget -q -O {REMOTEWORKDIR}/{DPDKNAME} {MONITORURL}; chmod u+x {REMOTEWORKDIR}/{DPDKNAME}"
+                        f"{STOP_AUTO_UPGRADES_CMD}; sudo ip link set {self.analyzer_iface.get_device_name()} up; wget -q -O {REMOTEWORKDIR}/{DPDKNAME} {MONITORURL}; chmod u+x {REMOTEWORKDIR}/{DPDKNAME}"
                     )
                 )
                 jobs.append(
@@ -1815,8 +2072,11 @@ class CrinkleSlice(Slice):
             logging.info("Saving slice data before rebooting monitors")
             print("Saving slice data before rebooting monitors")
             self.do_post_boot = False
+            ptp_configured = self.do_ptp_setup
             if self.do_ptp_setup:
-                self.setup_ptp()
+                self.setup_ptp(resume_upgrades=False)
+            else:
+                self.ptp_nodes = []
             logging.info("Saving Crinkle Data")
             self.set_crinkle_data()
             self.save_fablib_data()
@@ -1841,6 +2101,11 @@ class CrinkleSlice(Slice):
                 ctr += 1
                 logging.info(f"{ctr}/{len(jobs)} jobs finished")
                 print(f"{ctr}/{len(jobs)} jobs finished")
+            if ptp_configured:
+                logging.info("Checking Crinkle clock synchronisation")
+                print("Checking Crinkle clock synchronisation")
+                self.check_clock_sync()
+            self._resume_auto_upgrades()
             logging.info("Crinkle post_boot_config done")
             print("Crinkle post_boot_config done")
 
