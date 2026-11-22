@@ -133,6 +133,103 @@ MONITOR_START_CHECK_S = 5
 # through ptp_kvm sits within a microsecond of its host.
 CLOCK_SYNC_TOLERANCE_NS = 10_000
 
+# An L3 monitored link (add_monitored_l3network) joins two monitored L2 segments, each
+# ending at a tunnel node, by VXLAN over the tunnel nodes' FABNet uplinks. VXLAN carries
+# whole Ethernet frames, so the Crinkle trailer after the IP payload crosses the tunnel.
+# A router would strip it. On the tunnel node, tc redirects splice the tunnel-side
+# interface to the VXLAN device, and that interface takes the far endpoint's MAC. The
+# interfaces are asked for L3_TUNNEL_MTU, and the VXLAN device takes the uplink's MTU
+# less the encapsulation.
+L3_TUNNEL_MTU = 9000
+# MonitorData.net_type of a monitor on one end of an L3 monitored link.
+L3_NET_TYPE = "L3"
+# FABNet service types an L3 link's tunnel can use, by address family.
+FABNET_TYPES = {
+    "FABNetv4": "IPv4",
+    "FABNetv4Ext": "IPv4",
+    "FABNetv6": "IPv6",
+    "FABNetv6Ext": "IPv6",
+}
+VXLAN_PORT = 4789
+
+
+def l3_tunnel_cmd(
+    tunnel_dev: str,
+    uplink_dev: str,
+    vni: int,
+    local_ip: str,
+    local_prefixlen: int,
+    remote_ip: str,
+    peer_mac: str,
+    gateway: str,
+) -> str:
+    """
+    Not intended for API call.
+
+    Shell command that ensures one end of an L3 monitored link's tunnel is up on
+    its tunnel node. An end already in place is left unchanged, and the command
+    prints CRINKLE_TUNNEL_ALREADY_UP. Otherwise the end is recreated. Crinkle
+    leaves the interfaces unmanaged, so the command also sets the tunnel node's
+    FABNet address and its route to the other end.
+
+    :param tunnel_dev: OS device facing the local monitor
+    :param uplink_dev: OS device on the FABNet network
+    :param vni: VXLAN network identifier shared by both ends
+    :param local_ip: this end's FABNet address
+    :param local_prefixlen: prefix length of this end's FABNet subnet
+    :param remote_ip: the other end's FABNet address
+    :param peer_mac: MAC of the endpoint at the other end
+    :param gateway: the FABNet gateway of this end's network, which the route to
+        the other end goes through
+    :return: shell command string
+    """
+    vx = f"crkvx{vni}"
+    peer_mac = peer_mac.lower()
+    overhead = 70 if ":" in str(remote_ip) else 50
+    in_place = " && ".join(
+        [
+            f"ip link show {tunnel_dev} | grep -q '[<,]UP[,>]'",
+            f"ip link show {vx} 2>/dev/null | grep -q '[<,]UP[,>]'",
+            f"ip -o addr show dev {uplink_dev} | grep -q ' {local_ip}/'",
+            f"ip route get {remote_ip} 2>/dev/null | grep -q ' via {gateway} '",
+            f"ip -d link show {vx} 2>/dev/null | grep -q ' remote {remote_ip} '",
+            f'[ "$(cat /sys/class/net/{tunnel_dev}/address)" = "{peer_mac}" ]',
+            f"tc filter show dev {tunnel_dev} ingress | grep -q 'to device {vx})'",
+            f"tc filter show dev {vx} ingress | grep -q 'to device {tunnel_dev})'",
+        ]
+    )
+    best_effort = [
+        f"sudo ip link del {vx} 2>/dev/null",
+        f"sudo tc qdisc del dev {tunnel_dev} ingress 2>/dev/null",
+        f"sudo nmcli device set {tunnel_dev} managed no 2>/dev/null",
+        f"sudo nmcli device set {uplink_dev} managed no 2>/dev/null",
+        f"sudo ip link set {uplink_dev} mtu {L3_TUNNEL_MTU} 2>/dev/null",
+    ]
+    required = [
+        f"sudo ip link set {uplink_dev} up",
+        f"sudo ip addr replace {local_ip}/{local_prefixlen} dev {uplink_dev}",
+        f"sudo ip route replace {remote_ip} via {gateway} dev {uplink_dev}",
+        f"sudo ip link set {tunnel_dev} down",
+        f"sudo ip link set {tunnel_dev} address {peer_mac}",
+        f"{{ sudo ip link set {tunnel_dev} mtu {L3_TUNNEL_MTU} 2>/dev/null || true; }}",
+        f"sudo ip link set {tunnel_dev} promisc on up",
+        f"sudo ip link add {vx} type vxlan id {vni} local {local_ip}"
+        f" remote {remote_ip} dstport {VXLAN_PORT} dev {uplink_dev} nolearning",
+        f"sudo ip link set {vx} mtu $(( $(cat /sys/class/net/{uplink_dev}/mtu)"
+        f" - {overhead} )) up",
+        f"sudo tc qdisc add dev {tunnel_dev} ingress",
+        f"sudo tc filter add dev {tunnel_dev} ingress matchall"
+        f" action mirred egress redirect dev {vx}",
+        f"sudo tc qdisc add dev {vx} ingress",
+        f"sudo tc filter add dev {vx} ingress matchall"
+        f" action mirred egress redirect dev {tunnel_dev}",
+    ]
+    return (
+        f"if {in_place}; then echo CRINKLE_TUNNEL_ALREADY_UP;"
+        f" else {' ; '.join(best_effort)} ; {' && '.join(required)} ; fi"
+    )
+
+
 UBUNTU_IMAGES = [
     "default_ubuntu_20",
     "default_ubuntu_22",
@@ -311,7 +408,7 @@ class CrinkleMonitor(Node):
             :type cmd_args: str
             :param net_name: name of the network this monitor observes
             :type net_name: str
-            :param net_type: the network service type (e.g. "L2Bridge") of the network this monitor observes
+            :param net_type: the network service type (e.g. "L2Bridge") of the network this monitor observes, or L3_NET_TYPE for an end of an L3 monitored link
             :type net_type: str
             :param cnet_iface: the monitor's interface on the Crinkle control network, used to reach the analyzer
             :type cnet_iface: Interface
@@ -1255,6 +1352,149 @@ class CrinkleSlice(Slice):
         monitor.set_monitor_data()
         return monitor
 
+    def add_monitored_l3network(
+        self,
+        name: str = None,
+        interfaces: list[Interface] = None,
+        fabnet_iface: Interface = None,
+        vni: int = None,
+        role: str = "src",
+        fabnet_type: str = "IPv4",
+        subnet: ipaddress = None,
+        gateway: ipaddress = None,
+        user_data: dict = None,
+        sinks: list[Interface] = None,
+        host: str = None,
+        site: str = None,
+        cores: int = CrinkleMonitor.default_cores,
+        ram: int = CrinkleMonitor.default_ram,
+        disk: int = CrinkleMonitor.default_disk,
+    ) -> CrinkleMonitor:
+        """
+        Adds one end of an L3 (FABNet) monitored link, whose two ends are at
+        different sites or in different slices. Each end is a monitored
+        L2Bridge, as add_monitored_l2network() builds, between a local endpoint
+        interface and an interface of a tunnel node. The two tunnel nodes are
+        joined by VXLAN over FABNet (see setup_l3_tunnels()), which carries the
+        Crinkle trailer, so the provenance queries span the link.
+
+        Add both ends with the same vni and opposite roles. post_boot_config
+        joins two ends in one slice. For ends in two slices, call
+        setup_l3_tunnels() on each slice with the other's
+        get_l3_tunnel_endpoints().
+
+        :param name: the name of the network service
+        :type name: String
+
+        :param interfaces: exactly two interfaces to build the local L2Bridge
+            with: the local endpoint interface and an interface of the tunnel
+            node (the node that owns fabnet_iface), in either order
+        :type interfaces: List[Interface]
+
+        :param fabnet_iface: the tunnel node's interface on a FABNetv4 or
+            FABNetv6 network, which carries the tunnel
+        :type fabnet_iface: Interface
+
+        :param vni: the VXLAN VNI used for the cross-site tunnel
+        :type vni: int
+
+        :param role: which end of the link this is, "src" or "dst"; the two
+            ends of a link take opposite roles
+        :type role: String
+
+        :param fabnet_type: the address family of the tunnel, "IPv4" or "IPv6";
+            fabnet_iface must be on a FABNet network of that family
+        :type fabnet_type: String
+
+        :param subnet:
+        :type subnet: ipaddress
+
+        :param gateway:
+        :type gateway: ipaddress
+
+        :param user_data
+        :type user_data: dict
+
+        :param sinks: A set of interfaces which should have any Crinkle packet trailers
+            stripped before entering.
+        :type sinks: List[Interface]
+
+        :return: a new CrinkleMonitor
+        :rtype: CrinkleMonitor
+        :raises ValueError: if there are not exactly two interfaces, they are
+            at different sites, fabnet_iface is missing or not on the node of
+            exactly one of them, that interface is a sink, or vni, role or
+            fabnet_type is invalid
+        """
+        interfaces = interfaces or []
+        if len(interfaces) != 2:
+            raise ValueError(
+                f"add_monitored_l3network needs exactly two interfaces, got {len(interfaces)}"
+            )
+        sites = {iface.get_site() for iface in interfaces}
+        if len(sites) != 1:
+            raise ValueError(
+                f"add_monitored_l3network builds a single-site segment; interfaces are at {sorted(sites)}"
+            )
+        tunnel_node = fabnet_iface.get_node().get_name() if fabnet_iface else None
+        on_tunnel_node = [
+            iface for iface in interfaces if iface.get_node().get_name() == tunnel_node
+        ]
+        if len(on_tunnel_node) != 1:
+            raise ValueError(
+                "add_monitored_l3network needs fabnet_iface on the node of exactly "
+                "one of the two interfaces (the tunnel node)"
+            )
+        tunnel_iface = on_tunnel_node[0]
+        endpoint_iface = next(i for i in interfaces if i is not tunnel_iface)
+        if tunnel_iface in (sinks or []):
+            raise ValueError("The tunnel node's interface cannot be a sink")
+        fabnet = fabnet_iface.get_network()
+        fabnet_kind = str(fabnet.get_type()) if fabnet is not None else ""
+        if fabnet_kind not in FABNET_TYPES or FABNET_TYPES[fabnet_kind] != fabnet_type:
+            raise ValueError(
+                f"fabnet_iface must be on a FABNet network of type {fabnet_type},"
+                f" not {fabnet_kind or 'no network'}"
+            )
+        if isinstance(vni, bool) or not isinstance(vni, int) or not 0 < vni < 2**24:
+            raise ValueError(f"vni must be a VXLAN VNI (1 to 2**24 - 1), not {vni!r}")
+        if role not in ("src", "dst") or fabnet_type not in ("IPv4", "IPv6"):
+            raise ValueError(
+                f"role must be 'src' or 'dst' and fabnet_type 'IPv4' or 'IPv6', "
+                f"not {role!r} and {fabnet_type!r}"
+            )
+        if not site:
+            site = sites.pop()
+
+        monitor = self.add_monitor(
+            name=f"{self.prefix}_monitor_{name}",
+            site=site,
+            net_name=name,
+            host=host,
+            cores=cores,
+            ram=ram,
+            disk=disk,
+        )
+
+        sub_nets = self._populate_l2bridge_monitor(
+            monitor, name, interfaces, subnet, gateway, user_data, sinks
+        )
+        monitor.data.net_type = L3_NET_TYPE
+        self.monitors[name] = monitor
+        monitor.set_monitor_data()
+
+        self.set_l3_link_data(
+            sub_nets[0],
+            vni=vni,
+            fabnet_iface_name=fabnet_iface.get_name(),
+            role=role,
+            fabnet_type=fabnet_type,
+            tunnel_iface_name=tunnel_iface.get_name(),
+            endpoint_iface_name=endpoint_iface.get_name(),
+        )
+
+        return monitor
+
     @staticmethod
     def get_orig_net_name(net: NetworkService) -> str:
         """
@@ -1291,6 +1531,247 @@ class CrinkleSlice(Slice):
         logging.info(f"Storing orig name for network {net.get_name()} as {name}")
         user_data = net.get_user_data()
         user_data["crinkle_net_name"] = name
+        net.set_user_data(user_data=user_data)
+
+    @staticmethod
+    def get_l3_link_data(net: NetworkService) -> dict | None:
+        """
+        Not intended for API call. See: CrinkleSlice.get_monitored_l3networks()
+
+        Gets the Crinkle L3 (FABNet) tunnel metadata stored on a network by
+        set_l3_link_data(), if any.
+
+        :param net: the network to read L3 link metadata from
+        :type net: NetworkService
+        :return: a dict with keys "vni", "fabnet_iface_name", "role",
+            "fabnet_type", "tunnel_iface_name" and "endpoint_iface_name", or
+            None if the network has no L3 link metadata
+        :rtype: Optional[dict]
+        """
+        user_data = net.get_user_data()
+        if "crinkle_l3_link" in user_data:
+            l3_link_data = user_data["crinkle_l3_link"]
+            logging.debug(
+                f"Retrieved L3 link data for {net.get_name()} as {l3_link_data}"
+            )
+            return l3_link_data
+        return None
+
+    @staticmethod
+    def set_l3_link_data(
+        net: NetworkService,
+        vni: int,
+        fabnet_iface_name: str,
+        role: str,
+        fabnet_type: str,
+        tunnel_iface_name: str,
+        endpoint_iface_name: str,
+    ):
+        """
+        Not intended for API call. See: CrinkleSlice.add_monitored_l3network()
+
+        Stores Crinkle L3 (FABNet) tunnel metadata on a network's user data.
+
+        :param net: the network to store L3 link metadata on
+        :type net: NetworkService
+        :param vni: the VXLAN VNI used for the cross-site tunnel
+        :type vni: int
+        :param fabnet_iface_name: the name of the tunnel node's FABNet uplink interface
+        :type fabnet_iface_name: String
+        :param role: the role of this segment in the tunnel, "src" or "dst"
+        :type role: String
+        :param fabnet_type: the FABNet type used for the tunnel, "IPv4" or "IPv6"
+        :type fabnet_type: String
+        :param tunnel_iface_name: the tunnel node's interface on the monitored segment
+        :type tunnel_iface_name: String
+        :param endpoint_iface_name: the endpoint's interface on the monitored segment
+        :type endpoint_iface_name: String
+        """
+        logging.info(f"Storing L3 link data for network {net.get_name()}")
+        user_data = net.get_user_data()
+        user_data["crinkle_l3_link"] = {
+            "vni": vni,
+            "fabnet_iface_name": fabnet_iface_name,
+            "role": role,
+            "fabnet_type": fabnet_type,
+            "tunnel_iface_name": tunnel_iface_name,
+            "endpoint_iface_name": endpoint_iface_name,
+        }
+        net.set_user_data(user_data=user_data)
+
+    def get_monitored_l3networks(self) -> list[dict]:
+        """
+        List the ends of L3 monitored links in this slice (see
+        add_monitored_l3network()) with their tunnel metadata. Use after slice
+        submission.
+
+        :return: a list of dicts, one per monitored L3 link end in this
+            slice, each with keys "net_name" (the original Crinkle network
+            name), "network" (the NetworkService), and the stored "vni",
+            "fabnet_iface_name", "role", "fabnet_type", "tunnel_iface_name"
+            and "endpoint_iface_name"
+        :rtype: List[dict]
+        """
+        l3networks: list[dict] = []
+        for net in self.get_networks():
+            l3_link_data = self.get_l3_link_data(net)
+            if l3_link_data is not None:
+                l3networks.append(
+                    {
+                        "net_name": self.get_orig_net_name(net),
+                        "network": net,
+                        **l3_link_data,
+                    }
+                )
+        return l3networks
+
+    def _l3_end_info(self, link: dict) -> dict:
+        """
+        Not intended for API call.
+
+        What the other end of an L3 monitored link needs to reach this end.
+        """
+        fabnet_ip = self.get_interface(name=link["fabnet_iface_name"]).get_ip_addr()
+        version = 6 if link["fabnet_type"] == "IPv6" else 4
+        if fabnet_ip and ipaddress.ip_address(str(fabnet_ip)).version != version:
+            fabnet_ip = None
+        endpoint = self.get_interface(name=link["endpoint_iface_name"])
+        return {
+            "role": link["role"],
+            "fabnet_ip": str(fabnet_ip) if fabnet_ip else None,
+            "endpoint_mac": endpoint.get_mac(),
+        }
+
+    def get_l3_tunnel_endpoints(self) -> dict[int, dict]:
+        """
+        Get, per VNI, what the other end of each L3 monitored link that has
+        only one end in this slice needs to reach it: this end's role, its
+        tunnel node's FABNet address and its endpoint's MAC. Pass the result
+        to setup_l3_tunnels(peers=...) of the slice holding the other ends.
+        Requires the slice to be submitted and configured.
+
+        :return: dict[vni, {"role", "fabnet_ip", "endpoint_mac"}]
+        :rtype: dict
+        """
+        links = self.get_monitored_l3networks()
+        vnis = [link["vni"] for link in links]
+        return {
+            link["vni"]: self._l3_end_info(link)
+            for link in links
+            if vnis.count(link["vni"]) == 1
+        }
+
+    def setup_l3_tunnels(
+        self, peers: dict[int, dict] = None, net_names: list[str] = None
+    ) -> dict[int, str]:
+        """
+        Ensure the VXLAN tunnel end of each L3 monitored link end in this slice
+        is up (see add_monitored_l3network()). An end already up is left as it
+        is. The other end of a link is the end in this slice with the same VNI
+        or, for a link between two slices, the entry for the VNI in `peers`,
+        from get_l3_tunnel_endpoints() of the other slice. Peers given here are
+        saved with the link, so later calls need them no more.
+
+        :param peers: dict[vni, {"role", "fabnet_ip", "endpoint_mac"}] for
+            the ends in another slice
+        :type peers: dict
+        :param net_names: set up only the ends of these monitored links
+            (add_monitored_l3network() names); all when None
+        :type net_names: list[str]
+        :return: dict[vni, status], status "up", "waiting for peer" or the
+            reason it is not up
+        :rtype: dict
+        """
+        peers = peers or {}
+        by_vni: dict[int, list[dict]] = {}
+        for link in self.get_monitored_l3networks():
+            by_vni.setdefault(link["vni"], []).append(link)
+        status: dict[int, str] = {}
+        jobs = {}
+        peers_changed = False
+        for vni, ends in by_vni.items():
+            if net_names is not None and not any(
+                end["net_name"] in net_names for end in ends
+            ):
+                continue
+            if len(ends) > 2:
+                status[vni] = f"{len(ends)} ends share the VNI"
+                continue
+            infos = [self._l3_end_info(end) for end in ends]
+            if len(ends) == 2:
+                pairs = [(ends[0], infos[0], infos[1]), (ends[1], infos[1], infos[0])]
+            elif vni in peers or ends[0].get("peer"):
+                peer = peers.get(vni) or ends[0]["peer"]
+                if peer != ends[0].get("peer"):
+                    self._store_l3_peer(ends[0]["network"], peer)
+                    peers_changed = True
+                pairs = [(ends[0], infos[0], peer)]
+            else:
+                status[vni] = "waiting for peer"
+                continue
+            if pairs[0][1]["role"] == pairs[0][2]["role"]:
+                status[vni] = f"both ends have role {pairs[0][1]['role']!r}"
+                continue
+            if not all(
+                me["fabnet_ip"] and peer.get("fabnet_ip") for _, me, peer in pairs
+            ):
+                status[vni] = "a tunnel node has no FABNet address of the link's family"
+                continue
+            for end, me, peer in pairs:
+                if net_names is not None and end["net_name"] not in net_names:
+                    continue
+                tunnel_iface = self.get_interface(name=end["tunnel_iface_name"])
+                fabnet_iface = self.get_interface(name=end["fabnet_iface_name"])
+                fabnet = fabnet_iface.get_network()
+                node = tunnel_iface.get_node()
+                cmd = l3_tunnel_cmd(
+                    tunnel_dev=tunnel_iface.get_device_name(),
+                    uplink_dev=fabnet_iface.get_device_name(),
+                    gateway=str(fabnet.get_gateway()),
+                    vni=vni,
+                    local_ip=me["fabnet_ip"],
+                    local_prefixlen=ipaddress.ip_network(fabnet.get_subnet()).prefixlen,
+                    remote_ip=peer["fabnet_ip"],
+                    peer_mac=peer["endpoint_mac"],
+                )
+                job = (
+                    node.get_fablib_manager()
+                    .get_ssh_thread_pool_executor()
+                    .submit(
+                        node._execute_checked,
+                        cmd,
+                        f"L3 tunnel {vni} on {node.get_name()}",
+                    )
+                )
+                jobs[job] = vni
+        for job in futures.as_completed(jobs):
+            vni = jobs[job]
+            try:
+                job.result()
+                status.setdefault(vni, "up")
+            except Exception as e:
+                status[vni] = str(e)
+        for vni, st in sorted(status.items()):
+            msg = f"L3 tunnel VNI {vni}: {st}"
+            if st == "up":
+                logging.info(msg)
+            else:
+                logging.warning(msg)
+                print(f"WARNING: {msg}")
+        if peers_changed:
+            self.save_fablib_data()
+        return status
+
+    @staticmethod
+    def _store_l3_peer(net: NetworkService, peer: dict):
+        """
+        Not intended for API call.
+
+        Record the other slice's end of an L3 monitored link with this end's
+        tunnel metadata (in memory; setup_l3_tunnels() saves the slice).
+        """
+        user_data = net.get_user_data()
+        user_data["crinkle_l3_link"]["peer"] = dict(peer)
         net.set_user_data(user_data=user_data)
 
     def allocate_hosts(self):
@@ -1340,7 +1821,8 @@ class CrinkleSlice(Slice):
 
         for _, monitor in self.monitors.items():
             logging.info(f"Allocating Monitor for network {monitor.data.net_name}")
-            if monitor.data.net_type == "L2Bridge":
+            # An L3 end's monitor sits on two L2Bridge segments like any other.
+            if monitor.data.net_type in ("L2Bridge", L3_NET_TYPE):
                 endpoint1 = self.get_node(name=monitor.creation_data[0][0])
                 endpoint2 = self.get_node(name=monitor.creation_data[1][0])
                 endpoints = [endpoint1, endpoint2]
@@ -2152,6 +2634,12 @@ class CrinkleSlice(Slice):
                 print("Checking Crinkle clock synchronisation")
                 self.check_clock_sync()
             self._resume_auto_upgrades()
+            if any(m.data.net_type == L3_NET_TYPE for m in self.monitors.values()):
+                # An end whose other end is in another slice waits for
+                # setup_l3_tunnels(peers=...).
+                logging.info("Bringing up Crinkle L3 tunnels")
+                print("Bringing up Crinkle L3 tunnels")
+                self.setup_l3_tunnels()
             logging.info("Crinkle post_boot_config done")
             print("Crinkle post_boot_config done")
 
@@ -2968,7 +3456,11 @@ class CrinkleSlice(Slice):
         print("Analyzer reset")
 
     def start_monitor(
-        self, monitor: CrinkleMonitor, wait: bool = True, quiet: bool = False
+        self,
+        monitor: CrinkleMonitor,
+        wait: bool = True,
+        quiet: bool = False,
+        setup_tunnel: bool = True,
     ) -> futures.Future | None:
         """
         Start the DPDK script on a monitor. The app runs detached, with its
@@ -2982,6 +3474,9 @@ class CrinkleSlice(Slice):
         :type wait: bool
         :param quiet: Whether to suppress the launch output of a blocking call, default False
         :type quiet: bool
+        :param setup_tunnel: For a monitor on an L3 monitored link, first ensure
+            the link's tunnel end is up (setup_l3_tunnels()), default True
+        :type setup_tunnel: bool
         :return: For a non-blocking call, a future that completes once the app is launched and checked, and raises if it exited; otherwise None
         :rtype: concurrent.futures.Future
         :raises RuntimeError: for a blocking call, if the app exited
@@ -2989,6 +3484,8 @@ class CrinkleSlice(Slice):
         if monitor is None:
             raise Exception("Monitor cannot be None")
         logging.info(f"Starting Crinkle monitor {monitor.data.net_name}")
+        if setup_tunnel and monitor.data.net_type == L3_NET_TYPE:
+            self.setup_l3_tunnels(net_names=[monitor.data.net_name])
         # The app runs detached, so the SSH channel closes once it is spawned.
         # $pid is the sudo process, which exits with the app: a zombie (Z) or a
         # missing process means the app has exited. A monitor already running
@@ -3018,7 +3515,8 @@ class CrinkleSlice(Slice):
         self, wait: bool = True, no_return: bool = True
     ) -> list[futures.Future] | None:
         """
-        Start the DPDK script on all monitors.
+        Start the DPDK script on all monitors, after ensuring the tunnels of any
+        L3 monitored links are up.
 
         :param wait: Whether to block until every monitor's app is launched,
             raising the first launch failure, default True
@@ -3028,9 +3526,13 @@ class CrinkleSlice(Slice):
         :return: The futures of all started jobs
         :rtype: list[concurrent.futures.Future]
         """
+        if any(m.data.net_type == L3_NET_TYPE for m in self.monitors.values()):
+            self.setup_l3_tunnels()
         start_list: list[futures.Future] = []
         for monitor in self.monitors.values():
-            start_list.append(self.start_monitor(monitor=monitor, wait=False))
+            start_list.append(
+                self.start_monitor(monitor=monitor, wait=False, setup_tunnel=False)
+            )
         if wait:
             logging.info("Waiting for monitors to finish starting")
             total = len(start_list)
