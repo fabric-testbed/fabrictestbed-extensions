@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NetworkService.get_public_ips()` returns `None` (with a warning) while a `make_ip_publicly_routable()` request has not been submitted, instead of returning the request as if it were granted (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `Interface._config_nmcli` now issues a single chained SSH command per interface instead of 6-8 round trips
 - `Attestable_Switch.switch_config()` brings its ports up in one SSH call instead of two per port
+- Speed up Crinkle `post_boot_config` on large slices: batched and parallel node setup, one pass to resolve interface networks, and a single fablib data save
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))

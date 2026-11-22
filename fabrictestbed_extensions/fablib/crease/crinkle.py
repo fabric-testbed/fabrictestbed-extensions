@@ -1455,6 +1455,24 @@ class CrinkleSlice(Slice):
             print(f"{ctr}/{len(jobs)} jobs finished")
         self.do_ptp_setup = False
 
+    def resolve_interface_networks(self):
+        """
+        Cache the owning network on every interface, in one pass over the
+        networks.
+        """
+        fim_iface_nets = []
+        for net in self.get_networks(refresh=False):
+            for fim_interface in net.get_fim().interface_list:
+                fim_iface_nets.append((fim_interface.name, net))
+        for iface in self.get_all_interfaces():
+            if iface.network is not None:
+                continue
+            name = iface.get_name()
+            for fim_name, net in fim_iface_nets:
+                if fim_name.endswith(name):
+                    iface.network = net
+                    break
+
     def post_boot_config(self):
         """
         Runs post_boot_config identically to Slice.post_boot_config before running
@@ -1467,6 +1485,28 @@ class CrinkleSlice(Slice):
 
         Only use this method after a non-blocking submit call and only call it
         once.
+
+        The user_data written by the node configuration is saved with the
+        monitor data, in one submit. If the monitor setup raises before that
+        save, the user_data of the node configuration is saved before the
+        exception propagates.
+        """
+        self._post_boot_snapshot = None
+        try:
+            self._post_boot_config()
+        except BaseException:
+            if self._post_boot_snapshot is not None:
+                logging.warning(
+                    "post_boot_config failed before saving fablib data; "
+                    "saving the user_data of the node configuration"
+                )
+                self._apply_user_data(self._post_boot_snapshot)
+                self.save_fablib_data()
+            raise
+
+    def _post_boot_config(self):
+        """
+        Not intended for API call. The body of post_boot_config().
         """
         # Rewritten super to handle Crinkle-specific nodes
         if self.is_dead_or_closing() or self.is_allocated():
@@ -1483,9 +1523,12 @@ class CrinkleSlice(Slice):
         self.update()
 
         logging.info("post_boot_config: get_networks")
-        for network in self.get_networks():
+        for network in self.get_networks(refresh=False):
             logging.info(f"post_boot_config: network {network.get_name()}")
             network.config()
+
+        logging.info("post_boot_config: resolve interface networks")
+        self.resolve_interface_networks()
 
         logging.info("post_boot_config: get_interfaces")
         for interface in self.get_all_interfaces():
@@ -1497,19 +1540,52 @@ class CrinkleSlice(Slice):
                 logging.error(e, exc_info=True)
 
         logging.info("post_boot_config: unmanage interfaces")
+        node_interfaces: dict[str, tuple[Node, list[Interface]]] = {}
         for interface in self.get_all_interfaces():
             try:
-                logging.info(f"post_boot_config: unmanage {interface.get_name()}")
-                interface.get_node().execute(
-                    f"sudo nmcli device set {interface.get_device_name()} managed no",
-                    quiet=True,
-                    timeout=30,
+                node = interface.get_node()
+                node_interfaces.setdefault(node.get_name(), (node, []))[1].append(
+                    interface
                 )
             except Exception as e:
                 logging.error(
-                    f"Interface: {interface.get_name()} failed to become unmanaged"
+                    f"Interface: {interface.get_name()} failed to resolve node"
                 )
                 logging.error(e, exc_info=True)
+
+        def _unmanage_node_interfaces(node: Node, interfaces: list[Interface]):
+            devs = []
+            for interface in interfaces:
+                try:
+                    devs.append(interface.get_device_name())
+                except Exception as e:
+                    logging.error(
+                        f"Interface: {interface.get_name()} failed to resolve device name"
+                    )
+                    logging.error(e, exc_info=True)
+            if devs:
+                # Each device is bounded to 30 s.
+                node.execute(
+                    " ; ".join(
+                        f"sudo timeout --foreground -k 10 30"
+                        f" nmcli device set {dev} managed no"
+                        for dev in devs
+                    ),
+                    quiet=True,
+                )
+
+        with futures.ThreadPoolExecutor(8) as unmanage_pool:
+            unmanage_jobs = {
+                unmanage_pool.submit(_unmanage_node_interfaces, node, ifaces): name
+                for name, (node, ifaces) in node_interfaces.items()
+            }
+            for job in futures.as_completed(unmanage_jobs):
+                name = unmanage_jobs[job]
+                try:
+                    job.result()
+                except Exception as e:
+                    logging.error(f"Node: {name} failed to become unmanaged")
+                    logging.error(e, exc_info=True)
 
         start = time.time()
 
@@ -1544,18 +1620,44 @@ class CrinkleSlice(Slice):
                     f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
                 )
 
-        # Push updates to user_data
-        print("Saving fablib data... ", end="")
-        self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
-        self.update()
+        # With do_post_boot, the node configuration's user_data is saved with the
+        # monitor data below. An update() before then would discard it.
+        if not self.do_post_boot:
+            print("Saving fablib data... ", end="")
+            self.save_fablib_data()
+        else:
+            self._post_boot_snapshot = self._collect_user_data()
 
+        aswitches = {}
         for node in self.get_nodes():
             if "attestable_switch_config" in node.get_user_data():
                 logging.info(
                     f"switch config: {str(node.get_user_data()['attestable_switch_config'])}"
                 )
-                aswitch = self.get_attestable_switch(name=node.get_name())
-                aswitch.switch_config()
+                aswitches[node.get_name()] = self.get_attestable_switch(
+                    name=node.get_name()
+                )
+
+        # A failure stops post_boot_config once every switch has finished.
+        switch_errors = {}
+        with futures.ThreadPoolExecutor(8) as switch_pool:
+            switch_jobs = {
+                switch_pool.submit(aswitch.switch_config): name
+                for name, aswitch in aswitches.items()
+            }
+            for job in futures.as_completed(switch_jobs):
+                name = switch_jobs[job]
+                try:
+                    job.result()
+                    logging.info(f"Attestable switch config for {name}, Done!")
+                except Exception as e:
+                    logging.error(f"Attestable switch config for {name}, Failed! {e}")
+                    logging.error(e, exc_info=True)
+                    switch_errors[name] = e
+        if switch_errors:
+            raise Exception(
+                f"Attestable switch config failed on {sorted(switch_errors)}"
+            ) from switch_errors[min(switch_errors)]
 
         # Custom Crinkle logic
         logging.info("Crinkle post_boot_config")
@@ -1570,11 +1672,34 @@ class CrinkleSlice(Slice):
             jobs: list[futures.Future] = []
             counter = 0
             self.monitor_string = f"{self.analyzer_iface.get_device_name()} {self.analyzer.get_cores() - 1}"
+
+            # The monitors' dataplane interface lists are fetched in parallel.
+            refreshed_monitors = {
+                key: self.get_monitor(monitor.get_name())
+                for key, monitor in self.monitors.items()
+            }
+            prefetched_dataplane_ifaces: dict[str, list[dict] | None] = {}
+            with futures.ThreadPoolExecutor(8) as iface_prefetch_pool:
+                iface_prefetch_jobs = {
+                    iface_prefetch_pool.submit(mon.get_dataplane_os_interfaces): key
+                    for key, mon in refreshed_monitors.items()
+                }
+                for job in futures.as_completed(iface_prefetch_jobs):
+                    key = iface_prefetch_jobs[job]
+                    try:
+                        prefetched_dataplane_ifaces[key] = job.result()
+                    except Exception as e:
+                        logging.error(
+                            f"Monitor for net {key} failed to prefetch dataplane interfaces"
+                        )
+                        logging.error(e, exc_info=True)
+                        prefetched_dataplane_ifaces[key] = None
+
             for key, monitor in self.monitors.items():
                 logging.info(
                     f"Refreshing monitor for net {key} after slice creation, count {counter}"
                 )
-                refreshed_monitor = self.get_monitor(monitor.get_name())
+                refreshed_monitor = refreshed_monitors[key]
                 mon_site = refreshed_monitor.get_site()
                 jobs.append(
                     refreshed_monitor.execute_thread(
@@ -1601,7 +1726,10 @@ class CrinkleSlice(Slice):
                 # Need a way to know where a specific interface falls *in the OS ordering of them*
                 # Such as, if an interface is device enp8s0, and OS has enp7s0, enp8s0, enp9s0, return 1
                 # And because this isn't consistent per site, cannot assume enp7s0 is first
-                for entry in refreshed_monitor.get_dataplane_os_interfaces():
+                dataplane_ifaces = prefetched_dataplane_ifaces.get(key)
+                if dataplane_ifaces is None:
+                    dataplane_ifaces = refreshed_monitor.get_dataplane_os_interfaces()
+                for entry in dataplane_ifaces:
                     ordered_devs[entry["ifname"]] = ctr
                     ctr += 1
                 refreshed_monitor.data.cmd_args += (
@@ -1676,10 +1804,8 @@ class CrinkleSlice(Slice):
                 self.setup_ptp()
             logging.info("Saving Crinkle Data")
             self.set_crinkle_data()
-            self.submit(
-                wait=True, progress=False, post_boot_config=False, wait_ssh=False
-            )
-            self.update()
+            self.save_fablib_data()
+            self._post_boot_snapshot = None
 
             logging.info("Rebooting Crinkle monitors")
             print("Rebooting Crinkle Resources")
