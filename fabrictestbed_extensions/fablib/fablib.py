@@ -141,6 +141,7 @@ class FablibManager(Config):
         validate_config: bool = True,
         no_ssh: bool = False,
         raise_on_not_found: bool = False,
+        ssh_connect_limit: int = None,
         **kwargs,
     ):
         """
@@ -211,6 +212,11 @@ class FablibManager(Config):
             methods raise ``ResourceNotFoundError`` if the resource is not found;
             when ``False`` (default), they return ``None``.  Individual calls
             can override this via their ``raise_exception`` parameter.
+        :param ssh_connect_limit: Maximum number of concurrent bastion SSH
+            handshakes. Defaults to the ``FABRIC_SSH_CONNECT_LIMIT``
+            environment variable, or 8 if that is unset or not a positive
+            integer. Each connection step (bastion and node handshakes, tunnel
+            channel open) times out after 60 seconds.
         """
         # If id_token is provided, disable auto_token_refresh
         if id_token is not None:
@@ -256,6 +262,22 @@ class FablibManager(Config):
                 )
         self.required_check()
         self.lock = threading.Lock()
+        if ssh_connect_limit is None:
+            env_limit = os.environ.get(Constants.FABRIC_SSH_CONNECT_LIMIT)
+            try:
+                ssh_connect_limit = int(env_limit) if env_limit else None
+            except ValueError:
+                log.warning(
+                    f"Ignoring {Constants.FABRIC_SSH_CONNECT_LIMIT}={env_limit!r}: "
+                    "not an integer"
+                )
+            if ssh_connect_limit is None or ssh_connect_limit < 1:
+                ssh_connect_limit = Constants.DEFAULT_SSH_CONNECT_LIMIT
+        elif ssh_connect_limit < 1:
+            raise ValueError(
+                f"ssh_connect_limit must be at least 1, not {ssh_connect_limit}"
+            )
+        self.ssh_connect_semaphore = threading.Semaphore(ssh_connect_limit)
         # These dictionaries are maintained to keep cache of the slice objects created
         # Use the same objects when user queries for slices
         # This was added to address the concerns for
@@ -893,6 +915,13 @@ Host * !bastion.fabric-testbed.net
         Get :py:class:`ThreadPoolExecutor` that runs SSH commands.
         """
         return self.ssh_thread_pool_executor
+
+    def get_ssh_connect_semaphore(self) -> threading.Semaphore:
+        """
+        Get the :py:class:`threading.Semaphore` that limits concurrent
+        bastion SSH handshakes to ``ssh_connect_limit``.
+        """
+        return self.ssh_connect_semaphore
 
     def __build_manager(self) -> FabricManagerV2:
         """

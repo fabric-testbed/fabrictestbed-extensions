@@ -1592,29 +1592,47 @@ class Node(TemplateMixin):
                 get_private_key_passphrase=node_key_passphrase,
             )
 
-            # Connect to bastion
-            bastion = paramiko.SSHClient()
-            bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            bastion.connect(
-                fablib_manager.get_bastion_host(),
-                username=fablib_manager.get_bastion_username(),
-                key_filename=fablib_manager.get_bastion_key_location(),
-                passphrase=fablib_manager.get_bastion_key_passphrase(),
-            )
+            connect_start = time.time()
+            # At most ssh_connect_limit bastion handshakes run at once. Every
+            # step times out, so a hung handshake releases its slot.
+            with fablib_manager.get_ssh_connect_semaphore():
+                # Connect to bastion
+                bastion = paramiko.SSHClient()
+                bastion.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                bastion.connect(
+                    fablib_manager.get_bastion_host(),
+                    username=fablib_manager.get_bastion_username(),
+                    key_filename=fablib_manager.get_bastion_key_location(),
+                    passphrase=fablib_manager.get_bastion_key_passphrase(),
+                    timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                    banner_timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                    auth_timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                )
 
-            bastion_transport = bastion.get_transport()
-            bastion_channel = bastion_transport.open_channel(
-                "direct-tcpip", dest_addr, src_addr
-            )
+                bastion_transport = bastion.get_transport()
+                bastion_channel = bastion_transport.open_channel(
+                    "direct-tcpip",
+                    dest_addr,
+                    src_addr,
+                    timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                )
 
-            # Connect to node via bastion tunnel
-            client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(
-                management_ip,
-                username=node_username,
-                pkey=key,
-                sock=bastion_channel,
+                # Connect to node via bastion tunnel
+                client = paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client.connect(
+                    management_ip,
+                    username=node_username,
+                    pkey=key,
+                    sock=bastion_channel,
+                    timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                    banner_timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                    auth_timeout=Constants.DEFAULT_SSH_CONNECT_TIMEOUT,
+                )
+
+            log.debug(
+                f"ssh connection to {self.get_name()} established in "
+                f"{time.time() - connect_start:.1f}s"
             )
 
             # Cache the connections
@@ -1780,8 +1798,7 @@ class Node(TemplateMixin):
         fablib_manager = self.get_fablib_manager()
         log_debug = fablib_manager.get_log_level() == logging.DEBUG
 
-        if log_debug:
-            start_time = time.time()
+        start_time = time.time()
 
         # Get bastion and node credentials
         bastion_username = fablib_manager.get_bastion_username()
@@ -1831,13 +1848,19 @@ class Node(TemplateMixin):
 
                 # Handle interactive execution
                 if interactive_mode:
-                    return self._interactive_execute(
+                    result = self._interactive_execute(
                         client=client,
                         commands=command,
                         quiet=quiet,
                         display=display,
                         output_file=output_file,
                     )
+                    if log_debug:
+                        log.debug(
+                            f"Interactive command on {self.get_name()} executed in "
+                            f"{time.time() - start_time:.2f}s: {str(command)[:120]!r}"
+                        )
+                    return result
 
                 if timeout:
                     command = f"sudo timeout --foreground -k 10 {timeout} {command}\n"
@@ -1878,9 +1901,10 @@ class Node(TemplateMixin):
                 rtn_stderr = b"".join(stderr_chunks).decode()
 
                 if log_debug:
-                    elapsed_time = time.time() - start_time
                     log.debug(
-                        f"Command executed in {elapsed_time:.2f}s, stdout: {rtn_stdout}, stderr: {rtn_stderr}"
+                        f"Command on {self.get_name()} executed in "
+                        f"{time.time() - start_time:.2f}s: {str(command)[:120]!r}, "
+                        f"stdout: {rtn_stdout}, stderr: {rtn_stderr}"
                     )
 
                 return rtn_stdout, rtn_stderr
