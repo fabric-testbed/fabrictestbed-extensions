@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <signal.h>
 #include <unistd.h>
 #include <inttypes.h>
@@ -310,6 +311,97 @@ run_replay(
 		}
 	}
 	rte_ring_enqueue_burst(replay_rings[pidx], (void **)rbufs, n, NULL);
+}
+
+/* IPv6 neighbor discovery on the analyzer port (vport 0) only. The analyzer, or the
+ * FABNet router in front of a monitor at another site, resolves the monitor's
+ * analyzer-network address before sending it commands, and the DPDK port has no kernel
+ * behind it to answer. The data ports never answer, keeping the monitor transparent. */
+#define ICMPV6_NH 58
+#define ND_NEIGHBOR_SOLICIT 135
+#define ND_NEIGHBOR_ADVERT 136
+#define ND_OPT_TARGET_LLADDR 2
+/* TX queue of the analyzer port reserved for the main lcore's advertisements; the
+ * workers own queues 0..nb_worker_cores-1. */
+static uint16_t nd_txq;
+
+static uint16_t
+icmpv6_checksum(const uint8_t *src, const uint8_t *dst, const uint8_t *msg, uint16_t len)
+{
+	uint32_t sum = 0;
+	uint16_t i;
+	for (i = 0; i < 16; i += 2)
+		sum += (src[i] << 8 | src[i + 1]) + (dst[i] << 8 | dst[i + 1]);
+	sum += len + ICMPV6_NH;
+	for (i = 0; i + 1 < len; i += 2)
+		sum += msg[i] << 8 | msg[i + 1];
+	if (len & 1)
+		sum += msg[len - 1] << 8;
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	return (uint16_t)~sum;
+}
+
+/* If buf is a Neighbor Solicitation for this monitor's address (ana_headers[22..37]),
+ * send the Neighbor Advertisement and return 1; otherwise return 0. */
+static int
+crinkle_nd_reply(struct rte_mbuf *buf, const uint16_t portid)
+{
+	static const uint8_t all_nodes[16] = {0xff, 0x02, [15] = 0x01};
+	static const uint8_t unspecified[16] = {0};
+	const uint8_t *p = rte_pktmbuf_mtod(buf, const uint8_t *);
+	const uint8_t *ip = p + 14, *icmp = p + 54;
+	const uint8_t *my_ip = &ana_headers[22];
+	const uint8_t *my_mac = ports_eth_addr[portid].addr_bytes;
+	struct rte_mbuf *na;
+	uint8_t *q, *qi, *qc;
+	uint16_t cksum;
+	int solicited;
+
+	if (rte_pktmbuf_data_len(buf) < 14 + 40 + 24)
+		return 0;
+	if (p[12] != 0x86 || p[13] != 0xDD || ip[6] != ICMPV6_NH || ip[7] != 255)
+		return 0;
+	if (icmp[0] != ND_NEIGHBOR_SOLICIT || icmp[1] != 0 || memcmp(icmp + 8, my_ip, 16) != 0)
+		return 0;
+
+	na = rte_pktmbuf_alloc(packet_pool);
+	if (na == NULL)
+		return 1;
+	q = (uint8_t *)rte_pktmbuf_append(na, 14 + 40 + 32);
+	if (q == NULL) {
+		rte_pktmbuf_free(na);
+		return 1;
+	}
+	/* A solicitation from the unspecified address (duplicate address detection) is
+	 * answered to all nodes, unsolicited. */
+	solicited = memcmp(ip + 8, unspecified, 16) != 0;
+	rte_memcpy(q, p + 6, 6);
+	rte_memcpy(q + 6, my_mac, 6);
+	q[12] = 0x86;
+	q[13] = 0xDD;
+	qi = q + 14;
+	memset(qi, 0, 8);
+	qi[0] = 0x60;
+	qi[5] = 32;
+	qi[6] = ICMPV6_NH;
+	qi[7] = 255;
+	rte_memcpy(qi + 8, my_ip, 16);
+	rte_memcpy(qi + 24, solicited ? ip + 8 : all_nodes, 16);
+	qc = qi + 40;
+	memset(qc, 0, 32);
+	qc[0] = ND_NEIGHBOR_ADVERT;
+	qc[4] = solicited ? 0x60 : 0x20; /* Solicited and Override flags */
+	rte_memcpy(qc + 8, my_ip, 16);
+	qc[24] = ND_OPT_TARGET_LLADDR;
+	qc[25] = 1;
+	rte_memcpy(qc + 26, my_mac, 6);
+	cksum = icmpv6_checksum(qi + 8, qi + 24, qc, 32);
+	qc[2] = cksum >> 8;
+	qc[3] = cksum & 0xff;
+	if (rte_eth_tx_burst(portid, nd_txq, &na, 1) == 0)
+		rte_pktmbuf_free(na);
+	return 1;
 }
 
 static inline void
@@ -810,7 +902,7 @@ main(int argc, char *argv[])
 			rx_lcores[0]);
 		fflush(stdout);
 
-		ret = rte_eth_dev_configure(portid, 1, nb_worker_cores,
+		ret = rte_eth_dev_configure(portid, 1, nb_worker_cores + 1,
 					&local_port_conf);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "Cannot configure device: err=%s, port=%d\n",
@@ -865,10 +957,25 @@ main(int argc, char *argv[])
 			queueid++;
 			lcore_ctr++;
 		}
+		nd_txq = queueid;
+		printf("txq=%u,%hu (neighbor discovery) ", rte_get_main_lcore(), nd_txq);
+		ret = rte_eth_tx_queue_setup(portid, nd_txq, nb_txd,
+					     rte_socket_id(), &dev_info.default_txconf);
+		if (ret < 0)
+			rte_exit(EXIT_FAILURE, "rte_eth_tx_queue_setup: err=%s, "
+				  "port=%d\n", rte_strerror(-ret), portid);
 		ret = rte_eth_dev_start(portid);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "rte_eth_dev_start: err=%d, port=%d\n",
 				  ret, portid);
+
+		/* Solicitations go to the address's solicited-node multicast group. */
+		struct rte_ether_addr nd_mc = {{0x33, 0x33, 0xff, ana_headers[35],
+						ana_headers[36], ana_headers[37]}};
+		if (rte_eth_dev_set_mc_addr_list(portid, &nd_mc, 1) != 0 &&
+		    rte_eth_allmulticast_enable(portid) != 0)
+			printf("warning: port %d receives no neighbor solicitations by multicast ",
+			       portid);
 
 		printf("done:\n");
 	}
@@ -1019,7 +1126,8 @@ main(int argc, char *argv[])
 		}
 
 		for (i = 0; i < nb_rx; ++i) {
-			crinkle_command_handler(bufs[i], systime_ns);
+			if (!crinkle_nd_reply(bufs[i], portid))
+				crinkle_command_handler(bufs[i], systime_ns);
 		}
 		rte_pktmbuf_free_bulk(bufs, nb_rx);
 
