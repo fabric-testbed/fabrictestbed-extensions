@@ -199,7 +199,8 @@ class CrinkleMonitor(Node):
     # plus one worker; see monitor_source.c.
     default_cores = 4
     default_ram = 4
-    default_disk = 10
+    # The monitor image is 13.4 GB. FABRIC rounds any request above 10 GB up to 100.
+    default_disk = 100
 
     class MonitorData:
         """Holds a CrinkleMonitor's runtime configuration (its control-network

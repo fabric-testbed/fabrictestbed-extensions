@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix post-boot configuration failing with `'NoneType' object has no attribute 'get_gateway'` on slices that add a route through a network before it is provisioned, which includes every `node.enable_storage()` / `node.add_fabnet()` slice and CREASE analyzers and monitors. `NetworkService.get_gateway()` / `get_subnet()` again return the `"<name>.gateway"` / `"<name>.subnet"` placeholders for an unprovisioned network: `add_route()` stores them and `Node.config()` resolves them to the real addresses after provisioning. Returning `None` instead (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519)) stored the route's next hop as the string `"None"` (PR [#525](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/525))
 - Numerous fixes to Crinkle systems:
     - Fix `CrinkleMonitor.MonitorData`'s shared mutable default `iface_mappings`, which leaked interface mappings between monitors
+    - Raise `CrinkleMonitor.default_disk` from 10 to 100 GB, as the monitor image does not fit in 10 GB
     - Fix the monitor's core-count check underflowing when given fewer lcores than ports
 
 ### Added
