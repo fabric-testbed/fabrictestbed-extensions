@@ -1036,8 +1036,10 @@ class CrinkleSlice(Slice):
         self.interfaces = {}
 
         if site not in self.cnets or self.cnets[site] is None:
+            # post_boot_config and get_slice() find a site's analyzer network by
+            # this name.
             self.cnets[site] = self.add_l3network(
-                name=f"{self.prefix}_net_{site}", type="IPv6"
+                name=f"{self.prefix}_ananet_{site}", type="IPv6"
             )
         cnet = self.cnets[site]
         monitor_cnet_iface = monitor.add_component(
@@ -2007,7 +2009,14 @@ class CrinkleSlice(Slice):
                 refreshed_monitor.data.cmd_args += (
                     f"-r 1024 -n {refreshed_monitor.data.monitor_id} "
                 )
-                refreshed_monitor.data.cmd_args += f"-m {refreshed_monitor.data.cnet_iface.get_mac()} -m {self.analyzer_iface.get_mac()} "
+                report_mac = self.analyzer_iface.get_mac()
+                if mon_site != site:
+                    report_mac = self._fabnet_gateway_mac(
+                        refreshed_monitor, self.cnets[mon_site], report_mac
+                    )
+                refreshed_monitor.data.cmd_args += (
+                    f"-m {refreshed_monitor.data.cnet_iface.get_mac()} -m {report_mac} "
+                )
                 refreshed_monitor.data.cmd_args += f"-i {refreshed_monitor.data.cnet_iface.get_ip_addr()} -i {self.analyzer_iface.get_ip_addr()} "
                 dev_name = refreshed_monitor.data.cnet_iface.get_device_name()
                 if dev_name is None:
@@ -2108,6 +2117,36 @@ class CrinkleSlice(Slice):
             self._resume_auto_upgrades()
             logging.info("Crinkle post_boot_config done")
             print("Crinkle post_boot_config done")
+
+    @staticmethod
+    def _fabnet_gateway_mac(monitor: Node, cnet: NetworkService, fallback: str) -> str:
+        """
+        Not intended for API call.
+
+        The MAC of a FABNet network's gateway, as seen from a monitor on it. A
+        monitor at another site than the analyzer's addresses its reports to
+        this gateway, which routes them to the analyzer.
+
+        :param monitor: the monitor, with its control interface still up
+        :param cnet: the monitor site's analyzer network
+        :param fallback: MAC to use if the gateway cannot be resolved
+        :return: the gateway MAC, or fallback
+        """
+        gateway = cnet.get_gateway()
+        out, _ = monitor.execute(
+            f"ping -6 -c 2 -W 1 {gateway} >/dev/null 2>&1;"
+            f" ip -6 neigh show {gateway} | awk '{{print $5}}'",
+            quiet=True,
+        )
+        mac = (out or "").strip().splitlines()[-1:] or [""]
+        if re.fullmatch(r"([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}", mac[0]):
+            return mac[0]
+        msg = (
+            f"Could not resolve the FABNet gateway {gateway} from {monitor.get_name()}"
+        )
+        logging.warning(msg)
+        print(f"WARNING: {msg}")
+        return fallback
 
     def get_nodes(self, refresh: bool = False) -> list[Node]:
         """
