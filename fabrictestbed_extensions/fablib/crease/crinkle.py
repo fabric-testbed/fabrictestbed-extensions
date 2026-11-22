@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import enum
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -524,6 +525,156 @@ class CrinkleSlice(Slice):
         user_data["crinkle_slice_config"] = data_dict
         self.analyzer.set_user_data(user_data=user_data)
 
+    def user_data_dump_path(self) -> str:
+        """
+        Get the default path of the local user_data dump: one file per slice
+        ID in fablib's data directory. The data directory defaults to
+        /tmp/fablib, which does not survive a reboot.
+        """
+        data_dir = self.get_fablib_manager().get_data_dir() or "."
+        return os.path.join(data_dir, f"crinkle_user_data_{self.get_slice_id()}.json")
+
+    def _collect_user_data(self) -> dict:
+        """
+        Not intended for API call.
+
+        Copy every element's user_data out of the in-memory topology.
+        """
+        data = {"nodes": {}, "networks": {}, "interfaces": {}, "components": {}}
+        for node in self.get_all_nodes():
+            data["nodes"][node.get_name()] = node.get_user_data()
+            for component in node.get_components():
+                key = f"{node.get_name()}/{component.get_name()}"
+                data["components"][key] = component.get_user_data()
+        for network in self.get_networks():
+            data["networks"][network.get_name()] = network.get_user_data()
+        for interface in self.get_all_interfaces():
+            data["interfaces"][interface.get_name()] = interface.get_user_data()
+        return data
+
+    def _apply_user_data(self, data: dict):
+        """
+        Not intended for API call.
+
+        Write user_data collected by _collect_user_data() back into the
+        in-memory topology.
+        """
+        for node in self.get_all_nodes():
+            if node.get_name() in data["nodes"]:
+                node.set_user_data(data["nodes"][node.get_name()])
+            for component in node.get_components():
+                key = f"{node.get_name()}/{component.get_name()}"
+                if key in data["components"]:
+                    component.set_user_data(data["components"][key])
+        for network in self.get_networks():
+            if network.get_name() in data["networks"]:
+                network.set_user_data(data["networks"][network.get_name()])
+        for interface in self.get_all_interfaces():
+            if interface.get_name() in data["interfaces"]:
+                interface.set_user_data(data["interfaces"][interface.get_name()])
+
+    def dump_user_data_locally(self, path: str = None) -> str:
+        """
+        Write every element's user_data, tagged with the slice ID, to a local
+        JSON file.
+
+        :param path: destination file; defaults to user_data_dump_path()
+        :return: the path written
+        """
+        if not path:
+            path = self.user_data_dump_path()
+        data = self._collect_user_data()
+        data["slice_id"] = self.get_slice_id()
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f)
+        logging.info(f"Dumped slice user_data to {path}")
+        return path
+
+    def restore_user_data(self, path: str = None) -> bool:
+        """
+        Reapply user_data from a local dump file to the in-memory topology.
+
+        A dump written for another slice ID is ignored.
+
+        :param path: dump file to read; defaults to user_data_dump_path()
+        :return: True when a dump for this slice was found and applied
+        """
+        if not path:
+            path = self.user_data_dump_path()
+        if not os.path.isfile(path):
+            return False
+        with open(path) as f:
+            data = json.load(f)
+        if data.get("slice_id") != self.get_slice_id():
+            logging.warning(
+                f"Ignoring user_data dump {path}: written for slice "
+                f"{data.get('slice_id')}, not {self.get_slice_id()}"
+            )
+            return False
+        self._apply_user_data(data)
+        logging.info(f"Restored slice user_data from {path}")
+        return True
+
+    def update(self):
+        """
+        Refresh the slice from FABRIC, as Slice.update() does, then reapply this
+        slice's local user_data dump, if any. The next successful submit saves
+        the dumped data to FABRIC and removes the dump.
+        """
+        super().update()
+        try:
+            self.restore_user_data()
+        except Exception as e:
+            logging.error(
+                f"Failed to reapply the local user_data dump: {e}", exc_info=True
+            )
+
+    def save_fablib_data(self) -> bool:
+        """
+        Persist in-memory user_data to FABRIC via a modify submit.
+
+        When the save fails (e.g. HTTP 413 on a large topology), the user_data
+        is written by dump_user_data_locally() instead. get_slice() and
+        update() reapply the dump until a successful submit of this
+        CrinkleSlice saves the data and removes the dump. A plain Slice object
+        of the same slice ignores the dump.
+
+        :return: True when saved to FABRIC, False when dumped locally
+        """
+        try:
+            self.submit(
+                wait=True, progress=False, post_boot_config=False, wait_ssh=False
+            )
+        except Exception as e:
+            logging.error(f"Saving fablib data to FABRIC failed: {e}", exc_info=True)
+            path = self.dump_user_data_locally()
+            self._dumped_in_submit = True
+            print(
+                f"WARNING: saving fablib data to FABRIC failed ({e}); "
+                f"user_data written to {path} and reapplied automatically on reload"
+            )
+            return False
+        try:
+            self.update()
+        except Exception as e:
+            # The data reached FABRIC; only the refresh of the local copy failed.
+            logging.error(
+                f"Refreshing the slice after saving failed: {e}", exc_info=True
+            )
+        return True
+
+    def _remove_user_data_dump(self):
+        """
+        Not intended for API call.
+
+        Remove the local user_data dump after a submit has saved the topology.
+        """
+        path = self.user_data_dump_path()
+        if os.path.isfile(path):
+            os.remove(path)
+            logging.info(f"Removed user_data dump {path}: a submit reached FABRIC")
+
     @staticmethod
     def get_slice(
         fablib_manager: FablibManager,
@@ -573,6 +724,15 @@ class CrinkleSlice(Slice):
                 f"Slice {slice.slice_name} could not update slivers: slice.get_slice"
             )
             logging.error(e, exc_info=True)
+
+        try:
+            if slice.restore_user_data():
+                print(
+                    f"Applied local user_data dump {slice.user_data_dump_path()} "
+                    f"(a previous fablib data save did not reach FABRIC)"
+                )
+        except Exception as e:
+            logging.error(f"Failed to restore local user_data dump: {e}", exc_info=True)
 
         slice.analyzer = slice.get_analyzer(name=f"{name_prefix}_analyzer")
         slice.get_crinkle_data(slice.analyzer)
@@ -1228,7 +1388,10 @@ class CrinkleSlice(Slice):
         if self.do_allocate_hosts:
             self.allocate_hosts()
 
-        return super().submit(
+        # A post_boot_config run by this submit may write a dump, which must
+        # outlive the submit.
+        self._dumped_in_submit = False
+        slice_id = super().submit(
             wait=wait,
             wait_timeout=wait_timeout,
             wait_interval=wait_interval,
@@ -1242,6 +1405,9 @@ class CrinkleSlice(Slice):
             lease_in_hours=lease_in_hours,
             validate=validate,
         )
+        if not self._dumped_in_submit:
+            self._remove_user_data_dump()
+        return slice_id
 
     def setup_ptp(self):
         """

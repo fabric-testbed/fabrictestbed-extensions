@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `NetworkService.check_public_ip()`, `get_requested_public_ips()` and `get_public_ip_changes()`, and a `count=` argument to `make_ip_publicly_routable()` so fablib picks the candidate addresses (keeping any already granted) (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - Add zlib+base64 compression of per-element `user_data` that would exceed FIM's 2048-byte `UserData` limit. By default only those payloads are compressed, as fablib releases without compression cannot read a compressed payload. `FABRIC_COMPRESS_USER_DATA=always` compresses every payload above 256 bytes, and `0` turns compression off. A key that an older fablib writes beside a compressed payload is merged into the compressed value. `user_data` JSON is written without whitespace, so the stored strings of existing elements change on their next save
 - Add `FABRIC_SSH_CONNECT_LIMIT` env var / `FablibManager(ssh_connect_limit=...)` to cap concurrent bastion SSH handshakes (default 8). Each connection step (bastion and node handshakes, tunnel channel open) times out after 60 seconds
+- Add `CrinkleSlice.save_fablib_data()`, which keeps a local copy of the Crinkle data when the orchestrator rejects the save (e.g. HTTP 413) and reapplies it on reload
 - Add the node name, duration and the first 120 characters of the command to the DEBUG log line of each `Node.execute()` command
 
 ### Changed
