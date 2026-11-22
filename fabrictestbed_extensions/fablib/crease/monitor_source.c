@@ -133,6 +133,9 @@ uint16_t c_ctrs[8];
 uint64_t replay_start = 0;
 uint64_t replay_end = 0;
 uint64_t replay_run_start = 0;
+/* End of the accepted replay's window (main lcore): its start plus the recording's
+ * length. A record command overlapping it is ignored while the replay is outstanding. */
+uint64_t replay_run_end = 0;
 
 static struct rte_eth_conf port_conf = {
 	.rxmode = {
@@ -255,31 +258,61 @@ clear_replay(const uint16_t pidx)
 	record_drops[pidx] = 0;
 }
 
+/* A pending replay starts this long before its first burst's target time: the RX lcore
+ * forwards live traffic until then, and the remainder is waited out in replay_send(). */
+#define REPLAY_START_GUARD_NS 50000
+
+/* Per-port state of a replay between its run command and its window. */
+struct replay_pending {
+	uint32_t n;            /* bursts dequeued for the replay; 0 when none is pending */
+	uint64_t tsc_delta;    /* recorded TSC to replay TSC */
+	uint64_t first_tsc;    /* target TSC of the first burst */
+};
+
+/* Take the recording off its ring for a replay starting at start_time (ns) and work out
+ * its timing. Returns the number of bursts. The RX lcore keeps forwarding until
+ * replay_send() is due. */
+static uint32_t
+replay_prepare(
+	const uint16_t pidx,
+	const uint64_t start_time,
+	struct replay_pending *pending)
+{
+	struct replay_buf **rbufs = replay_run_bufs[pidx];
+	uint64_t delta_ns;
+
+	pending->n = rte_ring_dequeue_burst(replay_rings[pidx], (void **)rbufs,
+					    max_replay_size, NULL);
+	if (unlikely(pending->n == 0))
+		return 0;
+	// Split the conversion to avoid overflowing delta_ns * tsc_hz
+	delta_ns = start_time - replay_start;
+	pending->tsc_delta = (delta_ns / NSEC_PER_SEC) * tsc_hz
+			+ ((delta_ns % NSEC_PER_SEC) * tsc_hz) / NSEC_PER_SEC;
+	pending->first_tsc = rbufs[0]->tsc + pending->tsc_delta;
+	return pending->n;
+}
+
+/* Send a prepared replay with the recorded inter-burst timing, then put the recording back
+ * on its ring. Live forwarding on this port pauses only for this call. */
 static void
-run_replay(
+replay_send(
 	const uint16_t pidx,
 	const uint16_t outport,
 	const uint16_t queueid,
-	const uint64_t start_time)
+	struct replay_pending *pending)
 {
 	struct replay_buf **rbufs = replay_run_bufs[pidx];
 	struct replay_buf *rbuf;
-	uint64_t delta_ns, tsc_delta, tsc_target, curr;
+	const uint32_t n = pending->n;
+	uint64_t tsc_target, curr;
 	uint64_t late = 0, worst_late = 0, sent_pkts = 0, lost_pkts = 0;
-	uint32_t n, i, j;
+	uint32_t i, j;
 	uint16_t nb_tx;
-
-	n = rte_ring_dequeue_burst(replay_rings[pidx], (void **)rbufs, max_replay_size, NULL);
-	if (unlikely(n == 0)) return;
-
-	// Split the conversion to avoid overflowing delta_ns * tsc_hz
-	delta_ns = start_time - replay_start;
-	tsc_delta = (delta_ns / NSEC_PER_SEC) * tsc_hz
-			+ ((delta_ns % NSEC_PER_SEC) * tsc_hz) / NSEC_PER_SEC;
 
 	for (i = 0; i < n; ++i) {
 		rbuf = rbufs[i];
-		tsc_target = rbuf->tsc + tsc_delta;
+		tsc_target = rbuf->tsc + pending->tsc_delta;
 		curr = rte_rdtsc_precise();
 		if (unlikely(curr > tsc_target)) {
 			++late;
@@ -311,6 +344,7 @@ run_replay(
 		}
 	}
 	rte_ring_enqueue_burst(replay_rings[pidx], (void **)rbufs, n, NULL);
+	pending->n = 0;
 }
 
 /* IPv6 neighbor discovery on the analyzer port (vport 0) only. The analyzer, or the
@@ -418,9 +452,18 @@ crinkle_command_handler(
 
 	if (*cursor == TYPE_REPLAY_RECORD) {
 		printf("Replay record command received\n");
-		replay_start = extract_long(++cursor);
+		uint64_t start = extract_long(++cursor);
 		cursor += 8;
-		replay_end = extract_long(cursor);
+		uint64_t end = extract_long(cursor);
+		// An outstanding replay holds the recording off its ring until it is sent, so a
+		// record window overlapping that replay is ignored.
+		if (unlikely(c_ctrs[IDX_REPLAY_RUN] > 0 && start <= replay_run_end)) {
+			printf("Replay record window %lu-%lu overlaps the replay ending %lu, ignoring\n",
+				   start, end, replay_run_end);
+			return;
+		}
+		replay_start = start;
+		replay_end = end;
 		printf("Replay record start: %lu, end: %lu\n", replay_start, replay_end);
 	}
 	else if (*cursor == TYPE_REPLAY_CLEAR) {
@@ -450,6 +493,7 @@ crinkle_command_handler(
 		for (i = 1; i < nb_ports; ++i) {
 			__atomic_fetch_or(&c_to_tx[rx_lcores[i]], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 		}
+		replay_run_end = replay_run_start + (replay_end - replay_start);
 		c_ctrs[IDX_REPLAY_RUN] = nb_ports - 1;
 		printf("Replay run start: %lu\n", replay_run_start);
 	}
@@ -580,6 +624,8 @@ crinkle_rx(
 	uint64_t systime_ns;
 	uint32_t n, nb_rx, nb_rem = 0, nb_warn;
 	uint16_t i;
+	struct replay_pending pending = {0};
+	const uint64_t guard_tsc = REPLAY_START_GUARD_NS * tsc_hz / NSEC_PER_SEC;
 
 	clock_gettime(CLOCK_REALTIME, &ts);
 	systime_ns = timespec64_to_ns(&ts);
@@ -634,11 +680,17 @@ crinkle_rx(
 				__atomic_fetch_and(&c_to_tx[lcore_id], (uint8_t)~TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 				__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 			}
-			else if (cmds & TYPE_REPLAY_RUN) {
-				run_replay(pidx, outport, queue_id, replay_run_start);
+			else if ((cmds & TYPE_REPLAY_RUN) && pending.n == 0) {
 				__atomic_fetch_and(&c_to_tx[lcore_id], (uint8_t)~TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
-				__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
+				// Nothing recorded on this port: done at once. Otherwise forwarding
+				// goes on until the replay window below.
+				if (replay_prepare(pidx, replay_run_start, &pending) == 0)
+					__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 			}
+		}
+		if (unlikely(pending.n > 0) && rte_rdtsc() + guard_tsc >= pending.first_tsc) {
+			replay_send(pidx, outport, queue_id, &pending);
+			__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 		}
 	}
 
