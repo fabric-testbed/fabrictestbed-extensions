@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fix the monitor's core-count check underflowing when given fewer lcores than ports
     - Fix `start_all_monitors(wait=True)` hanging. It now re-raises the first launch failure
     - Fix a race in `spade_reader.py` that left provenance edges referencing a flow Artifact never emitted, at about twice the SPADE ingest work per packet
+    - Raise the edge limit of time-filtered provenance queries from 1,000 to 10,000,000 (`SPADE_TIME_EDGE_LIMIT`), which silently truncated results
 
 ### Added
 - Add docstrings for the 79 public modules, packages, classes and methods that had none, and describe the 121 `:param` fields that were left blank (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
