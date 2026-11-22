@@ -206,7 +206,7 @@ class CrinkleMonitor(Node):
             net_name: str = None,
             net_type: str = None,
             cnet_iface: Interface = None,
-            iface_mappings: dict[str, tuple[str, Interface, bool, int]] = {},
+            iface_mappings: dict[str, tuple[str, Interface, bool, int]] | None = None,
             monitor_id: int = None,
         ):
             """
@@ -233,7 +233,7 @@ class CrinkleMonitor(Node):
             self.net_name = net_name
             self.net_type = net_type
             self.cnet_iface = cnet_iface
-            self.iface_mappings = iface_mappings
+            self.iface_mappings = iface_mappings if iface_mappings is not None else {}
             self.monitor_id = monitor_id
 
     def __init__(

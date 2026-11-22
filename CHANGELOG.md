@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `auto`-mode interfaces storing the string `"None"` as their address when no IP could be allocated (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `slice.submit()` / `slice.modify()` now warn when the AM granted different public IPs than were requested (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - Fix post-boot configuration failing with `'NoneType' object has no attribute 'get_gateway'` on slices that add a route through a network before it is provisioned, which includes every `node.enable_storage()` / `node.add_fabnet()` slice and CREASE analyzers and monitors. `NetworkService.get_gateway()` / `get_subnet()` again return the `"<name>.gateway"` / `"<name>.subnet"` placeholders for an unprovisioned network: `add_route()` stores them and `Node.config()` resolves them to the real addresses after provisioning. Returning `None` instead (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519)) stored the route's next hop as the string `"None"` (PR [#525](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/525))
+- Numerous fixes to Crinkle systems:
+    - Fix `CrinkleMonitor.MonitorData`'s shared mutable default `iface_mappings`, which leaked interface mappings between monitors
 
 ### Added
 - Add docstrings for the 79 public modules, packages, classes and methods that had none, and describe the 121 `:param` fields that were left blank (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
