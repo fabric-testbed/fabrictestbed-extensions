@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fix `CrinkleMonitor.MonitorData`'s shared mutable default `iface_mappings`, which leaked interface mappings between monitors
     - Raise `CrinkleMonitor.default_disk` from 10 to 100 GB, as the monitor image does not fit in 10 GB
     - Fix the monitor's core-count check underflowing when given fewer lcores than ports
+    - Fix `start_all_monitors(wait=True)` hanging. It now re-raises the first launch failure
 
 ### Added
 - Add docstrings for the 79 public modules, packages, classes and methods that had none, and describe the 121 `:param` fields that were left blank (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Attestable_Switch.switch_config()` brings its ports up in one SSH call instead of two per port
 - Speed up Crinkle `post_boot_config` on large slices: batched and parallel node setup, one pass to resolve interface networks, and a single fablib data save
 - Raise `CrinkleMonitor.default_cores` from 2 to 4, as 2-core monitors exit at startup
+- `start_monitor()` launches the monitor detached and raises if it exits within 5 s. `start_monitor(wait=False)` now returns once the monitor is launched, not when it exits
 - Crinkle downloads the monitor binary by version (`MONITOR_VERSION`), so each fablib release runs its own monitor build
 
 ### Removed

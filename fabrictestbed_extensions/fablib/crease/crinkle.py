@@ -50,6 +50,8 @@ MONITORURL = (
 )
 DPDKNAME = "dpdk-crease_monitor-dev"
 MONPROT = 0x6587
+# Seconds start_monitor() waits before checking that the monitor app is still running.
+MONITOR_START_CHECK_S = 5
 
 UBUNTU_IMAGES = [
     "default_ubuntu_20",
@@ -2624,31 +2626,48 @@ class CrinkleSlice(Slice):
         self, monitor: CrinkleMonitor, wait: bool = True, quiet: bool = False
     ) -> futures.Future | None:
         """
-        Start the DPDK script on a monitor.
+        Start the DPDK script on a monitor. The app runs detached, with its
+        output in /tmp/dpdk-crease_monitor-dev.log on the monitor.
+        MONITOR_START_CHECK_S seconds after the launch, an app that has exited
+        raises, with the end of its log.
 
         :param monitor: The monitor node to target
         :type monitor: CrinkleMonitor
-        :param wait: Whether this call is blocking, default True
+        :param wait: Whether to block until the app is launched and checked, default True
         :type wait: bool
-        :param quiet: Whether to print stdout/stderr of a blocking call, default False
+        :param quiet: Whether to suppress the launch output of a blocking call, default False
         :type quiet: bool
-        :return: The future of a non-blocking call, or None
+        :return: For a non-blocking call, a future that completes once the app is launched and checked, and raises if it exited; otherwise None
         :rtype: concurrent.futures.Future
+        :raises RuntimeError: for a blocking call, if the app exited
         """
         if monitor is None:
             raise Exception("Monitor cannot be None")
         logging.info(f"Starting Crinkle monitor {monitor.data.net_name}")
-        job = None
+        # The app runs detached, so the SSH channel closes once it is spawned.
+        # $pid is the sudo process, which exits with the app: a zombie (Z) or a
+        # missing process means the app has exited. A monitor already running
+        # is refused.
+        log = f"/tmp/{DPDKNAME}.log"
+        cmd = (
+            f"if pgrep -x {DPDKNAME[:15]} >/dev/null; then"
+            " echo 'the monitor is already running'; false; else"
+            f" sudo nohup ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args}"
+            f" > {log} 2>&1 & pid=$!; sleep {MONITOR_START_CHECK_S};"
+            f' case "$(ps -o stat= -p $pid)" in ""|Z*) tail -n 20 {log}; false;; esac;'
+            " fi"
+        )
+        what = f"Starting Crinkle monitor {monitor.get_name()}"
         if wait:
-            monitor.execute(
-                f"sudo ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args} &",
-                quiet=quiet,
-            )
-        else:
-            job = monitor.execute_thread(
-                f"sudo ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args}"
-            )
-        return job
+            out = monitor._execute_checked(cmd, what)
+            if out.strip() and not quiet:
+                print(out)
+            return None
+        return (
+            monitor.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(monitor._execute_checked, cmd, what)
+        )
 
     def start_all_monitors(
         self, wait: bool = True, no_return: bool = True
@@ -2656,7 +2675,8 @@ class CrinkleSlice(Slice):
         """
         Start the DPDK script on all monitors.
 
-        :param wait: Whether this call is blocking, default True
+        :param wait: Whether to block until every monitor's app is launched,
+            raising the first launch failure, default True
         :type wait: bool
         :param no_return: Whether to return None instead of the list of jobs
         :type no_return: bool
@@ -2668,12 +2688,10 @@ class CrinkleSlice(Slice):
             start_list.append(self.start_monitor(monitor=monitor, wait=False))
         if wait:
             logging.info("Waiting for monitors to finish starting")
-            ctr = 0
-            max = len(start_list)
-            while ctr < max:
-                if start_list[ctr].running():
-                    ctr += 1
-                    logging.info(f"{ctr}/{max} started")
+            total = len(start_list)
+            for ctr, job in enumerate(futures.as_completed(start_list), 1):
+                job.result()
+                logging.info(f"{ctr}/{total} started")
         if no_return:
             return
         return start_list
