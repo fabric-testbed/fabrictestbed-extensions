@@ -542,6 +542,7 @@ V1Switch(
                 f"echo '{nothing_p4}' > {Attestable_Switch.crease_path_prefix}nothing.p4"
             )
 
+            port_cmds = []
             for port in self.get_port_names():
                 for (
                     ifa
@@ -549,13 +550,15 @@ V1Switch(
                     self.get_interfaces()
                 ):  # FIXME inefficient code -- use a look-up instead of looping.
                     if ifa.get_component().get_short_name() == port:
-                        self.execute(
-                            f"sudo ip link set dev {ifa.get_device_name()} up",
-                            quiet=True,
+                        port_cmds.append(
+                            f"sudo ip link set dev {ifa.get_device_name()} up"
                         )
-                        self.execute(
+                        port_cmds.append(
                             f"sudo ip link set dev {ifa.get_device_name()} arp off"
                         )
+
+            if port_cmds:
+                self.execute(" ; ".join(port_cmds), quiet=True)
 
             # self.execute(f"sudo ip route del 0/0")
             log.info(f"Attestable Switch {self.get_name()}: finished config")

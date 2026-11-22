@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `NetworkService.make_ip_publicly_routable()` now validates its input: it raises `ValidationError` on a network that is not FabNetv4Ext/FabNetv6Ext, for the wrong address family, or for an address outside the subnet (or the gateway, network or broadcast address). It accepts a single address as well as a list, and returns the requested addresses (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `NetworkService.get_public_ips()` returns `None` (with a warning) while a `make_ip_publicly_routable()` request has not been submitted, instead of returning the request as if it were granted (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
+- `Interface._config_nmcli` now issues a single chained SSH command per interface instead of 6-8 round trips
+- `Attestable_Switch.switch_config()` brings its ports up in one SSH call instead of two per port
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
