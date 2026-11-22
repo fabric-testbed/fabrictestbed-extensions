@@ -636,10 +636,11 @@ main(int argc, char *argv[])
 	printf("Maximum replay size: %u\n", max_replay_size);
 
 	nb_lcores = rte_lcore_count();
-	nb_worker_cores = nb_lcores - nb_ports;
-	if (nb_worker_cores == 0) {
-		rte_exit(EXIT_FAILURE, "Not enough cores, need at least %u\n", nb_ports + 1);
+	if (nb_lcores <= nb_ports) {
+		rte_exit(EXIT_FAILURE, "Not enough cores, have %u, need at least %u\n",
+			nb_lcores, nb_ports + 1);
 	}
+	nb_worker_cores = nb_lcores - nb_ports;
 	uint16_t portid;
 	unsigned lcore_id = 0, lcore_ctr = 0;
 	struct rte_eth_dev_info dev_info;

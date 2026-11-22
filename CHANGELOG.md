@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix post-boot configuration failing with `'NoneType' object has no attribute 'get_gateway'` on slices that add a route through a network before it is provisioned, which includes every `node.enable_storage()` / `node.add_fabnet()` slice and CREASE analyzers and monitors. `NetworkService.get_gateway()` / `get_subnet()` again return the `"<name>.gateway"` / `"<name>.subnet"` placeholders for an unprovisioned network: `add_route()` stores them and `Node.config()` resolves them to the real addresses after provisioning. Returning `None` instead (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519)) stored the route's next hop as the string `"None"` (PR [#525](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/525))
 - Numerous fixes to Crinkle systems:
     - Fix `CrinkleMonitor.MonitorData`'s shared mutable default `iface_mappings`, which leaked interface mappings between monitors
+    - Fix the monitor's core-count check underflowing when given fewer lcores than ports
 
 ### Added
 - Add docstrings for the 79 public modules, packages, classes and methods that had none, and describe the 121 `:param` fields that were left blank (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
@@ -40,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Interface._config_nmcli` now issues a single chained SSH command per interface instead of 6-8 round trips
 - `Attestable_Switch.switch_config()` brings its ports up in one SSH call instead of two per port
 - Speed up Crinkle `post_boot_config` on large slices: batched and parallel node setup, one pass to resolve interface networks, and a single fablib data save
+- Raise `CrinkleMonitor.default_cores` from 2 to 4, as 2-core monitors exit at startup
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))

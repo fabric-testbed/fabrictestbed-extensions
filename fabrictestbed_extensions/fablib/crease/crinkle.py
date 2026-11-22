@@ -188,7 +188,9 @@ class CrinkleMonitor(Node):
     """
 
     default_image = "crease_ubuntu_22"
-    default_cores = 2
+    # The DPDK monitor needs one lcore per port (analyzer uplink + 2 vports)
+    # plus one worker; see monitor_source.c.
+    default_cores = 4
     default_ram = 4
     default_disk = 10
 
