@@ -39,7 +39,7 @@
 
 #define MONPROT 0x6587
 #define CREASEPROT 254
-#define CREASEVER "Crease Monitor v0.6.1\n"
+#define CREASEVER "Crease Monitor v0.6.2\n"
 
 #define MAX_PORTS 3
 

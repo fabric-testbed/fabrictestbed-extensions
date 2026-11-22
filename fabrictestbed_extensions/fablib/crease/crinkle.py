@@ -40,7 +40,14 @@ PCAPDIR = "/home/ubuntu/pcaps/"
 LOCALP4DIR = "."
 REMOTEWORKDIR = ".crease"
 CREASEDIR = os.path.dirname(os.path.abspath(__file__))
-MONITORURL = "https://transparnet.cs.iit.edu/~awolosewicz/dpdk-crease_monitor-dev"
+# The monitor binary is prebuilt from monitor_source.c and hosted per version.
+# MONITOR_VERSION matches CREASEVER in monitor_source.c; a source change bumps both and
+# hosts the new build.
+MONITOR_VERSION = "0.6.2"
+MONITORURL = (
+    "https://transparnet.cs.iit.edu/~awolosewicz/"
+    f"dpdk-crease_monitor-v{MONITOR_VERSION}"
+)
 DPDKNAME = "dpdk-crease_monitor-dev"
 MONPROT = 0x6587
 
