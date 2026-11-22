@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Raise `CrinkleMonitor.default_cores` from 2 to 4, as 2-core monitors exit at startup
 - `start_monitor()` launches the monitor detached and raises if it exits within 5 s. `start_monitor(wait=False)` now returns once the monitor is launched, not when it exits
 - Crinkle downloads the monitor binary by version (`MONITOR_VERSION`), so each fablib release runs its own monitor build
+- `spade_reader.py` writes provenance epochs to the nanosecond
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
