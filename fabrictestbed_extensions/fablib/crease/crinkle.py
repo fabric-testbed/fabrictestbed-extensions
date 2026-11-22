@@ -3181,12 +3181,17 @@ class CrinkleSlice(Slice):
         spade_filter = spade_filter.rstrip()
         time_filter = ""
         if tformat != "epoch":
+
+            # A bound in the reader's epoch format: seconds with nine decimals.
+            def spade_epoch(t: str) -> str:
+                dt = datetime.strptime(t, tformat)
+                seconds = int(dt.replace(microsecond=0).timestamp())
+                return f"{seconds}.{dt.microsecond:06d}000"
+
             if tstart:
-                tstart: datetime = datetime.strptime(tstart, tformat)
-                tstart = tstart.timestamp() * 1000000
+                tstart = spade_epoch(tstart)
             if tend:
-                tend: datetime = datetime.strptime(tend, tformat)
-                tend = tend.timestamp() * 1000000
+                tend = spade_epoch(tend)
         if tstart and tend:
             time_filter += (
                 f"""(\\"epoch\\" >= '{tstart}' and \\"epoch\\" <= '{tend}')"""
