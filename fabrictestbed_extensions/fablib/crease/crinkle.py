@@ -1088,6 +1088,65 @@ class CrinkleSlice(Slice):
             logging.info(e, exc_info=True)
             raise Exception(f"Node not found: {name}")
 
+    def _populate_l2bridge_monitor(
+        self,
+        monitor: CrinkleMonitor,
+        name: str,
+        interfaces: list[Interface],
+        subnet: ipaddress = None,
+        gateway: ipaddress = None,
+        user_data: dict = None,
+        sinks: list[Interface] = None,
+    ) -> list[NetworkService]:
+        """
+        Not intended for API call.
+
+        Add a monitor NIC and an L2Bridge sub-network for each interface, and
+        record the creation data on the monitor.
+
+        :param monitor: the CrinkleMonitor node the sub-networks attach to
+        :type monitor: CrinkleMonitor
+        :param name: the name of the monitored network
+        :type name: String
+        :param interfaces: the interfaces to build the L2Bridge sub-networks with
+        :type interfaces: List[Interface]
+        :param sinks: interfaces whose frames have their Crinkle trailers
+            stripped
+        :type sinks: List[Interface]
+        :return: the sub-networks, in the same order as `interfaces`
+        :rtype: List[NetworkService]
+        """
+        user_data = user_data or {}
+        sinks = sinks or []
+        sub_nets: list[NetworkService] = []
+        for iface in interfaces:
+            iface_node_name = iface.get_node().get_name()
+            monitor_iface = monitor.add_component(
+                "NIC_Basic", f"{self.prefix}_nic_{iface_node_name}"
+            ).get_interfaces()[0]
+            monitor_iface.set_mode("manual")
+            new_net = self.add_l2network(
+                f"{self.prefix}_net_{name}_{iface_node_name}",
+                [iface, monitor_iface],
+                "L2Bridge",
+                subnet,
+                gateway,
+                user_data,
+            )
+            self.set_orig_net_name(new_net, name)
+            monitor.data.net_type = "L2Bridge"
+            monitor.creation_data.append(
+                (
+                    iface_node_name,
+                    iface.get_name(),
+                    f"{self.prefix}_nic_{iface_node_name}",
+                    (iface in sinks),
+                    0,
+                )
+            )
+            sub_nets.append(new_net)
+        return sub_nets
+
     def add_monitored_l2network(
         self,
         name: str = None,
@@ -1189,31 +1248,9 @@ class CrinkleSlice(Slice):
         )
 
         if type == "L2Bridge":
-            for iface in interfaces:
-                iface_node_name = iface.get_node().get_name()
-                monitor_iface = monitor.add_component(
-                    "NIC_Basic", f"{self.prefix}_nic_{iface_node_name}"
-                ).get_interfaces()[0]
-                monitor_iface.set_mode("manual")
-                new_net = self.add_l2network(
-                    f"{self.prefix}_net_{name}_{iface_node_name}",
-                    [iface, monitor_iface],
-                    "L2Bridge",
-                    subnet,
-                    gateway,
-                    user_data,
-                )
-                self.set_orig_net_name(new_net, name)
-                monitor.data.net_type = type
-                monitor.creation_data.append(
-                    (
-                        iface_node_name,
-                        iface.get_name(),
-                        f"{self.prefix}_nic_{iface_node_name}",
-                        (iface in sinks),
-                        0,
-                    )
-                )
+            self._populate_l2bridge_monitor(
+                monitor, name, interfaces, subnet, gateway, user_data, sinks
+            )
             self.monitors[name] = monitor
         monitor.set_monitor_data()
         return monitor
