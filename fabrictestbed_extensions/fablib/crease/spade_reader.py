@@ -176,8 +176,12 @@ def analyze_packet(
         monitor_iface_id = base.rx_port_id
         uid = f"{base.uid_mon}-{base.uid_port}-{base.uid_time}"
         size = base.len - 16
-        epoch = base.rx_time / 1e9
-        time = datetime.fromtimestamp(epoch).strftime("%Y-%m-%d_%H:%M:%S.%f")
+        # Exact to the nanosecond, as frames of one RX burst are stamped 1 ns
+        # apart.
+        epoch = f"{base.rx_time // 1_000_000_000}.{base.rx_time % 1_000_000_000:09d}"
+        time = datetime.fromtimestamp(base.rx_time / 1e9).strftime(
+            "%Y-%m-%d_%H:%M:%S.%f"
+        )
 
         h_eth = base["Ether"]
         eth_type = hex(h_eth.type)

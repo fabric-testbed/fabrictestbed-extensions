@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `CrinkleSlice.get_monitored_l3networks()` to list a slice's L3 link ends
 - Add `CrinkleSlice.record_replay()`, `run_replay()`, `clear_replay()` and `get_monitor_log()` to record and replay monitor traffic from fablib. Commands are sent from the analyzer as raw IPv6 (`crease_command.py`), and the methods raise instead of sending a command the monitors would ignore. They need monitors set up with this release (monitor v0.7.3)
 - Add a `replay_bursts` parameter to `CrinkleSlice.new_slice()` to size the monitor replay buffers, at about 0.3 MB of hugepage memory per burst and data port
+- Add `CrinkleSlice` provenance queries `missing_frames`, `reordered_frames`, `delay_gt`, `path_of` and `state_when`, each as `dump_` (dict) and `list_` (table) methods
 
 ### Changed
 - `NetworkService.make_ip_publicly_routable()` now validates its input: it raises `ValidationError` on a network that is not FabNetv4Ext/FabNetv6Ext, for the wrong address family, or for an address outside the subnet (or the gateway, network or broadcast address). It accepts a single address as well as a list, and returns the requested addresses (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
@@ -55,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Raise `CrinkleMonitor.default_cores` from 2 to 4, as 2-core monitors exit at startup
 - `start_monitor()` launches the monitor detached and raises if it exits within 5 s. `start_monitor(wait=False)` now returns once the monitor is launched, not when it exits
 - Crinkle downloads the monitor binary by version (`MONITOR_VERSION`), so each fablib release runs its own monitor build
+- `spade_reader.py` writes provenance epochs to the nanosecond
+- `dump_provenance()` no longer returns its internal `artifact` key
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))

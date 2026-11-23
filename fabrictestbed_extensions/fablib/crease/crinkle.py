@@ -14,6 +14,7 @@ import re
 import shlex
 import time
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from IPython.core.display_functions import display
@@ -243,6 +244,34 @@ UBUNTU_IMAGES = [
     "docker_ubuntu_20",
     "docker_ubuntu_22",
 ]
+
+PROV_OBSERVATION_NAMES = {
+    "time": "Time",
+    "tx_host": "TX Host",
+    "tx_interface": "TX Interface",
+    "rx_host": "RX Host",
+    "rx_interface": "RX Interface",
+    "size": "Size",
+    "epoch": "Epoch",
+}
+
+PROV_FLOW_NAMES = {
+    "eth.type": "Ether Type",
+    "ip.prot": "IP Protocol",
+    "ip.src": "Source IP",
+    "ip.dst": "Destination IP",
+    "prot.sport": "Source Port",
+    "prot.dport": "Destination Port",
+}
+
+PROV_FLOW_KEYS = list(PROV_FLOW_NAMES)
+
+LINK_PAIR_NAMES = {
+    "l1_time": "L1 Time",
+    "l1_epoch": "L1 Epoch",
+    "l2_time": "L2 Time",
+    "l2_epoch": "L2 Epoch",
+}
 
 
 class MonNetData(enum.IntEnum):
@@ -3152,12 +3181,17 @@ class CrinkleSlice(Slice):
         spade_filter = spade_filter.rstrip()
         time_filter = ""
         if tformat != "epoch":
+
+            # A bound in the reader's epoch format: seconds with nine decimals.
+            def spade_epoch(t: str) -> str:
+                dt = datetime.strptime(t, tformat)
+                seconds = int(dt.replace(microsecond=0).timestamp())
+                return f"{seconds}.{dt.microsecond:06d}000"
+
             if tstart:
-                tstart: datetime = datetime.strptime(tstart, tformat)
-                tstart = tstart.timestamp() * 1000000
+                tstart = spade_epoch(tstart)
             if tend:
-                tend: datetime = datetime.strptime(tend, tformat)
-                tend = tend.timestamp() * 1000000
+                tend = spade_epoch(tend)
         if tstart and tend:
             time_filter += (
                 f"""(\\"epoch\\" >= '{tstart}' and \\"epoch\\" <= '{tend}')"""
@@ -3225,14 +3259,6 @@ class CrinkleSlice(Slice):
         iface_host_map: dict[str, str] = {}
         flow_map: dict[str, dict[str, str]] = {}
         flow_tx_map: dict[str, dict[str, dict[str, str]]] = {}
-        flow_keys = [
-            "eth.type",
-            "ip.prot",
-            "ip.src",
-            "ip.dst",
-            "prot.sport",
-            "prot.dport",
-        ]
         with open(f"{name}.dot") as f:
             lines = f.readlines()
             for line in lines:
@@ -3255,7 +3281,7 @@ class CrinkleSlice(Slice):
                                 continue
                             flow_id = flow_id.group(1)
                             flow_map[flow_id] = {}
-                            for key in flow_keys:
+                            for key in PROV_FLOW_KEYS:
                                 if key in label_dict:
                                     flow_map[flow_id][key] = label_dict[key]
                 else:
@@ -3347,7 +3373,8 @@ class CrinkleSlice(Slice):
                     entry["rx_interface"] = flow_tx_map[entry["artifact"]][pkt_id][
                         "time"
                     ]
-                    del entry["artifact"]
+                # The flow key is internal.
+                del entry["artifact"]
         return prov_dict
 
     def list_provenance(
@@ -3390,7 +3417,6 @@ class CrinkleSlice(Slice):
         :return: the list of row dicts making up the table
         :rtype: list
         """
-        table = []
         prov_dict = self.dump_provenance(
             name=name,
             filterin=filterin,
@@ -3400,46 +3426,563 @@ class CrinkleSlice(Slice):
             pkt_id=pkt_id,
             quiet=True,
         )
-        pretty_names_dict = {}
-        if pretty_names:
-            pretty_names_dict = {
-                "pkt_id": "Packet ID",
-                "time": "Time",
-                "tx_host": "TX Host",
-                "tx_interface": "TX Interface",
-                "rx_host": "RX Host",
-                "rx_interface": "RX Interface",
-                "size": "Size",
-                "epoch": "Epoch",
-                "eth.type": "Ether Type",
-                "ip.prot": "IP Protocol",
-                "ip.src": "Source IP",
-                "ip.dst": "Destination IP",
-                "prot.sport": "Source Port",
-                "prot.dport": "Destination Port",
-            }
+        return self._list_pkt_table(
+            dict(sorted(prov_dict.items())),
+            "Packet Provenance",
+            {"pkt_id": "Packet ID", **PROV_OBSERVATION_NAMES, **PROV_FLOW_NAMES},
+            output,
+            fields,
+            filter_function,
+            quiet,
+            pretty_names,
+        )
 
-        for pkt_id, pkt_list in prov_dict.items():
-            for pkt_info in pkt_list:
-                rowdict = {"pkt_id": pkt_id}
-                rowdict.update(pkt_info)
-                table.append(rowdict)
+    @staticmethod
+    def _list_pkt_table(
+        pkt_dict: dict[str, dict[str, Any] | list[dict[str, Any]]],
+        title: str,
+        pretty_names_dict: dict[str, str],
+        output,
+        fields,
+        filter_function,
+        quiet: bool,
+        pretty_names: bool,
+    ):
+        """
+        Flatten a dict keyed by pkt_id, whose values are a row or a list of rows,
+        into a table in the format of Utils.list_table().
+        """
+        table = []
+        for pkt_id, rows in pkt_dict.items():
+            for row in rows if isinstance(rows, list) else [rows]:
+                table.append({"pkt_id": pkt_id, **row})
 
-        table = sorted(table, key=lambda x: (x["pkt_id"], x["time"]))
         table = Utils.list_table(
             table,
             fields=fields,
-            title="Packet Provenance",
+            title=title,
             output=output,
             quiet=True,
             filter_function=filter_function,
-            pretty_names_dict=pretty_names_dict,
+            pretty_names_dict=pretty_names_dict if pretty_names else {},
         )
 
         if table and not quiet:
             display(table)
 
         return table
+
+    def _check_links(self, *links: str):
+        for link in links:
+            if link not in self.monitors:
+                raise Exception(f"Exception: {link} is not a monitored link")
+
+    def _link_provenance(self, **query) -> dict[str, list[dict[str, str]]]:
+        """
+        Get dump_provenance() with each observation tagged by the name of the
+        monitored link it was seen on, under "link".
+        """
+        iface_links = {
+            iface_name: link_name
+            for link_name, monitor in self.monitors.items()
+            for iface_name in monitor.data.iface_mappings
+        }
+        prov_dict = self.dump_provenance(**query)
+        for observations in prov_dict.values():
+            for obs in observations:
+                obs["link"] = iface_links.get(obs["tx_interface"], "")
+        return prov_dict
+
+    @staticmethod
+    def _epoch_ns(obs: dict[str, str]) -> int:
+        """
+        An observation's epoch in integer nanoseconds. Frames of one RX burst
+        are stamped 1 ns apart.
+        """
+        return int(Decimal(obs["epoch"]) * 1_000_000_000)
+
+    @staticmethod
+    def _first_on_link(
+        observations: list[dict[str, str]], link: str
+    ) -> dict[str, str] | None:
+        return min(
+            (obs for obs in observations if obs["link"] == link),
+            key=CrinkleSlice._epoch_ns,
+            default=None,
+        )
+
+    def _frames_on_links(
+        self, l1: str, l2: str, **query
+    ) -> dict[str, tuple[dict[str, str] | None, dict[str, str] | None]]:
+        """
+        Get each frame's first observation on l1 and on l2, or None where it was
+        not seen.
+        """
+        self._check_links(l1, l2)
+        return {
+            pkt_id: (
+                self._first_on_link(observations, l1),
+                self._first_on_link(observations, l2),
+            )
+            for pkt_id, observations in self._link_provenance(**query).items()
+        }
+
+    @staticmethod
+    def _link_pair_record(
+        on_l1: dict[str, str], on_l2: dict[str, str]
+    ) -> dict[str, Any]:
+        return {
+            "l1_time": on_l1["time"],
+            "l1_epoch": on_l1["epoch"],
+            "l2_time": on_l2["time"],
+            "l2_epoch": on_l2["epoch"],
+            "size": on_l1["size"],
+            **{key: on_l1[key] for key in PROV_FLOW_KEYS if key in on_l1},
+        }
+
+    def dump_missing_frames(
+        self, l1: str, l2: str, **query
+    ) -> dict[str, dict[str, str]]:
+        """
+        Find frames observed on one of two monitored links but not the other.
+        With a tstart/tend filter, a frame whose observation on the other link
+        falls just outside the window is reported as missing. A window widened
+        by the path delay avoids that.
+
+        :param l1: Name of the first monitored link
+        :type l1: String
+        :param l2: Name of the second monitored link
+        :type l2: String
+        :param query: Provenance filters passed to dump_provenance()
+        :return: dict[pkt_id, pkt_info] ordered by time, where pkt_info is the
+            frame's first observation on the link it was seen on, as in
+            dump_provenance(), plus:
+                - link: the link the frame was seen on
+                - missing_link: the link the frame was not seen on
+        """
+        missing: dict[str, dict[str, str]] = {}
+        for pkt_id, (on_l1, on_l2) in self._frames_on_links(l1, l2, **query).items():
+            if on_l1 and not on_l2:
+                missing[pkt_id] = {**on_l1, "missing_link": l2}
+            elif on_l2 and not on_l1:
+                missing[pkt_id] = {**on_l2, "missing_link": l1}
+        return dict(sorted(missing.items(), key=lambda item: self._epoch_ns(item[1])))
+
+    def list_missing_frames(
+        self,
+        l1: str,
+        l2: str,
+        output=None,
+        fields=None,
+        filter_function=None,
+        quiet: bool = False,
+        pretty_names: bool = True,
+        **query,
+    ):
+        """
+        Build and optionally display a table of dump_missing_frames(): frames
+        seen on one of two monitored links but not the other, one row per frame.
+
+        :param l1: Name of the first monitored link
+        :type l1: String
+        :param l2: Name of the second monitored link
+        :type l2: String
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param quiet: if True, build the table without displaying it
+        :type quiet: bool
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :type pretty_names: bool
+        :param query: Provenance filters passed to dump_provenance()
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
+        return self._list_pkt_table(
+            self.dump_missing_frames(l1, l2, **query),
+            "Missing Frames",
+            {
+                "pkt_id": "Packet ID",
+                "link": "Seen On",
+                "missing_link": "Missing From",
+                **PROV_OBSERVATION_NAMES,
+                **PROV_FLOW_NAMES,
+            },
+            output,
+            fields,
+            filter_function,
+            quiet,
+            pretty_names,
+        )
+
+    def dump_reordered_frames(
+        self, l1: str, l2: str, **query
+    ) -> dict[str, dict[str, Any]]:
+        """
+        Find frames that reach two monitored links in a different order. A frame
+        is reordered when it reaches l2 before a frame that reached l1 ahead of
+        it. Only frames travelling from l1 to l2 (seen on both, on l1 first) are
+        ordered, by their first observation on each. Traffic in the opposite
+        direction, such as acknowledgements, is left out.
+
+        :param l1: Name of the first monitored link
+        :type l1: String
+        :param l2: Name of the second monitored link
+        :type l2: String
+        :param query: Provenance filters passed to dump_provenance()
+        :return: dict[pkt_id, pkt_info] ordered by arrival on l1, where pkt_info
+            is a dict of the following fields:
+                - l1_time, l1_epoch, l2_time, l2_epoch
+                - l1_position, l2_position: 0-based arrival order on each link
+                - size
+                - flow fields (src/dst ip, src/dst port, protocol)
+        """
+        pairs = [
+            (pkt_id, on_l1, on_l2)
+            for pkt_id, (on_l1, on_l2) in self._frames_on_links(l1, l2, **query).items()
+            if on_l1 and on_l2 and self._epoch_ns(on_l1) < self._epoch_ns(on_l2)
+        ]
+        l2_positions = {
+            pkt_id: position
+            for position, (pkt_id, _, _) in enumerate(
+                sorted(pairs, key=lambda pair: self._epoch_ns(pair[2]))
+            )
+        }
+        reordered: dict[str, dict[str, Any]] = {}
+        latest_l2_position = -1
+        for l1_position, (pkt_id, on_l1, on_l2) in enumerate(
+            sorted(pairs, key=lambda pair: self._epoch_ns(pair[1]))
+        ):
+            l2_position = l2_positions[pkt_id]
+            if l2_position < latest_l2_position:
+                reordered[pkt_id] = {
+                    **self._link_pair_record(on_l1, on_l2),
+                    "l1_position": l1_position,
+                    "l2_position": l2_position,
+                }
+            latest_l2_position = max(latest_l2_position, l2_position)
+        return reordered
+
+    def list_reordered_frames(
+        self,
+        l1: str,
+        l2: str,
+        output=None,
+        fields=None,
+        filter_function=None,
+        quiet: bool = False,
+        pretty_names: bool = True,
+        **query,
+    ):
+        """
+        Build and optionally display a table of dump_reordered_frames(): frames
+        that reach two monitored links in a different order, one row per frame.
+
+        :param l1: Name of the first monitored link
+        :type l1: String
+        :param l2: Name of the second monitored link
+        :type l2: String
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param quiet: if True, build the table without displaying it
+        :type quiet: bool
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :type pretty_names: bool
+        :param query: Provenance filters passed to dump_provenance()
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
+        return self._list_pkt_table(
+            self.dump_reordered_frames(l1, l2, **query),
+            "Reordered Frames",
+            {
+                "pkt_id": "Packet ID",
+                "l1_position": "L1 Position",
+                "l2_position": "L2 Position",
+                **LINK_PAIR_NAMES,
+                "size": "Size",
+                **PROV_FLOW_NAMES,
+            },
+            output,
+            fields,
+            filter_function,
+            quiet,
+            pretty_names,
+        )
+
+    def dump_delay_gt(
+        self, l1: str, l2: str, threshold: float, **query
+    ) -> dict[str, dict[str, Any]]:
+        """
+        Find frames that appeared on l2 more than `threshold` seconds after
+        appearing on l1, measured between their first observations on each.
+
+        :param l1: Name of the first monitored link
+        :type l1: String
+        :param l2: Name of the second monitored link
+        :type l2: String
+        :param threshold: Delay in seconds that frames must exceed
+        :type threshold: float
+        :param query: Provenance filters passed to dump_provenance()
+        :return: dict[pkt_id, pkt_info] ordered by delay, largest first, where
+            pkt_info is a dict of the following fields:
+                - l1_time, l1_epoch, l2_time, l2_epoch
+                - delay: seconds from l1 to l2
+                - size
+                - flow fields (src/dst ip, src/dst port, protocol)
+        """
+        delayed: dict[str, dict[str, Any]] = {}
+        for pkt_id, (on_l1, on_l2) in self._frames_on_links(l1, l2, **query).items():
+            if on_l1 and on_l2:
+                delay = (self._epoch_ns(on_l2) - self._epoch_ns(on_l1)) / 1e9
+                if delay > threshold:
+                    delayed[pkt_id] = {
+                        **self._link_pair_record(on_l1, on_l2),
+                        "delay": delay,
+                    }
+        return dict(
+            sorted(delayed.items(), key=lambda item: item[1]["delay"], reverse=True)
+        )
+
+    def list_delay_gt(
+        self,
+        l1: str,
+        l2: str,
+        threshold: float,
+        output=None,
+        fields=None,
+        filter_function=None,
+        quiet: bool = False,
+        pretty_names: bool = True,
+        **query,
+    ):
+        """
+        Build and optionally display a table of dump_delay_gt(): frames that
+        reach l2 more than `threshold` seconds after l1, one row per frame.
+
+        :param l1: Name of the first monitored link
+        :type l1: String
+        :param l2: Name of the second monitored link
+        :type l2: String
+        :param threshold: Delay in seconds that frames must exceed
+        :type threshold: float
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param quiet: if True, build the table without displaying it
+        :type quiet: bool
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :type pretty_names: bool
+        :param query: Provenance filters passed to dump_provenance()
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
+        return self._list_pkt_table(
+            self.dump_delay_gt(l1, l2, threshold, **query),
+            "Delayed Frames",
+            {
+                "pkt_id": "Packet ID",
+                "delay": "Delay (s)",
+                **LINK_PAIR_NAMES,
+                "size": "Size",
+                **PROV_FLOW_NAMES,
+            },
+            output,
+            fields,
+            filter_function,
+            quiet,
+            pretty_names,
+        )
+
+    def dump_path_of(
+        self, pkt_id: str = None, link: str = None, **query
+    ) -> dict[str, list[dict[str, str]]]:
+        """
+        Get the observations of frames along the links they traversed, in time
+        order. Given pkt_id, gets that frame's path. Given link, gets the path of
+        every frame seen on link, starting from its first observation there.
+        Exactly one of pkt_id or link must be given.
+
+        :param pkt_id: The frame to get the path of
+        :type pkt_id: String
+        :param link: Name of the monitored link that paths start from
+        :type link: String
+        :param query: Provenance filters passed to dump_provenance()
+        :return: dict[pkt_id, list[pkt_info]], where pkt_info is an observation
+            as in dump_provenance(), plus the link it was seen on
+        """
+        if (pkt_id is None) == (link is None):
+            raise Exception("Exception: Exactly one of pkt_id or link must be given")
+        if link is None:
+            prov_dict = self._link_provenance(pkt_id=pkt_id, **query)
+            return {pkt_id: prov_dict[pkt_id]} if pkt_id in prov_dict else {}
+        self._check_links(link)
+        paths: dict[str, list[dict[str, str]]] = {}
+        for frame_id, observations in self._link_provenance(**query).items():
+            start = next(
+                (i for i, obs in enumerate(observations) if obs["link"] == link),
+                None,
+            )
+            if start is not None:
+                paths[frame_id] = observations[start:]
+        return paths
+
+    def list_path_of(
+        self,
+        pkt_id: str = None,
+        link: str = None,
+        output=None,
+        fields=None,
+        filter_function=None,
+        quiet: bool = False,
+        pretty_names: bool = True,
+        **query,
+    ):
+        """
+        Build and optionally display a table of dump_path_of(): the observations
+        of a frame, or of every frame seen on a link, along the links they
+        traversed, one row per observation. Exactly one of pkt_id or link must
+        be given.
+
+        :param pkt_id: The frame to get the path of
+        :type pkt_id: String
+        :param link: Name of the monitored link that paths start from
+        :type link: String
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param quiet: if True, build the table without displaying it
+        :type quiet: bool
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :type pretty_names: bool
+        :param query: Provenance filters passed to dump_provenance()
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
+        return self._list_pkt_table(
+            self.dump_path_of(pkt_id=pkt_id, link=link, **query),
+            "Frame Paths",
+            {
+                "pkt_id": "Packet ID",
+                "link": "Link",
+                **PROV_OBSERVATION_NAMES,
+                **PROV_FLOW_NAMES,
+            },
+            output,
+            fields,
+            filter_function,
+            quiet,
+            pretty_names,
+        )
+
+    def dump_state_when(
+        self, pkt_id: str, before: float, after: float, **query
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Find other frames that crossed a link pkt_id traversed, from `before`
+        seconds before to `after` seconds after pkt_id crossed it.
+
+        :param pkt_id: The frame whose links and times anchor the windows
+        :type pkt_id: String
+        :param before: Seconds before pkt_id's observation that each window opens
+        :type before: float
+        :param after: Seconds after pkt_id's observation that each window closes
+        :type after: float
+        :param query: Provenance filters passed to dump_provenance()
+        :return: dict[pkt_id, list[pkt_info]] for the other frames, where
+            pkt_info is an observation as in dump_provenance(), plus:
+                - link: the link it was seen on
+                - offset: seconds from pkt_id's nearest observation on that
+                  link, negative when before it
+        """
+        anchor_prov = self._link_provenance(pkt_id=pkt_id, **query)
+        if pkt_id not in anchor_prov:
+            raise Exception(f"Exception: {pkt_id} not found in provenance")
+        anchors = [
+            (obs["link"], self._epoch_ns(obs))
+            for obs in anchor_prov[pkt_id]
+            if obs["link"]
+        ]
+        if not {"tstart", "tend", "tformat"} & set(query):
+            # Fetch only the frames inside the windows, not the whole graph.
+            lo = min(epoch for _, epoch in anchors) - int(before * 1e9)
+            hi = max(epoch for _, epoch in anchors) + int(after * 1e9)
+            query = {
+                **query,
+                "tstart": f"{lo // 1_000_000_000}.{lo % 1_000_000_000:09d}",
+                "tend": f"{hi // 1_000_000_000}.{hi % 1_000_000_000:09d}",
+            }
+        prov_dict = self._link_provenance(**query)
+        state: dict[str, list[dict[str, Any]]] = {}
+        for frame_id, observations in prov_dict.items():
+            if frame_id == pkt_id:
+                continue
+            for obs in observations:
+                if not obs["link"]:
+                    continue
+                offsets = [
+                    (self._epoch_ns(obs) - anchor_epoch) / 1e9
+                    for anchor_link, anchor_epoch in anchors
+                    if anchor_link == obs["link"]
+                ]
+                in_window = [offset for offset in offsets if -before <= offset <= after]
+                if in_window:
+                    state.setdefault(frame_id, []).append(
+                        {**obs, "offset": min(in_window, key=abs)}
+                    )
+        return state
+
+    def list_state_when(
+        self,
+        pkt_id: str,
+        before: float,
+        after: float,
+        output=None,
+        fields=None,
+        filter_function=None,
+        quiet: bool = False,
+        pretty_names: bool = True,
+        **query,
+    ):
+        """
+        Build and optionally display a table of dump_state_when(): the other
+        frames that crossed a link pkt_id traversed within the window around
+        it, one row per observation.
+
+        :param pkt_id: The frame whose links and times anchor the windows
+        :type pkt_id: String
+        :param before: Seconds before pkt_id's observation that each window opens
+        :type before: float
+        :param after: Seconds after pkt_id's observation that each window closes
+        :type after: float
+        :param output: output format passed through to Utils.list_table (e.g. "pandas", "text"); uses list_table's default if None
+        :param fields: subset of columns to include; all columns if None
+        :param filter_function: optional predicate used to filter rows before display
+        :param quiet: if True, build the table without displaying it
+        :type quiet: bool
+        :param pretty_names: if True, use human-readable column headers instead of raw field names
+        :type pretty_names: bool
+        :param query: Provenance filters passed to dump_provenance()
+        :return: the list of row dicts making up the table
+        :rtype: list
+        """
+        return self._list_pkt_table(
+            self.dump_state_when(pkt_id, before, after, **query),
+            "Link State",
+            {
+                "pkt_id": "Packet ID",
+                "link": "Link",
+                "offset": "Offset (s)",
+                **PROV_OBSERVATION_NAMES,
+                **PROV_FLOW_NAMES,
+            },
+            output,
+            fields,
+            filter_function,
+            quiet,
+            pretty_names,
+        )
 
     def reset_monitor_string(self):
         """
