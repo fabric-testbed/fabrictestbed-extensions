@@ -1,9 +1,14 @@
 """Unit tests for TemplateMixin."""
 
+import base64
 import json
 import unittest
+import zlib
 from unittest.mock import MagicMock, PropertyMock
 
+import pytest
+
+from fabrictestbed_extensions.fablib import template_mixin
 from fabrictestbed_extensions.fablib.template_mixin import TemplateMixin
 
 
@@ -223,3 +228,68 @@ class TestTemplateMixinPrettyNames(unittest.TestCase):
     def test_default_pretty_names_empty(self):
         result = TemplateMixin.get_pretty_name_dict()
         self.assertEqual(result, {})
+
+
+def _stored_user_data(obj):
+    """Wire obj's FIM property bag to a dict so set_user_data/get_user_data
+    round-trip as they would against FIM; return the dict."""
+    storage = {}
+    obj._fim.set_property.side_effect = lambda pname, pval: storage.update(
+        {pname: str(pval)}
+    )
+    obj._fim.get_property.side_effect = lambda pname: storage.get(pname, "")
+    return storage
+
+
+@pytest.mark.parametrize(
+    "data, mode, compressed",
+    [
+        ({"blob": "x" * 1900}, "needed", False),
+        ({"blob": "abcdefghij" * 300}, "needed", True),
+        ({"blob": "x" * 500}, "always", True),
+        ({"zlib64": "not-compressed", "other": "y" * 2100}, "needed", True),
+    ],
+    ids=["fits-stays-plain", "too-large-compressed", "always", "user-zlib64-key"],
+)
+def test_user_data_round_trip(monkeypatch, data, mode, compressed):
+    """Payloads round-trip. By default only a payload over UserData's
+    2048-byte limit is compressed (fablib without compression reads the rest),
+    and compression brings a 3 KB payload under the limit."""
+    monkeypatch.setenv("FABRIC_COMPRESS_USER_DATA", mode)
+    obj = ConcreteTemplate()
+    storage = _stored_user_data(obj)
+    obj.set_user_data(data)
+    stored = json.loads(storage["user_data"])
+    if compressed:
+        assert set(stored) == {template_mixin.USER_DATA_COMPRESSED_KEY}
+        assert len(storage["user_data"]) <= 2048
+    else:
+        assert stored == data
+    assert obj.get_user_data() == data
+
+
+def _compressed(data):
+    return base64.b64encode(zlib.compress(json.dumps(data).encode())).decode()
+
+
+@pytest.mark.parametrize(
+    "stored, expected",
+    [
+        ({"old": "format", "nested": {"a": 1}}, None),
+        ({"zlib64": "not-valid-base64!!!"}, None),
+        (
+            {
+                "zlib64": _compressed({"a": 1, "fablib_data": {"v": 1, "w": 3}}),
+                "fablib_data": {"v": 2},
+            },
+            {"a": 1, "fablib_data": {"v": 2, "w": 3}},
+        ),
+    ],
+    ids=["legacy-plain", "corrupt-zlib64", "older-client-wrote-beside"],
+)
+def test_user_data_read(stored, expected):
+    """Plain or undecodable user data reads back unchanged; a key that a fablib
+    without compression wrote beside the compressed payload is merged over it."""
+    obj = ConcreteTemplate()
+    _stored_user_data(obj)["user_data"] = json.dumps(stored)
+    assert obj.get_user_data() == (stored if expected is None else expected)

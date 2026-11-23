@@ -2,13 +2,42 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import logging
+import os
+import zlib
 from abc import abstractmethod
 
 import jinja2
 from fabrictestbed.slice_editor import UserData
 
 from fabrictestbed_extensions.utils.utils import Utils
+
+# Key that holds a compressed user_data payload.
+USER_DATA_COMPRESSED_KEY = "zlib64"
+# FIM refuses a UserData JSON string longer than this (UserData.MAX_SIZE).
+USER_DATA_MAX_SIZE = 2048
+# Smallest payload compressed when FABRIC_COMPRESS_USER_DATA=always.
+USER_DATA_COMPRESS_THRESHOLD = 256
+
+
+def _merge_user_data(base: dict, newer: dict) -> dict:
+    """Merge newer over base, recursing where both values are dicts."""
+    merged = dict(base)
+    for key, value in newer.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            value = _merge_user_data(merged[key], value)
+        merged[key] = value
+    return merged
+
+
+def _user_data_compress_mode() -> str:
+    """Return the FABRIC_COMPRESS_USER_DATA mode: off, always or needed."""
+    mode = os.environ.get("FABRIC_COMPRESS_USER_DATA", "needed").strip().lower()
+    if mode in ("0", "false", "no", "off"):
+        return "off"
+    return "always" if mode == "always" else "needed"
 
 
 class TemplateMixin:
@@ -257,24 +286,83 @@ class TemplateMixin:
         """
         Set user data.
 
+        A payload over FIM's 2048-byte limit is stored zlib-compressed and
+        base64-encoded, and :meth:`get_user_data` decompresses it. The
+        ``FABRIC_COMPRESS_USER_DATA`` environment variable selects when a
+        payload is compressed:
+
+        - ``needed`` (default): only a payload over the limit. fablib releases
+          without compression cannot read a compressed payload.
+        - ``always``: every payload above 256 bytes.
+        - ``0``, ``false``, ``no`` or ``off``: never.
+
         :param user_data: a ``dict``.
         :type user_data: dict
         """
-        self.get_fim().set_property(
-            pname="user_data", pval=UserData(json.dumps(user_data))
+        payload = json.dumps(user_data, separators=(",", ":"))
+
+        mode = _user_data_compress_mode()
+        threshold = (
+            USER_DATA_COMPRESS_THRESHOLD if mode == "always" else USER_DATA_MAX_SIZE
         )
+        if mode != "off" and len(payload) > threshold:
+            wrapper = json.dumps(
+                {
+                    USER_DATA_COMPRESSED_KEY: base64.b64encode(
+                        zlib.compress(payload.encode("utf-8"), 9)
+                    ).decode("ascii")
+                },
+                separators=(",", ":"),
+            )
+            if len(wrapper) < len(payload):
+                payload = wrapper
+
+        if len(payload) > USER_DATA_MAX_SIZE:
+            try:
+                name = self.get_name()
+            except Exception:
+                name = None
+            logging.getLogger("fablib").warning(
+                f"user_data payload for {name} is {len(payload)} bytes, "
+                f"exceeding the {USER_DATA_MAX_SIZE} byte UserData MAX_SIZE"
+            )
+
+        self.get_fim().set_property(pname="user_data", pval=UserData(payload))
 
     def get_user_data(self) -> dict:
         """
         Get user data.
 
+        Decompresses a payload that :meth:`set_user_data` stored compressed.
+        Keys stored beside it by a fablib release without compression are
+        merged over the decompressed values, dict into dict.
+
         :return: user data dictionary
         :rtype: dict
         """
         try:
-            return json.loads(str(self.get_fim().get_property(pname="user_data")))
+            result = json.loads(str(self.get_fim().get_property(pname="user_data")))
         except Exception:
             return {}
+
+        if isinstance(result, dict) and isinstance(
+            result.get(USER_DATA_COMPRESSED_KEY), str
+        ):
+            try:
+                decompressed = json.loads(
+                    zlib.decompress(
+                        base64.b64decode(result[USER_DATA_COMPRESSED_KEY])
+                    ).decode("utf-8")
+                )
+            except Exception:
+                return result
+            if isinstance(decompressed, dict):
+                return _merge_user_data(
+                    decompressed,
+                    {k: v for k, v in result.items() if k != USER_DATA_COMPRESSED_KEY},
+                )
+
+        return result
 
     def get_fablib_data(self) -> dict:
         """

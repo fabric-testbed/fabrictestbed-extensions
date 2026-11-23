@@ -27,10 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Sphinx API reference pages for `attestable_switch`, `resources_v2`, `validator`, `config`, `constants`, `exceptions`, `ceph_s3_utils` and `ceph_fs_utils` (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
 - Document the modify-start wait in `Slice.submit()` / `Slice.modify()`, and add a slice modify flow to `docs/claude/SPEC.md` (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
 - Add `NetworkService.check_public_ip()`, `get_requested_public_ips()` and `get_public_ip_changes()`, and a `count=` argument to `make_ip_publicly_routable()` so fablib picks the candidate addresses (keeping any already granted) (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
+- Add zlib+base64 compression of per-element `user_data` that would exceed FIM's 2048-byte `UserData` limit. By default only those payloads are compressed, as fablib releases without compression cannot read a compressed payload. `FABRIC_COMPRESS_USER_DATA=always` compresses every payload above 256 bytes, and `0` turns compression off. A key that an older fablib writes beside a compressed payload is merged into the compressed value. `user_data` JSON is written without whitespace, so the stored strings of existing elements change on their next save
+- Add `FABRIC_SSH_CONNECT_LIMIT` env var / `FablibManager(ssh_connect_limit=...)` to cap concurrent bastion SSH handshakes (default 8). Each connection step (bastion and node handshakes, tunnel channel open) times out after 60 seconds
+- Add the node name, duration and the first 120 characters of the command to the DEBUG log line of each `Node.execute()` command
 
 ### Changed
 - `NetworkService.make_ip_publicly_routable()` now validates its input: it raises `ValidationError` on a network that is not FabNetv4Ext/FabNetv6Ext, for the wrong address family, or for an address outside the subnet (or the gateway, network or broadcast address). It accepts a single address as well as a list, and returns the requested addresses (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `NetworkService.get_public_ips()` returns `None` (with a warning) while a `make_ip_publicly_routable()` request has not been submitted, instead of returning the request as if it were granted (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
+- `Interface._config_nmcli` now issues a single chained SSH command per interface instead of 6-8 round trips
+- `Attestable_Switch.switch_config()` brings its ports up in one SSH call instead of two per port
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))
