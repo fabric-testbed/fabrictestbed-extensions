@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `CrinkleSlice.save_fablib_data()`, which keeps a local copy of the Crinkle data when the orchestrator rejects the save (e.g. HTTP 413) and reapplies it on reload
 - Add the node name, duration and the first 120 characters of the command to the DEBUG log line of each `Node.execute()` command
 - Add `CrinkleSlice.check_clock_sync()`, which checks each node's PTP synchronisation after the monitor reboot, repairs a failing node once, and records the result in `clock_status`
+- Add Crinkle L3 monitored links. `CrinkleSlice.add_monitored_l3network()` builds one end, and `setup_l3_tunnels()` joins the two ends by VXLAN over FABNet. Ends in two slices are joined with `get_l3_tunnel_endpoints()` and `setup_l3_tunnels(peers=...)`.
+- Add `CrinkleSlice.get_monitored_l3networks()` to list a slice's L3 link ends
 
 ### Changed
 - `NetworkService.make_ip_publicly_routable()` now validates its input: it raises `ValidationError` on a network that is not FabNetv4Ext/FabNetv6Ext, for the wrong address family, or for an address outside the subnet (or the gateway, network or broadcast address). It accepts a single address as well as a list, and returns the requested addresses (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
