@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -43,12 +44,16 @@ CREASEDIR = os.path.dirname(os.path.abspath(__file__))
 # The monitor binary is prebuilt from monitor_source.c and hosted per version.
 # MONITOR_VERSION matches CREASEVER in monitor_source.c; a source change bumps both and
 # hosts the new build.
-MONITOR_VERSION = "0.6.2"
+MONITOR_VERSION = "0.7.3"
 MONITORURL = (
     "https://transparnet.cs.iit.edu/~awolosewicz/"
     f"dpdk-crease_monitor-v{MONITOR_VERSION}"
 )
 DPDKNAME = "dpdk-crease_monitor-dev"
+REPLAYCMDNAME = "crease_command.py"
+# Allowance on top of a replay's recorded length for bursts sent late. The replay-command
+# guards treat the replay as running until then.
+REPLAY_LATE_MARGIN_S = 1.0
 MONPROT = 0x6587
 # Most edges a time-filtered provenance query takes from SPADE.
 SPADE_TIME_EDGE_LIMIT = 10_000_000
@@ -637,6 +642,7 @@ class CrinkleSlice(Slice):
         self.do_allocate_hosts = True
         self.do_post_boot = True
         self.do_ptp_setup = True
+        self.replay_bursts = 1024
 
     @staticmethod
     def new_slice(
@@ -646,6 +652,7 @@ class CrinkleSlice(Slice):
         storage_cluster: str = None,
         pcaps_dir: str = ".query_analysis_pcaps",
         name_prefix: str = "C",
+        replay_bursts: int = 1024,
     ):
         """
         Create a new crinkle slice.
@@ -662,6 +669,10 @@ class CrinkleSlice(Slice):
         :type pcaps_dir: str
         :param name_prefix: prefix Crinkle prepends to the names of resources it creates
         :type name_prefix: str
+        :param replay_bursts: number of recorded bursts (about 128 packets each) each
+            monitor data port can hold. Each costs about 0.3 MB of hugepage memory per
+            data port, so a default monitor (4 GB RAM) holds up to about 2500.
+        :type replay_bursts: int
         :return: the new, not-yet-submitted CrinkleSlice
         :rtype: CrinkleSlice
         """
@@ -673,6 +684,7 @@ class CrinkleSlice(Slice):
         )
         slice._storage = storage
         slice._storage_cluster = storage_cluster
+        slice.replay_bursts = replay_bursts
         if fablib_manager:
             fablib_manager.cache_slice(slice_object=slice)
         return slice
@@ -691,6 +703,7 @@ class CrinkleSlice(Slice):
             self.do_post_boot = data["do_post_boot"]
             self.do_ptp_setup = data["do_ptp_setup"]
             self.ptp_nodes = data.get("ptp_nodes")
+            self.replay_bursts = data.get("replay_bursts", self.replay_bursts)
             logging.info(
                 f"Retrieved crinkle slice config as:\n{self.analyzer_name}\n{self.prefix}\n{self.monitor_string}"
             )
@@ -711,6 +724,7 @@ class CrinkleSlice(Slice):
             "do_post_boot": self.do_post_boot,
             "do_ptp_setup": self.do_ptp_setup,
             "ptp_nodes": getattr(self, "ptp_nodes", None),
+            "replay_bursts": self.replay_bursts,
         }
         logging.info(f"Writing crinkle slice config to user data: {data_dict}")
         user_data["crinkle_slice_config"] = data_dict
@@ -2526,7 +2540,7 @@ class CrinkleSlice(Slice):
                     ordered_devs[entry["ifname"]] = ctr
                     ctr += 1
                 refreshed_monitor.data.cmd_args += (
-                    f"-r 1024 -n {refreshed_monitor.data.monitor_id} "
+                    f"-r {self.replay_bursts} -n {refreshed_monitor.data.monitor_id} "
                 )
                 report_mac = self.analyzer_iface.get_mac()
                 if mon_site != site:
@@ -2592,6 +2606,11 @@ class CrinkleSlice(Slice):
                 f"{CREASEDIR}/spade_reader.py", f"{REMOTEWORKDIR}/spade_reader.py"
             )
             self.analyzer.execute(f"sudo chmod u+x {REMOTEWORKDIR}/spade_reader.py")
+            self.analyzer.upload_file(
+                f"{CREASEDIR}/{REPLAYCMDNAME}", f"{REMOTEWORKDIR}/{REPLAYCMDNAME}"
+            )
+            self._crease_command_uploaded = True
+            self.analyzer.execute(f"sudo chmod u+x {REMOTEWORKDIR}/{REPLAYCMDNAME}")
             if self.monitor_string == "":
                 self.reset_monitor_string()
             self.analyzer.execute_thread(
@@ -3489,12 +3508,12 @@ class CrinkleSlice(Slice):
         # The app runs detached, so the SSH channel closes once it is spawned.
         # $pid is the sudo process, which exits with the app: a zombie (Z) or a
         # missing process means the app has exited. A monitor already running
-        # is refused.
+        # is refused. stdbuf line-buffers the app's log.
         log = f"/tmp/{DPDKNAME}.log"
         cmd = (
             f"if pgrep -x {DPDKNAME[:15]} >/dev/null; then"
             " echo 'the monitor is already running'; false; else"
-            f" sudo nohup ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args}"
+            f" sudo nohup stdbuf -oL ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args}"
             f" > {log} 2>&1 & pid=$!; sleep {MONITOR_START_CHECK_S};"
             f' case "$(ps -o stat= -p $pid)" in ""|Z*) tail -n 20 {log}; false;; esac;'
             " fi"
@@ -3561,3 +3580,163 @@ class CrinkleSlice(Slice):
         """
         for monitor in self.monitors.values():
             self.stop_monitor(monitor=monitor)
+
+    def _send_crease_commands(self, *commands: tuple[str, list]):
+        """
+        Not intended for API call.
+
+        Send replay commands to every monitor from the analyzer, in order, in
+        one SSH call. The sender is uploaded first if this CrinkleSlice has not
+        uploaded it. A monitor at another site than the analyzer's is reached
+        through a host route via the analyzer's FABNet gateway, installed with
+        each call, as Crinkle leaves the analyzer's interfaces unmanaged.
+        Raises if a command cannot be sent to a monitor. A datagram lost on the
+        way, or one the monitor ignores, goes undetected.
+        """
+        ips = [
+            str(monitor.data.cnet_iface.get_ip_addr())
+            for monitor in self.monitors.values()
+        ]
+        if not ips:
+            raise Exception("Slice has no monitors to command")
+        analyzer_site = self.analyzer.get_site()
+        routes = [
+            f"sudo ip -6 route replace {monitor.data.cnet_iface.get_ip_addr()}"
+            f" via {self.analyzer_cnet.get_gateway()}"
+            f" dev {self.analyzer_iface.get_device_name()}"
+            for monitor in self.monitors.values()
+            if monitor.get_site() != analyzer_site
+        ]
+        if not getattr(self, "_crease_command_uploaded", False):
+            self.analyzer.upload_file(
+                f"{CREASEDIR}/{REPLAYCMDNAME}", f"{REMOTEWORKDIR}/{REPLAYCMDNAME}"
+            )
+            self._crease_command_uploaded = True
+        script = f"sudo python3 {REMOTEWORKDIR}/{REPLAYCMDNAME}"
+        self.analyzer._execute_checked(
+            " && ".join(
+                routes
+                + [
+                    " ".join([script, command] + [str(a) for a in args] + ips)
+                    for command, args in commands
+                ]
+            ),
+            f"Crease command {', '.join(command for command, _ in commands)}",
+        )
+
+    def _check_replay_idle(self, action: str):
+        """
+        Not intended for API call.
+
+        Raise if a replay sent from this CrinkleSlice may still be running.
+        Commands sent before a reload or from another CrinkleSlice are not
+        covered.
+        """
+        busy_until = getattr(self, "_replay_busy_until", None)
+        if busy_until is not None and time.monotonic() < busy_until:
+            raise Exception(
+                f"Cannot {action}: the replay may still be running for "
+                f"{busy_until - time.monotonic():.1f} s"
+            )
+
+    def record_replay(self, start_offset: float = 2.0, end_offset: float = 4.0):
+        """
+        Open a recording window on every monitor, after discarding any earlier
+        recording.
+
+        Offsets are seconds from the analyzer's current clock. Monitors store
+        the traffic they forward inside the window for later replay.
+
+        :param start_offset: Seconds until the window opens
+        :type start_offset: float
+        :param end_offset: Seconds until the window closes
+        :type end_offset: float
+        :raises Exception: if a replay may still be running
+        """
+        if end_offset <= start_offset:
+            raise Exception("end_offset must be greater than start_offset")
+        self._check_replay_idle("record")
+        self._send_crease_commands(
+            ("clear", []), ("record", [start_offset, end_offset])
+        )
+        # The offsets count from when the sender ran on the analyzer, which is
+        # before this call returns, so timing from the return errs late.
+        self._replay_window_closes = time.monotonic() + end_offset
+        self._replay_recorded = True
+        self._replay_length = end_offset - start_offset
+
+    def run_replay(self, start_offset: float = 2.0):
+        """
+        Replay the stored recording on every monitor, preserving the recorded
+        inter-burst timing. The recording survives the run and can be replayed
+        again.
+
+        Raises instead of sending a run command the monitors would ignore, as
+        far as this CrinkleSlice knows: while the window opened by its
+        record_replay() is open, after its clear_replay(), or while its last
+        replay may still be running. A monitor keeps forwarding live traffic
+        until the replay window, from just before the replay's start time
+        until its last burst is sent. Within it, the port sending the replay
+        forwards nothing. A record command whose window overlaps a pending or
+        running replay is ignored.
+
+        :param start_offset: Seconds from the analyzer's current clock until
+            the replay begins; must leave the command time to reach all
+            monitors
+        :type start_offset: float
+        :raises Exception: if the recording window is still open or a replay
+            may still be running
+        """
+        if getattr(self, "_replay_recorded", None) is False:
+            raise Exception("Cannot run the replay: the recording was cleared")
+        closes = getattr(self, "_replay_window_closes", None)
+        if closes is not None and time.monotonic() < closes:
+            raise Exception(
+                f"Cannot run the replay: the recording window closes in "
+                f"{closes - time.monotonic():.1f} s"
+            )
+        self._check_replay_idle("run the replay")
+        self._send_crease_commands(("run", [start_offset]))
+        self._replay_busy_until = (
+            time.monotonic()
+            + start_offset
+            + getattr(self, "_replay_length", 0.0)
+            + REPLAY_LATE_MARGIN_S
+        )
+
+    def clear_replay(self):
+        """
+        Discard the stored recording on every monitor.
+
+        :raises Exception: if a replay may still be running
+        """
+        self._check_replay_idle("clear the recording")
+        self._send_crease_commands(("clear", []))
+        self._replay_window_closes = None
+        self._replay_recorded = False
+
+    def get_monitor_log(
+        self, monitor: CrinkleMonitor, lines: int = 40, pattern: str | None = "REPLAY"
+    ) -> str:
+        """
+        Fetch the last lines of a monitor's DPDK app log that contain
+        ``pattern``, by default the REPLAY-STORE/REPLAY-RUN/REPLAY-CLEAR
+        telemetry lines.
+
+        :param monitor: The monitor node to read from
+        :type monitor: CrinkleMonitor
+        :param lines: Number of matching lines to fetch
+        :type lines: int
+        :param pattern: Fixed string a line must contain; None for the plain
+            tail of the log
+        :type pattern: str
+        :return: The matching lines
+        :rtype: str
+        """
+        log = f"/tmp/{DPDKNAME}.log"
+        if pattern:
+            cmd = f"grep -aF -- {shlex.quote(pattern)} {log} | tail -n {int(lines)}"
+        else:
+            cmd = f"tail -n {int(lines)} {log}"
+        stdout, _ = monitor.execute(cmd, quiet=True)
+        return stdout

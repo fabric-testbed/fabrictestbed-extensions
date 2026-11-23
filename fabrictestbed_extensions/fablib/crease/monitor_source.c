@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <signal.h>
 #include <unistd.h>
 #include <inttypes.h>
@@ -24,6 +25,7 @@
 #define MBUF_CACHE_SIZE 128
 #define BURST_SIZE 128
 #define MIN_REPLAY_SIZE 128
+#define REPLAY_TX_RETRIES 4
 #define BURST_TX_DRAIN_US 1 /* TX drain every ~1us */
 /* Configure how many packets ahead to prefetch, when reading packets */
 #define PREFETCH_OFFSET	3
@@ -39,7 +41,7 @@
 
 #define MONPROT 0x6587
 #define CREASEPROT 254
-#define CREASEVER "Crease Monitor v0.6.2\n"
+#define CREASEVER "Crease Monitor v0.7.3\n"
 
 #define MAX_PORTS 3
 
@@ -57,7 +59,7 @@ uint64_t mon_id;
 uint16_t nb_ports;
 unsigned nb_lcores, rx_lcores[MAX_PORTS], max_replay_size, nb_worker_cores, worker_core_ids[RTE_MAX_LCORE];
 static struct rte_mempool *packet_pool, *clone_pool, *replay_pool;
-static struct rte_ring *replay_ring;
+static struct rte_ring *replay_rings[MAX_PORTS - 1];
 static struct rte_soring *packet_rings[MAX_PORTS - 1];
 
 //static int rx_queue_per_lcore = 1;
@@ -70,15 +72,6 @@ static struct rte_ether_addr ports_eth_addr[MAX_PORTS];
 
 static uint16_t vport_to_devport[MAX_PORTS];
 static uint16_t devport_to_vport[MAX_PORTS];
-
-struct mbuf_table {
-	uint16_t len;
-	struct rte_mbuf *m_table[BURST_SIZE];
-};
-
-struct mbuf_table_light {
-	struct rte_mbuf *m_table[BURST_SIZE];
-};
 
 struct packet_metadata {
 	uint64_t systime_ns;
@@ -93,30 +86,15 @@ struct packet_metadata {
 
 ssize_t testsize = sizeof(struct packet_metadata);
 
-struct replay_mbuf_table {
-	uint32_t len;
-	uint64_t *tsc_counts;
-	uint16_t *m_lens;
-	struct mbuf_table_light *m_tables;
-};
-
 struct __rte_cache_aligned replay_buf {
 	uint32_t len;
 	uint64_t tsc;
 	struct rte_mbuf *bufs[BURST_SIZE];
 };
 
-#define MAX_RX_QUEUE_PER_LCORE 16
-#define MAX_TX_QUEUE_PER_PORT 16
-struct __rte_cache_aligned lcore_queue_conf {
-	uint64_t tx_tsc;
-	uint16_t n_rx_queue;
-	uint8_t rx_queue_list[MAX_RX_QUEUE_PER_LCORE];
-	uint16_t tx_queue_id[MAX_PORTS];
-	struct mbuf_table tx_mbufs[MAX_PORTS];
-	uint16_t buf_queue_id[MAX_PORTS];
-	struct replay_mbuf_table buf_mbufs[MAX_PORTS];
-};
+static struct replay_buf **replay_run_bufs[MAX_PORTS - 1];
+static uint64_t record_pkts[MAX_PORTS - 1];
+static uint64_t record_drops[MAX_PORTS - 1];
 
 struct tlr_struct {
 	uint64_t systime_ns;
@@ -155,6 +133,9 @@ uint16_t c_ctrs[8];
 uint64_t replay_start = 0;
 uint64_t replay_end = 0;
 uint64_t replay_run_start = 0;
+/* End of the accepted replay's window (main lcore): its start plus the recording's
+ * length. A record command overlapping it is ignored while the replay is outstanding. */
+uint64_t replay_run_end = 0;
 
 static struct rte_eth_conf port_conf = {
 	.rxmode = {
@@ -200,34 +181,50 @@ send_burst_replayable(
 	const uint64_t copy_replay_end,
 	const uint16_t outport,
 	const uint16_t queueid,
+	const uint16_t pidx,
 	const uint16_t nb_rx)
 {
 	struct replay_buf *rbuf;
-	int reti;
-	unsigned retu;
+	uint64_t tx_tsc = 0;
 	uint16_t nb_tx;
+	const bool recording = systime_ns <= copy_replay_end && systime_ns >= copy_replay_start;
+
+	// Stamp before the TX call so a replayed burst, which waits for the stored
+	// TSC and then calls TX, reproduces the same reference point
+	if (unlikely(recording))
+		tx_tsc = rte_rdtsc_precise();
 	nb_tx = rte_eth_tx_burst(outport, queueid, bufs, nb_rx);
 	if (unlikely(nb_tx < nb_rx)) {
 		rte_pktmbuf_free_bulk(&bufs[nb_tx], nb_rx - nb_tx);
 		debug_printf("Failed to send all packets, sent %d, total %d\n", nb_tx, nb_rx);
 	}
 
-	if (unlikely(systime_ns <= copy_replay_end && systime_ns >= copy_replay_start)) {
-		reti = rte_mempool_get(replay_pool, (void **)&rbuf);
-		if (unlikely(reti < 0)) {
-			debug_printf("Error getting replay buf: %s\n", rte_strerror(-reti));
-		}
-
-		retu = rte_ring_enqueue_bulk_start(replay_ring, 1, NULL);
-		if (unlikely(retu < 1)) {
-			debug_printf("Replay buffer overflow, not storing packets\n");
+	if (unlikely(recording)) {
+		if (unlikely(rte_mempool_get(replay_pool, (void **)&rbuf) < 0)) {
+			debug_printf("No replay bufs left, not storing packets\n");
+			record_drops[pidx] += nb_rx;
+			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			rte_pktmbuf_free_bulk(bufs, nb_rx);
 			return;
 		}
-		rbuf->tsc = rte_rdtsc_precise();
+		rbuf->tsc = tx_tsc;
 		rbuf->len = nb_tx;
 		rte_memcpy(rbuf->bufs, bufs, nb_tx * sizeof(struct rte_mbuf *));
-		rte_ring_enqueue_finish(replay_ring, (void *)rbuf, 1);
+		if (unlikely(rte_ring_enqueue(replay_rings[pidx], rbuf) != 0)) {
+			debug_printf("Replay buffer overflow, not storing packets\n");
+			record_drops[pidx] += nb_rx;
+			rte_mempool_put(replay_pool, rbuf);
+			rte_pktmbuf_free_bulk(bufs, nb_rx);
+			rte_pktmbuf_free_bulk(bufs, nb_rx);
+			return;
+		}
+		record_pkts[pidx] += nb_tx;
+		// Packets the TX burst did not send are not stored, so drop the two
+		// references that would otherwise be held for replay
+		if (unlikely(nb_tx < nb_rx)) {
+			rte_pktmbuf_free_bulk(&bufs[nb_tx], nb_rx - nb_tx);
+			rte_pktmbuf_free_bulk(&bufs[nb_tx], nb_rx - nb_tx);
+		}
 	}
 	else {
 		// Double free since the refcnt will be at +2
@@ -243,43 +240,202 @@ get_output_port_from_vport(uint16_t input_port) {
 	return vport_to_devport[1];
 }
 
-static inline void
-run_replay(
-	struct lcore_queue_conf *qconf,
-	const uint16_t port,
-	const uint64_t start_time)
+static void
+clear_replay(const uint16_t pidx)
 {
-	if (unlikely(qconf->buf_mbufs[port].len == 0)) return;
-	uint32_t ptr = 0;
-	uint32_t i;
-	int ret;
+	struct replay_buf *rbuf;
+	uint64_t bursts = 0;
+	while (rte_ring_dequeue(replay_rings[pidx], (void **)&rbuf) == 0) {
+		// Double free since stored packets hold two references
+		rte_pktmbuf_free_bulk(rbuf->bufs, rbuf->len);
+		rte_pktmbuf_free_bulk(rbuf->bufs, rbuf->len);
+		rte_mempool_put(replay_pool, rbuf);
+		++bursts;
+	}
+	printf("REPLAY-CLEAR port %hu: freed %lu bursts, had stored %lu pkts, dropped %lu\n",
+		   pidx, bursts, record_pkts[pidx], record_drops[pidx]);
+	record_pkts[pidx] = 0;
+	record_drops[pidx] = 0;
+}
 
-	uint64_t tsc_delta = ((start_time - replay_start) / NSEC_PER_SEC) * tsc_hz;
-	uint64_t tsc_start = qconf->buf_mbufs[port].tsc_counts[0] + tsc_delta;
-	uint64_t curr_tsc;
+/* A pending replay starts this long before its first burst's target time: the RX lcore
+ * forwards live traffic until then, and the remainder is waited out in replay_send(). */
+#define REPLAY_START_GUARD_NS 50000
 
-	while (ptr < qconf->buf_mbufs[port].len) {
-		curr_tsc = rte_rdtsc_precise();
-		if (tsc_start <= curr_tsc) {
-			ret = rte_eth_tx_burst(port, qconf->tx_queue_id[port],
-								   qconf->buf_mbufs[port].m_tables[ptr].m_table, qconf->buf_mbufs[port].m_lens[ptr]);
-			if (unlikely(ret < qconf->buf_mbufs[port].m_lens[ptr])) {
-				rte_pktmbuf_free_bulk(&qconf->buf_mbufs[port].m_tables[ptr].m_table[ret], qconf->buf_mbufs[port].m_lens[ptr] - ret);
-				printf("Failed to send all packets, sent %d, total %d\n", ret, qconf->buf_mbufs[port].m_lens[ptr]);
-			}
-			++ptr;
-			//tsc_start += qconf->buf_mbufs[port].tsc_counts[ptr] - qconf->buf_mbufs[port].tsc_counts[ptr-1];
-			tsc_start = qconf->buf_mbufs[port].tsc_counts[ptr] + tsc_delta;
+/* Per-port state of a replay between its run command and its window. */
+struct replay_pending {
+	uint32_t n;            /* bursts dequeued for the replay; 0 when none is pending */
+	uint64_t tsc_delta;    /* recorded TSC to replay TSC */
+	uint64_t first_tsc;    /* target TSC of the first burst */
+};
+
+/* Take the recording off its ring for a replay starting at start_time (ns) and work out
+ * its timing. Returns the number of bursts. The RX lcore keeps forwarding until
+ * replay_send() is due. */
+static uint32_t
+replay_prepare(
+	const uint16_t pidx,
+	const uint64_t start_time,
+	struct replay_pending *pending)
+{
+	struct replay_buf **rbufs = replay_run_bufs[pidx];
+	uint64_t delta_ns;
+
+	pending->n = rte_ring_dequeue_burst(replay_rings[pidx], (void **)rbufs,
+					    max_replay_size, NULL);
+	if (unlikely(pending->n == 0))
+		return 0;
+	// Split the conversion to avoid overflowing delta_ns * tsc_hz
+	delta_ns = start_time - replay_start;
+	pending->tsc_delta = (delta_ns / NSEC_PER_SEC) * tsc_hz
+			+ ((delta_ns % NSEC_PER_SEC) * tsc_hz) / NSEC_PER_SEC;
+	pending->first_tsc = rbufs[0]->tsc + pending->tsc_delta;
+	return pending->n;
+}
+
+/* Send a prepared replay with the recorded inter-burst timing, then put the recording back
+ * on its ring. Live forwarding on this port pauses only for this call. */
+static void
+replay_send(
+	const uint16_t pidx,
+	const uint16_t outport,
+	const uint16_t queueid,
+	struct replay_pending *pending)
+{
+	struct replay_buf **rbufs = replay_run_bufs[pidx];
+	struct replay_buf *rbuf;
+	const uint32_t n = pending->n;
+	uint64_t tsc_target, curr;
+	uint64_t late = 0, worst_late = 0, sent_pkts = 0, lost_pkts = 0;
+	uint32_t i, j;
+	uint16_t nb_tx;
+
+	for (i = 0; i < n; ++i) {
+		rbuf = rbufs[i];
+		tsc_target = rbuf->tsc + pending->tsc_delta;
+		curr = rte_rdtsc_precise();
+		if (unlikely(curr > tsc_target)) {
+			++late;
+			if (curr - tsc_target > worst_late)
+				worst_late = curr - tsc_target;
+		}
+		else {
+			while (rte_rdtsc_precise() < tsc_target)
+				;
+		}
+		nb_tx = rte_eth_tx_burst(outport, queueid, rbuf->bufs, (uint16_t)rbuf->len);
+		for (uint16_t tries = 0; tries < REPLAY_TX_RETRIES && nb_tx < rbuf->len; ++tries) {
+			nb_tx += rte_eth_tx_burst(outport, queueid, &rbuf->bufs[nb_tx],
+									  (uint16_t)(rbuf->len - nb_tx));
+		}
+		sent_pkts += nb_tx;
+		if (unlikely(nb_tx < rbuf->len)) {
+			lost_pkts += rbuf->len - nb_tx;
+			rte_pktmbuf_free_bulk(&rbuf->bufs[nb_tx], rbuf->len - nb_tx);
 		}
 	}
-	ptr = 0;
-	// Does the refcnt update second so that replay can happen immediately
-	while (ptr < qconf->buf_mbufs[port].len) {
-		for(i = 0; i < qconf->buf_mbufs[port].m_lens[ptr]; ++i) {
-			rte_pktmbuf_refcnt_update(qconf->buf_mbufs[port].m_tables[ptr].m_table[i], 1);
+	printf("REPLAY-RUN port %hu: %u bursts, %lu pkts sent, %lu pkts lost, %lu late bursts, worst %lu ns\n",
+		   pidx, n, sent_pkts, lost_pkts, late, worst_late * NSEC_PER_SEC / tsc_hz);
+	// Does the refcnt update second so that replay can happen immediately,
+	// then requeues the bursts in order so the recording can be replayed again
+	for (i = 0; i < n; ++i) {
+		for (j = 0; j < rbufs[i]->len; ++j) {
+			rte_pktmbuf_refcnt_update(rbufs[i]->bufs[j], 1);
 		}
-		++ptr;
 	}
+	rte_ring_enqueue_burst(replay_rings[pidx], (void **)rbufs, n, NULL);
+	pending->n = 0;
+}
+
+/* IPv6 neighbor discovery on the analyzer port (vport 0) only. The analyzer, or the
+ * FABNet router in front of a monitor at another site, resolves the monitor's
+ * analyzer-network address before sending it commands, and the DPDK port has no kernel
+ * behind it to answer. The data ports never answer, keeping the monitor transparent. */
+#define ICMPV6_NH 58
+#define ND_NEIGHBOR_SOLICIT 135
+#define ND_NEIGHBOR_ADVERT 136
+#define ND_OPT_TARGET_LLADDR 2
+/* TX queue of the analyzer port reserved for the main lcore's advertisements; the
+ * workers own queues 0..nb_worker_cores-1. */
+static uint16_t nd_txq;
+
+static uint16_t
+icmpv6_checksum(const uint8_t *src, const uint8_t *dst, const uint8_t *msg, uint16_t len)
+{
+	uint32_t sum = 0;
+	uint16_t i;
+	for (i = 0; i < 16; i += 2)
+		sum += (src[i] << 8 | src[i + 1]) + (dst[i] << 8 | dst[i + 1]);
+	sum += len + ICMPV6_NH;
+	for (i = 0; i + 1 < len; i += 2)
+		sum += msg[i] << 8 | msg[i + 1];
+	if (len & 1)
+		sum += msg[len - 1] << 8;
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	return (uint16_t)~sum;
+}
+
+/* If buf is a Neighbor Solicitation for this monitor's address (ana_headers[22..37]),
+ * send the Neighbor Advertisement and return 1; otherwise return 0. */
+static int
+crinkle_nd_reply(struct rte_mbuf *buf, const uint16_t portid)
+{
+	static const uint8_t all_nodes[16] = {0xff, 0x02, [15] = 0x01};
+	static const uint8_t unspecified[16] = {0};
+	const uint8_t *p = rte_pktmbuf_mtod(buf, const uint8_t *);
+	const uint8_t *ip = p + 14, *icmp = p + 54;
+	const uint8_t *my_ip = &ana_headers[22];
+	const uint8_t *my_mac = ports_eth_addr[portid].addr_bytes;
+	struct rte_mbuf *na;
+	uint8_t *q, *qi, *qc;
+	uint16_t cksum;
+	int solicited;
+
+	if (rte_pktmbuf_data_len(buf) < 14 + 40 + 24)
+		return 0;
+	if (p[12] != 0x86 || p[13] != 0xDD || ip[6] != ICMPV6_NH || ip[7] != 255)
+		return 0;
+	if (icmp[0] != ND_NEIGHBOR_SOLICIT || icmp[1] != 0 || memcmp(icmp + 8, my_ip, 16) != 0)
+		return 0;
+
+	na = rte_pktmbuf_alloc(packet_pool);
+	if (na == NULL)
+		return 1;
+	q = (uint8_t *)rte_pktmbuf_append(na, 14 + 40 + 32);
+	if (q == NULL) {
+		rte_pktmbuf_free(na);
+		return 1;
+	}
+	/* A solicitation from the unspecified address (duplicate address detection) is
+	 * answered to all nodes, unsolicited. */
+	solicited = memcmp(ip + 8, unspecified, 16) != 0;
+	rte_memcpy(q, p + 6, 6);
+	rte_memcpy(q + 6, my_mac, 6);
+	q[12] = 0x86;
+	q[13] = 0xDD;
+	qi = q + 14;
+	memset(qi, 0, 8);
+	qi[0] = 0x60;
+	qi[5] = 32;
+	qi[6] = ICMPV6_NH;
+	qi[7] = 255;
+	rte_memcpy(qi + 8, my_ip, 16);
+	rte_memcpy(qi + 24, solicited ? ip + 8 : all_nodes, 16);
+	qc = qi + 40;
+	memset(qc, 0, 32);
+	qc[0] = ND_NEIGHBOR_ADVERT;
+	qc[4] = solicited ? 0x60 : 0x20; /* Solicited and Override flags */
+	rte_memcpy(qc + 8, my_ip, 16);
+	qc[24] = ND_OPT_TARGET_LLADDR;
+	qc[25] = 1;
+	rte_memcpy(qc + 26, my_mac, 6);
+	cksum = icmpv6_checksum(qi + 8, qi + 24, qc, 32);
+	qc[2] = cksum >> 8;
+	qc[3] = cksum & 0xff;
+	if (rte_eth_tx_burst(portid, nd_txq, &na, 1) == 0)
+		rte_pktmbuf_free(na);
+	return 1;
 }
 
 static inline void
@@ -296,23 +452,31 @@ crinkle_command_handler(
 
 	if (*cursor == TYPE_REPLAY_RECORD) {
 		printf("Replay record command received\n");
-		replay_start = extract_long(++cursor);
+		uint64_t start = extract_long(++cursor);
 		cursor += 8;
-		replay_end = extract_long(cursor);
+		uint64_t end = extract_long(cursor);
+		// An outstanding replay holds the recording off its ring until it is sent, so a
+		// record window overlapping that replay is ignored.
+		if (unlikely(c_ctrs[IDX_REPLAY_RUN] > 0 && start <= replay_run_end)) {
+			printf("Replay record window %lu-%lu overlaps the replay ending %lu, ignoring\n",
+				   start, end, replay_run_end);
+			return;
+		}
+		replay_start = start;
+		replay_end = end;
 		printf("Replay record start: %lu, end: %lu\n", replay_start, replay_end);
 	}
 	else if (*cursor == TYPE_REPLAY_CLEAR) {
 		printf("Replay clear command received\n");
-		// if c_ctrs is > 0, that means one or more worker threads have not finished
+		// if c_ctrs is > 0, that means one or more rx lcores have not finished
 		// handling the last command
 		if (unlikely(c_ctrs[IDX_REPLAY_CLEAR] > 0)) return;
 		if (unlikely(c_ctrs[IDX_REPLAY_RUN] > 0)) return;
 		replay_end = 0;
-		for (i = 0; i < nb_lcores; ++i) {
-			if (unlikely(i == rx_lcores[0])) continue;
-			c_to_tx[i] |= TYPE_REPLAY_CLEAR;
+		for (i = 1; i < nb_ports; ++i) {
+			__atomic_fetch_or(&c_to_tx[rx_lcores[i]], TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 		}
-		c_ctrs[IDX_REPLAY_CLEAR] = nb_lcores;
+		c_ctrs[IDX_REPLAY_CLEAR] = nb_ports - 1;
 		printf("Clearing replay buffers\n");
 	}
 	else if (*cursor == TYPE_REPLAY_RUN) {
@@ -321,11 +485,16 @@ crinkle_command_handler(
 		if (unlikely(c_ctrs[IDX_REPLAY_CLEAR] > 0)) return;
 		if (unlikely(c_ctrs[IDX_REPLAY_RUN] > 0)) return;
 		replay_run_start = extract_long(++cursor);
-		for (i = 0; i < nb_lcores; ++i) {
-			if (unlikely(i == rx_lcores[0])) continue;
-			c_to_tx[i] |= TYPE_REPLAY_RUN;
+		if (unlikely(replay_run_start <= replay_start)) {
+			printf("Replay run start %lu predates recording start %lu, ignoring\n",
+				   replay_run_start, replay_start);
+			return;
 		}
-		c_ctrs[IDX_REPLAY_RUN] = nb_lcores;
+		for (i = 1; i < nb_ports; ++i) {
+			__atomic_fetch_or(&c_to_tx[rx_lcores[i]], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
+		}
+		replay_run_end = replay_run_start + (replay_end - replay_start);
+		c_ctrs[IDX_REPLAY_RUN] = nb_ports - 1;
 		printf("Replay run start: %lu\n", replay_run_start);
 	}
 }
@@ -451,14 +620,15 @@ crinkle_rx(
 	const uint16_t vport = devport_to_vport[port_id];
 	const uint16_t pidx = vport - 1;
 	const uint16_t outport = get_output_port_from_vport(vport);
-	uint64_t systime_ns, last_ns, tsc_start;
+	const unsigned lcore_id = rte_lcore_id();
+	uint64_t systime_ns;
 	uint32_t n, nb_rx, nb_rem = 0, nb_warn;
 	uint16_t i;
+	struct replay_pending pending = {0};
+	const uint64_t guard_tsc = REPLAY_START_GUARD_NS * tsc_hz / NSEC_PER_SEC;
 
 	clock_gettime(CLOCK_REALTIME, &ts);
 	systime_ns = timespec64_to_ns(&ts);
-	tsc_start = rte_rdtsc_precise();
-	last_ns = systime_ns;
 
 	for (i = 0; i < BURST_SIZE; ++i) {
 		default_metas[i].systime_ns = 0;
@@ -486,6 +656,10 @@ crinkle_rx(
 				rte_pktmbuf_free_bulk(&bufs[n], nb_rx - n);
 			}
 		}
+		else if (unlikely(replay_end != 0)) {
+			clock_gettime(CLOCK_REALTIME, &ts);
+			systime_ns = timespec64_to_ns(&ts);
+		}
 
 		/* Dequeue and Transmit */
 		
@@ -496,7 +670,27 @@ crinkle_rx(
 		
 		if (n > 0) {
 			send_burst_replayable(bufs, systime_ns, replay_start, replay_end,
-									outport, queue_id, n);
+									outport, queue_id, pidx, n);
+		}
+
+		uint8_t cmds = __atomic_load_n(&c_to_tx[lcore_id], __ATOMIC_ACQUIRE);
+		if (unlikely(cmds)) {
+			if (cmds & TYPE_REPLAY_CLEAR) {
+				clear_replay(pidx);
+				__atomic_fetch_and(&c_to_tx[lcore_id], (uint8_t)~TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
+				__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
+			}
+			else if ((cmds & TYPE_REPLAY_RUN) && pending.n == 0) {
+				__atomic_fetch_and(&c_to_tx[lcore_id], (uint8_t)~TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
+				// Nothing recorded on this port: done at once. Otherwise forwarding
+				// goes on until the replay window below.
+				if (replay_prepare(pidx, replay_run_start, &pending) == 0)
+					__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
+			}
+		}
+		if (unlikely(pending.n > 0) && rte_rdtsc() + guard_tsc >= pending.first_tsc) {
+			replay_send(pidx, outport, queue_id, &pending);
+			__atomic_fetch_or(&tx_to_c[lcore_id], TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 		}
 	}
 
@@ -649,7 +843,7 @@ main(int argc, char *argv[])
 	ssize_t packet_ring_size = 0;
 
 
-	packet_pool = rte_pktmbuf_pool_create("packet_pool", (max_replay_size+256)*BURST_SIZE, RTE_MEMPOOL_CACHE_MAX_SIZE,
+	packet_pool = rte_pktmbuf_pool_create("packet_pool", ((nb_ports - 1)*max_replay_size+256)*BURST_SIZE, RTE_MEMPOOL_CACHE_MAX_SIZE,
 		0, PKT_MBUF_DATA_SIZE, rte_socket_id());
 
 	if (packet_pool == NULL)
@@ -689,16 +883,26 @@ main(int argc, char *argv[])
 	if (clone_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init clone mbuf pool: %s\n", rte_strerror(rte_errno));
 
-	replay_pool = rte_mempool_create("replay_pool", max_replay_size, sizeof(struct replay_buf),
-		RTE_MEMPOOL_CACHE_MAX_SIZE, 0, NULL, NULL, NULL, NULL, rte_socket_id(), 0);
-	
+	replay_pool = rte_mempool_create("replay_pool", (nb_ports - 1) * max_replay_size, sizeof(struct replay_buf),
+		0, 0, NULL, NULL, NULL, NULL, rte_socket_id(), 0);
+
 	if (replay_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init replay mbuf pool: %s\n", rte_strerror(rte_errno));
 
-	replay_ring = rte_ring_create("replay_ring", max_replay_size, rte_socket_id(), RING_F_MP_HTS_ENQ | RING_F_MC_HTS_DEQ);
+	// Each data-port rx lcore records to and replays from its own ring, so the
+	// rings can be single-producer single-consumer
+	for (uint16_t i = 0; i < nb_ports - 1; ++i) {
+		char ring_name[32];
+		snprintf(ring_name, 32, "replay_ring_%hu", i);
+		replay_rings[i] = rte_ring_create(ring_name, max_replay_size, rte_socket_id(),
+			RING_F_SP_ENQ | RING_F_SC_DEQ | RING_F_EXACT_SZ);
+		if (replay_rings[i] == NULL)
+			rte_exit(EXIT_FAILURE, "Cannot create replay ring: %s\n", rte_strerror(rte_errno));
 
-	if (replay_ring == NULL)
-		rte_exit(EXIT_FAILURE, "Cannot create replay ring: %s\n", rte_strerror(rte_errno));
+		replay_run_bufs[i] = rte_malloc("replay_run_bufs", max_replay_size * sizeof(struct replay_buf *), 0);
+		if (replay_run_bufs[i] == NULL)
+			rte_exit(EXIT_FAILURE, "Cannot allocate replay run buffers: %s\n", rte_strerror(rte_errno));
+	}
 
 	/*
 	 * Master core handles command handling
@@ -750,7 +954,7 @@ main(int argc, char *argv[])
 			rx_lcores[0]);
 		fflush(stdout);
 
-		ret = rte_eth_dev_configure(portid, 1, nb_worker_cores,
+		ret = rte_eth_dev_configure(portid, 1, nb_worker_cores + 1,
 					&local_port_conf);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "Cannot configure device: err=%s, port=%d\n",
@@ -805,10 +1009,25 @@ main(int argc, char *argv[])
 			queueid++;
 			lcore_ctr++;
 		}
+		nd_txq = queueid;
+		printf("txq=%u,%hu (neighbor discovery) ", rte_get_main_lcore(), nd_txq);
+		ret = rte_eth_tx_queue_setup(portid, nd_txq, nb_txd,
+					     rte_socket_id(), &dev_info.default_txconf);
+		if (ret < 0)
+			rte_exit(EXIT_FAILURE, "rte_eth_tx_queue_setup: err=%s, "
+				  "port=%d\n", rte_strerror(-ret), portid);
 		ret = rte_eth_dev_start(portid);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "rte_eth_dev_start: err=%d, port=%d\n",
 				  ret, portid);
+
+		/* Solicitations go to the address's solicited-node multicast group. */
+		struct rte_ether_addr nd_mc = {{0x33, 0x33, 0xff, ana_headers[35],
+						ana_headers[36], ana_headers[37]}};
+		if (rte_eth_dev_set_mc_addr_list(portid, &nd_mc, 1) != 0 &&
+		    rte_eth_allmulticast_enable(portid) != 0)
+			printf("warning: port %d receives no neighbor solicitations by multicast ",
+			       portid);
 
 		printf("done:\n");
 	}
@@ -959,17 +1178,20 @@ main(int argc, char *argv[])
 		}
 
 		for (i = 0; i < nb_rx; ++i) {
-			crinkle_command_handler(bufs[i], systime_ns);
+			if (!crinkle_nd_reply(bufs[i], portid))
+				crinkle_command_handler(bufs[i], systime_ns);
 		}
+		rte_pktmbuf_free_bulk(bufs, nb_rx);
 
-		for (k = 0; k < (nb_lcores - 1); ++k) {
-			if (tx_to_c[k] & TYPE_REPLAY_CLEAR) {
+		for (k = 1; k < nb_ports; ++k) {
+			uint8_t acks = __atomic_load_n(&tx_to_c[rx_lcores[k]], __ATOMIC_ACQUIRE);
+			if (acks & TYPE_REPLAY_CLEAR) {
 				--c_ctrs[IDX_REPLAY_CLEAR];
-				tx_to_c[k] &= ~TYPE_REPLAY_CLEAR;
+				__atomic_fetch_and(&tx_to_c[rx_lcores[k]], (uint8_t)~TYPE_REPLAY_CLEAR, __ATOMIC_RELEASE);
 			}
-			if (tx_to_c[k] & TYPE_REPLAY_RUN) {
+			if (acks & TYPE_REPLAY_RUN) {
 				--c_ctrs[IDX_REPLAY_RUN];
-				tx_to_c[k] &= ~TYPE_REPLAY_RUN;
+				__atomic_fetch_and(&tx_to_c[rx_lcores[k]], (uint8_t)~TYPE_REPLAY_RUN, __ATOMIC_RELEASE);
 			}
 		}
 	}

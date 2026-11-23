@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `CrinkleSlice.check_clock_sync()`, which checks each node's PTP synchronisation after the monitor reboot, repairs a failing node once, and records the result in `clock_status`
 - Add Crinkle L3 monitored links. `CrinkleSlice.add_monitored_l3network()` builds one end, and `setup_l3_tunnels()` joins the two ends by VXLAN over FABNet. Ends in two slices are joined with `get_l3_tunnel_endpoints()` and `setup_l3_tunnels(peers=...)`.
 - Add `CrinkleSlice.get_monitored_l3networks()` to list a slice's L3 link ends
+- Add `CrinkleSlice.record_replay()`, `run_replay()`, `clear_replay()` and `get_monitor_log()` to record and replay monitor traffic from fablib. Commands are sent from the analyzer as raw IPv6 (`crease_command.py`), and the methods raise instead of sending a command the monitors would ignore. They need monitors set up with this release (monitor v0.7.3)
+- Add a `replay_bursts` parameter to `CrinkleSlice.new_slice()` to size the monitor replay buffers, at about 0.3 MB of hugepage memory per burst and data port
 
 ### Changed
 - `NetworkService.make_ip_publicly_routable()` now validates its input: it raises `ValidationError` on a network that is not FabNetv4Ext/FabNetv6Ext, for the wrong address family, or for an address outside the subnet (or the gateway, network or broadcast address). It accepts a single address as well as a list, and returns the requested addresses (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
