@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `auto`-mode interfaces storing the string `"None"` as their address when no IP could be allocated (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `slice.submit()` / `slice.modify()` now warn when the AM granted different public IPs than were requested (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - Fix post-boot configuration failing with `'NoneType' object has no attribute 'get_gateway'` on slices that add a route through a network before it is provisioned, which includes every `node.enable_storage()` / `node.add_fabnet()` slice and CREASE analyzers and monitors. `NetworkService.get_gateway()` / `get_subnet()` again return the `"<name>.gateway"` / `"<name>.subnet"` placeholders for an unprovisioned network: `add_route()` stores them and `Node.config()` resolves them to the real addresses after provisioning. Returning `None` instead (Issue [#519](https://github.com/fabric-testbed/fabrictestbed-extensions/issues/519)) stored the route's next hop as the string `"None"` (PR [#525](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/525))
+- Numerous fixes to Crinkle systems:
+    - Fix `CrinkleMonitor.MonitorData`'s shared mutable default `iface_mappings`, which leaked interface mappings between monitors
+    - Fix post-boot failing on Crinkle slices with monitors at more than one site
+    - Raise `CrinkleMonitor.default_disk` from 10 to 100 GB, as the monitor image does not fit in 10 GB
+    - Fix the monitor's core-count check underflowing when given fewer lcores than ports
+    - Fix Crinkle monitors losing PTP synchronisation at the post-boot reboot. Automatic upgrades are paused during setup, and `setup_ptp()` upgrades the kernel and installs its `linux-modules-extra` (`ptp_kvm`)
+    - Fix `start_all_monitors(wait=True)` hanging. It now re-raises the first launch failure
+    - Fix a race in `spade_reader.py` that left provenance edges referencing a flow Artifact never emitted, at about twice the SPADE ingest work per packet
+    - Raise the edge limit of time-filtered provenance queries from 1,000 to 10,000,000 (`SPADE_TIME_EDGE_LIMIT`), which silently truncated results
 
 ### Added
 - Add docstrings for the 79 public modules, packages, classes and methods that had none, and describe the 121 `:param` fields that were left blank (PR [#520](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/520))
@@ -29,13 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `NetworkService.check_public_ip()`, `get_requested_public_ips()` and `get_public_ip_changes()`, and a `count=` argument to `make_ip_publicly_routable()` so fablib picks the candidate addresses (keeping any already granted) (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - Add zlib+base64 compression of per-element `user_data` that would exceed FIM's 2048-byte `UserData` limit. By default only those payloads are compressed, as fablib releases without compression cannot read a compressed payload. `FABRIC_COMPRESS_USER_DATA=always` compresses every payload above 256 bytes, and `0` turns compression off. A key that an older fablib writes beside a compressed payload is merged into the compressed value. `user_data` JSON is written without whitespace, so the stored strings of existing elements change on their next save
 - Add `FABRIC_SSH_CONNECT_LIMIT` env var / `FablibManager(ssh_connect_limit=...)` to cap concurrent bastion SSH handshakes (default 8). Each connection step (bastion and node handshakes, tunnel channel open) times out after 60 seconds
+- Add `CrinkleSlice.save_fablib_data()`, which keeps a local copy of the Crinkle data when the orchestrator rejects the save (e.g. HTTP 413) and reapplies it on reload
 - Add the node name, duration and the first 120 characters of the command to the DEBUG log line of each `Node.execute()` command
+- Add `CrinkleSlice.check_clock_sync()`, which checks each node's PTP synchronisation after the monitor reboot, repairs a failing node once, and records the result in `clock_status`
 
 ### Changed
 - `NetworkService.make_ip_publicly_routable()` now validates its input: it raises `ValidationError` on a network that is not FabNetv4Ext/FabNetv6Ext, for the wrong address family, or for an address outside the subnet (or the gateway, network or broadcast address). It accepts a single address as well as a list, and returns the requested addresses (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `NetworkService.get_public_ips()` returns `None` (with a warning) while a `make_ip_publicly_routable()` request has not been submitted, instead of returning the request as if it were granted (PR [#522](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/522))
 - `Interface._config_nmcli` now issues a single chained SSH command per interface instead of 6-8 round trips
 - `Attestable_Switch.switch_config()` brings its ports up in one SSH call instead of two per port
+- Speed up Crinkle `post_boot_config` on large slices: batched and parallel node setup, one pass to resolve interface networks, and a single fablib data save
+- Raise `CrinkleMonitor.default_cores` from 2 to 4, as 2-core monitors exit at startup
+- `start_monitor()` launches the monitor detached and raises if it exits within 5 s. `start_monitor(wait=False)` now returns once the monitor is launched, not when it exits
+- Crinkle downloads the monitor binary by version (`MONITOR_VERSION`), so each fablib release runs its own monitor build
 
 ### Removed
 - **Breaking:** remove the unused `fabrictestbed_extensions.editors` package (`AbcTopologyEditor`, `CytoscapeTopologyEditor`, `GeoTopologyEditor`) and the `fabrictestbed_extensions.images` assets it used. Nothing in the package, its tests or the FABRIC jupyter-examples used them, and `AbcTopologyEditor` called an undefined function (PR [#521](https://github.com/fabric-testbed/fabrictestbed-extensions/pull/521))

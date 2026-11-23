@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import enum
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -39,9 +40,98 @@ PCAPDIR = "/home/ubuntu/pcaps/"
 LOCALP4DIR = "."
 REMOTEWORKDIR = ".crease"
 CREASEDIR = os.path.dirname(os.path.abspath(__file__))
-MONITORURL = "https://transparnet.cs.iit.edu/~awolosewicz/dpdk-crease_monitor-dev"
+# The monitor binary is prebuilt from monitor_source.c and hosted per version.
+# MONITOR_VERSION matches CREASEVER in monitor_source.c; a source change bumps both and
+# hosts the new build.
+MONITOR_VERSION = "0.6.2"
+MONITORURL = (
+    "https://transparnet.cs.iit.edu/~awolosewicz/"
+    f"dpdk-crease_monitor-v{MONITOR_VERSION}"
+)
 DPDKNAME = "dpdk-crease_monitor-dev"
 MONPROT = 0x6587
+# Most edges a time-filtered provenance query takes from SPADE.
+SPADE_TIME_EDGE_LIMIT = 10_000_000
+
+# Stops Ubuntu's automatic upgrades and waits up to ten minutes for a run in progress to
+# end. A kernel they install lacks linux-modules-extra (ptp_kvm), and the monitor reboot
+# would boot it without a PTP clock. The processes are watched, not the oneshot units,
+# which report "activating" while they run. The [u] and [a] keep pgrep -f from matching
+# this command, and "( |$)" leaves out unattended-upgrade-shutdown.
+STOP_AUTO_UPGRADES_CMD = (
+    "sudo systemctl disable --now apt-daily.timer apt-daily-upgrade.timer"
+    " unattended-upgrades.service >/dev/null 2>&1;"
+    " sudo systemctl stop apt-daily.service apt-daily-upgrade.service >/dev/null 2>&1;"
+    " for _ in $(seq 300); do pgrep -f '[u]nattended-upgrade( |$)' >/dev/null"
+    " || pgrep -f '[a]pt.systemd.daily' >/dev/null || break; sleep 2; done;"
+    " sudo dpkg --configure -a >/dev/null 2>&1"
+)
+RESUME_AUTO_UPGRADES_CMD = (
+    "sudo systemctl enable --now apt-daily.timer apt-daily-upgrade.timer"
+    " unattended-upgrades.service >/dev/null 2>&1 && echo CRINKLE_UPGRADES_RESUMED"
+)
+APT_GET = (
+    "sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=600"
+    " -o Dpkg::Options::=--force-confold"
+)
+# Upgrades the kernel alone, in the foreground, through its flavour metapackage
+# (linux-image-generic for a -generic kernel), which brings the matching
+# linux-modules-extra.
+KERNEL_UPGRADE_CMD = (
+    f"{APT_GET} install -y \"linux-image-$(uname -r | sed 's/^[0-9.-]*//')\""
+    ' >/dev/null 2>&1 || echo "CRINKLE_PTP_WARN: kernel upgrade failed"'
+)
+# Installs linux-modules-extra (ptp_kvm) for every installed kernel. Only a miss for the
+# newest kernel, which the next boot picks, is reported: other flavours (e.g. -kvm) have
+# no such package.
+PTP_MODULES_CMD = (
+    "next=$(ls /boot | sed -n 's/^vmlinuz-//p' | sort -V | tail -n 1);"
+    " for k in $(ls /boot | sed -n 's/^vmlinuz-//p'); do"
+    f' {APT_GET} install -y "linux-modules-extra-$k" >/dev/null 2>&1'
+    ' || { [ "$k" != "$next" ] || echo "CRINKLE_PTP_WARN: no linux-modules-extra-$k"; };'
+    " done"
+)
+# The whole PTP setup of one node, safe to repeat. It ends with CRINKLE_PTP_RC=<status>.
+# A failed kernel or module install that did not stop the setup is reported on a
+# CRINKLE_PTP_WARN line.
+PTP_SETUP_CMD = (
+    f"mkdir -p {REMOTEWORKDIR}; {STOP_AUTO_UPGRADES_CMD};"
+    f" {APT_GET} update && {APT_GET} install -y ansible git &&"
+    f" {{ {KERNEL_UPGRADE_CMD}; {PTP_MODULES_CMD}; }} &&"
+    f" (cd {REMOTEWORKDIR} && (test -d ptp ||"
+    " git clone https://github.com/fabric-testbed/ptp.git)) &&"
+    f" (cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local"
+    " --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml);"
+    " echo CRINKLE_PTP_RC=$?"
+)
+# Reports the kernel, the ptp_kvm device, the phc2sys service and the offset of the system
+# clock from the host clock in nanoseconds (system minus host). The offset comes from the
+# tightest of 300 system/PTP/system clock_gettime triples on the ptp_kvm device.
+CLOCK_OFFSET_PY = (
+    "import os,time;fd=os.open('/dev/ptp_kvm',os.O_RDONLY);c=((~fd)<<3)|3;"
+    "r=min((b-a,(a+b)//2-p) for a,p,b in ((time.clock_gettime_ns(0),"
+    "time.clock_gettime_ns(c),time.clock_gettime_ns(0)) for _ in range(300)));"
+    "print('CLOCK_OFFSET_NS=%d' % r[1])"
+)
+CLOCK_CHECK_CMD = (
+    "echo CLOCK_KERNEL=$(uname -r);"
+    " test -e /dev/ptp_kvm && echo CLOCK_PTPDEV=yes || echo CLOCK_PTPDEV=no;"
+    " echo CLOCK_SYNC=$(systemctl is-active phc2sys@CLOCK_REALTIME);"
+    f' sudo python3 -c "{CLOCK_OFFSET_PY}" 2>&1 | tail -n 1'
+)
+# Repeats the PTP setup, reinstalls the running kernel's linux-modules-extra, restarts
+# phc2sys and turns the automatic upgrades back on.
+CLOCK_REPAIR_CMD = (
+    f"{PTP_SETUP_CMD};"
+    f' {APT_GET} install -y --reinstall "linux-modules-extra-$(uname -r)" >/dev/null 2>&1;'
+    " sudo modprobe ptp_kvm; sudo udevadm settle;"
+    f" sudo systemctl restart phc2sys@CLOCK_REALTIME; sleep 5; {RESUME_AUTO_UPGRADES_CMD}"
+)
+# Seconds start_monitor() waits before checking that the monitor app is still running.
+MONITOR_START_CHECK_S = 5
+# Largest offset from the host clock that counts as synchronised. A VM synchronised
+# through ptp_kvm sits within a microsecond of its host.
+CLOCK_SYNC_TOLERANCE_NS = 10_000
 
 UBUNTU_IMAGES = [
     "default_ubuntu_20",
@@ -187,9 +277,12 @@ class CrinkleMonitor(Node):
     """
 
     default_image = "crease_ubuntu_22"
-    default_cores = 2
+    # The DPDK monitor needs one lcore per port (analyzer uplink + 2 vports)
+    # plus one worker; see monitor_source.c.
+    default_cores = 4
     default_ram = 4
-    default_disk = 10
+    # The monitor image is 13.4 GB. FABRIC rounds any request above 10 GB up to 100.
+    default_disk = 100
 
     class MonitorData:
         """Holds a CrinkleMonitor's runtime configuration (its control-network
@@ -205,7 +298,7 @@ class CrinkleMonitor(Node):
             net_name: str = None,
             net_type: str = None,
             cnet_iface: Interface = None,
-            iface_mappings: dict[str, tuple[str, Interface, bool, int]] = {},
+            iface_mappings: dict[str, tuple[str, Interface, bool, int]] | None = None,
             monitor_id: int = None,
         ):
             """
@@ -232,7 +325,7 @@ class CrinkleMonitor(Node):
             self.net_name = net_name
             self.net_type = net_type
             self.cnet_iface = cnet_iface
-            self.iface_mappings = iface_mappings
+            self.iface_mappings = iface_mappings if iface_mappings is not None else {}
             self.monitor_id = monitor_id
 
     def __init__(
@@ -500,6 +593,7 @@ class CrinkleSlice(Slice):
             self.do_allocate_hosts = data["do_allocate_hosts"]
             self.do_post_boot = data["do_post_boot"]
             self.do_ptp_setup = data["do_ptp_setup"]
+            self.ptp_nodes = data.get("ptp_nodes")
             logging.info(
                 f"Retrieved crinkle slice config as:\n{self.analyzer_name}\n{self.prefix}\n{self.monitor_string}"
             )
@@ -519,10 +613,161 @@ class CrinkleSlice(Slice):
             "do_allocate_hosts": self.do_allocate_hosts,
             "do_post_boot": self.do_post_boot,
             "do_ptp_setup": self.do_ptp_setup,
+            "ptp_nodes": getattr(self, "ptp_nodes", None),
         }
         logging.info(f"Writing crinkle slice config to user data: {data_dict}")
         user_data["crinkle_slice_config"] = data_dict
         self.analyzer.set_user_data(user_data=user_data)
+
+    def user_data_dump_path(self) -> str:
+        """
+        Get the default path of the local user_data dump: one file per slice
+        ID in fablib's data directory. The data directory defaults to
+        /tmp/fablib, which does not survive a reboot.
+        """
+        data_dir = self.get_fablib_manager().get_data_dir() or "."
+        return os.path.join(data_dir, f"crinkle_user_data_{self.get_slice_id()}.json")
+
+    def _collect_user_data(self) -> dict:
+        """
+        Not intended for API call.
+
+        Copy every element's user_data out of the in-memory topology.
+        """
+        data = {"nodes": {}, "networks": {}, "interfaces": {}, "components": {}}
+        for node in self.get_all_nodes():
+            data["nodes"][node.get_name()] = node.get_user_data()
+            for component in node.get_components():
+                key = f"{node.get_name()}/{component.get_name()}"
+                data["components"][key] = component.get_user_data()
+        for network in self.get_networks():
+            data["networks"][network.get_name()] = network.get_user_data()
+        for interface in self.get_all_interfaces():
+            data["interfaces"][interface.get_name()] = interface.get_user_data()
+        return data
+
+    def _apply_user_data(self, data: dict):
+        """
+        Not intended for API call.
+
+        Write user_data collected by _collect_user_data() back into the
+        in-memory topology.
+        """
+        for node in self.get_all_nodes():
+            if node.get_name() in data["nodes"]:
+                node.set_user_data(data["nodes"][node.get_name()])
+            for component in node.get_components():
+                key = f"{node.get_name()}/{component.get_name()}"
+                if key in data["components"]:
+                    component.set_user_data(data["components"][key])
+        for network in self.get_networks():
+            if network.get_name() in data["networks"]:
+                network.set_user_data(data["networks"][network.get_name()])
+        for interface in self.get_all_interfaces():
+            if interface.get_name() in data["interfaces"]:
+                interface.set_user_data(data["interfaces"][interface.get_name()])
+
+    def dump_user_data_locally(self, path: str = None) -> str:
+        """
+        Write every element's user_data, tagged with the slice ID, to a local
+        JSON file.
+
+        :param path: destination file; defaults to user_data_dump_path()
+        :return: the path written
+        """
+        if not path:
+            path = self.user_data_dump_path()
+        data = self._collect_user_data()
+        data["slice_id"] = self.get_slice_id()
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f)
+        logging.info(f"Dumped slice user_data to {path}")
+        return path
+
+    def restore_user_data(self, path: str = None) -> bool:
+        """
+        Reapply user_data from a local dump file to the in-memory topology.
+
+        A dump written for another slice ID is ignored.
+
+        :param path: dump file to read; defaults to user_data_dump_path()
+        :return: True when a dump for this slice was found and applied
+        """
+        if not path:
+            path = self.user_data_dump_path()
+        if not os.path.isfile(path):
+            return False
+        with open(path) as f:
+            data = json.load(f)
+        if data.get("slice_id") != self.get_slice_id():
+            logging.warning(
+                f"Ignoring user_data dump {path}: written for slice "
+                f"{data.get('slice_id')}, not {self.get_slice_id()}"
+            )
+            return False
+        self._apply_user_data(data)
+        logging.info(f"Restored slice user_data from {path}")
+        return True
+
+    def update(self):
+        """
+        Refresh the slice from FABRIC, as Slice.update() does, then reapply this
+        slice's local user_data dump, if any. The next successful submit saves
+        the dumped data to FABRIC and removes the dump.
+        """
+        super().update()
+        try:
+            self.restore_user_data()
+        except Exception as e:
+            logging.error(
+                f"Failed to reapply the local user_data dump: {e}", exc_info=True
+            )
+
+    def save_fablib_data(self) -> bool:
+        """
+        Persist in-memory user_data to FABRIC via a modify submit.
+
+        When the save fails (e.g. HTTP 413 on a large topology), the user_data
+        is written by dump_user_data_locally() instead. get_slice() and
+        update() reapply the dump until a successful submit of this
+        CrinkleSlice saves the data and removes the dump. A plain Slice object
+        of the same slice ignores the dump.
+
+        :return: True when saved to FABRIC, False when dumped locally
+        """
+        try:
+            self.submit(
+                wait=True, progress=False, post_boot_config=False, wait_ssh=False
+            )
+        except Exception as e:
+            logging.error(f"Saving fablib data to FABRIC failed: {e}", exc_info=True)
+            path = self.dump_user_data_locally()
+            self._dumped_in_submit = True
+            print(
+                f"WARNING: saving fablib data to FABRIC failed ({e}); "
+                f"user_data written to {path} and reapplied automatically on reload"
+            )
+            return False
+        try:
+            self.update()
+        except Exception as e:
+            # The data reached FABRIC; only the refresh of the local copy failed.
+            logging.error(
+                f"Refreshing the slice after saving failed: {e}", exc_info=True
+            )
+        return True
+
+    def _remove_user_data_dump(self):
+        """
+        Not intended for API call.
+
+        Remove the local user_data dump after a submit has saved the topology.
+        """
+        path = self.user_data_dump_path()
+        if os.path.isfile(path):
+            os.remove(path)
+            logging.info(f"Removed user_data dump {path}: a submit reached FABRIC")
 
     @staticmethod
     def get_slice(
@@ -573,6 +818,15 @@ class CrinkleSlice(Slice):
                 f"Slice {slice.slice_name} could not update slivers: slice.get_slice"
             )
             logging.error(e, exc_info=True)
+
+        try:
+            if slice.restore_user_data():
+                print(
+                    f"Applied local user_data dump {slice.user_data_dump_path()} "
+                    f"(a previous fablib data save did not reach FABRIC)"
+                )
+        except Exception as e:
+            logging.error(f"Failed to restore local user_data dump: {e}", exc_info=True)
 
         slice.analyzer = slice.get_analyzer(name=f"{name_prefix}_analyzer")
         slice.get_crinkle_data(slice.analyzer)
@@ -782,8 +1036,10 @@ class CrinkleSlice(Slice):
         self.interfaces = {}
 
         if site not in self.cnets or self.cnets[site] is None:
+            # post_boot_config and get_slice() find a site's analyzer network by
+            # this name.
             self.cnets[site] = self.add_l3network(
-                name=f"{self.prefix}_net_{site}", type="IPv6"
+                name=f"{self.prefix}_ananet_{site}", type="IPv6"
             )
         cnet = self.cnets[site]
         monitor_cnet_iface = monitor.add_component(
@@ -1228,7 +1484,10 @@ class CrinkleSlice(Slice):
         if self.do_allocate_hosts:
             self.allocate_hosts()
 
-        return super().submit(
+        # A post_boot_config run by this submit may write a dump, which must
+        # outlive the submit.
+        self._dumped_in_submit = False
+        slice_id = super().submit(
             wait=wait,
             wait_timeout=wait_timeout,
             wait_interval=wait_interval,
@@ -1242,27 +1501,30 @@ class CrinkleSlice(Slice):
             lease_in_hours=lease_in_hours,
             validate=validate,
         )
+        if not self._dumped_in_submit:
+            self._remove_user_data_dump()
+        return slice_id
 
-    def setup_ptp(self):
+    def setup_ptp(self, resume_upgrades: bool = True):
         """
         Install and run the fabric-testbed PTP (Precision Time Protocol) ansible
         playbook on the analyzer and on each monitor whose site advertises PTP
         support, running the jobs concurrently and blocking until they all finish.
-        Monitors at sites without PTP support are skipped. Clears do_ptp_setup
-        once complete.
+        Monitors at sites without PTP support are skipped. Unattended upgrades are
+        stopped first, the kernel alone is brought up to date in the foreground,
+        and linux-modules-extra is installed for every installed kernel. A node
+        whose setup fails is reported. Clears do_ptp_setup once complete.
+
+        :param resume_upgrades: turn the automatic upgrades back on at the end
+        :type resume_upgrades: bool
         """
-        prereq_cmd = "sudo apt update && sudo apt install -y ansible git"
-        git_cmd = (
-            f"cd {REMOTEWORKDIR} && git clone https://github.com/fabric-testbed/ptp.git"
-        )
-        ansible_cmd = f"cd {REMOTEWORKDIR}/ptp/ansible && ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 playbook_fabric_experiment_ptp.yml"
-        jobs = []
+        ptp_cmd = PTP_SETUP_CMD
+        jobs = {}
         site_ptp_flags = {}
+        self.ptp_nodes = [self.analyzer.get_name()]
         logging.info(f"Setting up PTP on Crinkle nodes")
         print("Setting up PTP on Crinkle nodes")
-        jobs.append(
-            self.analyzer.execute_thread(f"{prereq_cmd} && {git_cmd} && {ansible_cmd}")
-        )
+        jobs[self.analyzer.execute_thread(ptp_cmd)] = self.analyzer.get_name()
         for monitor_name, monitor in self.monitors.items():
             monitor_site = monitor.get_site()
             site_has_ptp = site_ptp_flags.setdefault(
@@ -1279,15 +1541,208 @@ class CrinkleSlice(Slice):
                     f"Site {monitor_site} does not support PTP, skipping setup for monitor {monitor_name}"
                 )
                 continue
-            jobs.append(
-                monitor.execute_thread(f"{prereq_cmd} && {git_cmd} && {ansible_cmd}")
-            )
+            jobs[monitor.execute_thread(ptp_cmd)] = monitor.get_name()
+            self.ptp_nodes.append(monitor.get_name())
+        self._upgrades_stopped = getattr(self, "_upgrades_stopped", set()) | set(
+            self.ptp_nodes
+        )
         ctr = 0
-        for _ in futures.as_completed(jobs):
+        for job in futures.as_completed(jobs):
             ctr += 1
             logging.info(f"{ctr}/{len(jobs)} jobs finished")
             print(f"{ctr}/{len(jobs)} jobs finished")
+            try:
+                stdout = job.result()[0]
+            except Exception as e:
+                stdout = f"{type(e).__name__}: {e}"
+            match = re.search(r"CRINKLE_PTP_RC=(\d+)", stdout or "")
+            warnings = re.findall(r"^CRINKLE_PTP_WARN: (.*)$", stdout or "", re.M)
+            if match is None or match.group(1) != "0":
+                msg = f"PTP setup failed on {jobs[job]}: {(stdout or '')[-500:]}"
+            elif warnings:
+                msg = f"PTP setup on {jobs[job]} incomplete: {'; '.join(warnings)}"
+            else:
+                continue
+            logging.warning(msg)
+            print(msg)
         self.do_ptp_setup = False
+        if resume_upgrades:
+            self._resume_auto_upgrades()
+
+    @staticmethod
+    def parse_clock_check(output: str) -> dict:
+        """
+        Parse the output of CLOCK_CHECK_CMD.
+
+        :param output: stdout of the check on one node
+        :type output: str
+        :return: kernel, ptp_device (bool), sync_service (systemd state),
+            offset_ns (int or None) and ok (bool: device present, phc2sys active,
+            offset within CLOCK_SYNC_TOLERANCE_NS); a failing check also carries
+            the end of the raw output as detail
+        :rtype: dict
+        """
+        output = output or ""
+
+        def field(name):
+            match = re.search(rf"^{name}=(.*)$", output, re.MULTILINE)
+            return match.group(1).strip() if match else None
+
+        offset = field("CLOCK_OFFSET_NS")
+        status = {
+            "kernel": field("CLOCK_KERNEL"),
+            "ptp_device": field("CLOCK_PTPDEV") == "yes",
+            "sync_service": field("CLOCK_SYNC"),
+            "offset_ns": (
+                int(offset) if offset and re.fullmatch(r"-?\d+", offset) else None
+            ),
+        }
+        status["ok"] = (
+            status["ptp_device"]
+            and status["sync_service"] == "active"
+            and status["offset_ns"] is not None
+            and abs(status["offset_ns"]) <= CLOCK_SYNC_TOLERANCE_NS
+        )
+        if not status["ok"]:
+            status["detail"] = output[-300:]
+        return status
+
+    def check_clock_sync(
+        self, node_names: list[str] = None, repair: bool = True, settle_s: float = 30
+    ):
+        """
+        Check that each PTP-synchronised Crinkle node still has its ptp_kvm device,
+        a running phc2sys and a system clock within CLOCK_SYNC_TOLERANCE_NS of its
+        host. A node that fails is repaired once (the PTP setup again, the
+        running kernel's linux-modules-extra reinstalled, modprobe ptp_kvm,
+        phc2sys restarted) and checked again. A node still failing is reported.
+
+        :param node_names: nodes to check; defaults to the nodes setup_ptp
+            configured (none if it did not run), or, for a slice set up before
+            they were recorded, the analyzer and the monitors at PTP-capable
+            sites
+        :type node_names: list[str]
+        :param repair: attempt one repair of failing nodes
+        :type repair: bool
+        :param settle_s: seconds to wait before checking failing nodes again.
+            Only nodes still failing then are repaired.
+        :type settle_s: float
+        :return: per-node status from parse_clock_check
+        :rtype: dict
+        """
+        if node_names is None:
+            node_names = getattr(self, "ptp_nodes", None)
+        if node_names is None:
+            resources = self.get_fablib_manager().get_resources()
+            node_names = [self.analyzer.get_name()] + [
+                m.get_name()
+                for m in self.monitors.values()
+                if resources.get_ptp_capable(site_name=m.get_site())
+            ]
+        nodes = {
+            n.get_name(): n
+            for n in [self.analyzer] + list(self.monitors.values())
+            if n.get_name() in node_names
+        }
+
+        def run(names, cmd):
+            jobs = {nodes[name].execute_thread(cmd): name for name in names}
+            out = {}
+            for job in futures.as_completed(jobs):
+                try:
+                    out[jobs[job]] = job.result()[0]
+                except Exception as e:
+                    out[jobs[job]] = f"{type(e).__name__}: {e}"
+            return out
+
+        status = {
+            name: self.parse_clock_check(out)
+            for name, out in run(nodes, CLOCK_CHECK_CMD).items()
+        }
+        failing = [name for name, st in status.items() if not st["ok"]]
+        if failing and repair and settle_s:
+            time.sleep(settle_s)
+            for name, out in run(failing, CLOCK_CHECK_CMD).items():
+                status[name] = self.parse_clock_check(out)
+            failing = [name for name in failing if not status[name]["ok"]]
+        if failing and repair:
+            logging.warning(f"Clock not synchronised on {failing}, repairing")
+            run(failing, CLOCK_REPAIR_CMD)
+            for name, out in run(failing, CLOCK_CHECK_CMD).items():
+                status[name] = self.parse_clock_check(out)
+                status[name]["repaired"] = True
+        for name in sorted(status):
+            st = status[name]
+            msg = (
+                f"Clock {name}: offset {st['offset_ns']} ns, phc2sys {st['sync_service']},"
+                f" ptp_kvm {'yes' if st['ptp_device'] else 'no'}, kernel {st['kernel']}"
+            )
+            if st["ok"]:
+                logging.info(msg)
+            else:
+                logging.warning(f"{msg} -- NOT SYNCHRONISED")
+                print(
+                    f"WARNING: {msg} -- NOT SYNCHRONISED; its timestamps cannot be"
+                    " compared with other monitors'"
+                )
+        self.clock_status = status
+        return status
+
+    def _resume_auto_upgrades(self):
+        """
+        Not intended for API call.
+
+        Turn back on the automatic upgrades that post_boot_config and setup_ptp
+        stopped, and report the nodes where that failed. Stop commands still
+        running finish first.
+        """
+        stop_jobs = getattr(self, "_upgrade_stop_jobs", [])
+        futures.wait(stop_jobs)
+        jobs = {}
+        for name in sorted(getattr(self, "_upgrades_stopped", set())):
+            try:
+                # Look the node up afresh: after a failed submit the objects in
+                # self.monitors may predate it and lack a management IP.
+                node = (
+                    self.get_node(name=name)
+                    if name == self.analyzer_name
+                    else self.get_monitor(name)
+                )
+                jobs[node.execute_thread(RESUME_AUTO_UPGRADES_CMD)] = name
+            except Exception as e:
+                logging.error(f"Resuming automatic upgrades on {name}: {e}")
+                print(
+                    f"WARNING: Automatic upgrades could not be turned back on on {name}"
+                )
+        for job in futures.as_completed(jobs):
+            try:
+                ok = "CRINKLE_UPGRADES_RESUMED" in (job.result()[0] or "")
+            except Exception as e:
+                logging.error(f"Resuming automatic upgrades: {e}", exc_info=True)
+                ok = False
+            if not ok:
+                msg = f"Automatic upgrades could not be turned back on on {jobs[job]}"
+                logging.warning(msg)
+                print(f"WARNING: {msg}")
+        self._upgrades_stopped = set()
+
+    def resolve_interface_networks(self):
+        """
+        Cache the owning network on every interface, in one pass over the
+        networks.
+        """
+        fim_iface_nets = []
+        for net in self.get_networks(refresh=False):
+            for fim_interface in net.get_fim().interface_list:
+                fim_iface_nets.append((fim_interface.name, net))
+        for iface in self.get_all_interfaces():
+            if iface.network is not None:
+                continue
+            name = iface.get_name()
+            for fim_name, net in fim_iface_nets:
+                if fim_name.endswith(name):
+                    iface.network = net
+                    break
 
     def post_boot_config(self):
         """
@@ -1301,6 +1756,29 @@ class CrinkleSlice(Slice):
 
         Only use this method after a non-blocking submit call and only call it
         once.
+
+        The user_data written by the node configuration is saved with the
+        monitor data, in one submit. If the monitor setup raises before that
+        save, the user_data of the node configuration is saved before the
+        exception propagates.
+        """
+        self._post_boot_snapshot = None
+        try:
+            self._post_boot_config()
+        except BaseException:
+            if self._post_boot_snapshot is not None:
+                logging.warning(
+                    "post_boot_config failed before saving fablib data; "
+                    "saving the user_data of the node configuration"
+                )
+                self._apply_user_data(self._post_boot_snapshot)
+                self.save_fablib_data()
+            self._resume_auto_upgrades()
+            raise
+
+    def _post_boot_config(self):
+        """
+        Not intended for API call. The body of post_boot_config().
         """
         # Rewritten super to handle Crinkle-specific nodes
         if self.is_dead_or_closing() or self.is_allocated():
@@ -1317,9 +1795,12 @@ class CrinkleSlice(Slice):
         self.update()
 
         logging.info("post_boot_config: get_networks")
-        for network in self.get_networks():
+        for network in self.get_networks(refresh=False):
             logging.info(f"post_boot_config: network {network.get_name()}")
             network.config()
+
+        logging.info("post_boot_config: resolve interface networks")
+        self.resolve_interface_networks()
 
         logging.info("post_boot_config: get_interfaces")
         for interface in self.get_all_interfaces():
@@ -1331,19 +1812,52 @@ class CrinkleSlice(Slice):
                 logging.error(e, exc_info=True)
 
         logging.info("post_boot_config: unmanage interfaces")
+        node_interfaces: dict[str, tuple[Node, list[Interface]]] = {}
         for interface in self.get_all_interfaces():
             try:
-                logging.info(f"post_boot_config: unmanage {interface.get_name()}")
-                interface.get_node().execute(
-                    f"sudo nmcli device set {interface.get_device_name()} managed no",
-                    quiet=True,
-                    timeout=30,
+                node = interface.get_node()
+                node_interfaces.setdefault(node.get_name(), (node, []))[1].append(
+                    interface
                 )
             except Exception as e:
                 logging.error(
-                    f"Interface: {interface.get_name()} failed to become unmanaged"
+                    f"Interface: {interface.get_name()} failed to resolve node"
                 )
                 logging.error(e, exc_info=True)
+
+        def _unmanage_node_interfaces(node: Node, interfaces: list[Interface]):
+            devs = []
+            for interface in interfaces:
+                try:
+                    devs.append(interface.get_device_name())
+                except Exception as e:
+                    logging.error(
+                        f"Interface: {interface.get_name()} failed to resolve device name"
+                    )
+                    logging.error(e, exc_info=True)
+            if devs:
+                # Each device is bounded to 30 s.
+                node.execute(
+                    " ; ".join(
+                        f"sudo timeout --foreground -k 10 30"
+                        f" nmcli device set {dev} managed no"
+                        for dev in devs
+                    ),
+                    quiet=True,
+                )
+
+        with futures.ThreadPoolExecutor(8) as unmanage_pool:
+            unmanage_jobs = {
+                unmanage_pool.submit(_unmanage_node_interfaces, node, ifaces): name
+                for name, (node, ifaces) in node_interfaces.items()
+            }
+            for job in futures.as_completed(unmanage_jobs):
+                name = unmanage_jobs[job]
+                try:
+                    job.result()
+                except Exception as e:
+                    logging.error(f"Node: {name} failed to become unmanaged")
+                    logging.error(e, exc_info=True)
 
         start = time.time()
 
@@ -1378,18 +1892,44 @@ class CrinkleSlice(Slice):
                     f"Post boot config {node.get_name()}, Failed! ({time.time() - start:.0f} sec) {e}"
                 )
 
-        # Push updates to user_data
-        print("Saving fablib data... ", end="")
-        self.submit(wait=True, progress=False, post_boot_config=False, wait_ssh=False)
-        self.update()
+        # With do_post_boot, the node configuration's user_data is saved with the
+        # monitor data below. An update() before then would discard it.
+        if not self.do_post_boot:
+            print("Saving fablib data... ", end="")
+            self.save_fablib_data()
+        else:
+            self._post_boot_snapshot = self._collect_user_data()
 
+        aswitches = {}
         for node in self.get_nodes():
             if "attestable_switch_config" in node.get_user_data():
                 logging.info(
                     f"switch config: {str(node.get_user_data()['attestable_switch_config'])}"
                 )
-                aswitch = self.get_attestable_switch(name=node.get_name())
-                aswitch.switch_config()
+                aswitches[node.get_name()] = self.get_attestable_switch(
+                    name=node.get_name()
+                )
+
+        # A failure stops post_boot_config once every switch has finished.
+        switch_errors = {}
+        with futures.ThreadPoolExecutor(8) as switch_pool:
+            switch_jobs = {
+                switch_pool.submit(aswitch.switch_config): name
+                for name, aswitch in aswitches.items()
+            }
+            for job in futures.as_completed(switch_jobs):
+                name = switch_jobs[job]
+                try:
+                    job.result()
+                    logging.info(f"Attestable switch config for {name}, Done!")
+                except Exception as e:
+                    logging.error(f"Attestable switch config for {name}, Failed! {e}")
+                    logging.error(e, exc_info=True)
+                    switch_errors[name] = e
+        if switch_errors:
+            raise Exception(
+                f"Attestable switch config failed on {sorted(switch_errors)}"
+            ) from switch_errors[min(switch_errors)]
 
         # Custom Crinkle logic
         logging.info("Crinkle post_boot_config")
@@ -1404,15 +1944,40 @@ class CrinkleSlice(Slice):
             jobs: list[futures.Future] = []
             counter = 0
             self.monitor_string = f"{self.analyzer_iface.get_device_name()} {self.analyzer.get_cores() - 1}"
+
+            # The monitors' dataplane interface lists are fetched in parallel.
+            refreshed_monitors = {
+                key: self.get_monitor(monitor.get_name())
+                for key, monitor in self.monitors.items()
+            }
+            prefetched_dataplane_ifaces: dict[str, list[dict] | None] = {}
+            with futures.ThreadPoolExecutor(8) as iface_prefetch_pool:
+                iface_prefetch_jobs = {
+                    iface_prefetch_pool.submit(mon.get_dataplane_os_interfaces): key
+                    for key, mon in refreshed_monitors.items()
+                }
+                for job in futures.as_completed(iface_prefetch_jobs):
+                    key = iface_prefetch_jobs[job]
+                    try:
+                        prefetched_dataplane_ifaces[key] = job.result()
+                    except Exception as e:
+                        logging.error(
+                            f"Monitor for net {key} failed to prefetch dataplane interfaces"
+                        )
+                        logging.error(e, exc_info=True)
+                        prefetched_dataplane_ifaces[key] = None
+
+            self._upgrades_stopped = {m.get_name() for m in self.monitors.values()}
+            self._upgrade_stop_jobs = []
             for key, monitor in self.monitors.items():
                 logging.info(
                     f"Refreshing monitor for net {key} after slice creation, count {counter}"
                 )
-                refreshed_monitor = self.get_monitor(monitor.get_name())
+                refreshed_monitor = refreshed_monitors[key]
                 mon_site = refreshed_monitor.get_site()
-                jobs.append(
+                self._upgrade_stop_jobs.append(
                     refreshed_monitor.execute_thread(
-                        f"sudo ip link set {self.analyzer_iface.get_device_name()} up; wget -q -O {REMOTEWORKDIR}/{DPDKNAME} {MONITORURL}; chmod u+x {REMOTEWORKDIR}/{DPDKNAME}"
+                        f"{STOP_AUTO_UPGRADES_CMD}; sudo ip link set {self.analyzer_iface.get_device_name()} up; wget -q -O {REMOTEWORKDIR}/{DPDKNAME} {MONITORURL}; chmod u+x {REMOTEWORKDIR}/{DPDKNAME}"
                     )
                 )
                 jobs.append(
@@ -1435,13 +2000,23 @@ class CrinkleSlice(Slice):
                 # Need a way to know where a specific interface falls *in the OS ordering of them*
                 # Such as, if an interface is device enp8s0, and OS has enp7s0, enp8s0, enp9s0, return 1
                 # And because this isn't consistent per site, cannot assume enp7s0 is first
-                for entry in refreshed_monitor.get_dataplane_os_interfaces():
+                dataplane_ifaces = prefetched_dataplane_ifaces.get(key)
+                if dataplane_ifaces is None:
+                    dataplane_ifaces = refreshed_monitor.get_dataplane_os_interfaces()
+                for entry in dataplane_ifaces:
                     ordered_devs[entry["ifname"]] = ctr
                     ctr += 1
                 refreshed_monitor.data.cmd_args += (
                     f"-r 1024 -n {refreshed_monitor.data.monitor_id} "
                 )
-                refreshed_monitor.data.cmd_args += f"-m {refreshed_monitor.data.cnet_iface.get_mac()} -m {self.analyzer_iface.get_mac()} "
+                report_mac = self.analyzer_iface.get_mac()
+                if mon_site != site:
+                    report_mac = self._fabnet_gateway_mac(
+                        refreshed_monitor, self.cnets[mon_site], report_mac
+                    )
+                refreshed_monitor.data.cmd_args += (
+                    f"-m {refreshed_monitor.data.cnet_iface.get_mac()} -m {report_mac} "
+                )
                 refreshed_monitor.data.cmd_args += f"-i {refreshed_monitor.data.cnet_iface.get_ip_addr()} -i {self.analyzer_iface.get_ip_addr()} "
                 dev_name = refreshed_monitor.data.cnet_iface.get_device_name()
                 if dev_name is None:
@@ -1506,14 +2081,15 @@ class CrinkleSlice(Slice):
             logging.info("Saving slice data before rebooting monitors")
             print("Saving slice data before rebooting monitors")
             self.do_post_boot = False
+            ptp_configured = self.do_ptp_setup
             if self.do_ptp_setup:
-                self.setup_ptp()
+                self.setup_ptp(resume_upgrades=False)
+            else:
+                self.ptp_nodes = []
             logging.info("Saving Crinkle Data")
             self.set_crinkle_data()
-            self.submit(
-                wait=True, progress=False, post_boot_config=False, wait_ssh=False
-            )
-            self.update()
+            self.save_fablib_data()
+            self._post_boot_snapshot = None
 
             logging.info("Rebooting Crinkle monitors")
             print("Rebooting Crinkle Resources")
@@ -1534,8 +2110,43 @@ class CrinkleSlice(Slice):
                 ctr += 1
                 logging.info(f"{ctr}/{len(jobs)} jobs finished")
                 print(f"{ctr}/{len(jobs)} jobs finished")
+            if ptp_configured:
+                logging.info("Checking Crinkle clock synchronisation")
+                print("Checking Crinkle clock synchronisation")
+                self.check_clock_sync()
+            self._resume_auto_upgrades()
             logging.info("Crinkle post_boot_config done")
             print("Crinkle post_boot_config done")
+
+    @staticmethod
+    def _fabnet_gateway_mac(monitor: Node, cnet: NetworkService, fallback: str) -> str:
+        """
+        Not intended for API call.
+
+        The MAC of a FABNet network's gateway, as seen from a monitor on it. A
+        monitor at another site than the analyzer's addresses its reports to
+        this gateway, which routes them to the analyzer.
+
+        :param monitor: the monitor, with its control interface still up
+        :param cnet: the monitor site's analyzer network
+        :param fallback: MAC to use if the gateway cannot be resolved
+        :return: the gateway MAC, or fallback
+        """
+        gateway = cnet.get_gateway()
+        out, _ = monitor.execute(
+            f"ping -6 -c 2 -W 1 {gateway} >/dev/null 2>&1;"
+            f" ip -6 neigh show {gateway} | awk '{{print $5}}'",
+            quiet=True,
+        )
+        mac = (out or "").strip().splitlines()[-1:] or [""]
+        if re.fullmatch(r"([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}", mac[0]):
+            return mac[0]
+        msg = (
+            f"Could not resolve the FABNet gateway {gateway} from {monitor.get_name()}"
+        )
+        logging.warning(msg)
+        print(f"WARNING: {msg}")
+        return fallback
 
     def get_nodes(self, refresh: bool = False) -> list[Node]:
         """
@@ -2017,7 +2628,8 @@ class CrinkleSlice(Slice):
         else:
             graph_build += """\\$graph0 = \\$base\n"""
         if time_filter != "":
-            graph_build += f"""\\$graph1 = \\$graph0.getPath(\\$graph0.getEdge({time_filter}).limit(1000).getEdgeEndpoints(), \\$graph0.getVertex(\\"type\\" == 'Agent'), 1) + \\$graph0.getEdge({time_filter}).limit(1000) + \\$graph0.getEdge({time_filter}).limit(1000).getEdgeEndpoints()\n"""
+            edges = f"\\$graph0.getEdge({time_filter}).limit({SPADE_TIME_EDGE_LIMIT})"
+            graph_build += f"""\\$graph1 = \\$graph0.getPath({edges}.getEdgeEndpoints(), \\$graph0.getVertex(\\"type\\" == 'Agent'), 1) + {edges} + {edges}.getEdgeEndpoints()\n"""
         else:
             graph_build += """\\$graph1 = \\$graph0\n"""
         graph_build += f"""\\$graph2 = \\$graph1.getLineage(\\$graph1.getVertex({spade_filter}), 1, 'b')\n\\$graph3 = \\$graph2 + \\$base.getPath(\\$graph2.getVertex(\\"type\\" == 'Process'), \\$base.getVertex(\\"type\\" == 'Agent'), 1)"""
@@ -2322,31 +2934,48 @@ class CrinkleSlice(Slice):
         self, monitor: CrinkleMonitor, wait: bool = True, quiet: bool = False
     ) -> futures.Future | None:
         """
-        Start the DPDK script on a monitor.
+        Start the DPDK script on a monitor. The app runs detached, with its
+        output in /tmp/dpdk-crease_monitor-dev.log on the monitor.
+        MONITOR_START_CHECK_S seconds after the launch, an app that has exited
+        raises, with the end of its log.
 
         :param monitor: The monitor node to target
         :type monitor: CrinkleMonitor
-        :param wait: Whether this call is blocking, default True
+        :param wait: Whether to block until the app is launched and checked, default True
         :type wait: bool
-        :param quiet: Whether to print stdout/stderr of a blocking call, default False
+        :param quiet: Whether to suppress the launch output of a blocking call, default False
         :type quiet: bool
-        :return: The future of a non-blocking call, or None
+        :return: For a non-blocking call, a future that completes once the app is launched and checked, and raises if it exited; otherwise None
         :rtype: concurrent.futures.Future
+        :raises RuntimeError: for a blocking call, if the app exited
         """
         if monitor is None:
             raise Exception("Monitor cannot be None")
         logging.info(f"Starting Crinkle monitor {monitor.data.net_name}")
-        job = None
+        # The app runs detached, so the SSH channel closes once it is spawned.
+        # $pid is the sudo process, which exits with the app: a zombie (Z) or a
+        # missing process means the app has exited. A monitor already running
+        # is refused.
+        log = f"/tmp/{DPDKNAME}.log"
+        cmd = (
+            f"if pgrep -x {DPDKNAME[:15]} >/dev/null; then"
+            " echo 'the monitor is already running'; false; else"
+            f" sudo nohup ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args}"
+            f" > {log} 2>&1 & pid=$!; sleep {MONITOR_START_CHECK_S};"
+            f' case "$(ps -o stat= -p $pid)" in ""|Z*) tail -n 20 {log}; false;; esac;'
+            " fi"
+        )
+        what = f"Starting Crinkle monitor {monitor.get_name()}"
         if wait:
-            monitor.execute(
-                f"sudo ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args} &",
-                quiet=quiet,
-            )
-        else:
-            job = monitor.execute_thread(
-                f"sudo ./{REMOTEWORKDIR}/{DPDKNAME} -- {monitor.data.cmd_args}"
-            )
-        return job
+            out = monitor._execute_checked(cmd, what)
+            if out.strip() and not quiet:
+                print(out)
+            return None
+        return (
+            monitor.get_fablib_manager()
+            .get_ssh_thread_pool_executor()
+            .submit(monitor._execute_checked, cmd, what)
+        )
 
     def start_all_monitors(
         self, wait: bool = True, no_return: bool = True
@@ -2354,7 +2983,8 @@ class CrinkleSlice(Slice):
         """
         Start the DPDK script on all monitors.
 
-        :param wait: Whether this call is blocking, default True
+        :param wait: Whether to block until every monitor's app is launched,
+            raising the first launch failure, default True
         :type wait: bool
         :param no_return: Whether to return None instead of the list of jobs
         :type no_return: bool
@@ -2366,12 +2996,10 @@ class CrinkleSlice(Slice):
             start_list.append(self.start_monitor(monitor=monitor, wait=False))
         if wait:
             logging.info("Waiting for monitors to finish starting")
-            ctr = 0
-            max = len(start_list)
-            while ctr < max:
-                if start_list[ctr].running():
-                    ctr += 1
-                    logging.info(f"{ctr}/{max} started")
+            total = len(start_list)
+            for ctr, job in enumerate(futures.as_completed(start_list), 1):
+                job.result()
+                logging.info(f"{ctr}/{total} started")
         if no_return:
             return
         return start_list

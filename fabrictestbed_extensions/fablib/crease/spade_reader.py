@@ -125,6 +125,7 @@ bind_layers(IPv6, CMA, nh=PROT_CMA)
 bind_layers(CMA, Ether)
 flowptr = 0
 flows = {}
+flows_lock = threading.Lock()
 
 
 def analyze_packet(
@@ -134,8 +135,8 @@ def analyze_packet(
 ):
     """
     Parse one sniffed packet for a CMA trailer and, if present, convert it into
-    SPADE provenance lines: an "Artifact" vertex the first time a flow is seen,
-    plus "Used"/"WasGeneratedBy" edges recording this packet's receipt and
+    SPADE provenance lines: the flow's "Artifact" vertex (declared with every
+    packet), plus "Used"/"WasGeneratedBy" edges recording this packet's receipt and
     retransmission across the hop. The resulting lines are pushed onto
     output_queue for the writer thread to persist. Packets without a CMA trailer
     produce no lines.
@@ -213,20 +214,20 @@ def analyze_packet(
         thisflow = Flow(
             tx_port, rx_port, ip_src, ip_dst, ip_prot, prot_sport, prot_dport
         )
+        # Worker threads share flows and flowptr.
         flowhash = hash(thisflow)
-        fid = None
-        if flowhash in flows:
-            fid = flows[flowhash]
-            # print(f'Previous flow {fid}')
-        else:
-            fid = flowptr
-            flowptr += 1
-            flows[flowhash] = fid
-            # print(f'New flow {fid}')
-            # print(f'type:Artifact id:{fid} eth.type:{eth_type} ip.src:{ip_src} ip.dst:{ip_dst} ip.prot:{ip_prot} prot.sport:{prot_sport} prot.dport:{prot_dport}\n')
-            output_lines.append(
-                f"type:Artifact id:{fid} eth.type:{eth_type} ip.src:{ip_src} ip.dst:{ip_dst} ip.prot:{ip_prot} prot.sport:{prot_sport} prot.dport:{prot_dport}\n"
-            )
+        with flows_lock:
+            if flowhash in flows:
+                fid = flows[flowhash]
+            else:
+                fid = flowptr
+                flowptr += 1
+                flows[flowhash] = fid
+        # The flow Artifact is declared with every packet, so the edges below
+        # never reference one whose batch has not flushed.
+        output_lines.append(
+            f"type:Artifact id:{fid} eth.type:{eth_type} ip.src:{ip_src} ip.dst:{ip_dst} ip.prot:{ip_prot} prot.sport:{prot_sport} prot.dport:{prot_dport}\n"
+        )
         # print('Writing spade edges')
         print(
             f"type:Used from:{rx_port} to:{fid} pkt_id:{uid} size:{size} time:{time} epoch:{epoch}\n"
